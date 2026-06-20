@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1565c0"/>
+      <stop offset="100%" stop-color="#0d47a1"/>
+    </linearGradient>
+    <linearGradient id="disp" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#e8e8e8"/>
+      <stop offset="50%" stop-color="#f5f5f5"/>
+      <stop offset="100%" stop-color="#e0e0e0"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a237e"/>
+      <stop offset="100%" stop-color="#283593"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="40" fill="url(#bg)"/>
+  <g transform="translate(96,120)">
+    <circle cx="0" cy="-94" r="18" fill="#fff" opacity="0.15"/>
+    <text x="0" y="-89" text-anchor="middle" fill="#fff" font-size="20" font-family="Arial,sans-serif" font-weight="bold" opacity="0.4">€</text>
+    <rect x="-36" y="-72" width="72" height="132" rx="12" fill="url(#disp)" stroke="#bdbdbd" stroke-width="1.5"/>
+    <rect x="-39" y="-77" width="78" height="16" rx="8" fill="#1565c0"/>
+    <rect x="-30" y="-58" width="60" height="36" rx="6" fill="url(#screen)"/>
+    <text x="0" y="-34" text-anchor="middle" fill="#4caf50" font-size="13" font-family="Arial,sans-serif" font-weight="bold">1,599</text>
+    <text x="0" y="-33" text-anchor="middle" fill="#4caf50" font-size="5" font-family="Arial,sans-serif" opacity="0.6">————————</text>
+    <text x="0" y="-24" text-anchor="middle" fill="#4caf50" font-size="7" font-family="Arial,sans-serif">€/L</text>
+    <line x1="-20" y1="-52" x2="-20" y2="-26" stroke="#4caf50" stroke-width="0.8" opacity="0.6"/>
+    <line x1="-14" y1="-49" x2="-14" y2="-29" stroke="#4caf50" stroke-width="0.8" opacity="0.5"/>
+    <line x1="-8" y1="-46" x2="-8" y2="-32" stroke="#4caf50" stroke-width="0.8" opacity="0.4"/>
+    <rect x="-20" y="-16" width="40" height="6" rx="2" fill="#bdbdbd" opacity="0.5"/>
+    <rect x="-20" y="-8" width="40" height="2" rx="1" fill="#bdbdbd" opacity="0.3"/>
+    <rect x="-24" y="10" width="14" height="22" rx="3" fill="#2e7d32"/>
+    <rect x="10" y="10" width="14" height="22" rx="3" fill="#c62828"/>
+    <circle cx="-17" cy="17" r="3.5" fill="#fff" opacity="0.8"/>
+    <circle cx="17" cy="17" r="3.5" fill="#fff" opacity="0.8"/>
+    <path d="M36 -28 Q66 -20 66 14 Q66 34 58 38 L52 38 Q52 32 58 28 Q62 24 62 14 Q62 -12 36 -20 Z" fill="#b71c1c"/>
+    <rect x="36" y="-12" width="20" height="5" rx="2.5" fill="#757575"/>
+    <rect x="54" y="28" width="8" height="12" rx="2" fill="#424242"/>
+    <rect x="-42" y="56" width="84" height="7" rx="3.5" fill="#e65100"/>
+  </g>
+</svg>

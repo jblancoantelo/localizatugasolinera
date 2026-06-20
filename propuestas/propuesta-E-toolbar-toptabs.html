@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Propuesta E — Toolbar + Top Tabs</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; color: #1a1a2e; height: 100vh; overflow: hidden; }
+
+.app { display: flex; flex-direction: column; height: 100vh; }
+
+/* === Top Tabs === */
+.top-tabs {
+  display: flex; background: #fff; border-bottom: 2px solid #e0e0e0;
+  flex-shrink: 0; z-index: 100;
+}
+.top-tab {
+  padding: 0.45rem 1rem; cursor: pointer; font-size: 0.78rem; color: #666;
+  border: none; background: none; border-bottom: 2px solid transparent;
+  margin-bottom: -2px; transition: all 0.15s;
+  display: inline-flex; align-items: center; gap: 0.3rem;
+}
+.top-tab:hover { color: #1a73e8; background: #f8f9ff; }
+.top-tab.active { color: #1a73e8; border-bottom-color: #1a73e8; font-weight: 500; }
+.top-tab-spacer { margin-left: auto; display: flex; align-items: center; gap: 0.3rem; padding: 0 0.5rem; }
+.top-tab-spacer .count { font-size: 0.72rem; color: #888; }
+
+/* === Toolbar (appears below tabs, hidden in Config) === */
+.toolbar { background: #fff; border-bottom: 1px solid #e0e0e0; z-index: 99; flex-shrink: 0; display: block; }
+.toolbar.hide { display: none; }
+
+.toolbar-groups {
+  display: flex; flex-wrap: wrap; gap: 0;
+  padding: 0.3rem 0.5rem;
+}
+.filter-group {
+  display: flex; align-items: center; gap: 0.3rem;
+  padding: 0.2rem 0.5rem; border-right: 1px solid #eee; min-height: 2rem;
+}
+.filter-group:last-child { border-right: none; flex: 1; justify-content: flex-end; }
+.filter-group-label { font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; color: #888; white-space: nowrap; }
+.filter-group input, .filter-group select {
+  padding: 0.2rem 0.35rem; border: 1px solid #d0d0d0; border-radius: 4px;
+  font-size: 0.72rem; background: #fff; max-width: 110px;
+}
+.filter-group input:focus, .filter-group select:focus { border-color: #1a73e8; outline: none; box-shadow: 0 0 0 2px rgba(26,115,232,0.1); }
+.filter-group .btn {
+  padding: 0.2rem 0.4rem; border: 1px solid #d0d0d0; border-radius: 4px;
+  background: #fff; cursor: pointer; font-size: 0.7rem; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 0.15rem;
+}
+.filter-group .btn:hover { background: #f0f0f0; }
+.filter-group .btn-primary { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+.filter-group .btn-active { background: #fff8e1; color: #f9a825; border-color: #f9a825; }
+
+.search-row { padding: 0.2rem 0.5rem 0.3rem; display: flex; gap: 0.4rem; align-items: center; }
+.search-row input { flex: 1; padding: 0.3rem 0.5rem; border: 1px solid #d0d0d0; border-radius: 6px; font-size: 0.75rem; }
+
+/* === Tab Content === */
+.tab-content { flex: 1; display: none; flex-direction: column; overflow: hidden; position: relative; }
+.tab-content.active { display: flex; }
+
+#map { height: 100%; width: 100%; }
+
+.table-wrap { flex: 1; overflow: auto; }
+.table-wrap table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
+.table-wrap thead { position: sticky; top: 0; z-index: 2; }
+.table-wrap th {
+  background: #343a40; color: #fff; padding: 0.3rem 0.25rem; cursor: pointer;
+  white-space: nowrap; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.02em;
+}
+.table-wrap th:hover { background: #495057; }
+.table-wrap td { padding: 0.25rem 0.25rem; border-bottom: 1px solid #eee; white-space: nowrap; }
+.table-wrap tr { cursor: pointer; }
+.table-wrap tr:hover td { background: #f1f3f5; }
+.table-wrap tr.cheapest td { background: #e8f5e9; }
+.table-wrap .price { font-weight: 600; }
+.table-wrap .cheap-badge { display: inline-block; background: #2e7d32; color: #fff; font-size: 0.5rem; border-radius: 3px; padding: 0 3px; margin-left: 2px; }
+
+/* === Both === */
+.both-layout { flex: 1; display: flex; overflow: hidden; }
+.both-layout .map-half { flex: 1; min-height: 0; }
+.both-layout .table-half { flex: 1; display: flex; flex-direction: column; border-left: 1px solid #e0e0e0; }
+.both-layout .table-half .table-wrap { flex: 1; }
+
+/* === Config === */
+.config-container { flex: 1; overflow-y: auto; padding: 1rem; background: #f8f9fa; }
+.config-card { background: #fff; border-radius: 10px; padding: 1rem; margin-bottom: 0.75rem; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.config-card h3 { font-size: 0.8rem; margin-bottom: 0.5rem; color: #444; display: flex; align-items: center; gap: 0.3rem; }
+.config-card label { font-size: 0.75rem; display: flex; align-items: center; gap: 0.3rem; }
+.config-card input[type="number"] { width: 55px; padding: 0.2rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; }
+.config-card button { background: #1a73e8; color: #fff; border: none; padding: 0.2rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.72rem; }
+.discount-row { display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem; }
+.discount-row input[type="text"] { flex: 1; padding: 0.2rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.72rem; }
+
+/* === Detail === */
+.detail-panel {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: #fff; border-radius: 12px 12px 0 0;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
+  padding: 0.6rem 1rem 1rem; display: none; z-index: 200; max-height: 40vh; overflow-y: auto;
+}
+.detail-panel.show { display: block; animation: slideUp 0.2s ease; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.detail-panel .handle { width: 32px; height: 3px; background: #ddd; border-radius: 2px; margin: 0 auto 0.4rem; }
+.detail-panel h3 { font-size: 0.82rem; }
+.detail-panel .addr { font-size: 0.72rem; color: #666; margin-bottom: 0.3rem; }
+.detail-panel .fuels { display: grid; grid-template-columns: auto auto; gap: 0.05rem 0.6rem; font-size: 0.75rem; }
+.detail-panel .fuels span:nth-child(odd) { font-weight: 600; }
+.detail-panel .close-btn { position: absolute; top: 0.4rem; right: 0.6rem; cursor: pointer; font-size: 1rem; color: #999; background: none; border: none; }
+
+/* === Info bar === */
+.info-bar {
+  background: rgba(255,255,255,0.95); border-top: 1px solid #e0e0e0;
+  padding: 0.2rem 0.75rem; display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.7rem; color: #666; flex-shrink: 0;
+}
+.info-bar .pagination { margin-left: auto; display: flex; align-items: center; gap: 0.2rem; }
+.info-bar .pagination button { background: transparent; border: 1px solid #ccc; border-radius: 3px; padding: 0.1rem 0.35rem; cursor: pointer; font-size: 0.65rem; }
+
+.price-legend { display: inline-flex; gap: 0.35rem; font-size: 0.62rem; color: #777; align-items: center; }
+.price-legend span { display: inline-flex; align-items: center; gap: 2px; }
+.dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; }
+.dot.g { background: #2e7d32; }
+.dot.o { background: #f57c00; }
+.dot.r { background: #b71c1c; }
+
+/* === Responsive === */
+@media (max-width: 1024px) {
+  .toolbar-groups { flex-wrap: wrap; }
+  .filter-group { border-right: none; flex: 1 0 auto; min-width: 100px; }
+  .filter-group:last-child { flex: 1 0 100%; justify-content: flex-start; }
+  .both-layout { flex-direction: column; }
+  .both-layout .table-half { border-left: none; border-top: 1px solid #e0e0e0; max-height: 40%; }
+}
+
+@media (max-width: 768px) {
+  .top-tab { font-size: 0.7rem; padding: 0.35rem 0.6rem; }
+  .top-tab-spacer .count { font-size: 0.65rem; }
+  .filter-group { min-width: 70px; }
+  .filter-group-label { display: none; }
+  .filter-group input, .filter-group select { font-size: 0.65rem; max-width: 85px; }
+  .search-row input { font-size: 0.7rem; }
+  .table-wrap th { font-size: 0.6rem; }
+  .table-wrap td { font-size: 0.62rem; }
+}
+
+@media (max-width: 480px) {
+  .top-tab { font-size: 0.62rem; padding: 0.25rem 0.4rem; }
+  .table-wrap th:nth-child(4), .table-wrap td:nth-child(4),
+  .table-wrap th:nth-child(5), .table-wrap td:nth-child(5) { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Top Tabs -->
+  <div class="top-tabs">
+    <button class="top-tab active" data-tab="tabMap">🗺️ Mapa</button>
+    <button class="top-tab" data-tab="tabTable">☰ Tabla</button>
+    <button class="top-tab" data-tab="tabBoth">⊞ Ambos</button>
+    <button class="top-tab" data-tab="tabConfig">⚙️ Config</button>
+    <div class="top-tab-spacer">
+      <span class="count" id="resultCount">0 estaciones</span>
+    </div>
+  </div>
+
+  <!-- Toolbar (hidden in Config tab) -->
+  <div class="toolbar" id="toolbar">
+    <div class="toolbar-groups">
+      <div class="filter-group">
+        <span class="filter-group-label">🎯 Ubicación</span>
+        <button class="btn btn-primary" id="geoBtn">📍</button>
+        <input type="number" id="distInput" min="1" placeholder="km" style="width:50px">
+      </div>
+      <div class="filter-group">
+        <span class="filter-group-label">⛽ Combustible</span>
+        <select id="fuelSelect" style="max-width:100px">
+          <option value="">Todos</option>
+          <option>Gasolina 95 E5</option>
+          <option>Gasolina 98 E5</option>
+          <option>Gasóleo A</option>
+          <option>Gasóleo Premium</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-group-label">📍 Provincia</span>
+        <select id="provSelect" style="max-width:90px">
+          <option value="">Todas</option>
+          <option>Madrid</option>
+          <option>Barcelona</option>
+          <option>Valencia</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-group-label">🏷️ Marca</span>
+        <select id="brandSelect" style="max-width:90px">
+          <option value="">Todas</option>
+          <option>Repsol</option>
+          <option>Cepsa</option>
+          <option>BP</option>
+          <option>Shell</option>
+        </select>
+      </div>
+      <div class="filter-group" style="border-right:none">
+        <button class="btn btn-active" id="favBtn">☆</button>
+        <select id="styleSelect" style="max-width:70px">
+          <option value="street">Calle</option>
+          <option value="satellite">Satélite</option>
+        </select>
+        <button class="btn" id="resetBtn">✕</button>
+        <div class="price-legend" style="margin-left:0.2rem">
+          <span><span class="dot g"></span>&lt;1.50</span>
+          <span><span class="dot o"></span>1.50-1.70</span>
+          <span><span class="dot r"></span>&gt;1.70</span>
+        </div>
+      </div>
+    </div>
+    <div class="search-row">
+      <input type="text" id="searchInput" placeholder="Buscar localidad, calle o marca...">
+    </div>
+  </div>
+
+  <!-- Tab: Mapa -->
+  <div class="tab-content active" id="tabMap"><div id="map"></div></div>
+
+  <!-- Tab: Tabla -->
+  <div class="tab-content" id="tabTable">
+    <div class="table-wrap">
+      <table id="tableMain">
+        <thead><tr>
+          <th style="width:1.2rem"></th>
+          <th data-col="Rótulo">Marca</th>
+          <th data-col="Precio">Precio</th>
+          <th data-col="Combustible">Comb.</th>
+          <th data-col="Provincia">Prov.</th>
+          <th data-col="Localidad">Localidad</th>
+          <th data-col="Dirección">Dirección</th>
+          <th data-col="Distancia">Dist.</th>
+        </tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab: Ambos -->
+  <div class="tab-content" id="tabBoth">
+    <div class="both-layout">
+      <div class="map-half"><div id="mapBoth" style="height:100%;width:100%"></div></div>
+      <div class="table-half">
+        <div class="search-row" style="border-bottom:1px solid #eee;padding:0.2rem 0.4rem">
+          <input type="text" id="bothSearch" placeholder="Buscar..." style="font-size:0.7rem;padding:0.2rem 0.4rem">
+        </div>
+        <div class="table-wrap">
+          <table id="tableBoth">
+            <thead><tr>
+              <th data-col="Rótulo">Marca</th>
+              <th data-col="Precio">Precio</th>
+              <th data-col="Combustible">Comb.</th>
+              <th data-col="Distancia">Dist.</th>
+            </tr></thead>
+            <tbody id="tableBothBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Config -->
+  <div class="tab-content" id="tabConfig">
+    <div class="config-container">
+      <div class="config-card">
+        <h3>🗑️ Caché de datos</h3>
+        <p style="font-size:0.72rem;color:#888;margin-bottom:0.3rem">Las provincias se almacenan localmente para evitar recargas.</p>
+        <label><input type="number" value="12"> horas de caché</label>
+        <button style="margin-left:0.3rem;background:#e65100">🗑️ Limpiar caché</button>
+      </div>
+      <div class="config-card">
+        <h3>🏷️ Descuentos por marca</h3>
+        <p style="font-size:0.72rem;color:#888;margin-bottom:0.3rem">Resta céntimos al precio mostrado.</p>
+        <div id="discountList">
+          <div class="discount-row">
+            <input type="text" placeholder="Marca" list="brandOpts" value="Repsol">
+            <input type="number" value="5" style="width:50px"> cts
+            <button style="background:#c62828;color:#fff;border:none;padding:0.15rem 0.4rem;border-radius:4px;cursor:pointer">✕</button>
+          </div>
+        </div>
+        <button style="margin-top:0.3rem">+ Añadir marca</button>
+        <datalist id="brandOpts">
+          <option>Repsol</option><option>Cepsa</option><option>BP</option><option>Shell</option><option>Galp</option>
+        </datalist>
+      </div>
+      <div class="config-card">
+        <h3>🗺️ Preferencias</h3>
+        <label style="margin-bottom:0.3rem"><input type="checkbox" checked> Mostrar leyenda de precios</label>
+        <label><input type="checkbox"> Destacar siempre la más barata</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail -->
+  <div class="detail-panel" id="detailPanel">
+    <div class="handle"></div>
+    <button class="close-btn" id="detailClose">✕</button>
+    <h3 id="detailBrand">Estación</h3>
+    <div class="addr" id="detailAddr">Dirección, Localidad</div>
+    <div class="fuels" id="detailFuels">
+      <span>Gasolina 95 E5</span><span>1.459 €</span>
+      <span>Gasóleo A</span><span>1.329 €</span>
+    </div>
+  </div>
+
+  <!-- Info bar -->
+  <div class="info-bar">
+    <span id="barInfo">💡 Haz clic en una estación</span>
+    <div class="pagination">
+      <button disabled>◀</button>
+      <span id="pageInfo">0 / 0</span>
+      <button disabled>▶</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const MOCK = [
+  { id: '1', rotulo: 'Repsol', precio: '1.459', combustible: 'Gasolina 95 E5', provincia: 'Madrid', localidad: 'Madrid', direccion: 'C/ Mayor 12', dist: '0.5', lat: 40.4168, lng: -3.7038, cheapest: true },
+  { id: '2', rotulo: 'Cepsa', precio: '1.429', combustible: 'Gasolina 95 E5', provincia: 'Madrid', localidad: 'Madrid', direccion: 'Av. Castilla 45', dist: '1.2', lat: 40.4200, lng: -3.7100, cheapest: false },
+  { id: '3', rotulo: 'BP', precio: '1.489', combustible: 'Gasóleo A', provincia: 'Madrid', localidad: 'Alcalá', direccion: 'C/ Sol 8', dist: '3.4', lat: 40.4820, lng: -3.3600, cheapest: false },
+  { id: '4', rotulo: 'Shell', precio: '1.399', combustible: 'Gasóleo A', provincia: 'Madrid', localidad: 'Madrid', direccion: 'Paseo Recoletos 23', dist: '0.8', lat: 40.4250, lng: -3.6900, cheapest: true },
+  { id: '5', rotulo: 'Galp', precio: '1.509', combustible: 'Gasolina 95 E5', provincia: 'Barcelona', localidad: 'Barcelona', direccion: 'C/ Marina 67', dist: null, lat: 41.3874, lng: 2.1686, cheapest: false },
+  { id: '6', rotulo: 'Repsol', precio: '1.379', combustible: 'Gasóleo Premium', provincia: 'Madrid', localidad: 'Móstoles', direccion: 'Av. Portugal 15', dist: '5.1', lat: 40.3222, lng: -3.8650, cheapest: true },
+];
+
+function initMap(el) {
+  const m = L.map(el).setView([40.4168, -3.7038], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(m);
+  MOCK.forEach(s => { if (s.lat && s.lng) {
+    const mk = L.circleMarker([s.lat, s.lng], { radius: 7, color: '#1a73e8', fillColor: '#fff', fillOpacity: 1, weight: 2 }).addTo(m);
+    mk.bindPopup(`<strong>${s.rotulo}</strong><br>${s.precio} €/L`);
+    mk._sid = s.id; mk.on('click', () => showDetail(s.id));
+  }});
+  return m;
+}
+const map1 = initMap('map'); const map2 = initMap('mapBoth');
+setTimeout(() => { map1.invalidateSize(); map2.invalidateSize(); }, 200);
+
+// Tabs
+document.querySelectorAll('.top-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+    document.getElementById(tab.dataset.tab).classList.add('active');
+    document.getElementById('toolbar').classList.toggle('hide', tab.dataset.tab === 'tabConfig');
+    setTimeout(() => { map1.invalidateSize(); map2.invalidateSize(); }, 100);
+  });
+});
+
+function showDetail(id) {
+  const s = MOCK.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('detailPanel').classList.add('show');
+  document.getElementById('detailBrand').textContent = `${s.rotulo} ⛽`;
+  document.getElementById('detailAddr').textContent = `${s.direccion}, ${s.localidad} (${s.provincia})`;
+  document.getElementById('detailFuels').innerHTML = `
+    <span>Gasolina 95 E5</span><span>1.459 €</span>
+    <span>Gasóleo A</span><span>1.329 €</span>
+    <span>Gasóleo Premium</span><span>1.489 €</span>`;
+  document.getElementById('barInfo').textContent = `${s.rotulo} — ${s.precio} €/L`;
+}
+document.getElementById('detailClose').addEventListener('click', () => document.getElementById('detailPanel').classList.remove('show'));
+
+function renderTable() {
+  const f = [...MOCK];
+  document.getElementById('resultCount').textContent = `${f.length} estaciones`;
+  ['tableBody', 'tableBothBody'].forEach(tid => {
+    const tb = document.getElementById(tid);
+    tb.innerHTML = f.map(s =>
+      `<tr class="${s.cheapest ? 'cheapest' : ''}" onclick="showDetail('${s.id}')">
+        <td>${s.cheapest ? '<span class="cheap-badge">$</span>' : ''}</td>
+        <td>${s.rotulo}</td>
+        <td class="price">${s.precio} €</td>
+        <td>${s.combustible}</td>
+        ${tid === 'tableBody' ? `<td>${s.provincia}</td><td>${s.localidad}</td><td>${s.direccion}</td>` : ''}
+        <td>${s.dist !== null ? s.dist + ' km' : '—'}</td>
+      </tr>`
+    ).join('');
+  });
+}
+
+document.getElementById('searchInput').addEventListener('input', renderTable);
+document.getElementById('fuelSelect').addEventListener('change', renderTable);
+document.getElementById('provSelect').addEventListener('change', renderTable);
+document.getElementById('brandSelect').addEventListener('change', renderTable);
+document.getElementById('distInput').addEventListener('input', renderTable);
+document.getElementById('resetBtn').addEventListener('click', () => {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('fuelSelect').value = '';
+  document.getElementById('provSelect').value = '';
+  document.getElementById('brandSelect').value = '';
+  document.getElementById('distInput').value = '';
+  renderTable();
+});
+document.getElementById('geoBtn').addEventListener('click', function() {
+  this.textContent = '🔄';
+  setTimeout(() => { this.textContent = '📍'; map1.setView([40.4168, -3.7038], 13); map2.setView([40.4168, -3.7038], 13); }, 1000);
+});
+document.getElementById('favBtn').addEventListener('click', function() {
+  this.classList.toggle('btn-active');
+  this.textContent = this.classList.contains('btn-active') ? '★' : '☆';
+});
+document.getElementById('styleSelect').addEventListener('change', (e) => {
+  const u = e.target.value === 'satellite' ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+  [map1, map2].forEach(m => { m.eachLayer(l => { if (l._url) m.removeLayer(l); }); L.tileLayer(u, { maxZoom: 19 }).addTo(m); });
+});
+
+renderTable();
+</script>
+</body>
+</html>

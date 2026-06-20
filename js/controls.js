@@ -1,0 +1,255 @@
+function render(fitBounds) {
+  const s = STATE;
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  const sf = s.selectedFuel;
+  const sl = s.selectedLoc;
+  const sb = s.selectedBrands;
+
+  let arr = s.data;
+  if (q) arr = arr.filter(d => (d.Localidad||'').toLowerCase().includes(q) || (d.Dirección||'').toLowerCase().includes(q) || (d.Rótulo||'').toLowerCase().includes(q));
+  if (sf) {
+    const group = FUEL_GROUPS[sf];
+    if (group) {
+      arr = arr.filter(d => group.some(name => getFuelPrice(d, FUEL_KEYS[name]) !== null));
+    } else {
+      const key = FUEL_KEYS[sf];
+      arr = arr.filter(d => getFuelPrice(d, key) !== null);
+    }
+  }
+  if (sl) arr = arr.filter(d => d.Localidad === sl);
+  if (sb.length) arr = arr.filter(d => sb.includes(d.Rótulo));
+  if (s.userLat!==null) arr.forEach(d => { d._dist = dist(s.userLat,s.userLng,parseFloat(norm(d.Latitud)),parseFloat(norm(d['Longitud (WGS84)']))); });
+  else arr.forEach(d => d._dist = null);
+  const maxDist = parseFloat(document.getElementById('maxDistance').value);
+  if (s.userLat !== null && !isNaN(maxDist) && maxDist > 0) {
+    arr = arr.filter(d => d._dist !== null && d._dist <= maxDist);
+  }
+  if (s.showFavoritesOnly && s.favorites.length) {
+    arr = arr.filter(d => s.favorites.includes(d.IDEESS));
+  }
+  s.filtered = arr;
+
+  const cheapestMap = {};
+  arr.forEach(d => {
+    const p = getSelectedFuelPrice(d);
+    if (p === null) return;
+    const prov = d.Provincia;
+    if (!cheapestMap[prov] || p < cheapestMap[prov].price) {
+      cheapestMap[prov] = { id: d.IDEESS, price: p };
+    }
+  });
+  arr.forEach(d => {
+    d._cheapest = cheapestMap[d.Provincia]?.id === d.IDEESS;
+  });
+
+  const allPrices = [];
+  if (sf) {
+    const group = FUEL_GROUPS[sf];
+    if (group) {
+      arr.forEach(d => { for (const name of group) { const p = getDiscountedFuelPrice(d, FUEL_KEYS[name]); if (p !== null) allPrices.push(p); } });
+    } else {
+      const key = FUEL_KEYS[sf];
+      arr.forEach(d => { const p = getDiscountedFuelPrice(d, key); if (p !== null) allPrices.push(p); });
+    }
+  } else {
+    arr.forEach(d => { for (const [, k] of FUEL_NAMES) { const p = getDiscountedFuelPrice(d, k); if (p !== null) allPrices.push(p); } });
+  }
+  allPrices.sort((a,b) => a-b);
+  if (allPrices.length >= 3) {
+s._lo = allPrices[Math.floor(allPrices.length * 0.20)];
+s._hi = allPrices[Math.floor(allPrices.length * 0.60)];
+  } else {
+    s._lo = undefined;
+    s._hi = undefined;
+  }
+  const leg = document.getElementById('legend');
+  if (s._lo !== undefined) {
+    leg.innerHTML = `<span><span class="dot g"></span> ≤${s._lo.toFixed(3).replace('.',',')}</span><span><span class="dot o"></span> ${s._lo.toFixed(3).replace('.',',')}–${s._hi.toFixed(3).replace('.',',')}</span><span><span class="dot r"></span> &gt;${s._hi.toFixed(3).replace('.',',')}</span>`;
+  } else {
+    leg.innerHTML = '<span><span class="dot g"></span> &lt;1,50</span><span><span class="dot o"></span> 1,50–1,70</span><span><span class="dot r"></span> &gt;1,70</span>';
+  }
+  doSort();
+  document.getElementById('infoText').textContent = `${arr.length}${s.selectedProv ? ' de ' + s.data.length + ' en ' + s.selectedProv : ''}${_cacheExpiryLabel}`;
+  updateMarkers(fitBounds, (id) => {
+    render(false);
+    const m2 = STATE.markerMap[id];
+    if (m2) m2.openPopup();
+    const row = document.querySelector(`tr[data-id="${id}"]`);
+    if (row) row.scrollIntoView({ block: 'center' });
+  });
+  const favBtn = document.getElementById('favToggleBtn');
+  if (favBtn) {
+    favBtn.classList.toggle('active', s.showFavoritesOnly);
+    const cnt = s.favorites.length;
+    favBtn.textContent = cnt ? `★ ${cnt}` : '☆';
+  }
+  saveState();
+}
+
+function toggleFavorite(id) {
+  const s = STATE;
+  const idx = s.favorites.indexOf(id);
+  if (idx >= 0) s.favorites.splice(idx, 1);
+  else s.favorites.push(id);
+  saveState();
+}
+
+function setViewMode(mode) {
+  const s = STATE, main = document.getElementById('main');
+  ['normal','map','table'].forEach(m => main.classList.remove('mode-'+m));
+  main.classList.add('mode-'+mode);
+  s.viewMode = mode;
+  const mapEl = document.getElementById('map');
+  if (mode === 'map') {
+    mapEl.style.height = '';
+  } else if (mode === 'normal' && s.mapHeight) {
+    mapEl.style.height = s.mapHeight + 'px';
+  }
+  document.querySelectorAll('#viewBtns button').forEach(b => b.classList.toggle('active', b.dataset.mode===mode));
+  if (s.map) setTimeout(() => s.map.invalidateSize(), 100);
+  saveState();
+}
+
+function populateLocFilter() {
+  const locSet = new Set();
+  STATE.data.forEach(d => {
+    if (d.Localidad) locSet.add(d.Localidad);
+  });
+  const sel = document.getElementById('locFilter');
+  sel.innerHTML = '<option value="">Localidad</option>';
+  Array.from(locSet).sort().forEach(l => {
+    const o = document.createElement('option');
+    o.value = l; o.textContent = l;
+    sel.appendChild(o);
+  });
+  sel.value = STATE.selectedLoc && locSet.has(STATE.selectedLoc) ? STATE.selectedLoc : '';
+}
+
+function populateBrandFilter() {
+  const sl = STATE.selectedLoc;
+  const brandMap = {};
+  STATE.data.forEach(d => {
+    if (!d.Rótulo) return;
+    if (sl && d.Localidad !== sl) return;
+    brandMap[d.Rótulo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')] = d.Rótulo;
+  });
+  const sorted = Object.keys(brandMap).sort().map(k => brandMap[k]);
+  const dd = document.getElementById('brandFilterDropdown');
+  dd.innerHTML = `<input type="text" class="brandSearch" placeholder="Buscar marca...">
+    <div class="brandList">
+      <label class="selectAll"><input type="checkbox" id="brandSelectAll" checked> Todas</label>
+    </div>`;
+  const list = dd.querySelector('.brandList');
+  sorted.forEach(b => {
+    list.innerHTML += `<label><input type="checkbox" value="${b.replace(/"/g,'&quot;')}" checked> ${b}</label>`;
+  });
+  STATE.selectedBrands = [];
+  document.getElementById('brandFilterBtn').textContent = 'Marcas';
+
+  const searchInput = dd.querySelector('.brandSearch');
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+    list.querySelectorAll('label:not(.selectAll)').forEach(l => {
+      l.classList.toggle('hide', q && !l.textContent.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().includes(q));
+    });
+  });
+
+  document.getElementById('brandSelectAll').addEventListener('change', e => {
+    list.querySelectorAll('input[type="checkbox"]:not(#brandSelectAll)').forEach(cb => cb.checked = e.target.checked);
+    applyBrandFilter();
+  });
+  list.querySelectorAll('input[type="checkbox"]:not(#brandSelectAll)').forEach(cb => {
+    cb.addEventListener('change', applyBrandFilter);
+  });
+}
+
+function applyBrandFilter() {
+  const dd = document.getElementById('brandFilterDropdown');
+  const checked = [];
+  dd.querySelectorAll('input[type="checkbox"]:not(#brandSelectAll)').forEach(cb => { if (cb.checked) checked.push(cb.value); });
+  const all = dd.querySelectorAll('input[type="checkbox"]:not(#brandSelectAll)');
+  const allChecked = all.length === checked.length;
+  document.getElementById('brandSelectAll').checked = allChecked;
+  document.getElementById('brandFilterBtn').textContent = checked.length && !allChecked ? `Marcas (${checked.length})` : 'Marcas';
+  STATE.selectedBrands = allChecked ? [] : checked;
+  render(false);
+}
+
+function renderDiscountConfig() {
+  const list = document.getElementById('discountList');
+  if (!list) return;
+  const brandSet = new Set();
+  STATE.data.forEach(d => {
+    if (!d.Rótulo) return;
+    if (STATE.selectedLoc && d.Localidad !== STATE.selectedLoc) return;
+    brandSet.add(d.Rótulo);
+  });
+  const dl = document.getElementById('brandOptions');
+  dl.innerHTML = '';
+  Array.from(brandSet).sort().forEach(b => {
+    const o = document.createElement('option');
+    o.value = b; dl.appendChild(o);
+  });
+  list.innerHTML = '';
+  Object.keys(STATE.discounts).forEach(brand => {
+    addDiscountRow(brand, STATE.discounts[brand]);
+  });
+}
+
+function addEmptyDiscountRow() {
+  addDiscountRow('', 0);
+}
+
+function addDiscountRow(brand, cents) {
+  const list = document.getElementById('discountList');
+  const row = document.createElement('div');
+  row.className = 'discount-row';
+  const brandInput = document.createElement('input');
+  brandInput.type = 'text';
+  brandInput.className = 'discountBrand';
+  brandInput.placeholder = 'Marca';
+  brandInput.setAttribute('list', 'brandOptions');
+  brandInput.value = brand;
+  const centsInput = document.createElement('input');
+  centsInput.type = 'number';
+  centsInput.className = 'discountCents';
+  centsInput.placeholder = '¢';
+  centsInput.value = cents;
+  centsInput.min = 0;
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'discountRemove';
+  removeBtn.textContent = '✕';
+  removeBtn.addEventListener('click', () => {
+    row.remove();
+    saveDiscountsFromUI();
+  });
+  [brandInput, centsInput].forEach(inp => inp.addEventListener('change', saveDiscountsFromUI));
+  row.appendChild(brandInput);
+  row.appendChild(centsInput);
+  row.appendChild(removeBtn);
+  list.appendChild(row);
+}
+
+function saveDiscountsFromUI() {
+  const newDiscounts = {};
+  document.querySelectorAll('.discount-row').forEach(row => {
+    const brand = row.querySelector('.discountBrand').value.trim();
+    const cents = parseInt(row.querySelector('.discountCents').value, 10);
+    if (brand && !isNaN(cents) && cents > 0) newDiscounts[brand] = cents;
+  });
+  STATE.discounts = newDiscounts;
+  saveState();
+  render(false);
+}
+
+function updatePosInfo() {
+  const el = document.getElementById('posInfo');
+  if (!el) return;
+  if (STATE.userLat != null && STATE.userLng != null) {
+    const lat = STATE.userLat.toFixed(4);
+    const lng = STATE.userLng.toFixed(4);
+    el.textContent = `${lat}, ${lng}`;
+  } else {
+    el.textContent = '';
+  }
+}

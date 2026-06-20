@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Propuesta C — Tabbed Navigator</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; color: #1a1a2e; height: 100vh; overflow: hidden; }
+
+.app { display: flex; flex-direction: column; height: 100vh; }
+
+/* === Top Bar === */
+.top-bar {
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+  z-index: 100;
+}
+.top-bar-main {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: linear-gradient(135deg, #1a73e8, #1557b0);
+  color: #fff;
+}
+.top-bar-main h1 { font-size: 1rem; font-weight: 600; }
+.top-bar-main .badge { font-size: 0.6rem; background: rgba(255,255,255,0.2); padding: 0.1rem 0.4rem; border-radius: 8px; }
+.top-bar-main .count { margin-left: auto; font-size: 0.78rem; opacity: 0.9; }
+
+/* === Compact filter bar === */
+.filter-bar {
+  display: flex; align-items: center; gap: 0.3rem;
+  padding: 0.3rem 0.5rem;
+  background: #fff;
+  flex-wrap: wrap;
+}
+.filter-pill {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 0.2rem 0.45rem; border: 1px solid #e0e0e0; border-radius: 16px;
+  font-size: 0.7rem; cursor: pointer; background: #fafafa;
+  white-space: nowrap; transition: all 0.15s;
+}
+.filter-pill:hover { border-color: #1a73e8; background: #f0f4ff; }
+.filter-pill.active { background: #e8f0fe; border-color: #1a73e8; color: #1a73e8; }
+.filter-pill .label { font-weight: 500; color: #666; font-size: 0.62rem; text-transform: uppercase; }
+.filter-pill .value { color: #333; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+.filter-pill .remove { margin-left: 0.1rem; cursor: pointer; color: #999; font-size: 0.65rem; }
+.filter-pill .remove:hover { color: #c62828; }
+.filter-bar .btn-icon {
+  background: none; border: none; cursor: pointer; font-size: 0.85rem;
+  padding: 0.2rem 0.3rem; border-radius: 50%; color: #666;
+}
+.filter-bar .btn-icon:hover { background: #f0f0f0; }
+
+/* === Content area === */
+.content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+#map { height: 100%; width: 100%; }
+
+/* === Table === */
+.table-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.table-toolbar {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.35rem 0.5rem; background: #fafafa; border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
+.table-toolbar input {
+  flex: 1; padding: 0.3rem 0.5rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.78rem;
+}
+.table-toolbar select { padding: 0.3rem 0.5rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.75rem; }
+.table-wrap { flex: 1; overflow: auto; }
+.table-wrap table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+.table-wrap thead { position: sticky; top: 0; z-index: 2; }
+.table-wrap th {
+  background: #f8f9fa; color: #333; padding: 0.35rem 0.3rem; cursor: pointer;
+  white-space: nowrap; font-size: 0.68rem; font-weight: 600; border-bottom: 2px solid #dee2e6;
+  position: sticky; top: 0; text-transform: uppercase; letter-spacing: 0.01em;
+}
+.table-wrap th:hover { color: #1a73e8; }
+.table-wrap th .arrow { margin-left: 2px; font-size: 0.55rem; color: #999; }
+.table-wrap td { padding: 0.3rem 0.3rem; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
+.table-wrap tr { cursor: pointer; }
+.table-wrap tr:hover td { background: #f8f9ff; }
+.table-wrap tr.selected td { background: #e8f4fd; }
+.table-wrap tr.cheapest td { background: #e8f5e9; }
+.table-wrap .price { font-weight: 600; font-variant-numeric: tabular-nums; }
+.table-wrap .fav-btn { cursor: pointer; color: #bbb; margin-right: 0.15rem; background: none; border: none; }
+.table-wrap .fav-btn.on { color: #f9a825; }
+.table-wrap .cheap-badge { display: inline-block; background: #2e7d32; color: #fff; font-size: 0.5rem; border-radius: 3px; padding: 0 3px; margin-left: 2px; }
+
+/* === Config panel === */
+.config-container {
+  flex: 1; overflow-y: auto; padding: 1rem 1.25rem; background: #f8f9fa;
+  display: none;
+}
+.config-container.active { display: block; }
+.config-section { background: #fff; border-radius: 10px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.config-section h3 { font-size: 0.82rem; margin-bottom: 0.5rem; color: #444; display: flex; align-items: center; gap: 0.4rem; }
+.config-section label { font-size: 0.78rem; display: flex; align-items: center; gap: 0.3rem; }
+.config-section input[type="number"] { width: 60px; padding: 0.2rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; }
+.config-section button { background: #1a73e8; color: #fff; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
+.config-section .discount-row { display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem; }
+.config-section .discount-row input[type="text"] { flex: 1; padding: 0.2rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.75rem; }
+.discount-remove { background: transparent; border: none; color: #c62828; cursor: pointer; font-size: 0.85rem; }
+
+/* === Filter Modal (mobile) === */
+.filter-modal {
+  display: none; position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,0.3);
+}
+.filter-modal.show { display: block; }
+.filter-modal-content {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  max-height: 80vh; background: #fff; border-radius: 16px 16px 0 0;
+  overflow-y: auto; padding: 1rem 1.25rem 2rem;
+  animation: slideUp 0.25s ease;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.filter-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid #eee;
+}
+.filter-modal-header h2 { font-size: 0.95rem; }
+.filter-modal-header button { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #666; }
+.filter-group { margin-bottom: 0.75rem; }
+.filter-group-label {
+  display: flex; align-items: center; gap: 0.3rem;
+  font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+  color: #888; margin-bottom: 0.3rem; letter-spacing: 0.02em;
+}
+.filter-group input, .filter-group select {
+  width: 100%; padding: 0.4rem 0.5rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.82rem;
+}
+.filter-group .btn {
+  padding: 0.4rem 0.6rem; border: 1px solid #ddd; border-radius: 6px;
+  background: #fff; cursor: pointer; font-size: 0.8rem;
+}
+.filter-group .btn-primary { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+.filter-group .btn-active { background: #fff8e1; color: #f9a825; border-color: #f9a825; }
+
+/* === Price legend === */
+.price-legend { display: flex; gap: 0.6rem; font-size: 0.68rem; color: #666; align-items: center; }
+.price-legend span { display: inline-flex; align-items: center; gap: 2px; }
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+.dot.g { background: #2e7d32; }
+.dot.o { background: #f57c00; }
+.dot.r { background: #b71c1c; }
+
+/* === Detail panel === */
+.detail-panel {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: #fff; border-radius: 12px 12px 0 0;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
+  padding: 0.75rem 1rem 1rem;
+  display: none; z-index: 100; max-height: 45vh; overflow-y: auto;
+}
+.detail-panel.show { display: block; animation: slideUp 0.2s ease; }
+.detail-panel .handle { width: 36px; height: 4px; background: #ddd; border-radius: 2px; margin: 0 auto 0.5rem; }
+.detail-panel h3 { font-size: 0.85rem; margin-bottom: 0.15rem; }
+.detail-panel .addr { font-size: 0.75rem; color: #666; margin-bottom: 0.4rem; }
+.detail-panel .fuels { display: grid; grid-template-columns: auto auto; gap: 0.1rem 0.8rem; font-size: 0.78rem; }
+.detail-panel .fuels span:nth-child(odd) { font-weight: 600; }
+.detail-panel .close-btn { position: absolute; top: 0.5rem; right: 0.7rem; cursor: pointer; font-size: 1.1rem; color: #999; background: none; border: none; }
+
+/* === Bottom Tabs === */
+.bottom-tabs {
+  display: flex; background: #fff; border-top: 1px solid #e0e0e0;
+  flex-shrink: 0; z-index: 100;
+}
+.bottom-tab {
+  flex: 1; text-align: center; padding: 0.4rem 0.25rem;
+  cursor: pointer; font-size: 0.65rem; color: #888;
+  border: none; background: none; transition: all 0.15s;
+  display: flex; flex-direction: column; align-items: center; gap: 0.1rem;
+}
+.bottom-tab .tab-icon { font-size: 1rem; }
+.bottom-tab.active { color: #1a73e8; border-top: 2px solid #1a73e8; margin-top: -1px; }
+.bottom-tab:hover { color: #333; }
+
+/* === Tab Content === */
+.tab-content { flex: 1; display: none; flex-direction: column; overflow: hidden; }
+.tab-content.active { display: flex; }
+.tab-content.map-mode #map { height: 100%; }
+.tab-content.table-mode { }
+.tab-content.both-mode { flex-direction: row; }
+.tab-content.both-mode .map-half { flex: 1; min-height: 0; }
+.tab-content.both-mode .table-half { flex: 1; display: flex; flex-direction: column; border-left: 1px solid #e0e0e0; overflow: hidden; }
+
+/* === Info bar === */
+.info-bar {
+  background: rgba(255,255,255,0.95);
+  border-top: 1px solid #e0e0e0;
+  padding: 0.25rem 0.75rem;
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.72rem; color: #666;
+  flex-shrink: 0;
+}
+.info-bar .pagination { margin-left: auto; display: flex; align-items: center; gap: 0.2rem; }
+.info-bar .pagination button {
+  background: transparent; border: 1px solid #ccc; border-radius: 3px;
+  padding: 0.1rem 0.35rem; cursor: pointer; font-size: 0.65rem;
+}
+.info-bar .pagination button:disabled { opacity: 0.3; cursor: default; }
+
+/* === Responsive === */
+@media (min-width: 769px) {
+  .filter-modal { display: none !important; }
+  .filter-pill .open-modal-btn { display: none; }
+}
+
+@media (max-width: 768px) {
+  .top-bar-main { padding: 0.4rem 0.5rem; }
+  .top-bar-main h1 { font-size: 0.85rem; }
+  .filter-pill { font-size: 0.65rem; padding: 0.15rem 0.35rem; }
+  .filter-pill .value { max-width: 60px; }
+  .table-wrap th { font-size: 0.62rem; padding: 0.25rem 0.15rem; }
+  .table-wrap td { font-size: 0.65rem; padding: 0.2rem 0.15rem; }
+  .detail-panel { font-size: 0.75rem; }
+  .filter-bar { padding: 0.2rem 0.35rem; gap: 0.2rem; }
+  .filter-bar .btn-icon { font-size: 0.75rem; }
+  .tab-content.both-mode { flex-direction: column; }
+  .tab-content.both-mode .table-half { border-left: none; border-top: 1px solid #e0e0e0; max-height: 45%; }
+}
+
+@media (max-width: 480px) {
+  .bottom-tab { font-size: 0.58rem; padding: 0.3rem 0.15rem; }
+  .bottom-tab .tab-icon { font-size: 0.85rem; }
+  .table-wrap th:nth-child(4),
+  .table-wrap td:nth-child(4) { display: none; }
+  .info-bar { font-size: 0.65rem; flex-wrap: wrap; }
+  .table-toolbar input { font-size: 0.72rem; }
+  .table-toolbar select { font-size: 0.7rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="top-bar-main">
+      <h1>⛽ Gasolineras</h1>
+      <span class="badge">ES</span>
+      <span class="count" id="resultCountC">0 estaciones</span>
+    </div>
+
+    <!-- Compact filter pills bar -->
+    <div class="filter-bar" id="filterBar">
+      <div class="filter-pill" data-filter="fuel" id="pillFuel">
+        <span class="label">⛽ Comb.</span>
+        <span class="value" id="pillFuelVal">Todos</span>
+      </div>
+      <div class="filter-pill" data-filter="prov" id="pillProv">
+        <span class="label">📍 Prov.</span>
+        <span class="value" id="pillProvVal">Todas</span>
+      </div>
+      <div class="filter-pill" data-filter="brand" id="pillBrand">
+        <span class="label">🏷️ Marca</span>
+        <span class="value" id="pillBrandVal">Todas</span>
+      </div>
+      <div class="filter-pill" data-filter="dist" id="pillDist">
+        <span class="label">📏 Dist.</span>
+        <span class="value" id="pillDistVal">—</span>
+      </div>
+      <button class="btn-icon" id="favBtnC" title="Favoritos">☆</button>
+      <div class="price-legend" style="margin-left:auto">
+        <span><span class="dot g"></span>&lt;1.50</span>
+        <span><span class="dot o"></span>1.50-1.70</span>
+        <span><span class="dot r"></span>&gt;1.70</span>
+      </div>
+      <button class="btn-icon" id="openFilterModal" style="display:none" title="Filtros">🔍</button>
+    </div>
+  </div>
+
+  <!-- Tab Content: Map -->
+  <div class="tab-content active" id="tabMap">
+    <div id="map"></div>
+  </div>
+
+  <!-- Tab Content: Table -->
+  <div class="tab-content" id="tabTable">
+    <div class="table-container">
+      <div class="table-toolbar">
+        <input type="text" id="tableSearchC" placeholder="🔍 Buscar en tabla...">
+        <select id="tablePageSizeC">
+          <option value="50">50</option>
+          <option value="100">100</option>
+          <option value="0">Todos</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table id="tableC">
+          <thead>
+            <tr>
+              <th style="width:1.2rem"></th>
+              <th data-col="Rótulo">Marca</th>
+              <th data-col="Precio">Precio</th>
+              <th data-col="Combustible">Combustible</th>
+              <th data-col="Provincia">Provincia</th>
+              <th data-col="Localidad">Localidad</th>
+              <th data-col="Dirección">Dirección</th>
+              <th data-col="Distancia">Distancia</th>
+            </tr>
+          </thead>
+          <tbody id="tableBodyC">
+            <tr><td colspan="8" style="text-align:center;color:#999;padding:2rem">Activa la geolocalización o selecciona una provincia</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="info-bar">
+        <span id="barInfoC">💡 Haz clic en una estación para ver detalle</span>
+        <div class="pagination">
+          <button disabled>◀</button>
+          <span id="pageInfoC">0 / 0</span>
+          <button disabled>▶</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Content: Ambos -->
+  <div class="tab-content both-mode" id="tabBoth">
+    <div class="map-half" id="bothMapHalf"><div id="mapBoth" style="height:100%;width:100%"></div></div>
+    <div class="table-half">
+      <div class="table-toolbar">
+        <input type="text" id="bothSearchC" placeholder="🔍 Buscar...">
+      </div>
+      <div class="table-wrap">
+        <table id="tableBothC">
+          <thead>
+            <tr>
+              <th data-col="Rótulo">Marca</th>
+              <th data-col="Precio">Precio</th>
+              <th data-col="Combustible">Comb.</th>
+              <th data-col="Distancia">Dist.</th>
+            </tr>
+          </thead>
+          <tbody id="tableBothBodyC"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Content: Config -->
+  <div class="config-container" id="tabConfig">
+    <div class="config-section">
+      <h3>🗑️ Caché de datos</h3>
+      <p style="font-size:0.75rem;color:#888;margin-bottom:0.3rem">Las provincias se almacenan en caché para evitar recargas.</p>
+      <label><input type="number" id="cacheTtlC" min="0" value="12"> horas de caché</label>
+      <button style="margin-left:0.5rem;background:#e65100">🗑️ Limpiar caché</button>
+    </div>
+    <div class="config-section">
+      <h3>🏷️ Descuentos por marca</h3>
+      <p style="font-size:0.75rem;color:#888;margin-bottom:0.3rem">Resta céntimos al precio mostrado por marca.</p>
+      <div id="discountListC">
+        <div class="discount-row">
+          <input type="text" placeholder="Marca" list="brandOpts" value="Repsol">
+          <input type="number" value="5" style="width:55px" placeholder="cts">
+          <button class="discount-remove">✕</button>
+        </div>
+      </div>
+      <button style="margin-top:0.3rem">+ Añadir marca</button>
+      <datalist id="brandOpts">
+        <option>Repsol</option><option>Cepsa</option><option>BP</option><option>Shell</option><option>Galp</option>
+      </datalist>
+    </div>
+  </div>
+
+  <!-- Detail Panel (bottom sheet) -->
+  <div class="detail-panel" id="detailPanelC">
+    <div class="handle"></div>
+    <button class="close-btn" id="detailCloseC">✕</button>
+    <h3 id="detailBrandC">Estación</h3>
+    <div class="addr" id="detailAddrC">Dirección, Localidad</div>
+    <div class="fuels" id="detailFuelsC">
+      <span>Gasolina 95 E5</span><span>1.459 €</span>
+      <span>Gasóleo A</span><span>1.329 €</span>
+    </div>
+  </div>
+
+  <!-- Bottom Tabs -->
+  <div class="bottom-tabs">
+    <button class="bottom-tab active" data-tab="tabMap">
+      <span class="tab-icon">🗺️</span> Mapa
+    </button>
+    <button class="bottom-tab" data-tab="tabTable">
+      <span class="tab-icon">☰</span> Tabla
+    </button>
+    <button class="bottom-tab" data-tab="tabBoth">
+      <span class="tab-icon">⊞</span> Ambos
+    </button>
+    <button class="bottom-tab" data-tab="tabConfig">
+      <span class="tab-icon">⚙️</span> Config
+    </button>
+  </div>
+
+  <!-- Filter Modal (mobile) -->
+  <div class="filter-modal" id="filterModal">
+    <div class="filter-modal-content">
+      <div class="filter-modal-header">
+        <h2>🔍 Filtros</h2>
+        <button id="closeFilterModal">✕</button>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-group-label">🔍 Búsqueda</div>
+        <input type="text" id="modalSearch" placeholder="Localidad, calle o marca...">
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-group-label">🎯 Ubicación</div>
+        <button class="btn btn-primary" style="width:100%;margin-bottom:0.3rem">📍 Geolocalizar</button>
+        <input type="number" id="modalDist" min="1" placeholder="Distancia máxima (km)">
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-group-label">⛽ Combustible</div>
+        <select id="modalFuel">
+          <option value="">Todos los combustibles</option>
+          <optgroup label="Gasolina">
+            <option>Gasolina 95 E5</option>
+            <option>Gasolina 98 E5</option>
+          </optgroup>
+          <optgroup label="Gasóleo">
+            <option>Gasóleo A</option>
+            <option>Gasóleo Premium</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-group-label">📍 Localización</div>
+        <select id="modalProv">
+          <option value="">— Provincia —</option>
+          <option>Madrid</option><option>Barcelona</option><option>Valencia</option>
+        </select>
+        <select id="modalLoc" style="margin-top:0.3rem">
+          <option value="">— Localidad —</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-group-label">🏷️ Marcas</div>
+        <select id="modalBrand">
+          <option value="">Todas las marcas</option>
+          <option>Repsol</option><option>Cepsa</option><option>BP</option><option>Shell</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-group-label">🗺️ Vista</div>
+        <div style="display:flex;gap:2px">
+          <button class="btn" style="flex:1;text-align:center;background:#1a73e8;color:#fff;border-color:#1a73e8">⊞ Ambos</button>
+          <button class="btn" style="flex:1;text-align:center">🗺️ Mapa</button>
+          <button class="btn" style="flex:1;text-align:center">☰ Tabla</button>
+        </div>
+        <select style="margin-top:0.3rem">
+          <option>🌐 Estilo: Calle</option>
+          <option>🛰️ Estilo: Satélite</option>
+        </select>
+      </div>
+
+      <button class="btn" style="width:100%;margin-top:0.5rem;text-align:center;background:#e0e0e0;border:none">✕ Limpiar todos los filtros</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const MOCK = [
+  { id: '1', rotulo: 'Repsol', precio: '1.459', combustible: 'Gasolina 95 E5', provincia: 'Madrid', localidad: 'Madrid', direccion: 'C/ Mayor 12', dist: '0.5', lat: 40.4168, lng: -3.7038, cheapest: true },
+  { id: '2', rotulo: 'Cepsa', precio: '1.429', combustible: 'Gasolina 95 E5', provincia: 'Madrid', localidad: 'Madrid', direccion: 'Av. Castilla 45', dist: '1.2', lat: 40.4200, lng: -3.7100, cheapest: false },
+  { id: '3', rotulo: 'BP', precio: '1.489', combustible: 'Gasóleo A', provincia: 'Madrid', localidad: 'Alcalá', direccion: 'C/ Sol 8', dist: '3.4', lat: 40.4820, lng: -3.3600, cheapest: false },
+  { id: '4', rotulo: 'Shell', precio: '1.399', combustible: 'Gasóleo A', provincia: 'Madrid', localidad: 'Madrid', direccion: 'Paseo Recoletos 23', dist: '0.8', lat: 40.4250, lng: -3.6900, cheapest: true },
+  { id: '5', rotulo: 'Galp', precio: '1.509', combustible: 'Gasolina 95 E5', provincia: 'Barcelona', localidad: 'Barcelona', direccion: 'C/ Marina 67', dist: null, lat: 41.3874, lng: 2.1686, cheapest: false },
+  { id: '6', rotulo: 'Repsol', precio: '1.379', combustible: 'Gasóleo Premium', provincia: 'Madrid', localidad: 'Móstoles', direccion: 'Av. Portugal 15', dist: '5.1', lat: 40.3222, lng: -3.8650, cheapest: true },
+];
+
+// Init maps
+function initMap(elId, lat, lng, zoom) {
+  const m = L.map(elId).setView([lat, lng], zoom);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(m);
+  addMarkersToMap(m);
+  return m;
+}
+
+function addMarkersToMap(mapInstance) {
+  MOCK.forEach(s => {
+    if (s.lat && s.lng) {
+      const marker = L.circleMarker([s.lat, s.lng], {
+        radius: 7, color: '#1a73e8', fillColor: '#fff', fillOpacity: 1, weight: 2
+      }).addTo(mapInstance);
+      marker.bindPopup(`<strong>${s.rotulo}</strong><br>${s.precio} €/L`);
+      marker._stationId = s.id;
+      marker.on('click', () => showDetailC(s.id));
+    }
+  });
+}
+
+const mapMain = initMap('map', 40.4168, -3.7038, 11);
+const mapBoth = initMap('mapBoth', 40.4168, -3.7038, 11);
+setTimeout(() => { mapMain.invalidateSize(); mapBoth.invalidateSize(); }, 200);
+
+// Tab switching
+document.querySelectorAll('.bottom-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.bottom-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+    document.getElementById('tabConfig').classList.remove('active');
+    const target = tab.dataset.tab;
+    if (target === 'tabConfig') {
+      document.getElementById('tabConfig').classList.add('active');
+    } else {
+      document.getElementById(target).classList.add('active');
+    }
+    setTimeout(() => { mapMain.invalidateSize(); mapBoth.invalidateSize(); }, 100);
+  });
+});
+
+// Detail
+function showDetailC(id) {
+  const s = MOCK.find(x => x.id === id);
+  if (!s) return;
+  const p = document.getElementById('detailPanelC');
+  document.getElementById('detailBrandC').textContent = `${s.rotulo} ⛽`;
+  document.getElementById('detailAddrC').textContent = `${s.direccion}, ${s.localidad} (${s.provincia})`;
+  document.getElementById('detailFuelsC').innerHTML = `
+    <span>Gasolina 95 E5</span><span>1.459 €</span>
+    <span>Gasóleo A</span><span>1.329 €</span>
+    <span>Gasóleo Premium</span><span>1.489 €</span>`;
+  p.classList.add('show');
+  document.getElementById('barInfoC').textContent = `${s.rotulo} — ${s.precio} €/L`;
+}
+
+document.getElementById('detailCloseC').addEventListener('click', () => {
+  document.getElementById('detailPanelC').classList.remove('show');
+});
+
+// Filter modal (mobile toggle)
+const isMobile = window.innerWidth <= 768;
+document.getElementById('openFilterModal').style.display = isMobile ? 'inline-block' : 'none';
+
+document.querySelectorAll('.filter-pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    if (window.innerWidth <= 768) {
+      document.getElementById('filterModal').classList.add('show');
+    }
+  });
+});
+
+document.getElementById('closeFilterModal').addEventListener('click', () => {
+  document.getElementById('filterModal').classList.remove('show');
+});
+
+document.getElementById('filterModal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('filterModal')) {
+    document.getElementById('filterModal').classList.remove('show');
+  }
+});
+
+// Table render
+function updateTables() {
+  ['tableBodyC', 'tableBothBodyC'].forEach(tid => {
+    const tbody = document.getElementById(tid);
+    tbody.innerHTML = MOCK.map(s =>
+      `<tr class="${s.cheapest ? 'cheapest' : ''}" onclick="showDetailC('${s.id}')">
+        <td>${s.cheapest ? '<span class="cheap-badge">$</span>' : ''}</td>
+        <td>${s.rotulo}</td>
+        <td class="price">${s.precio} €</td>
+        <td>${s.combustible}</td>
+        <td>${s.provincia}</td>
+        <td>${s.localidad}</td>
+        <td>${s.direccion}</td>
+        <td>${s.dist !== null ? s.dist + ' km' : '—'}</td>
+      </tr>`
+    ).join('');
+  });
+  document.getElementById('resultCountC').textContent = `${MOCK.length} estaciones`;
+}
+
+// Filter pills update
+function updatePills() {
+  // Demo: show some mock values
+  document.getElementById('pillFuelVal').textContent = 'Gasolina 95';
+  document.getElementById('pillProvVal').textContent = 'Madrid';
+}
+
+// Favorites
+document.getElementById('favBtnC').addEventListener('click', () => {
+  document.getElementById('favBtnC').classList.toggle('active');
+  document.getElementById('favBtnC').textContent =
+    document.getElementById('favBtnC').classList.contains('active') ? '★' : '☆';
+});
+
+// Responsive resize handler
+window.addEventListener('resize', () => {
+  const mobile = window.innerWidth <= 768;
+  document.getElementById('openFilterModal').style.display = mobile ? 'inline-block' : 'none';
+  if (!mobile) document.getElementById('filterModal').classList.remove('show');
+});
+
+// Init
+updateTables();
+updatePills();
+</script>
+</body>
+</html>

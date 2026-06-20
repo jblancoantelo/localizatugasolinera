@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Propuesta F — Dashboard Tabbed</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; color: #1a1a2e; height: 100vh; overflow: hidden; }
+
+.app { display: flex; flex-direction: column; height: 100vh; }
+
+/* === Top filter bar === */
+.top-bar { background: #fff; border-bottom: 1px solid #e0e0e0; z-index: 100; flex-shrink: 0; }
+.top-bar-head {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.35rem 1rem; background: linear-gradient(135deg, #1a73e8, #0d47a1); color: #fff;
+}
+.top-bar-head h1 { font-size: 0.9rem; font-weight: 600; }
+
+.filter-strip {
+  padding: 0.4rem 0.75rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: flex-end;
+}
+.filter-item { display: flex; flex-direction: column; gap: 0.15rem; }
+.filter-item label {
+  font-size: 0.58rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.03em; color: #888;
+}
+.filter-item input, .filter-item select {
+  padding: 0.25rem 0.4rem; border: 1px solid #d0d0d0; border-radius: 5px; font-size: 0.72rem; background: #fff;
+}
+.filter-item input:focus, .filter-item select:focus { border-color: #1a73e8; outline: none; box-shadow: 0 0 0 2px rgba(26,115,232,0.1); }
+.filter-item .btn {
+  padding: 0.25rem 0.45rem; border: 1px solid #d0d0d0; border-radius: 5px;
+  background: #fff; cursor: pointer; font-size: 0.72rem;
+  display: inline-flex; align-items: center; gap: 0.2rem; white-space: nowrap;
+}
+.filter-item .btn:hover { background: #f0f0f0; }
+.filter-item .btn-primary { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+.filter-item .btn-primary:hover { background: #1557b0; }
+.filter-item .btn-active { background: #fff8e1; color: #f9a825; border-color: #f9a825; }
+
+/* === Content area === */
+.content { flex: 1; display: flex; overflow: hidden; }
+
+/* === Active filters sidebar (desktop) === */
+.filters-active {
+  width: 200px; min-width: 200px; background: #fff;
+  border-right: 1px solid #e0e0e0; padding: 0.6rem 0.75rem;
+  display: flex; flex-direction: column; gap: 0.3rem;
+}
+.filters-active h3 {
+  font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.03em;
+  color: #888; margin-bottom: 0.2rem;
+}
+.filter-chip {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  font-size: 0.7rem; background: #e8f0fe; color: #1a73e8;
+  padding: 0.2rem 0.5rem; border-radius: 14px;
+}
+.filter-chip .remove { cursor: pointer; font-size: 0.65rem; color: #1a73e8; margin-left: 0.15rem; }
+.filter-chip .remove:hover { color: #c62828; }
+.filters-active .actions { margin-top: auto; display: flex; flex-direction: column; gap: 0.3rem; }
+.filters-active .actions button {
+  background: none; border: 1px solid #ddd; border-radius: 5px;
+  padding: 0.25rem 0.4rem; font-size: 0.7rem; cursor: pointer; text-align: left;
+}
+.filters-active .actions button:hover { background: #f5f5f5; }
+
+/* === Main area (tabbed) === */
+.main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.tab-bar {
+  display: flex; background: #fff; border-bottom: 1px solid #e0e0e0; flex-shrink: 0;
+}
+.tab-btn {
+  padding: 0.4rem 0.9rem; font-size: 0.72rem; cursor: pointer; border: none;
+  background: none; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  color: #666; transition: all 0.15s;
+  display: inline-flex; align-items: center; gap: 0.25rem;
+}
+.tab-btn:hover { color: #1a73e8; background: #f8f9ff; }
+.tab-btn.active { color: #1a73e8; border-bottom-color: #1a73e8; font-weight: 500; }
+.tab-btn-spacer { margin-left: auto; display: flex; align-items: center; padding: 0 0.5rem; }
+.tab-btn-spacer .count { font-size: 0.7rem; color: #888; }
+
+.tab-pane { flex: 1; display: none; flex-direction: column; overflow: hidden; }
+.tab-pane.active { display: flex; }
+
+#map { height: 100%; width: 100%; }
+
+.table-wrap { flex: 1; overflow: auto; }
+.table-wrap table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
+.table-wrap thead { position: sticky; top: 0; z-index: 2; }
+.table-wrap th {
+  background: #343a40; color: #fff; padding: 0.3rem 0.25rem; cursor: pointer;
+  white-space: nowrap; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.02em;
+}
+.table-wrap th:hover { background: #495057; }
+.table-wrap td { padding: 0.25rem; border-bottom: 1px solid #eee; white-space: nowrap; }
+.table-wrap tr { cursor: pointer; }
+.table-wrap tr:hover td { background: #f1f3f5; }
+.table-wrap tr.cheapest td { background: #e8f5e9; }
+.table-wrap .price { font-weight: 600; }
+.table-wrap .cheap-badge { display: inline-block; background: #2e7d32; color: #fff; font-size: 0.5rem; border-radius: 3px; padding: 0 3px; margin-left: 2px; }
+
+/* === Both === */
+.both-split { flex: 1; display: flex; overflow: hidden; }
+.both-split .map-half { flex: 1; }
+.both-split .table-half { flex: 1; border-left: 1px solid #e0e0e0; display: flex; flex-direction: column; }
+
+/* === Config === */
+.config-pane { flex: 1; overflow-y: auto; padding: 0.75rem; background: #f8f9fa; }
+.config-card { background: #fff; border-radius: 10px; padding: 0.75rem; margin-bottom: 0.6rem; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.config-card h3 { font-size: 0.78rem; margin-bottom: 0.4rem; color: #444; display: flex; align-items: center; gap: 0.3rem; }
+.config-card label { font-size: 0.72rem; display: flex; align-items: center; gap: 0.25rem; }
+.config-card input[type="number"] { width: 50px; padding: 0.2rem; border: 1px solid #ddd; border-radius: 4px; }
+.config-card button { background: #1a73e8; color: #fff; border: none; padding: 0.2rem 0.45rem; border-radius: 4px; cursor: pointer; font-size: 0.7rem; }
+.discount-row { display: flex; align-items: center; gap: 0.25rem; margin-bottom: 0.25rem; }
+.discount-row input[type="text"] { flex: 1; padding: 0.2rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.7rem; }
+
+/* === Search row === */
+.search-strip { padding: 0.25rem 0.5rem; display: flex; gap: 0.3rem; align-items: center; border-bottom: 1px solid #eee; }
+.search-strip input { flex: 1; padding: 0.25rem 0.4rem; border: 1px solid #ddd; border-radius: 5px; font-size: 0.72rem; }
+
+/* === Detail === */
+.detail-panel {
+  position: absolute; bottom: 0; right: 1rem; width: 300px;
+  background: #fff; border-radius: 10px 10px 0 0;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
+  padding: 0.6rem 0.9rem; display: none; z-index: 200; max-height: 40vh; overflow-y: auto;
+}
+.detail-panel.show { display: block; }
+.detail-panel h3 { font-size: 0.8rem; }
+.detail-panel .addr { font-size: 0.7rem; color: #666; margin-bottom: 0.3rem; }
+.detail-panel .fuels { display: grid; grid-template-columns: auto auto; gap: 0.05rem 0.6rem; font-size: 0.72rem; }
+.detail-panel .fuels span:nth-child(odd) { font-weight: 600; }
+.detail-panel .close-btn { position: absolute; top: 0.3rem; right: 0.5rem; cursor: pointer; font-size: 0.9rem; color: #999; background: none; border: none; }
+
+/* === Info bar === */
+.info-bar {
+  background: rgba(255,255,255,0.95); border-top: 1px solid #e0e0e0;
+  padding: 0.2rem 0.75rem; display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.68rem; color: #666; flex-shrink: 0;
+}
+.info-bar .pagination { margin-left: auto; display: flex; align-items: center; gap: 0.2rem; }
+.info-bar .pagination button { background: transparent; border: 1px solid #ccc; border-radius: 3px; padding: 0.1rem 0.35rem; cursor: pointer; font-size: 0.62rem; }
+
+.price-legend { display: inline-flex; gap: 0.35rem; font-size: 0.62rem; color: #777; align-items: center; }
+.price-legend span { display: inline-flex; align-items: center; gap: 2px; }
+.dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; }
+.dot.g { background: #2e7d32; }
+.dot.o { background: #f57c00; }
+.dot.r { background: #b71c1c; }
+
+/* === Responsive === */
+@media (max-width: 1024px) {
+  .filters-active { display: none; }
+  .filter-strip { gap: 0.35rem; }
+  .both-split { flex-direction: column; }
+  .both-split .table-half { border-left: none; border-top: 1px solid #e0e0e0; max-height: 40%; }
+}
+
+@media (max-width: 768px) {
+  .top-bar-head { padding: 0.3rem 0.6rem; }
+  .top-bar-head h1 { font-size: 0.8rem; }
+  .filter-strip { padding: 0.25rem 0.4rem; gap: 0.25rem; }
+  .filter-item label { font-size: 0.52rem; }
+  .filter-item input, .filter-item select { font-size: 0.65rem; padding: 0.18rem 0.3rem; max-width: 90px; }
+  .filter-item .btn { font-size: 0.65rem; padding: 0.18rem 0.3rem; }
+  .tab-btn { font-size: 0.65rem; padding: 0.3rem 0.5rem; }
+  .table-wrap th { font-size: 0.6rem; padding: 0.2rem; }
+  .table-wrap td { font-size: 0.62rem; padding: 0.18rem; }
+  .detail-panel { left: 0.5rem; right: 0.5rem; width: auto; }
+}
+
+@media (max-width: 480px) {
+  .tab-btn { font-size: 0.58rem; padding: 0.25rem 0.35rem; }
+  .table-wrap th:nth-child(4), .table-wrap td:nth-child(4),
+  .table-wrap th:nth-child(5), .table-wrap td:nth-child(5) { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Top bar -->
+  <div class="top-bar">
+    <div class="top-bar-head">
+      <h1>⛽ Panel de Gasolineras</h1>
+    </div>
+    <div class="filter-strip">
+      <div class="filter-item">
+        <label>🎯 Ubicación</label>
+        <div style="display:flex;gap:0.25rem">
+          <button class="btn btn-primary" id="geoBtn" style="padding:0.25rem 0.35rem">📍</button>
+          <input type="number" id="distInput" min="1" placeholder="km" style="width:50px">
+        </div>
+      </div>
+      <div class="filter-item">
+        <label>⛽ Combustible</label>
+        <select id="fuelSelect" style="max-width:110px">
+          <option value="">Todos</option>
+          <option>Gasolina 95 E5</option>
+          <option>Gasolina 98 E5</option>
+          <option>Gasóleo A</option>
+          <option>Gasóleo Premium</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>📍 Provincia</label>
+        <select id="provSelect" style="max-width:100px">
+          <option value="">Todas</option>
+          <option>Madrid</option>
+          <option>Barcelona</option>
+          <option>Valencia</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>🏷️ Marca</label>
+        <select id="brandSelect" style="max-width:90px">
+          <option value="">Todas</option>
+          <option>Repsol</option>
+          <option>Cepsa</option>
+          <option>BP</option>
+          <option>Shell</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>🔍 Búsqueda</label>
+        <input type="text" id="searchInput" placeholder="Localidad, calle..." style="min-width:120px">
+      </div>
+      <div class="filter-item" style="align-self:center">
+        <button class="btn btn-active" id="favBtn">☆ Fav</button>
+        <select id="styleSelect" style="max-width:70px;margin-left:0.2rem">
+          <option value="street">Calle</option>
+          <option value="satellite">Satélite</option>
+        </select>
+        <button class="btn" id="resetBtn" style="margin-left:0.2rem">✕</button>
+        <div class="price-legend" style="margin-left:0.5rem">
+          <span><span class="dot g"></span>&lt;1.50</span>
+          <span><span class="dot o"></span>1.50-1.70</span>
+          <span><span class="dot r"></span>&gt;1.70</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+    <!-- Active filters sidebar -->
+    <div class="filters-active">
+      <h3>Filtros activos</h3>
+      <div id="activeChips">
+        <div class="filter-chip">📍&lt; 10 km <span class="remove">✕</span></div>
+        <div class="filter-chip">⛽ Gasolina 95 <span class="remove">✕</span></div>
+      </div>
+      <div class="actions">
+        <button onclick="document.getElementById('resetBtn').click()">✕ Limpiar todos</button>
+        <button>☆ Solo favoritos</button>
+      </div>
+    </div>
+
+    <!-- Main area -->
+    <div class="main-area">
+      <!-- Tabs -->
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="tabMap">🗺️ Mapa</button>
+        <button class="tab-btn" data-tab="tabTable">☰ Tabla</button>
+        <button class="tab-btn" data-tab="tabBoth">⊞ Ambos</button>
+        <button class="tab-btn" data-tab="tabConfig">⚙️ Config</button>
+        <div class="tab-btn-spacer"><span class="count" id="resultCount">0 est.</span></div>
+      </div>
+
+      <!-- Mapa -->
+      <div class="tab-pane active" id="tabMap"><div id="map"></div></div>
+
+      <!-- Tabla -->
+      <div class="tab-pane" id="tabTable">
+        <div class="search-strip">
+          <input type="text" id="tableSearch" placeholder="🔍 Buscar en tabla...">
+          <select style="padding:0.2rem 0.3rem;border:1px solid #ddd;border-radius:4px;font-size:0.7rem">
+            <option>50</option><option>100</option><option>Todos</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table id="tableMain">
+            <thead><tr>
+              <th style="width:1.2rem"></th>
+              <th data-col="Rótulo">Marca</th>
+              <th data-col="Precio">Precio</th>
+              <th data-col="Combustible">Comb.</th>
+              <th data-col="Provincia">Prov.</th>
+              <th data-col="Localidad">Localidad</th>
+              <th data-col="Dirección">Dirección</th>
+              <th data-col="Distancia">Dist.</th>
+            </tr></thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Ambos -->
+      <div class="tab-pane" id="tabBoth">
+        <div class="both-split">
+          <div class="map-half"><div id="mapBoth" style="height:100%;width:100%"></div></div>
+          <div class="table-half">
+            <div class="search-strip"><input type="text" id="bothSearch" placeholder="Buscar..."></div>
+            <div class="table-wrap">
+              <table id="tableBoth"><thead><tr>
+                <th data-col="Rótulo">Marca</th><th data-col="Precio">Precio</th>
+                <th data-col="Combustible">Comb.</th><th data-col="Distancia">Dist.</th>
+              </tr></thead><tbody id="tableBothBody"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Config -->
+      <div class="tab-pane" id="tabConfig">
+        <div class="config-pane">
+          <div class="config-card">
+            <h3>🗑️ Caché de datos</h3>
+            <p style="font-size:0.7rem;color:#888;margin-bottom:0.25rem">Las provincias se almacenan localmente.</p>
+            <label><input type="number" value="12"> horas de caché</label>
+            <button style="margin-left:0.3rem;background:#e65100">🗑️ Limpiar</button>
+          </div>
+          <div class="config-card">
+            <h3>🏷️ Descuentos</h3>
+            <div id="discountList">
+              <div class="discount-row">
+                <input type="text" placeholder="Marca" list="brandOpts" value="Repsol">
+                <input type="number" value="5" style="width:45px">
+                <button style="background:#c62828;color:#fff;border:none;padding:0.15rem 0.35rem;border-radius:4px;cursor:pointer">✕</button>
+              </div>
+            </div>
+            <button style="margin-top:0.25rem">+ Añadir</button>
+            <datalist id="brandOpts">
+              <option>Repsol</option><option>Cepsa</option><option>BP</option><option>Shell</option>
+            </datalist>
+          </div>
+          <div class="config-card">
+            <h3>🗺️ Preferencias</h3>
+            <label style="margin-bottom:0.2rem"><input type="checkbox" checked> Leyenda precios</label>
+            <label><input type="checkbox"> Marcar más barata</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail -->
+  <div class="detail-panel" id="detailPanel">
+    <button class="close-btn" id="detailClose">✕</button>
+    <h3 id="detailBrand">Estación</h3>
+    <div class="addr" id="detailAddr">Dirección</div>
+    <div class="fuels" id="detailFuels">
+      <span>Gasolina 95</span><span>1.459 €</span>
+      <span>Gasóleo A</span><span>1.329 €</span>
+    </div>
+  </div>
+
+  <!-- Info bar -->
+  <div class="info-bar">
+    <span id="barInfo">💡 Estación seleccionada</span>
+    <div class="pagination">
+      <button disabled>◀</button>
+      <span id="pageInfo">0 / 0</span>
+      <button disabled>▶</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const MOCK = [
+  { id: '1', rotulo: 'Repsol', precio: '1.459', combustible: 'Gasolina 95 E5', provincia: 'Madrid', localidad: 'Madrid', direccion: 'C/ Mayor 12', dist: '0.5', lat: 40.4168, lng: -3.7038, cheapest: true },
+  { id: '2', rotulo: 'Cepsa', precio: '1.429', combustible: 'Gasolina 95 E5', provincia: 'Madrid', localidad: 'Madrid', direccion: 'Av. Castilla 45', dist: '1.2', lat: 40.4200, lng: -3.7100, cheapest: false },
+  { id: '3', rotulo: 'BP', precio: '1.489', combustible: 'Gasóleo A', provincia: 'Madrid', localidad: 'Alcalá', direccion: 'C/ Sol 8', dist: '3.4', lat: 40.4820, lng: -3.3600, cheapest: false },
+  { id: '4', rotulo: 'Shell', precio: '1.399', combustible: 'Gasóleo A', provincia: 'Madrid', localidad: 'Madrid', direccion: 'Paseo Recoletos 23', dist: '0.8', lat: 40.4250, lng: -3.6900, cheapest: true },
+  { id: '5', rotulo: 'Galp', precio: '1.509', combustible: 'Gasolina 95 E5', provincia: 'Barcelona', localidad: 'Barcelona', direccion: 'C/ Marina 67', dist: null, lat: 41.3874, lng: 2.1686, cheapest: false },
+  { id: '6', rotulo: 'Repsol', precio: '1.379', combustible: 'Gasóleo Premium', provincia: 'Madrid', localidad: 'Móstoles', direccion: 'Av. Portugal 15', dist: '5.1', lat: 40.3222, lng: -3.8650, cheapest: true },
+];
+
+function initMap(el) {
+  const m = L.map(el).setView([40.4168, -3.7038], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(m);
+  MOCK.forEach(s => { if (s.lat && s.lng) {
+    const mk = L.circleMarker([s.lat, s.lng], { radius: 7, color: '#1a73e8', fillColor: '#fff', fillOpacity: 1, weight: 2 }).addTo(m);
+    mk.bindPopup(`<strong>${s.rotulo}</strong><br>${s.precio} €/L`);
+    mk._sid = s.id; mk.on('click', () => showDetail(s.id));
+  }});
+  return m;
+}
+const map1 = initMap('map'); const map2 = initMap('mapBoth');
+setTimeout(() => { map1.invalidateSize(); map2.invalidateSize(); }, 200);
+
+document.querySelectorAll('.tab-btn').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.tab-pane').forEach(tc => tc.classList.remove('active'));
+    document.getElementById(tab.dataset.tab).classList.add('active');
+    setTimeout(() => { map1.invalidateSize(); map2.invalidateSize(); }, 100);
+  });
+});
+
+function showDetail(id) {
+  const s = MOCK.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('detailPanel').classList.add('show');
+  document.getElementById('detailBrand').textContent = `${s.rotulo} ⛽`;
+  document.getElementById('detailAddr').textContent = `${s.direccion}, ${s.localidad}`;
+  document.getElementById('detailFuels').innerHTML = `
+    <span>Gasolina 95 E5</span><span>1.459 €</span>
+    <span>Gasóleo A</span><span>1.329 €</span>
+    <span>Gasóleo Premium</span><span>1.489 €</span>`;
+  document.getElementById('barInfo').textContent = `${s.rotulo} — ${s.precio} €/L`;
+}
+document.getElementById('detailClose').addEventListener('click', () => document.getElementById('detailPanel').classList.remove('show'));
+
+function renderTable() {
+  const f = [...MOCK];
+  document.getElementById('resultCount').textContent = `${f.length} est.`;
+  ['tableBody', 'tableBothBody'].forEach(tid => {
+    const tb = document.getElementById(tid);
+    tb.innerHTML = f.map(s =>
+      `<tr class="${s.cheapest ? 'cheapest' : ''}" onclick="showDetail('${s.id}')">
+        <td>${s.cheapest ? '<span class="cheap-badge">$</span>' : ''}</td>
+        <td>${s.rotulo}</td>
+        <td class="price">${s.precio} €</td>
+        <td>${s.combustible}</td>
+        ${tid === 'tableBody' ? `<td>${s.provincia}</td><td>${s.localidad}</td><td>${s.direccion}</td>` : ''}
+        <td>${s.dist !== null ? s.dist + ' km' : '—'}</td>
+      </tr>`
+    ).join('');
+  });
+}
+
+document.getElementById('searchInput').addEventListener('input', renderTable);
+document.getElementById('fuelSelect').addEventListener('change', renderTable);
+document.getElementById('provSelect').addEventListener('change', renderTable);
+document.getElementById('brandSelect').addEventListener('change', renderTable);
+document.getElementById('distInput').addEventListener('input', renderTable);
+document.getElementById('resetBtn').addEventListener('click', () => {
+  document.getElementById('searchInput').value = ''; document.getElementById('fuelSelect').value = '';
+  document.getElementById('provSelect').value = ''; document.getElementById('brandSelect').value = '';
+  document.getElementById('distInput').value = ''; renderTable();
+});
+document.getElementById('geoBtn').addEventListener('click', function() {
+  this.textContent = '🔄';
+  setTimeout(() => { this.textContent = '📍'; map1.setView([40.4168, -3.7038], 13); map2.setView([40.4168, -3.7038], 13); }, 1000);
+});
+document.getElementById('favBtn').addEventListener('click', function() {
+  this.classList.toggle('btn-active');
+  this.textContent = this.classList.contains('btn-active') ? '★ Fav' : '☆ Fav';
+});
+document.getElementById('styleSelect').addEventListener('change', (e) => {
+  const u = e.target.value === 'satellite' ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+  [map1, map2].forEach(m => { m.eachLayer(l => { if (l._url) m.removeLayer(l); }); L.tileLayer(u, { maxZoom: 19 }).addTo(m); });
+});
+
+renderTable();
+</script>
+</body>
+</html>
