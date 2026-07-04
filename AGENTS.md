@@ -7,6 +7,8 @@
    Get-Process -Name "node" -ErrorAction SilentlyContinue | Stop-Process -Force
    node test/full_test.mjs
    ```
+   Si los tests no existen o fallan, no continuar hasta que pasen todos.
+
 2. **Commit + push** tras cada cambio significativo:
    ```powershell
    git add -A
@@ -40,7 +42,7 @@ El test "Clase CSS + panel + botón activo en todas las vistas" detecta mismatch
   - `.detail-panel`: `z-index: 200; position: absolute`
   - `#brandFilterDropdown`: `z-index: 10000; position: fixed`
 
-### Persistencia provincia tras F5
+### Persistencia estado tras F5
 - `loadState()` en `main.js` DEBE restaurar `STATE.selectedProv` ANTES de `setActiveTab()`
 - Razón: `setActiveTab()` llama a `saveState()` vía microtask (`Promise.resolve().then()`)
 - Si `selectedProv` no se restaura primero, el microtask sobrescribe localStorage con `''`
@@ -51,6 +53,8 @@ Orden correcto en `main.js`:
 if (saved.selectedProv) STATE.selectedProv = saved.selectedProv;
 if (saved.activeTab) setActiveTab(saved.activeTab);
 ```
+
+**Regla general**: cada propiedad guardada en `saveState()` (storage.js) debe tener su restauración correspondiente en `loadState()` (`main.js`). Las que faltan actualmente: `selectedFuel`, `selectedLoc`, `maxDistance`, `userLat`/`userLng`. Las que no necesitan restauración en `loadState` se restauran desde `loadProvinceFilters` dentro de `fetchProvinceData()`.
 
 ### Tests
 - Ubicación: `test/full_test.mjs`
