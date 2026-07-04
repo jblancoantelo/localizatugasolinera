@@ -24,80 +24,140 @@
 <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <div id="main">
+<div class="app">
+  <div class="toolbar">
+    <div class="toolbar-header">
+      <h1>⛽ Gasolina España</h1>
+      <span class="badge">Oficial</span>
+      <span class="count" id="resultCount">0 estaciones</span>
+    </div>
+    <div class="toolbar-groups">
+      <div class="filter-group">
+        <span class="filter-group-label">🎯 Ubicación</span>
+        <button class="btn btn-primary" id="geolocBtn">📍</button>
+        <input type="number" id="maxDistance" min="1" placeholder="km" style="width:50px">
+      </div>
+      <div class="filter-group">
+        <span class="filter-group-label">⛽ Combustible</span>
+        <select id="fuelFilter" style="max-width:100px"><option value="">Todos</option></select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-group-label">📍 Provincia</span>
+        <select id="provFilter" style="max-width:90px"><option value="">Todas</option></select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-group-label">🏘️ Localidad</span>
+        <select id="locFilter" style="max-width:90px"><option value="">Todas</option></select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-group-label">🏷️ Marca</span>
+        <button class="btn" id="brandFilterBtn">Todas</button>
+      </div>
+      <div class="filter-group actions-group">
+        <button class="btn" id="favToggleBtn" title="Favoritos">☆</button>
+        <select id="mapStyle" style="max-width:70px">
+          <option value="street">Calle</option>
+          <option value="satellite">Satélite</option>
+          <option value="standard">Estándar</option>
+          <option value="cycling">Ciclismo</option>
+        </select>
+        <button class="btn" id="resetFiltersBtn" title="Limpiar filtros">✕</button>
+        <div class="price-legend" id="legend"><span><span class="dot g"></span> &lt;1.50</span><span><span class="dot o"></span> 1.50–1.70</span><span><span class="dot r"></span> &gt;1.70</span></div>
+      </div>
+    </div>
+    <div class="search-row">
+      <input type="text" id="search" placeholder="Buscar localidad, calle o marca...">
+    </div>
+  </div>
+
+  <div class="content" id="contentArea">
     <div id="noProvinceMsg">
       <div class="msg-content">
         <h2>Precios Gasolina España</h2>
         <p>Selecciona una provincia para consultar los precios de combustible en sus estaciones de servicio.</p>
-        <div class="msg-prov-select">
-          <select id="provFilterInit"><option value="">— Selecciona una provincia —</option></select>
+      </div>
+    </div>
+    <div id="map"></div>
+    <div class="table-area">
+      <div class="table-wrap">
+        <table id="table"><thead><tr>
+          <th data-col="Rótulo">Marca<span class="arrow"></span></th>
+          <th data-col="Precio">Precio<span class="arrow"></span></th>
+          <th data-col="Combustible">Combustible<span class="arrow"></span></th>
+          <th data-col="Provincia">Provincia<span class="arrow"></span></th>
+          <th data-col="Localidad">Localidad<span class="arrow"></span></th>
+          <th data-col="Dirección">Calle<span class="arrow"></span></th>
+          <th data-col="Distancia">Distancia<span class="arrow"></span></th>
+        </tr></thead><tbody id="tableBody"></tbody></table>
+      </div>
+    </div>
+    <div class="both-table-area">
+      <div class="table-wrap">
+        <table id="tableBoth"><thead><tr>
+          <th data-col="Rótulo">Marca<span class="arrow"></span></th>
+          <th data-col="Precio">Precio<span class="arrow"></span></th>
+          <th data-col="Combustible">Combustible<span class="arrow"></span></th>
+          <th data-col="Distancia">Distancia<span class="arrow"></span></th>
+        </tr></thead><tbody id="tableBothBody"></tbody></table>
+      </div>
+    </div>
+    <div class="config-area">
+      <div class="config-container">
+        <div class="config-card">
+          <h3>🗑️ Caché de datos</h3>
+          <p class="config-desc">Las provincias se almacenan localmente para evitar recargas innecesarias.</p>
+          <div id="cacheInfo" class="cache-line"></div>
+          <div id="provCacheInfo" class="cache-line muted"></div>
+          <label><input type="number" id="cacheTtl" min="0" value="12"> horas de caché</label>
+          <button id="clearCacheBtn" class="btn-del">🗑️ Limpiar caché</button>
+        </div>
+        <div class="config-card">
+          <h3>🏷️ Descuentos por marca</h3>
+          <p class="config-desc">Resta céntimos al precio mostrado por marca.</p>
+          <div id="discountList"></div>
+          <button id="addDiscountBtn">+ Añadir marca</button>
+          <datalist id="brandOptions"></datalist>
+        </div>
+        <div class="config-card">
+          <h3>📄 Paginación</h3>
+          <label>Resultados por página:
+            <select id="pageSize">
+              <option value="50">50</option>
+              <option value="200">200</option>
+              <option value="300">300</option>
+              <option value="500">500</option>
+              <option value="0">Todos</option>
+            </select>
+          </label>
         </div>
       </div>
     </div>
-    <div id="map" class="hide"></div>
-      <div id="resizeHandle"></div>
-      <div id="panel">
-      <div id="controls">
-        <input type="text" id="search" placeholder="Buscar localidad, calle o marca...">
-        <select id="fuelFilter"><option value="">Combustible</option></select>
-        <select id="provFilter"><option value="">Provincia</option></select>
-        <select id="locFilter"><option value="">Localidad</option></select>
-      <div id="brandFilterWrap">
-        <button id="brandFilterBtn">Marcas</button>
-        <div id="brandFilterDropdown"></div>
-      </div>
-      <input type="number" id="maxDistance" min="1" placeholder="Dist. máx (km)" title="Filtrar por distancia máxima desde tu posición">
-      <select id="pageSize">
-        <option value="50">50</option>
-        <option value="200">200</option>
-        <option value="300">300</option>
-        <option value="500">500</option>
-        <option value="0">Todos</option>
-      </select>
-      <button id="geolocBtn">📍</button>
-      <span id="posInfo"></span>
-      <select id="mapStyle">
-        <option value="street">Calle</option>
-        <option value="satellite">Satélite</option>
-        <option value="standard">Estándar</option>
-        <option value="cycling">Ciclismo</option>
-      </select>
-      <button id="configToggleBtn" title="Configuración">⚙️</button>
-      <button id="favToggleBtn" title="Favoritos">☆</button>
-      <button id="resetFiltersBtn" title="Limpiar filtros">✕</button>
-      <div id="viewBtns">
-        <button data-mode="normal" class="active" title="Completa">⊞</button>
-        <button data-mode="map" title="Solo mapa">🗺</button>
-        <button data-mode="table" title="Solo tabla">☰</button>
-      </div>
-      <div id="legend"><span><span class="dot g"></span> &lt;1.50</span><span><span class="dot o"></span> 1.50–1.70</span><span><span class="dot r"></span> &gt;1.70</span></div>
+
+    <div class="detail-panel" id="detailPanel">
+      <div class="handle"></div>
+      <button class="close-btn" id="detailClose">✕</button>
+      <h3 id="detailBrand"></h3>
+      <div class="addr" id="detailAddr"></div>
+      <div class="fuels" id="detailFuels"></div>
     </div>
-    <div id="configPanel">
-      <div class="config-section">
-        <h4>Cache</h4>
-        <div id="cacheInfo" style="font-size:0.78rem;color:#666;margin-bottom:0.3rem;"></div>
-        <div id="provCacheInfo" style="font-size:0.78rem;color:#888;margin-bottom:0.3rem;word-break:break-all;"></div>
-        <label><input type="number" id="cacheTtl" min="0" value="12"> horas</label>
-        <button id="clearCacheBtn">🗑 Limpiar</button>
-      </div>
-      <div class="config-section">
-        <h4>Descuentos por marca</h4>
-        <div id="discountList"></div>
-        <button id="addDiscountBtn">+ Añadir marca</button>
-      </div>
-      <datalist id="brandOptions"></datalist>
+  </div>
+
+  <div id="brandFilterDropdown"></div>
+  <div class="info-bar">
+    <span id="infoText">💡 Selecciona una provincia para comenzar</span>
+    <span id="posInfo"></span>
+    <div class="pagination" id="pageNav">
+      <button id="prevPage">◀</button>
+      <span id="pageInfo">0 / 0</span>
+      <button id="nextPage">▶</button>
     </div>
-    <div id="detail"></div>
-    <div id="tableWrap"><table id="table"><thead><tr>
-      <th data-col="Rótulo">Marca<span class="arrow"></span></th>
-      <th data-col="Precio">Precio<span class="arrow"></span></th>
-      <th data-col="Combustible">Combustible<span class="arrow"></span></th>
-      <th data-col="Provincia">Provincia<span class="arrow"></span></th>
-      <th data-col="Localidad">Localidad<span class="arrow"></span></th>
-      <th data-col="Dirección">Calle<span class="arrow"></span></th>
-      <th data-col="Distancia">Distancia<span class="arrow"></span></th>
-    </tr></thead><tbody></tbody></table></div>
-    <div id="info"><span id="infoText">Cargando datos...</span><span id="pageNav"><button id="prevPage">◀</button><span id="pageInfo"></span><button id="nextPage">▶</button></span></div>
+  </div>
+
+  <div class="bottom-tabs">
+    <button class="bottom-tab active" data-tab="tab-map"><span class="tab-icon">🗺️</span> Mapa</button>
+    <button class="bottom-tab" data-tab="tab-table"><span class="tab-icon">☰</span> Tabla</button>
+    <button class="bottom-tab" data-tab="tab-both"><span class="tab-icon">⊞</span> Ambos</button>
+    <button class="bottom-tab" data-tab="tab-config"><span class="tab-icon">⚙️</span> Config</button>
   </div>
 </div>
 <script src="js/state.js"></script>

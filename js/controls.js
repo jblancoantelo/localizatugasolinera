@@ -29,6 +29,10 @@ function render(fitBounds) {
   }
   s.filtered = arr;
 
+  const idsHash = arr.map(d => d.IDEESS).join(',');
+  const filteredChanged = idsHash !== s._prevFilteredIds;
+  s._prevFilteredIds = idsHash;
+
   const cheapestMap = {};
   arr.forEach(d => {
     const p = getSelectedFuelPrice(d);
@@ -56,8 +60,8 @@ function render(fitBounds) {
   }
   allPrices.sort((a,b) => a-b);
   if (allPrices.length >= 3) {
-s._lo = allPrices[Math.floor(allPrices.length * 0.20)];
-s._hi = allPrices[Math.floor(allPrices.length * 0.60)];
+    s._lo = allPrices[Math.floor(allPrices.length * 0.20)];
+    s._hi = allPrices[Math.floor(allPrices.length * 0.60)];
   } else {
     s._lo = undefined;
     s._hi = undefined;
@@ -70,13 +74,21 @@ s._hi = allPrices[Math.floor(allPrices.length * 0.60)];
   }
   doSort();
   document.getElementById('infoText').textContent = `${arr.length}${s.selectedProv ? ' de ' + s.data.length + ' en ' + s.selectedProv : ''}${_cacheExpiryLabel}`;
-  updateMarkers(fitBounds, (id) => {
-    render(false);
-    const m2 = STATE.markerMap[id];
-    if (m2) m2.openPopup();
-    const row = document.querySelector(`tr[data-id="${id}"]`);
-    if (row) row.scrollIntoView({ block: 'center' });
-  });
+  document.getElementById('resultCount').textContent = `${arr.length} estaciones`;
+
+  if (filteredChanged) {
+    updateMarkers(fitBounds, (id) => {
+      render(false);
+      const m2 = STATE.markerMap[id];
+      if (m2) m2.openPopup();
+      const row = document.querySelector(`tr[data-id="${id}"]`);
+      if (row) row.scrollIntoView({ block: 'center' });
+    });
+  } else if (fitBounds && s.markers.length) {
+    const bounds = s.markers.map(m => m.getLatLng());
+    if (bounds.length) s.map.fitBounds(bounds, { padding: [20,20], maxZoom: 14 });
+  }
+
   const favBtn = document.getElementById('favToggleBtn');
   if (favBtn) {
     favBtn.classList.toggle('active', s.showFavoritesOnly);
@@ -91,22 +103,31 @@ function toggleFavorite(id) {
   const idx = s.favorites.indexOf(id);
   if (idx >= 0) s.favorites.splice(idx, 1);
   else s.favorites.push(id);
-  saveState();
+  render(false);
 }
 
-function setViewMode(mode) {
-  const s = STATE, main = document.getElementById('main');
-  ['normal','map','table'].forEach(m => main.classList.remove('mode-'+m));
-  main.classList.add('mode-'+mode);
-  s.viewMode = mode;
-  const mapEl = document.getElementById('map');
-  if (mode === 'map') {
-    mapEl.style.height = '';
-  } else if (mode === 'normal' && s.mapHeight) {
-    mapEl.style.height = s.mapHeight + 'px';
+function setActiveTab(tabId) {
+  const s = STATE;
+  s.activeTab = tabId;
+  const ca = document.getElementById('contentArea');
+  const hasNoProvince = ca.classList.contains('no-province');
+  ca.className = 'content ' + tabId;
+  if (hasNoProvince) ca.classList.add('no-province');
+
+  document.querySelectorAll('.bottom-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tabId);
+  });
+
+  if (tabId === 'tab-config') {
+    renderDiscountConfig();
+    renderCacheInfo();
+    renderProvinceCacheInfo();
   }
-  document.querySelectorAll('#viewBtns button').forEach(b => b.classList.toggle('active', b.dataset.mode===mode));
-  if (s.map) setTimeout(() => s.map.invalidateSize(), 100);
+
+  if (tabId === 'tab-map' || tabId === 'tab-both') {
+    if (s.map) setTimeout(() => s.map.invalidateSize(), 100);
+  }
+
   saveState();
 }
 
@@ -143,8 +164,23 @@ function populateBrandFilter() {
   sorted.forEach(b => {
     list.innerHTML += `<label><input type="checkbox" value="${b.replace(/"/g,'&quot;')}" checked> ${b}</label>`;
   });
-  STATE.selectedBrands = [];
-  document.getElementById('brandFilterBtn').textContent = 'Marcas';
+
+  const saved = loadProvinceFilters(STATE.selectedProv);
+  const savedBrands = saved ? saved.selectedBrands || [] : [];
+  if (savedBrands.length) {
+    list.querySelectorAll('input[type="checkbox"]:not(#brandSelectAll)').forEach(cb => {
+      cb.checked = savedBrands.includes(cb.value);
+    });
+    const all = list.querySelectorAll('input[type="checkbox"]:not(#brandSelectAll)');
+    const allChecked = all.length === list.querySelectorAll('input[type="checkbox"]:not(#brandSelectAll):checked').length;
+    document.getElementById('brandSelectAll').checked = allChecked;
+    STATE.selectedBrands = allChecked ? [] : savedBrands;
+  } else {
+    STATE.selectedBrands = [];
+  }
+
+  const hasSelection = STATE.selectedBrands.length > 0;
+  document.getElementById('brandFilterBtn').textContent = hasSelection ? `Marcas (${STATE.selectedBrands.length})` : 'Todas';
 
   const searchInput = dd.querySelector('.brandSearch');
   searchInput.addEventListener('input', () => {
@@ -170,7 +206,7 @@ function applyBrandFilter() {
   const all = dd.querySelectorAll('input[type="checkbox"]:not(#brandSelectAll)');
   const allChecked = all.length === checked.length;
   document.getElementById('brandSelectAll').checked = allChecked;
-  document.getElementById('brandFilterBtn').textContent = checked.length && !allChecked ? `Marcas (${checked.length})` : 'Marcas';
+  document.getElementById('brandFilterBtn').textContent = checked.length && !allChecked ? `Marcas (${checked.length})` : 'Todas';
   STATE.selectedBrands = allChecked ? [] : checked;
   render(false);
 }

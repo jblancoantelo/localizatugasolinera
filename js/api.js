@@ -4,16 +4,14 @@ function populateProvinceSelect(provinces) {
   STATE.provinceIdMap = {};
   provinces.forEach(p => { STATE.provinceIdMap[p.name] = p.id; });
   const sorted = provinces.sort((a, b) => a.name.localeCompare(b.name));
-  ['provFilter', 'provFilterInit'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    sel.innerHTML = '<option value="">— Selecciona una provincia —</option>';
-    sorted.forEach(p => {
-      const o = document.createElement('option');
-      o.value = p.name;
-      o.textContent = p.name;
-      sel.appendChild(o);
-    });
+  const sel = document.getElementById('provFilter');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Selecciona una provincia —</option>';
+  sorted.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.name;
+    o.textContent = p.name;
+    sel.appendChild(o);
   });
 }
 
@@ -36,28 +34,25 @@ function populateFuelFilter(data) {
   });
 }
 
+function setLoading(active) {
+  document.getElementById('contentArea').classList.toggle('loading', active);
+}
+
 function showProvinceScreen() {
-  document.getElementById('noProvinceMsg').classList.remove('hide');
-  document.getElementById('map').classList.add('hide');
-  document.getElementById('tableWrap').classList.add('hide');
-  document.getElementById('info').classList.add('hide');
-  document.getElementById('legend').classList.add('hide');
+  document.getElementById('contentArea').classList.add('no-province');
   STATE.data = [];
   STATE.filtered = [];
 }
 
 function showDataScreen() {
-  document.getElementById('noProvinceMsg').classList.add('hide');
-  document.getElementById('map').classList.remove('hide');
-  document.getElementById('tableWrap').classList.remove('hide');
-  document.getElementById('info').classList.remove('hide');
-  document.getElementById('legend').classList.remove('hide');
+  document.getElementById('contentArea').classList.remove('no-province');
   if (STATE.map) setTimeout(() => STATE.map.invalidateSize(), 50);
 }
 
 async function fetchProvinces() {
   showProvinceScreen();
   document.getElementById('infoText').textContent = 'Cargando lista de provincias...';
+  setActiveTab('tab-map');
 
   let provinces = await getCachedProvinces();
   if (provinces && provinces.length && typeof provinces[0].id === 'string') {
@@ -94,7 +89,6 @@ function tryAutoRestoreProvince() {
     : null;
   if (name) {
     document.getElementById('provFilter').value = name;
-    document.getElementById('provFilterInit').value = name;
     fetchProvinceData(name);
   }
 }
@@ -107,6 +101,7 @@ async function fetchProvinceData(provinceName) {
   }
 
   document.getElementById('infoText').textContent = 'Cargando datos de ' + provinceName + '...';
+  setLoading(true);
 
   let data = await getCachedProvinceData(provinceName);
 
@@ -122,6 +117,7 @@ async function fetchProvinceData(provinceName) {
       await cacheProvinceData(provinceName, data);
     } catch (e) {
       document.getElementById('infoText').textContent = 'Error al cargar ' + provinceName + ': ' + e.message;
+      setLoading(false);
       return;
     }
   }
@@ -129,25 +125,54 @@ async function fetchProvinceData(provinceName) {
   STATE.data = data;
   STATE.selectedProv = provinceName;
   document.getElementById('provFilter').value = provinceName;
-  document.getElementById('provFilterInit').value = provinceName;
-  STATE.selectedLoc = '';
-  STATE.selectedBrands = [];
-  STATE.selectedId = null;
-  STATE.selectedFuel = '';
-  STATE.page = 1;
-  document.getElementById('search').value = '';
-  document.getElementById('maxDistance').value = '';
-  document.getElementById('fuelFilter').value = '';
-  document.getElementById('locFilter').value = '';
 
   populateFuelFilter(data);
   populateLocFilter();
   populateBrandFilter();
+
+  const saved = loadProvinceFilters(provinceName);
+  if (saved) {
+    STATE.selectedFuel = saved.selectedFuel || '';
+    STATE.selectedLoc = saved.selectedLoc || '';
+    STATE.selectedBrands = saved.selectedBrands || [];
+    STATE.maxDistance = saved.maxDistance || '';
+    STATE.showFavoritesOnly = saved.showFavoritesOnly || false;
+    STATE.page = saved.page || 1;
+    document.getElementById('search').value = saved.search || '';
+    document.getElementById('maxDistance').value = saved.maxDistance || '';
+    document.getElementById('fuelFilter').value = STATE.selectedFuel;
+    document.getElementById('locFilter').value = STATE.selectedLoc;
+    applyBrandFilter();
+  } else {
+    STATE.selectedFuel = '';
+    STATE.selectedLoc = '';
+    STATE.selectedBrands = [];
+    STATE.selectedId = null;
+    STATE.page = 1;
+    STATE.maxDistance = '';
+    STATE.showFavoritesOnly = false;
+    document.getElementById('search').value = '';
+    document.getElementById('maxDistance').value = '';
+    document.getElementById('fuelFilter').value = '';
+    document.getElementById('locFilter').value = '';
+  }
+
+  const savedGlobal = loadState();
+  if (savedGlobal) {
+    if (savedGlobal.activeTab) setActiveTab(savedGlobal.activeTab);
+    if (savedGlobal.sortCol) STATE.sortCol = savedGlobal.sortCol;
+    if (savedGlobal.sortDir) STATE.sortDir = savedGlobal.sortDir;
+    if (savedGlobal.mapCenter && savedGlobal.mapZoom) {
+      STATE.map.setView(savedGlobal.mapCenter, savedGlobal.mapZoom);
+    }
+  }
+
   showDataScreen();
   document.getElementById('infoText').textContent = data.length + ' gasolineras en ' + provinceName;
   await renderCacheInfo();
   render(true);
   saveState();
+  setLoading(false);
 }
 
 async function clearCache() {

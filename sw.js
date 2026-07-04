@@ -1,4 +1,4 @@
-const CACHE = 'gasolineras-v2';
+const CACHE = 'gasolineras-v3';
 const CDN_CACHE = 'gasolineras-cdn-v1';
 const CDN_URLS = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',

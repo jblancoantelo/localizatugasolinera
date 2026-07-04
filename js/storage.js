@@ -1,6 +1,8 @@
 let _cacheExpiryLabel = '';
+let _savePending = false;
 
 const STATE_KEY = 'gasolineras_state';
+const PROV_FILTER_PREFIX = 'gasolineras_prov_filters_';
 const DB_NAME = 'gasolineras_db';
 const DB_VERSION = 1;
 const STORE_NAME = 'cache';
@@ -162,7 +164,6 @@ async function renderCacheInfo() {
     const loaded = new Date(cached.timestamp);
     const ttlHours = cached.ttl || 12;
     const expires = new Date(cached.timestamp + ttlHours * 60 * 60 * 1000);
-    const now = Date.now();
     _cacheExpiryLabel = ` · Expira ${expires.toLocaleString([], {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}`;
     el.innerHTML = `<span>${count} gasolineras · Cargado: ${loaded.toLocaleString()}${_cacheExpiryLabel}</span>`;
   } catch(e) {
@@ -196,31 +197,59 @@ async function renderProvinceCacheInfo() {
   }
 }
 
+function loadProvinceFilters(prov) {
+  try {
+    const raw = localStorage.getItem(PROV_FILTER_PREFIX + prov);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+function saveProvinceFilters(prov) {
+  if (!prov) return;
+  try {
+    const filters = {
+      search: document.getElementById('search').value,
+      selectedFuel: STATE.selectedFuel,
+      selectedLoc: STATE.selectedLoc,
+      selectedBrands: STATE.selectedBrands,
+      maxDistance: STATE.maxDistance,
+      showFavoritesOnly: STATE.showFavoritesOnly,
+      page: STATE.page
+    };
+    localStorage.setItem(PROV_FILTER_PREFIX + prov, JSON.stringify(filters));
+  } catch(e) {}
+}
+
 function saveState() {
-  const s = STATE;
-  const center = s.map ? s.map.getCenter() : null;
-  const zoom = s.map ? s.map.getZoom() : null;
-  const data = {
-    search: document.getElementById('search').value,
-    selectedFuel: s.selectedFuel,
-    selectedProv: s.selectedProv,
-    selectedLoc: s.selectedLoc,
-    selectedBrands: s.selectedBrands,
-    discounts: s.discounts,
-    sortCol: s.sortCol,
-    sortDir: s.sortDir,
-    selectedId: s.selectedId,
-    viewMode: s.viewMode,
-    selectedTile: s.selectedTile,
-    mapHeight: s.mapHeight || null,
-    mapCenter: center ? [center.lat, center.lng] : null,
-    mapZoom: zoom,
-    maxDistance: s.maxDistance,
-    pageSize: s.pageSize,
-    favorites: s.favorites,
-    showFavoritesOnly: s.showFavoritesOnly
-  };
-  try { localStorage.setItem(STATE_KEY, JSON.stringify(data)); } catch(e) {}
+  if (_savePending) return;
+  _savePending = true;
+  Promise.resolve().then(() => {
+    _savePending = false;
+    const s = STATE;
+    const center = s.map ? s.map.getCenter() : null;
+    const zoom = s.map ? s.map.getZoom() : null;
+    const data = {
+      search: document.getElementById('search').value,
+      selectedFuel: s.selectedFuel,
+      selectedProv: s.selectedProv,
+      selectedLoc: s.selectedLoc,
+      selectedBrands: s.selectedBrands,
+      discounts: s.discounts,
+      sortCol: s.sortCol,
+      sortDir: s.sortDir,
+      selectedId: s.selectedId,
+      activeTab: s.activeTab,
+      selectedTile: s.selectedTile,
+      mapCenter: center ? [center.lat, center.lng] : null,
+      mapZoom: zoom,
+      maxDistance: s.maxDistance,
+      pageSize: s.pageSize,
+      favorites: s.favorites,
+      showFavoritesOnly: s.showFavoritesOnly
+    };
+    try { localStorage.setItem(STATE_KEY, JSON.stringify(data)); } catch(e) {}
+    saveProvinceFilters(s.selectedProv);
+  });
 }
 
 function loadState() {

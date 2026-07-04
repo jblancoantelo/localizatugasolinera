@@ -3,10 +3,11 @@ const STATE = {
   selectedFuel: '', selectedProv: '', selectedLoc: '', selectedBrands: [],
   userLat: null, userLng: null, map: null, markers: [], userMarker: null,
   markerMap: {}, tileLayer: null,
-  selectedId: null, viewMode: 'normal', selectedTile: 'street',
+  selectedId: null, activeTab: 'tab-both', selectedTile: 'street',
   discounts: {}, page: 1, pageSize: 50, maxDistance: '',
   favorites: [], showFavoritesOnly: false,
-  provinces: [], provinceIdMap: {}
+  provinces: [], provinceIdMap: {},
+  _prevFilteredIds: ''
 };
 
 const FUEL_KEYS = {
