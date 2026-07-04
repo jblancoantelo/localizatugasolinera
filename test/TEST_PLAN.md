@@ -13,8 +13,8 @@ Validar que la migración a Propuesta D funciona correctamente tanto desde `file
 Get-Process -Name "node" -ErrorAction SilentlyContinue | Stop-Process -Force
 
 # 2. Ejecuta el test suite autónomo
-cd E:\Temp\VS\petrol
-node test\full_test.mjs
+cd ../petrol
+node test/full_test.mjs
 ```
 
 ### Qué hace el script:

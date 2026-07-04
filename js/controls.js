@@ -74,7 +74,7 @@ function render(fitBounds) {
   }
   doSort();
   document.getElementById('infoText').textContent = `${arr.length}${s.selectedProv ? ' de ' + s.data.length + ' en ' + s.selectedProv : ''}${_cacheExpiryLabel}`;
-  document.getElementById('resultCount').textContent = `${arr.length} estaciones`;
+
 
   if (filteredChanged) {
     updateMarkers(fitBounds, (id) => {
