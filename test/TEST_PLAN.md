@@ -29,7 +29,7 @@ node test/full_test.mjs
 | Entorno | URL | Limitaciones |
 |---------|-----|-------------|
 | **HTTP** | `http://localhost:8080` | API funcional (CORS ok) |
-| **file://** | `file:///.../petrol/index.html` | API bloqueada por CORS (pre-existente), UI debe cargar |
+| **file://** | `../index.html` (relativo a `test/`) | API bloqueada por CORS (pre-existente), UI debe cargar |
 
 ## Casos de prueba
 
