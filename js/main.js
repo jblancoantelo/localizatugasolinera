@@ -133,5 +133,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const ps = document.getElementById('pageSize');
       if (ps) ps.value = saved.pageSize === 0 ? '0' : String(saved.pageSize);
     }
+    if (saved.maxDistance) {
+      STATE.maxDistance = saved.maxDistance;
+      document.getElementById('maxDistance').value = saved.maxDistance;
+    }
+    if (saved.userLat != null && saved.userLng != null) {
+      STATE.userLat = saved.userLat;
+      STATE.userLng = saved.userLng;
+      updateUserMarker(saved.userLat, saved.userLng);
+      updatePosInfo();
+    }
   }
 });

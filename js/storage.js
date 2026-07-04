@@ -245,7 +245,9 @@ function saveState() {
       maxDistance: s.maxDistance,
       pageSize: s.pageSize,
       favorites: s.favorites,
-      showFavoritesOnly: s.showFavoritesOnly
+      showFavoritesOnly: s.showFavoritesOnly,
+      userLat: s.userLat,
+      userLng: s.userLng
     };
     try { localStorage.setItem(STATE_KEY, JSON.stringify(data)); } catch(e) {}
     saveProvinceFilters(s.selectedProv);
