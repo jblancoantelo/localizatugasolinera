@@ -214,6 +214,16 @@ async function testHTTP(browser, server) {
   // Search input exists
   log('Búsqueda', 'Input visible', await page.locator('#search').isVisible());
 
+  // --- F5: recargar y verificar que restaura provincia ---
+  await page.reload({ waitUntil: 'networkidle', timeout: 30000 });
+  await sleep(3000);
+  const reloadedProv = await page.evaluate(() => {
+    const sel = document.getElementById('provFilter');
+    return sel ? sel.value : '';
+  });
+  const provRestored = reloadedProv === firstProv;
+  log('Persistencia', `Provincia restaurada tras F5: "${reloadedProv}"`, provRestored);
+
   await ctx.close();
 }
 
