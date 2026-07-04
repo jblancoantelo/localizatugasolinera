@@ -133,6 +133,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const ps = document.getElementById('pageSize');
       if (ps) ps.value = saved.pageSize === 0 ? '0' : String(saved.pageSize);
     }
+    if (saved.selectedFuel) {
+      STATE.selectedFuel = saved.selectedFuel;
+      document.getElementById('fuelFilter').value = saved.selectedFuel;
+    }
+    if (saved.selectedLoc) {
+      STATE.selectedLoc = saved.selectedLoc;
+      document.getElementById('locFilter').value = saved.selectedLoc;
+    }
     if (saved.maxDistance) {
       STATE.maxDistance = saved.maxDistance;
       document.getElementById('maxDistance').value = saved.maxDistance;
