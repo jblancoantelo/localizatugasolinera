@@ -9,7 +9,7 @@
    ```
    Si los tests no existen o fallan, no continuar hasta que pasen todos.
 
-2. **Commit + push** tras cada cambio significativo:
+2. **Commit**: preguntar al usuario antes de hacer commit. Si confirma:
    ```powershell
    git add -A
    git commit -m "mensaje descriptivo"
