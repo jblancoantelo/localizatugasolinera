@@ -28,16 +28,34 @@ function allFuelsHtml(d) {
   return items;
 }
 
-function updateDetail() {
-  const s = STATE, el = document.getElementById('detail');
-  if (!s.selectedId) { el.classList.remove('show'); el.innerHTML = ''; return; }
-  const d = s.data.find(x => x.IDEESS === s.selectedId);
-  if (!d) { el.classList.remove('show'); el.innerHTML = ''; return; }
+function showDetail(id) {
+  const s = STATE;
+  const d = s.data.find(x => x.IDEESS === id);
+  if (!d) return;
+  s.selectedId = id;
   const items = allFuelsHtml(d);
-  if (!items.length) { el.classList.remove('show'); el.innerHTML = ''; return; }
+  if (!items.length) return;
   const isFav = s.favorites.includes(d.IDEESS);
-  el.innerHTML = `<h3><span class="fav-btn${isFav?' on':''}" data-id="${d.IDEESS}">${isFav?'★':'☆'}</span> ${d.Rótulo||''}</h3><div class="addr">${[d.Dirección, d.Localidad, d.Provincia].filter(Boolean).join(', ')}</div><div class="fuels">${items.join('')}</div>`;
-  el.classList.add('show');
+  document.getElementById('detailBrand').innerHTML = `<span class="fav-btn${isFav ? ' on' : ''}" data-id="${d.IDEESS}">${isFav ? '★' : '☆'}</span> ${d.Rótulo || ''}`;
+  document.getElementById('detailAddr').textContent = [d.Dirección, d.Localidad, d.Provincia].filter(Boolean).join(', ');
+  document.getElementById('detailFuels').innerHTML = items.join('');
+  document.getElementById('detailPanel').classList.add('show');
+}
+
+function updateDetail() {
+  const s = STATE, el = document.getElementById('detailPanel');
+  if (!s.selectedId || !s.data.length) {
+    el.classList.remove('show');
+    s.selectedId = null;
+    return;
+  }
+  const d = s.data.find(x => x.IDEESS === s.selectedId);
+  if (!d) {
+    el.classList.remove('show');
+    s.selectedId = null;
+    return;
+  }
+  showDetail(s.selectedId);
 }
 
 function updatePageNav(total) {
@@ -75,7 +93,8 @@ function doSort() {
   if (s.page > totalPages) s.page = totalPages;
   const start = pageSize === 0 ? 0 : (s.page - 1) * pageSize;
   const pageItems = pageSize === 0 ? arr : arr.slice(start, start + pageSize);
-  document.querySelector('#table tbody').innerHTML = pageItems.map(d => {
+
+  document.querySelector('#tableBody').innerHTML = pageItems.map(d => {
     const p = getSelectedFuelPrice(d);
     const fn = getSelectedFuelName(d);
     const distStr = d._dist!==null ? d._dist.toFixed(1)+' km' : '';
@@ -85,16 +104,35 @@ function doSort() {
     const disc = getDiscount(d);
     const priceStr = p!==null ? p.toFixed(3).replace('.',',')+' €' + (disc ? ' (-'+disc+')' : '') : '—';
     const dot = p !== null ? `<span class="dot ${fuelColor(p)}"></span> ` : '';
-    const star = `<span class="fav-btn${isFav?' on':''}">${isFav?'★':'☆'}</span> `;
+    const star = `<span class="fav-btn${isFav?' on':''}" data-id="${d.IDEESS}">${isFav?'★':'☆'}</span> `;
     const cheapBadge = d._cheapest ? ' <span class="cheap-badge" title="Más barato de la provincia">↓</span>' : '';
     return `<tr class="${sel}${cheap}" data-id="${d.IDEESS}"><td>${star}${dot}${d.Rótulo||''}${cheapBadge}</td><td>${priceStr}</td><td>${fn}</td><td>${d.Provincia||''}</td><td>${d.Localidad||''}</td><td>${d.Dirección||''}</td><td>${distStr}</td></tr>`;
   }).join('');
+
+  document.querySelector('#tableBothBody').innerHTML = arr.map(d => {
+    const p = getSelectedFuelPrice(d);
+    const fn = getSelectedFuelName(d);
+    const distStr = d._dist!==null ? d._dist.toFixed(1)+' km' : '';
+    const isFav = s.favorites.includes(d.IDEESS);
+    const sel = s.selectedId===d.IDEESS ? ' selected' : '';
+    const cheap = d._cheapest ? ' cheapest' : '';
+    const priceStr = p!==null ? p.toFixed(3).replace('.',',')+' €' : '—';
+    const dot = p !== null ? `<span class="dot ${fuelColor(p)}"></span> ` : '';
+    const star = `<span class="fav-btn${isFav?' on':''}" data-id="${d.IDEESS}">${isFav?'★':'☆'}</span> `;
+    const cheapBadge = d._cheapest ? ' <span class="cheap-badge" title="Más barato de la provincia">↓</span>' : '';
+    return `<tr class="${sel}${cheap}" data-id="${d.IDEESS}"><td>${star}${dot}${d.Rótulo||''}${cheapBadge}</td><td>${priceStr}</td><td>${fn}</td><td>${distStr}</td></tr>`;
+  }).join('');
+
   document.querySelectorAll('#table thead th').forEach(th => {
     const a = th.querySelector('.arrow');
     a.textContent = th.dataset.col===s.sortCol ? (s.sortDir==='asc'?' ▲':' ▼') : '';
   });
+  document.querySelectorAll('#tableBoth thead th').forEach(th => {
+    const a = th.querySelector('.arrow');
+    a.textContent = th.dataset.col===s.sortCol ? (s.sortDir==='asc'?' ▲':' ▼') : '';
+  });
   updatePageNav(arr.length);
-  updateDetail();
+  saveState();
 }
 
 function toggleSort(col) {

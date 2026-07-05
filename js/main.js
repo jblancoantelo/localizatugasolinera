@@ -14,22 +14,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   fetchProvinces();
 
-  document.getElementById('search').addEventListener('input', () => render(false));
-  document.getElementById('fuelFilter').addEventListener('change', e => { STATE.selectedFuel = e.target.value; render(false); });
+  document.getElementById('search').addEventListener('input', () => { STATE.page = 1; render(false); });
+  document.getElementById('fuelFilter').addEventListener('change', e => { STATE.selectedFuel = e.target.value; STATE.page = 1; render(false); });
   document.getElementById('provFilter').addEventListener('change', e => {
     if (e.target.value) {
-      fetchProvinceData(e.target.value);
-    }
-  });
-  document.getElementById('provFilterInit').addEventListener('change', e => {
-    if (e.target.value) {
-      document.getElementById('provFilter').value = e.target.value;
       fetchProvinceData(e.target.value);
     }
   });
   document.getElementById('locFilter').addEventListener('change', e => {
     STATE.selectedLoc = e.target.value;
     populateBrandFilter();
+    STATE.page = 1;
     render(false);
   });
   document.getElementById('mapStyle').addEventListener('change', e => {
@@ -56,10 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('resetFiltersBtn').addEventListener('click', () => {
-    if (STATE.selectedProv) {
-      fetchProvinceData(STATE.selectedProv);
-    } else {
-      document.getElementById('search').value = '';
+    if (STATE.data.length) {
       STATE.selectedFuel = '';
       STATE.selectedLoc = '';
       STATE.selectedBrands = [];
@@ -67,96 +59,62 @@ document.addEventListener('DOMContentLoaded', () => {
       STATE.page = 1;
       STATE.maxDistance = '';
       STATE.showFavoritesOnly = false;
+      document.getElementById('search').value = '';
       document.getElementById('maxDistance').value = '';
       document.getElementById('fuelFilter').value = '';
+      document.getElementById('locFilter').value = '';
       document.getElementById('favToggleBtn').classList.remove('active');
       document.getElementById('favToggleBtn').textContent = '☆';
+      populateBrandFilter();
       render(false);
     }
   });
 
   document.getElementById('brandFilterBtn').addEventListener('click', e => {
     e.stopPropagation();
-    document.getElementById('brandFilterDropdown').classList.toggle('open');
+    const btn = e.currentTarget;
+    const dd = document.getElementById('brandFilterDropdown');
+    const rect = btn.getBoundingClientRect();
+    dd.style.left = rect.left + 'px';
+    dd.style.top = rect.bottom + 'px';
+    dd.classList.toggle('open');
   });
+  document.getElementById('brandFilterDropdown').addEventListener('click', e => e.stopPropagation());
   document.addEventListener('click', () => document.getElementById('brandFilterDropdown').classList.remove('open'));
 
-  document.querySelectorAll('#viewBtns button').forEach(b => {
-    b.addEventListener('click', () => setViewMode(b.dataset.mode));
+  document.querySelectorAll('.bottom-tab').forEach(tab => {
+    tab.addEventListener('click', () => setActiveTab(tab.dataset.tab));
   });
 
-  document.querySelector('#table thead').addEventListener('click', e => {
-    const th = e.target.closest('th');
-    if (th) toggleSort(th.dataset.col);
-  });
-  document.querySelector('#table tbody').addEventListener('click', e => {
+  document.addEventListener('click', e => {
     const favBtn = e.target.closest('.fav-btn');
     if (favBtn) {
-      const tr = favBtn.closest('tr');
-      if (tr) { toggleFavorite(tr.dataset.id); render(false); }
+      const id = favBtn.dataset.id;
+      if (id) toggleFavorite(id);
       return;
     }
-    const tr = e.target.closest('tr');
+
+    const th = e.target.closest('.table-wrap th');
+    if (th && th.dataset.col) { toggleSort(th.dataset.col); return; }
+
+    const tr = e.target.closest('.table-wrap tr');
     if (!tr) return;
-    STATE.selectedId = tr.dataset.id;
-    render(false);
-    const m = STATE.markerMap[STATE.selectedId];
+
+    const id = tr.dataset.id;
+    if (!id) return;
+    STATE.selectedId = id;
+    showDetail(id);
+    const m = STATE.markerMap[id];
     if (m) { m.openPopup(); STATE.map.panTo(m.getLatLng()); }
   });
 
-  const resizeHandle = document.getElementById('resizeHandle');
-  const mapEl = document.getElementById('map');
-  let dragging = false;
-  const resizePointerDown = (startY, clientYProp) => {
-    dragging = true;
-    resizeHandle.classList.add('active');
-    document.body.classList.add('dragging');
-    const startH = mapEl.offsetHeight;
-    function onMove(ev) {
-      if (!dragging) return;
-      const newH = Math.max(100, startH + ev[clientYProp] - startY);
-      mapEl.style.height = newH + 'px';
-      if (STATE.map) STATE.map.invalidateSize();
-    }
-    function onUp() {
-      dragging = false;
-      resizeHandle.classList.remove('active');
-      document.body.classList.remove('dragging');
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      document.removeEventListener('touchmove', onMove);
-      document.removeEventListener('touchend', onUp);
-      STATE.mapHeight = mapEl.offsetHeight;
-      saveState();
-    }
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-    document.addEventListener('touchmove', onMove, { passive: true });
-    document.addEventListener('touchend', onUp);
-  };
-  resizeHandle.addEventListener('mousedown', e => resizePointerDown(e.clientY, 'clientY'));
-  resizeHandle.addEventListener('touchstart', e => {
-    const t = e.touches[0];
-    resizePointerDown(t.clientY, 'clientY');
-  }, { passive: true });
-
-  document.getElementById('configToggleBtn').addEventListener('click', async () => {
-    document.getElementById('configPanel').classList.toggle('open');
-    document.getElementById('configToggleBtn').classList.toggle('active');
-    renderDiscountConfig();
-    await renderCacheInfo();
-    await renderProvinceCacheInfo();
+  document.getElementById('detailClose').addEventListener('click', () => {
+    document.getElementById('detailPanel').classList.remove('show');
+    STATE.selectedId = null;
   });
+
   document.getElementById('addDiscountBtn').addEventListener('click', addEmptyDiscountRow);
   document.getElementById('cacheTtl').addEventListener('change', saveState);
-
-  document.addEventListener('click', e => {
-    const fb = e.target.closest('.fav-btn');
-    if (fb && fb.closest('#detail')) {
-      const id = fb.dataset.id;
-      if (id) { toggleFavorite(id); updateDetail(); saveState(); }
-    }
-  });
 
   const saved = loadState();
   if (saved) {
@@ -164,16 +122,34 @@ document.addEventListener('DOMContentLoaded', () => {
     if (saved.favorites) STATE.favorites = saved.favorites;
     if (saved.sortCol) STATE.sortCol = saved.sortCol;
     if (saved.sortDir) STATE.sortDir = saved.sortDir;
-    if (saved.viewMode) setViewMode(saved.viewMode);
+    if (saved.selectedProv) STATE.selectedProv = saved.selectedProv;
+    if (saved.activeTab) setActiveTab(saved.activeTab);
     if (saved.selectedTile) { document.getElementById('mapStyle').value = saved.selectedTile; setTileLayer(saved.selectedTile); }
     if (saved.mapCenter && saved.mapZoom) {
       STATE.map.setView(saved.mapCenter, saved.mapZoom);
     }
-    if (saved.pageSize !== undefined) { STATE.pageSize = saved.pageSize; document.getElementById('pageSize').value = saved.pageSize === 0 ? '0' : String(saved.pageSize); }
-    if (saved.mapHeight) {
-      document.getElementById('map').style.height = saved.mapHeight + 'px';
-      STATE.mapHeight = saved.mapHeight;
-      if (STATE.map) setTimeout(() => STATE.map.invalidateSize(), 50);
+    if (saved.pageSize !== undefined) {
+      STATE.pageSize = saved.pageSize;
+      const ps = document.getElementById('pageSize');
+      if (ps) ps.value = saved.pageSize === 0 ? '0' : String(saved.pageSize);
+    }
+    if (saved.selectedFuel) {
+      STATE.selectedFuel = saved.selectedFuel;
+      document.getElementById('fuelFilter').value = saved.selectedFuel;
+    }
+    if (saved.selectedLoc) {
+      STATE.selectedLoc = saved.selectedLoc;
+      document.getElementById('locFilter').value = saved.selectedLoc;
+    }
+    if (saved.maxDistance) {
+      STATE.maxDistance = saved.maxDistance;
+      document.getElementById('maxDistance').value = saved.maxDistance;
+    }
+    if (saved.userLat != null && saved.userLng != null) {
+      STATE.userLat = saved.userLat;
+      STATE.userLng = saved.userLng;
+      updateUserMarker(saved.userLat, saved.userLng);
+      updatePosInfo();
     }
   }
 });
