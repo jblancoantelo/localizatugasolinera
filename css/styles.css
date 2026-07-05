@@ -121,6 +121,9 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 .table-wrap tr.cheapest:hover td { background: #c8e6c9; }
 .table-wrap .price { font-weight: 600; }
 .table-wrap .cheap-badge { display: inline-block; background: #2e7d32; color: #fff; font-size: 0.5rem; border-radius: 3px; padding: 0 3px; margin-left: 2px; }
+.fav-btn { cursor: pointer; color: #999; margin-right: 2px; user-select: none; }
+.fav-btn:hover { color: #f9a825; }
+.fav-btn.on { color: #f9a825; }
 .table-wrap .fav-btn { cursor: pointer; color: #999; margin-right: 2px; user-select: none; }
 .table-wrap .fav-btn:hover { color: #f9a825; }
 .table-wrap .fav-btn.on { color: #f9a825; }

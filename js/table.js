@@ -104,7 +104,7 @@ function doSort() {
     const disc = getDiscount(d);
     const priceStr = p!==null ? p.toFixed(3).replace('.',',')+' €' + (disc ? ' (-'+disc+')' : '') : '—';
     const dot = p !== null ? `<span class="dot ${fuelColor(p)}"></span> ` : '';
-    const star = `<span class="fav-btn${isFav?' on':''}">${isFav?'★':'☆'}</span> `;
+    const star = `<span class="fav-btn${isFav?' on':''}" data-id="${d.IDEESS}">${isFav?'★':'☆'}</span> `;
     const cheapBadge = d._cheapest ? ' <span class="cheap-badge" title="Más barato de la provincia">↓</span>' : '';
     return `<tr class="${sel}${cheap}" data-id="${d.IDEESS}"><td>${star}${dot}${d.Rótulo||''}${cheapBadge}</td><td>${priceStr}</td><td>${fn}</td><td>${d.Provincia||''}</td><td>${d.Localidad||''}</td><td>${d.Dirección||''}</td><td>${distStr}</td></tr>`;
   }).join('');
@@ -118,7 +118,7 @@ function doSort() {
     const cheap = d._cheapest ? ' cheapest' : '';
     const priceStr = p!==null ? p.toFixed(3).replace('.',',')+' €' : '—';
     const dot = p !== null ? `<span class="dot ${fuelColor(p)}"></span> ` : '';
-    const star = `<span class="fav-btn${isFav?' on':''}">${isFav?'★':'☆'}</span> `;
+    const star = `<span class="fav-btn${isFav?' on':''}" data-id="${d.IDEESS}">${isFav?'★':'☆'}</span> `;
     const cheapBadge = d._cheapest ? ' <span class="cheap-badge" title="Más barato de la provincia">↓</span>' : '';
     return `<tr class="${sel}${cheap}" data-id="${d.IDEESS}"><td>${star}${dot}${d.Rótulo||''}${cheapBadge}</td><td>${priceStr}</td><td>${fn}</td><td>${distStr}</td></tr>`;
   }).join('');

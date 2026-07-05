@@ -26,7 +26,9 @@ function popupHtml(d) {
       items.push(`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;border:1px solid #999;background:${fuelColorHex(dv)};margin-right:3px"></span> ${name}: ${display}`);
     }
   }
-  const html = `<strong>${d.Rótulo||''}</strong><br>${d.Dirección||''}, ${d.Localidad||''}`;
+  const isFav = STATE.favorites.includes(d.IDEESS);
+  const star = `<span class="fav-btn${isFav ? ' on' : ''}" data-id="${d.IDEESS}">${isFav ? '★' : '☆'}</span> `;
+  const html = `<strong>${star}${d.Rótulo||''}</strong><br>${d.Dirección||''}, ${d.Localidad||''}`;
   return items.length ? `${html}<br><br>${items.join('<br>')}` : html;
 }
 
