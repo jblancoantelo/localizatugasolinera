@@ -16,7 +16,6 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
 <link rel="icon" type="image/svg+xml" sizes="any" href="icons/icon-192.svg">
-<link rel="manifest" href="manifest.json">
 <meta name="msapplication-TileColor" content="#1a73e8">
 <meta name="msapplication-TileImage" content="icons/icon-192.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -131,9 +130,26 @@
     <div class="detail-panel" id="detailPanel">
       <div class="handle"></div>
       <button class="close-btn" id="detailClose">✕</button>
-      <h3 id="detailBrand"></h3>
-      <div class="addr" id="detailAddr"></div>
-      <div class="fuels" id="detailFuels"></div>
+      <div class="detail-tabs">
+        <button class="detail-tab active" data-dtab="info">Información</button>
+        <button class="detail-tab" data-dtab="history">Histórico</button>
+      </div>
+      <div class="detail-tab-content" id="detailTabInfo">
+        <h3 id="detailBrand"></h3>
+        <div class="addr" id="detailAddr"></div>
+        <div class="fuels" id="detailFuels"></div>
+      </div>
+      <div class="detail-tab-content" id="detailTabHistory" style="display:none">
+        <div class="history-header">
+          <span class="history-label">Histórico 14 días</span>
+          <span class="history-fuel" id="historyFuel"></span>
+        </div>
+        <div class="chart-wrap" id="chartWrap">
+          <canvas id="priceChart"></canvas>
+          <div class="chart-loading" id="chartLoading">Cargando histórico...</div>
+          <div class="chart-error" id="chartError" style="display:none"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -162,10 +178,17 @@
 <script src="js/table.js"></script>
 <script src="js/controls.js"></script>
 <script src="js/api.js"></script>
+<script src="js/chart-engine.js"></script>
 <script src="js/main.js"></script>
 <script>
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+if (location.protocol.startsWith('http')) {
+  var lm = document.createElement('link');
+  lm.rel = 'manifest';
+  lm.href = 'manifest.json';
+  document.head.appendChild(lm);
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  }
 }
 </script>
 </body>

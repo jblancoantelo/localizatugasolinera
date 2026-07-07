@@ -106,7 +106,16 @@ node test/full_test.mjs
 | 8.3 | Descuentos | Añadir/quitar descuentos por marca |
 | 8.4 | Paginación | Cambiar tamaño de página y verificar |
 
-### 9. Persistencia de filtros
+### 10. Histórico de precios
+
+| # | Acción | Resultado esperado |
+|---|--------|-------------------|
+| 10.1 | Abrir detail panel | Sección histórica visible con loader |
+| 10.2 | Esperar carga histórica | Gráfica Canvas dibujada con línea de precios de 14 días |
+| 10.3 | Cambiar filtro combustible | Gráfica se actualiza con datos del nuevo combustible |
+| 10.4 | Cerrar y reabrir detail | Histórico usa caché (misma provincia), carga instantánea |
+
+### 9. Persistencia de filtros (renumerado)
 
 | # | Acción | Resultado esperado |
 |---|--------|-------------------|
@@ -116,7 +125,7 @@ node test/full_test.mjs
 
 ## Resultados actuales
 
-**29 tests — 29 ✅ 0 ❌ 0 ⏭️**
+**32 tests — 32 ✅ 0 ❌ 0 ⏭️**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
@@ -126,6 +135,7 @@ node test/full_test.mjs
 | Filtros | 1 ✅ | — |
 | Tabla | 5 ✅ | — |
 | Detail | 3 ✅ | — |
+| Histórico | 2 ✅ | — |
 | Ambos | 2 ✅ | — |
 | Config | 2 ✅ | 1 ✅ |
 | Mapa | 2 ✅ | — |
@@ -134,7 +144,7 @@ node test/full_test.mjs
 | Toolbar | — | 1 ✅ |
 | Tabs | — | 2 ✅ |
 | Navegación | — | 2 ✅ |
-| **Total** | **22 ✅** | **7 ✅** |
+| **Total** | **25 ✅** | **7 ✅** |
 
 ## Bugs conocidos y fixes aplicados
 

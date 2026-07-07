@@ -179,7 +179,7 @@ async function clearCache() {
   try {
     const keys = await dbGetAllKeys();
     for (const key of keys) {
-      if (typeof key === 'string' && (key.startsWith('prov_') || key === 'main_cache' || key === 'provinces_list')) {
+      if (typeof key === 'string' && (key.startsWith('prov_') || key === 'main_cache' || key === 'provinces_list' || key.startsWith('hist_'))) {
         await dbDelete(key);
       }
     }
@@ -187,6 +187,7 @@ async function clearCache() {
   provinceCacheMap.clear();
   STATE.data = [];
   STATE.filtered = [];
+  window._historyCache = null;
   showProvinceScreen();
   document.getElementById('infoText').textContent = 'Caché limpiada. Selecciona una provincia.';
   document.getElementById('cacheInfo').innerHTML = '<span style="color:#999">Sin datos en caché</span>';
@@ -218,4 +219,94 @@ function locateUser() {
     },
     { enableHighAccuracy: true, timeout: 10000 }
   );
+}
+
+function formatDateDDMMYYYY(date) {
+  const d = date.getDate().toString().padStart(2, '0');
+  const m = (date.getMonth() + 1).toString().padStart(2, '0');
+  const y = date.getFullYear();
+  return d + '-' + m + '-' + y;
+}
+
+const HISTORY_DAYS = 14;
+
+async function fetchProvinceHistory(provinceName) {
+  const provId = STATE.provinceIdMap[provinceName];
+  if (!provId) return {};
+  const dates = [];
+  for (let i = HISTORY_DAYS; i >= 1; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    d.setHours(0, 0, 0, 0);
+    dates.push(d);
+  }
+  const results = {};
+  const CHUNK = 3;
+  for (let i = 0; i < dates.length; i += CHUNK) {
+    const chunk = dates.slice(i, i + CHUNK);
+    const promises = chunk.map(async (date) => {
+      const dateStr = formatDateDDMMYYYY(date);
+      const cacheKey = 'hist_' + provId + '_' + dateStr;
+      let cached = await dbGet(cacheKey);
+      if (cached && cached.data) {
+        results[dateStr] = cached.data;
+        return;
+      }
+      try {
+        const r = await fetch(API_BASE + 'EstacionesTerrestresHist/FiltroProvincia/' + dateStr + '/' + provId, {
+          headers: { 'Accept': 'application/json' }
+        });
+        if (r.ok) {
+          const json = await r.json();
+          const list = json.ListaEESSPrecio || [];
+          results[dateStr] = list;
+          await dbPut(cacheKey, { data: list, timestamp: Date.now() });
+        }
+      } catch (e) { console.warn('Histórico: error en', dateStr, provId, e.message); }
+    });
+    await Promise.all(promises);
+  }
+  return results;
+}
+
+function getStationHistory(historyByDate, stationId, fuelName) {
+  const isGroup = FUEL_GROUPS[fuelName] ? true : false;
+  const groupMembers = isGroup ? FUEL_GROUPS[fuelName] : [fuelName];
+  const results = [];
+  const dates = Object.keys(historyByDate).sort((a, b) => {
+    const [da, ma, ya] = a.split('-');
+    const [db, mb, yb] = b.split('-');
+    return new Date(ya, ma - 1, da) - new Date(yb, mb - 1, db);
+  });
+  for (const dateStr of dates) {
+    const list = historyByDate[dateStr];
+    if (!list || !list.length) continue;
+    const st = list.find(x => x.IDEESS === stationId);
+    if (!st) continue;
+    const key = FUEL_KEYS[fuelName];
+    if (key) {
+      const price = getFuelPrice(st, key);
+      if (price !== null) results.push({ date: dateStr, price });
+    } else {
+      let found = false;
+      for (const name of groupMembers) {
+        const k = FUEL_KEYS[name];
+        if (k) {
+          const p = getFuelPrice(st, k);
+          if (p !== null) {
+            results.push({ date: dateStr, price: p, fuel: name });
+            found = true;
+            break;
+          }
+        }
+      }
+      if (!found) {
+        for (const [, k] of FUEL_NAMES) {
+          const p = getFuelPrice(st, k);
+          if (p !== null) { results.push({ date: dateStr, price: p }); break; }
+        }
+      }
+    }
+  }
+  return results;
 }
