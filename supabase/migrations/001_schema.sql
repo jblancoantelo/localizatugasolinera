@@ -41,5 +41,6 @@ CREATE POLICY p_sel_prov ON provincias FOR SELECT USING (true);
 CREATE POLICY p_sel_gaso ON gasolineras FOR SELECT USING (true);
 CREATE POLICY p_sel_hist ON precios_historicos FOR SELECT USING (true);
 CREATE POLICY p_ins_gaso ON gasolineras FOR INSERT WITH CHECK (true);
+CREATE POLICY p_upd_gaso ON gasolineras FOR UPDATE USING (true) WITH CHECK (true);
 CREATE POLICY p_ins_hist ON precios_historicos FOR INSERT WITH CHECK (true);
 CREATE POLICY p_upd_hist ON precios_historicos FOR UPDATE USING (true) WITH CHECK (true);

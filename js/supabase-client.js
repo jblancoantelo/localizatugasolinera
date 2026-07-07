@@ -33,18 +33,23 @@ async function sbUpsertGasolinera(d) {
   if (!sb) return;
   const provId = STATE.provinceIdMap[d.Provincia];
   if (!provId) return;
-  await sb.from('gasolineras').upsert({
-    ideess: d.IDEESS,
-    rotulo: d['Rótulo'] || '',
-    direccion: d['Dirección'] || '',
-    localidad: d['Localidad'] || '',
-    provincia_id: provId,
-    codigo_postal: d['C.P.'] || '',
-    horario: d['Horario'] || '',
-    latitud: parseFloat((d['Latitud'] || '').replace(',', '.')),
-    longitud: parseFloat((d['Longitud (WGS84)'] || '').replace(',', '.')),
-    margen: d['Margen'] || ''
-  }, { onConflict: 'ideess' });
+  try {
+    await sb.from('gasolineras').upsert({
+      ideess: d.IDEESS,
+      rotulo: d['Rótulo'] || '',
+      direccion: d['Dirección'] || '',
+      localidad: d['Localidad'] || '',
+      provincia_id: provId,
+      codigo_postal: d['C.P.'] || '',
+      horario: d['Horario'] || '',
+      latitud: (() => { const v = parseFloat((d['Latitud'] || '').replace(',', '.')); return isNaN(v) ? null : v; })(),
+      longitud: (() => { const v = parseFloat((d['Longitud (WGS84)'] || '').replace(',', '.')); return isNaN(v) ? null : v; })(),
+      margen: d['Margen'] || ''
+    }, { onConflict: 'ideess' });
+  } catch (e) {
+    if (e && (e.status === 409 || e.code === '409')) return;
+    console.warn('Supabase: error al guardar gasolinera', d.IDEESS, e?.message);
+  }
 }
 
 async function sbUpsertPrecioHistorico(gasolineraId, fecha, carburante, precio) {
@@ -52,14 +57,28 @@ async function sbUpsertPrecioHistorico(gasolineraId, fecha, carburante, precio) 
   if (!sb) return;
   if (precio === null || precio === undefined || precio === '') return;
   try {
+    const p = parseFloat(precio.toString().replace(',', '.'));
+    if (isNaN(p)) return;
     await sb.from('precios_historicos').upsert({
       gasolinera_id: gasolineraId,
       fecha: fecha,
       carburante: carburante,
-      precio: parseFloat(precio.toString().replace(',', '.'))
+      precio: p
     }, { onConflict: 'gasolinera_id,fecha,carburante' });
   } catch (e) {
-    console.warn('Supabase: error al guardar precio', gasolineraId, fecha, carburante, e.message);
+    if (e && (e.status === 409 || e.code === '409')) return;
+    console.warn('Supabase: error al guardar precio', gasolineraId, fecha, carburante, e?.message);
+  }
+}
+
+async function sbUpsertProvincia(nombre, id) {
+  const sb = await initSupabase();
+  if (!sb) return;
+  try {
+    await sb.from('provincias').upsert({ id, nombre }, { onConflict: 'id' });
+  } catch (e) {
+    if (e && (e.status === 409 || e.code === '409')) return;
+    console.warn('Supabase: error al guardar provincia', nombre, e?.message);
   }
 }
 
@@ -68,6 +87,7 @@ async function sbGuardarHistorialProvincia(provinceName, historyByDate) {
   if (!sb) return;
   const provId = STATE.provinceIdMap[provinceName];
   if (!provId) return;
+  await sbUpsertProvincia(provinceName, provId);
   for (const [dateStr, list] of Object.entries(historyByDate)) {
     if (!list || !list.length) continue;
     const fecha = dateStr.split('-').reverse().join('-');
