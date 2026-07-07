@@ -1,7 +1,6 @@
 const SUPABASE_URL = window._SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = window._SUPABASE_ANON_KEY || '';
 let _supabase = null;
-let _supabaseReady = false;
 
 async function initSupabase() {
   if (_supabase) return _supabase;
@@ -11,8 +10,7 @@ async function initSupabase() {
   }
   try {
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-    _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    _supabaseReady = true;
+    _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { db: { schema: 'petrol' } });
     return _supabase;
   } catch (e) {
     console.warn('Supabase: error al inicializar', e.message);
@@ -24,12 +22,8 @@ async function sbInsertOrIgnore(table, data, conflictCols) {
   const sb = await initSupabase();
   if (!sb) return;
   try {
-    const { error } = await sb.from(table).insert(data, { onConflict: conflictCols, ignoreDuplicates: true });
-    if (error && error.status !== 409) console.warn('Supabase: error en', table, error.message);
-  } catch (e) {
-    if (e && (e.status === 409 || e.code === '409')) return;
-    console.warn('Supabase: error en', table, e?.message);
-  }
+    await sb.from(table).insert(data, { onConflict: conflictCols, ignoreDuplicates: true });
+  } catch (e) {}
 }
 
 async function sbGuardarHistorialProvincia(provinceName, historyByDate) {
@@ -72,42 +66,7 @@ async function sbGuardarHistorialProvincia(provinceName, historyByDate) {
   }
 }
 
-async function sbGuardarHistorialProvincia(provinceName, historyByDate) {
-  const sb = await initSupabase();
-  if (!sb) return;
-  const provId = STATE.provinceIdMap[provinceName];
-  if (!provId) return;
-  await sbUpsertProvincia(provinceName, provId);
-  for (const [dateStr, list] of Object.entries(historyByDate)) {
-    if (!list || !list.length) continue;
-    const fecha = dateStr.split('-').reverse().join('-');
-    for (const st of list) {
-      await sbUpsertGasolinera(st);
-      for (const [name, key] of FUEL_NAMES) {
-        const precio = st[key];
-        if (precio !== undefined && precio !== null && precio !== '') {
-          await sbUpsertPrecioHistorico(st.IDEESS, fecha, name, precio);
-        }
-      }
-    }
-  }
-}
-
 async function sbObtenerHistorial(gasolineraId, carburante) {
-  const sb = await initSupabase();
-  if (!sb) return [];
-  const { data, error } = await sb.from('precios_historicos')
-    .select('fecha, precio')
-    .eq('gasolinera_id', gasolineraId)
-    .eq('carburante', carburante)
-    .order('fecha', { ascending: true })
-    .limit(30);
-  if (error) {
-    console.warn('Supabase: error al obtener historial', error.message);
-    return [];
-  }
-  return data.map(r => ({ date: r.fecha.split('-').reverse().join('-'), price: r.precio }));
-}
   const sb = await initSupabase();
   if (!sb) return [];
   const { data, error } = await sb.from('precios_historicos')

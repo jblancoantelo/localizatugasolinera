@@ -125,7 +125,7 @@ node test/full_test.mjs
 
 ## Resultados actuales
 
-**32 tests — 32 ✅ 0 ❌ 0 ⏭️**
+**33 tests — 33 ✅ 0 ❌ 0 ⏭️**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
@@ -134,6 +134,7 @@ node test/full_test.mjs
 | Datos | 1 ✅ | — |
 | Filtros | 1 ✅ | — |
 | Tabla | 5 ✅ | — |
+| Tabs | 1 ✅ | 2 ✅ |
 | Detail | 3 ✅ | — |
 | Histórico | 2 ✅ | — |
 | Ambos | 2 ✅ | — |
@@ -142,9 +143,9 @@ node test/full_test.mjs
 | Geo | 1 ✅ | — |
 | Búsqueda | 1 ✅ | 1 ✅ |
 | Toolbar | — | 1 ✅ |
-| Tabs | — | 2 ✅ |
+| Persistencia | 1 ✅ | — |
 | Navegación | — | 2 ✅ |
-| **Total** | **25 ✅** | **7 ✅** |
+| **Total** | **26 ✅** | **7 ✅** |
 
 ## Bugs conocidos y fixes aplicados
 
@@ -155,6 +156,8 @@ node test/full_test.mjs
 | `noProvinceMsg` oculto por especificidad | Selector `.content #noProvinceMsg` insuficiente | Cambiado a `#noProvinceMsg` con mayor especificidad |
 | `setActiveTab()` borraba clase `no-province` | `className = 'content'` sobreescribía clases existentes | Usar `classList.add`/`remove` |
 | `fn` undefined en tabla Ambos | Faltaba `const fn = getSelectedFuelName(d)` en la función map | Añadida declaración |
+| Insert Supabase violaba RLS | Tablas en `public` sin policy `INSERT` para `provincias` | Movido a schema `petrol`, policies `p_ins_prov`, `p_upd_*`, grants + schema expuesto vía `pgrst.db_schemas` |
+| Errores 409/401 en consola | RLS bloqueaba inserts; `Content-Profile` no se enviaba para `public` | Schema `petrol` + `db: { schema: 'petrol' }` en createClient + catch silencioso |
 
 ## Arquitectura de la solución
 

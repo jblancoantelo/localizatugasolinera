@@ -60,7 +60,20 @@ npx supabase link --project-ref tu-ref
 npx supabase db push
 ```
 
-### 5. Probar
+### 5. Exponer schema `petrol` en la API
+
+Tras ejecutar el SQL, ir a **Settings → API → Exposed schemas** en el dashboard de Supabase y añadir `petrol`.  
+También puede hacerse vía SQL:
+
+```sql
+ALTER ROLE authenticator SET pgrst.db_schemas TO 'public, extensions, petrol';
+SELECT pg_notify('pgrst', 'reload config');
+SELECT pg_notify('pgrst', 'reload schema');
+```
+
+> ⚠ Sin este paso, la API REST devuelve `PGRST106: Invalid schema: petrol`.
+
+### 6. Probar
 
 ```powershell
 Get-Process -Name "node" -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -159,22 +172,26 @@ petrol/
 ### Esquema relacional
 
 ```
-provincias (id, nombre)
-  └─ gasolineras (ideess, rotulo, direccion, ..., provincia_id → provincias)
-       └─ precios_historicos (id, gasolinera_id → gasolineras, fecha, carburante, precio)
+petrol.provincias (id, nombre)
+  └─ petrol.gasolineras (ideess, rotulo, direccion, ..., provincia_id → provincias)
+       └─ petrol.precios_historicos (id, gasolinera_id → gasolineras, fecha, carburante, precio)
 ```
 
 ### Tablas
 
 | Tabla | Propósito | RLS |
 |-------|-----------|-----|
-| `provincias` | Catálogo de 52 provincias | SELECT anónimo |
-| `gasolineras` | Estaciones de servicio (~12.000) | SELECT/INSERT anónimo |
-| `precios_historicos` | Precios diarios por gasolinera + combustible + fecha | SELECT/INSERT/UPDATE anónimo |
+| `petrol.provincias` | Catálogo de 52 provincias | SELECT/INSERT/UPDATE anónimo |
+| `petrol.gasolineras` | Estaciones de servicio (~12.000) | SELECT/INSERT/UPDATE anónimo |
+| `petrol.precios_historicos` | Precios diarios por gasolinera + combustible + fecha | SELECT/INSERT/UPDATE anónimo |
 
 ### Políticas RLS
 
-Todas las tablas permiten lectura anónima. `gasolineras` y `precios_historicos` permiten inserción/update anónimos desde la app.
+Todas las tablas permiten SELECT/INSERT/UPDATE anónimos desde la app mediante políticas con `USING (true)` / `WITH CHECK (true)`.
+
+### Schema
+
+Las tablas residen en el schema `petrol` (no `public`). El cliente JS se configura con `db: { schema: 'petrol' }` y la API REST requiere el schema expuesto en la configuración de PostgREST.
 
 ---
 
@@ -242,9 +259,10 @@ Ramas:
 
 ### Rama `bbdd`
 - Conexión a Supabase (proyecto `petrolfinder`)
-- Esquema PostgreSQL: `provincias`, `gasolineras`, `precios_historicos`
-- Cliente Supabase en `js/supabase-client.js`
-- Almacenamiento automático de histórico en Supabase
+- Schema `petrol` con tablas: `provincias`, `gasolineras`, `precios_historicos`
+- Cliente Supabase en `js/supabase-client.js` (usa schema `petrol`)
+- RLS policies con SELECT/INSERT/UPDATE en todas las tablas
+- Auto-guardado de histórico en Supabase desde `api.js`
+- Schema expuesto vía `pgrst.db_schemas` + reload PostgREST
 - Config MCP para opencode
-- Documentación actualizada
 - Tests: 33/33 OK
