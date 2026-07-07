@@ -15,7 +15,7 @@
    git commit -m "mensaje descriptivo"
    git push
    ```
-   Rama activa: `propuesta-d`
+   Rama activa: `bbdd`
 
 ## Convenios del proyecto
 
@@ -59,7 +59,7 @@ if (saved.activeTab) setActiveTab(saved.activeTab);
 ### Tests
 - Ubicación: `test/full_test.mjs`
 - Plan: `test/TEST_PLAN.md`
-- 31 tests totales (24 HTTP + 7 file://)
+- 33 tests totales (26 HTTP + 7 file://)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)
 
@@ -78,15 +78,24 @@ if (saved.activeTab) setActiveTab(saved.activeTab);
 | `js/main.js` | Event listeners, restauración de estado |
 | `sw.js` | Service Worker (solo HTTP) |
 | `opencode.jsonc` | Config MCP para Supabase |
-| `supabase/migrations/001_schema.sql` | Esquema PostgreSQL |
+| `supabase/migrations/001_schema.sql` | Esquema PostgreSQL (schema `petrol`) |
 | `supabase/.env.example` | Plantilla de credenciales |
 
 ### Configuración Supabase (opcional)
 
 1. Crear proyecto en [supabase.com](https://supabase.com)
 2. Ejecutar `supabase/migrations/001_schema.sql` en SQL Editor
-3. Pegar SUPABASE_URL y SUPABASE_ANON_KEY en `js/supabase-config.js`
-4. (Opcional) Para usar MCP: crear token en Account→Access Tokens y exportar `SUPABASE_ACCESS_TOKEN`
+3. Ir a **Settings → API → Exposed schemas** y añadir `petrol`
+4. Pegar SUPABASE_URL y SUPABASE_ANON_KEY en `js/supabase-config.js`
+5. (Opcional) Para usar MCP: crear token en Account→Access Tokens y exportar `SUPABASE_ACCESS_TOKEN`
+
+### Schema `petrol`
+
+- Las tablas están en schema `petrol` (no `public`).
+- `js/supabase-client.js` usa `createClient(URL, KEY, { db: { schema: 'petrol' } })`.
+- El schema debe estar expuesto en PostgREST vía `ALTER ROLE authenticator SET pgrst.db_schemas TO 'public, extensions, petrol';` + reload.
+- RLS: todas las tablas tienen policies SELECT + INSERT + UPDATE con `USING (true)`.
+- Grants: `USAGE` y `ALL` en schema/tablas/secuencias a `anon`, `authenticated`, `service_role`.
 
 ### Comandos útiles
 ```powershell
