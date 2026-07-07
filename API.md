@@ -406,25 +406,26 @@ curl -s "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/Precio
 
 ## 3. Estaciones Terrestres — Histórico
 
-Añaden `{Fecha}` (formato `dd/mm/aaaa`) como primer parámetro de la ruta.
+Añaden `{Fecha}` (formato `dd-mm-aaaa` con **guiones**) como primer parámetro de la ruta.
 Los precios reflejados son los vigentes a las 23:59 de esa fecha.
+> ⚠ El separador de fecha debe ser `-` (guion), no `/` (barra).
 
 ### 3.1 Histórico completo por fecha
 
 ```bash
-curl -s "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestresHist/19/06/2026"
+curl -s "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestresHist/19-06-2026"
 ```
 
 ### 3.2 Histórico por provincia + fecha
 
 ```bash
-curl -s "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestresHist/FiltroProvincia/19/06/2026/28"
+curl -s "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestresHist/FiltroProvincia/19-06-2026/28"
 ```
 
 ### 3.3 Histórico por municipio + producto + fecha
 
 ```bash
-curl -s "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestresHist/FiltroMunicipioProducto/19/06/2026/4495/1"
+curl -s "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestresHist/FiltroMunicipioProducto/19-06-2026/4495/1"
 ```
 
 Variantes disponibles:
@@ -613,6 +614,59 @@ Mismas variantes de filtro que estaciones terrestres:
 | 46 | VALENCIA / VALÈNCIA | 10 |
 | 41 | SEVILLA | 01 |
 | 29 | MÁLAGA | 01 |
+
+---
+
+## 6. Supabase — Esquema relacional (base de datos externa)
+
+Los datos históricos se replican opcionalmente en Supabase (PostgreSQL) para consultas persistentes.
+
+### 6.1 Tablas
+
+```sql
+-- Provincias
+CREATE TABLE provincias (
+  id smallint PRIMARY KEY,
+  nombre text NOT NULL
+);
+
+-- Gasolineras (estaciones de servicio)
+CREATE TABLE gasolineras (
+  ideess text PRIMARY KEY,
+  rotulo text,
+  direccion text,
+  localidad text,
+  provincia_id smallint NOT NULL REFERENCES provincias(id),
+  codigo_postal text,
+  horario text,
+  latitud numeric(10,6),
+  longitud numeric(10,6),
+  margen text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Precios históricos por gasolinera, fecha y carburante
+CREATE TABLE precios_historicos (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  gasolinera_id text NOT NULL REFERENCES gasolineras(ideess),
+  fecha date NOT NULL,
+  carburante text NOT NULL,
+  precio numeric(6,3),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (gasolinera_id, fecha, carburante)
+);
+```
+
+### 6.2 Políticas RLS
+
+Todas las tablas tienen RLS habilitado con políticas de lectura/escritura anónimas (se recomienda restringir en producción).
+
+### 6.3 Configuración
+
+1. Crear proyecto en [supabase.com](https://supabase.com)
+2. Ejecutar `supabase/migrations/001_schema.sql` en el SQL Editor
+3. Copiar `supabase/.env.example` a `js/supabase-config.js` con las credenciales reales
+4. Para MCP: configurar `SUPABASE_ACCESS_TOKEN` en entorno y usar `opencode.jsonc`
 
 ---
 

@@ -70,11 +70,23 @@ if (saved.activeTab) setActiveTab(saved.activeTab);
 | `css/styles.css` | ~260 líneas responsive |
 | `js/state.js` | STATE global |
 | `js/storage.js` | localStorage (estado/filtros) + IndexedDB (caché/favoritos) |
+| `js/supabase-config.js` | Credenciales Supabase (URL + anon key) |
+| `js/supabase-client.js` | Cliente Supabase: guardar/leer histórico, gasolineras, provincias |
 | `js/api.js` | Fetch datos, `tryAutoRestoreProvince()` |
 | `js/controls.js` | `render()`, `setActiveTab()`, filtros |
 | `js/table.js` | `doSort()`, `showDetail()` |
 | `js/main.js` | Event listeners, restauración de estado |
 | `sw.js` | Service Worker (solo HTTP) |
+| `opencode.jsonc` | Config MCP para Supabase |
+| `supabase/migrations/001_schema.sql` | Esquema PostgreSQL |
+| `supabase/.env.example` | Plantilla de credenciales |
+
+### Configuración Supabase (opcional)
+
+1. Crear proyecto en [supabase.com](https://supabase.com)
+2. Ejecutar `supabase/migrations/001_schema.sql` en SQL Editor
+3. Pegar SUPABASE_URL y SUPABASE_ANON_KEY en `js/supabase-config.js`
+4. (Opcional) Para usar MCP: crear token en Account→Access Tokens y exportar `SUPABASE_ACCESS_TOKEN`
 
 ### Comandos útiles
 ```powershell

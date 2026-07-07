@@ -266,6 +266,7 @@ async function fetchProvinceHistory(provinceName) {
     });
     await Promise.all(promises);
   }
+  sbGuardarHistorialProvincia(provinceName, results);
   return results;
 }
 
