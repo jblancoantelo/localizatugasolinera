@@ -24,6 +24,7 @@ const ASSETS = [
   `${BASE}js/table.js`,
   `${BASE}js/controls.js`,
   `${BASE}js/api.js`,
+  `${BASE}js/chart-engine.js`,
   `${BASE}js/main.js`
 ];
 

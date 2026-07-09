@@ -40,6 +40,63 @@ function showDetail(id) {
   document.getElementById('detailAddr').textContent = [d.Dirección, d.Localidad, d.Provincia].filter(Boolean).join(', ');
   document.getElementById('detailFuels').innerHTML = items.join('');
   document.getElementById('detailPanel').classList.add('show');
+  const lastTab = window._lastDetailTab || 'info';
+  switchDetailTab(lastTab);
+}
+
+function switchDetailTab(tabId) {
+  window._lastDetailTab = tabId;
+  document.querySelectorAll('.detail-tab').forEach(t => t.classList.toggle('active', t.dataset.dtab === tabId));
+  document.getElementById('detailTabInfo').style.display = tabId === 'info' ? 'block' : 'none';
+  document.getElementById('detailTabHistory').style.display = tabId === 'history' ? 'block' : 'none';
+  if (tabId === 'history') {
+    const s = STATE;
+    if (s.selectedId) {
+      const d = s.data.find(x => x.IDEESS === s.selectedId);
+      if (d) loadHistory(d);
+    }
+  }
+}
+
+if (window._historyCache === undefined) window._historyCache = null;
+
+async function loadHistory(station) {
+  const loadingEl = document.getElementById('chartLoading');
+  const chartEl = document.getElementById('priceChart');
+  const fuelLabel = document.getElementById('historyFuel');
+  const errorEl = document.getElementById('chartError');
+
+  const s = STATE;
+  if (!s.selectedProv) return;
+  loadingEl.style.display = 'flex';
+  errorEl.style.display = 'none';
+
+  let fuelName = s.selectedFuel;
+  if (!fuelName) {
+    fuelName = getFirstFuelName(station);
+  }
+
+  fuelLabel.textContent = fuelName || '';
+
+  try {
+    if (!window._historyCache || window._historyCache.province !== s.selectedProv) {
+      const data = await fetchProvinceHistory(s.selectedProv);
+      window._historyCache = { province: s.selectedProv, data };
+    }
+    const stationData = window._historyCache.data;
+    const history = getStationHistory(stationData, station.IDEESS, fuelName);
+    loadingEl.style.display = 'none';
+    if (history.length < 2) {
+      errorEl.textContent = 'No hay suficientes datos históricos para esta estación';
+      errorEl.style.display = 'flex';
+      return;
+    }
+    drawPriceChart(chartEl, history, fuelName);
+  } catch (e) {
+    loadingEl.style.display = 'none';
+    errorEl.textContent = 'Error al cargar histórico: ' + (e.message || 'desconocido');
+    errorEl.style.display = 'flex';
+  }
 }
 
 function updateDetail() {

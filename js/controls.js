@@ -104,6 +104,15 @@ function toggleFavorite(id) {
   if (idx >= 0) s.favorites.splice(idx, 1);
   else s.favorites.push(id);
   render(false);
+  const d = s.data.find(x => x.IDEESS === id);
+  if (d) {
+    const m = s.markerMap[id];
+    if (m && m.getPopup()) m.setPopupContent(popupHtml(d));
+    if (s.selectedId === id) {
+      const isFav = s.favorites.includes(id);
+      document.getElementById('detailBrand').innerHTML = `<span class="fav-btn${isFav ? ' on' : ''}" data-id="${id}">${isFav ? '★' : '☆'}</span> ${d.Rótulo || ''}`;
+    }
+  }
 }
 
 function setActiveTab(tabId) {

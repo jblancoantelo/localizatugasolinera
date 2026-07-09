@@ -153,6 +153,40 @@ async function testHTTP(browser, server) {
     if (detail) {
       const brand = await page.locator('#detailBrand').textContent();
       log('Detail', `Contenido: "${brand?.trim()}"`, brand && brand.trim().length > 0);
+      // Switch to history tab
+      const histTab = page.locator('.detail-tab[data-dtab="history"]');
+      await histTab.click();
+      await sleep(300);
+      const histTabbed = await page.evaluate(() => {
+        const tab = document.querySelector('.detail-tab[data-dtab="history"]');
+        return tab && tab.classList.contains('active');
+      });
+      log('Histórico', 'Tab activo', histTabbed);
+      try {
+        await page.waitForFunction(() => {
+          const loading = document.getElementById('chartLoading');
+          const err = document.getElementById('chartError');
+          return loading && loading.style.display === 'none';
+        }, { timeout: 60000 });
+        await sleep(500);
+        const histResolved = await page.evaluate(() => {
+          const err = document.getElementById('chartError');
+          const c = document.getElementById('priceChart');
+          if (!err || !c) return false;
+          if (err.style.display === 'flex') return true;
+          const ctx = c.getContext('2d');
+          if (!ctx) return false;
+          const imgData = ctx.getImageData(0, 0, c.width, c.height);
+          let drawn = 0;
+          for (let i = 3; i < imgData.data.length; i += 4) {
+            if (imgData.data[i] > 0) { drawn++; if (drawn > 500) return true; }
+          }
+          return false;
+        });
+        log('Histórico', 'Gráfica o mensaje error', histResolved, histResolved ? 'OK' : 'ni datos ni error');
+      } catch(e) {
+        log('Histórico', 'Timeout esperando datos históricos', null, 'API histórica sin respuesta');
+      }
       await page.locator('#detailClose').click();
       await sleep(300);
       log('Detail', 'Cerrar funciona', !(await page.locator('#detailPanel').isVisible()));

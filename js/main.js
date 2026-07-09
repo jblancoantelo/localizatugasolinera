@@ -94,6 +94,17 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    const histLink = e.target.closest('.popup-hist-link');
+    if (histLink) {
+      const id = histLink.dataset.id;
+      if (id) {
+        STATE.selectedId = id;
+        showDetail(id);
+        switchDetailTab('history');
+      }
+      return;
+    }
+
     const th = e.target.closest('.table-wrap th');
     if (th && th.dataset.col) { toggleSort(th.dataset.col); return; }
 
@@ -111,6 +122,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('detailClose').addEventListener('click', () => {
     document.getElementById('detailPanel').classList.remove('show');
     STATE.selectedId = null;
+  });
+
+  document.querySelectorAll('.detail-tab').forEach(tab => {
+    tab.addEventListener('click', () => switchDetailTab(tab.dataset.dtab));
   });
 
   document.getElementById('addDiscountBtn').addEventListener('click', addEmptyDiscountRow);

@@ -28,8 +28,9 @@ function popupHtml(d) {
   }
   const isFav = STATE.favorites.includes(d.IDEESS);
   const star = `<span class="fav-btn${isFav ? ' on' : ''}" data-id="${d.IDEESS}">${isFav ? '★' : '☆'}</span> `;
+  const histLink = `<a class="popup-hist-link" data-id="${d.IDEESS}">📊 Histórico</a>`;
   const html = `<strong>${star}${d.Rótulo||''}</strong><br>${d.Dirección||''}, ${d.Localidad||''}`;
-  return items.length ? `${html}<br><br>${items.join('<br>')}` : html;
+  return items.length ? `${html}<br><br>${items.join('<br>')}<br>${histLink}` : html + `<br>${histLink}`;
 }
 
 function initMap() {
@@ -90,5 +91,8 @@ function updateMarkers(fitBounds, onMarkerClick) {
     s.markerMap[d.IDEESS] = m;
     bounds.push([lat,lng]);
   });
+  if (s.selectedId && s.markerMap[s.selectedId]) {
+    s.markerMap[s.selectedId].openPopup();
+  }
   if (fitBounds && bounds.length) s.map.fitBounds(bounds, { padding: [20,20], maxZoom: 14 });
 }
