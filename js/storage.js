@@ -176,22 +176,34 @@ async function renderProvinceCacheInfo() {
   if (!el) return;
   try {
     const keys = await dbGetAllKeys();
-    const provKeys = keys.filter(k => typeof k === 'string' && k.startsWith('prov_'));
-    if (!provKeys.length) {
-      el.innerHTML = '<span style="color:#999">Sin provincias en caché</span>';
+    if (!keys.length) {
+      el.innerHTML = '<span style="color:#999">Sin datos en IndexedDB</span>';
       return;
     }
-    const items = [];
-    for (const key of provKeys) {
-      const entry = await dbGet(key);
-      if (entry && Array.isArray(entry.data)) {
-        const provName = key.slice(5);
-        const ttl = (entry.ttl || 12) * 60 * 60 * 1000;
-        const valid = Date.now() - entry.timestamp <= ttl;
-        items.push(`${provName} (${entry.data.length})${valid ? '' : ' ⏳'}`);
+    const sections = [];
+    const provKeys = keys.filter(k => typeof k === 'string' && k.startsWith('prov_'));
+    if (provKeys.length) {
+      const items = [];
+      for (const key of provKeys) {
+        const entry = await dbGet(key);
+        if (entry && Array.isArray(entry.data)) {
+          const provName = key.slice(5);
+          const ttl = (entry.ttl || 12) * 60 * 60 * 1000;
+          const valid = Date.now() - entry.timestamp <= ttl;
+          items.push(`${provName} (${entry.data.length})${valid ? '' : ' ⏳'}`);
+        }
       }
+      sections.push(`<b>Provincias (${items.length}):</b> ${items.join(' · ')}`);
     }
-    el.innerHTML = '<span>' + items.join(' · ') + '</span>';
+    const histKeys = keys.filter(k => typeof k === 'string' && k.startsWith('hist_'));
+    if (histKeys.length) {
+      sections.push(`<b>Histórico:</b> ${histKeys.length} entradas`);
+    }
+    const otherKeys = keys.filter(k => typeof k === 'string' && !k.startsWith('prov_') && !k.startsWith('hist_'));
+    if (otherKeys.length) {
+      sections.push(`<b>Otras (${otherKeys.length}):</b> ${otherKeys.join(', ')}`);
+    }
+    el.innerHTML = '<span>' + sections.join('<br>') + '</span>';
   } catch(e) {
     el.innerHTML = '<span style="color:#999">No disponible</span>';
   }
@@ -260,4 +272,38 @@ function loadState() {
     if (!raw) return null;
     return JSON.parse(raw);
   } catch(e) { return null; }
+}
+
+function renderLocalStorageCache() {
+  const el = document.getElementById('lsCacheInfo');
+  if (!el) return;
+  try {
+    const items = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith('gasolineras_')) continue;
+      const val = localStorage.getItem(key);
+      let desc = val;
+      try { const p = JSON.parse(val); desc = typeof p === 'object' ? JSON.stringify(p).slice(0, 120) + (JSON.stringify(p).length > 120 ? '…' : '') : val; } catch(e) {}
+      const btn = `<button class="ls-del-btn" data-ls-key="${key}" style="background:#e65100;color:#fff;border:none;border-radius:3px;padding:0 4px;cursor:pointer;font-size:0.6rem;margin-right:4px">✕</button>`;
+      items.push(`<div style="margin-bottom:0.2rem;font-size:0.7rem">${btn}<b>${key}</b>: ${desc}</div>`);
+    }
+    el.innerHTML = items.length ? items.join('') : '<span style="color:#999">Sin datos de la app en localStorage</span>';
+  } catch(e) {
+    el.innerHTML = '<span style="color:#999">No disponible</span>';
+  }
+}
+
+function initCacheTabs() {
+  document.querySelectorAll('.config-cache-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.config-cache-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const id = tab.dataset.cachetab;
+      document.querySelectorAll('.config-cache-panel').forEach(p => p.style.display = 'none');
+      const panel = document.querySelector(`.config-cache-panel[data-cachepanel="${id}"]`);
+      if (panel) panel.style.display = 'block';
+      if (id === 'localstorage') renderLocalStorageCache();
+    });
+  });
 }

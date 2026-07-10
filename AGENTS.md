@@ -1,11 +1,11 @@
-# AGENTS.md — Gasolineras Propuesta D
+# AGENTS.md
 
 ## Workflow obligatorio
 
 1. **Siempre ejecutar tests completos** tras cualquier cambio:
    ```powershell
    Get-Process -Name "node" -ErrorAction SilentlyContinue | Stop-Process -Force
-   node test/full_test.mjs
+   node docs/test/full_test.mjs
    ```
    Si los tests no existen o fallan, no continuar hasta que pasen todos.
 
@@ -15,7 +15,6 @@
    git commit -m "mensaje descriptivo"
    git push
    ```
-   Rama activa: `propuesta-d`
 
 ## Convenios del proyecto
 
@@ -25,7 +24,7 @@
 - JS `setActiveTab(tabId)` recibe el mismo kebab-case
 - JS comparaciones dentro de `setActiveTab` usan kebab-case
 
-**Si se cambia un tab, actualizar los 3 lugares simultáneamente.**  
+**Si se cambia un tab, actualizar los 3 lugares simultáneamente.**
 El test "Clase CSS + panel + botón activo en todas las vistas" detecta mismatch.
 
 ### Dropdown marcas
@@ -54,12 +53,55 @@ if (saved.selectedProv) STATE.selectedProv = saved.selectedProv;
 if (saved.activeTab) setActiveTab(saved.activeTab);
 ```
 
-**Regla general**: cada propiedad guardada en `saveState()` (storage.js) debe tener su restauración correspondiente en `loadState()` (`main.js`). Las que faltan actualmente: `selectedFuel`, `selectedLoc`, `maxDistance`, `userLat`/`userLng`. Las que no necesitan restauración en `loadState` se restauran desde `loadProvinceFilters` dentro de `fetchProvinceData()`.
+**Regla general**: cada propiedad guardada en `saveState()` (storage.js) debe tener su restauración correspondiente en `loadState()` (`main.js`). Las que no necesitan restauración en `loadState` se restauran desde `loadProvinceFilters` dentro de `fetchProvinceData()`.
+
+### setActiveTab — cierre de paneles
+En `controls.js`, `setActiveTab()` cierra automáticamente:
+- `#detailPanel` al salir de `tab-table` o `tab-both`
+- Popup del mapa (`map.closePopup()`) al salir de `tab-map` o `tab-both`
+
+### Chart tooltip (canvas)
+- **chart-engine.js**: `drawPriceChart()` dibuja gráfica + tooltip al hover. Mouse events (`mousemove`/`mouseleave`) buscan el punto más cercano (12px radio) y muestran recuadro oscuro con precio (bold) + fecha debajo.
+- **map.js**: `drawPopupPriceChart()` tiene el mismo sistema con `onPopupChartHover`/`drawPopupTooltip`.
+
+### API Log
+- `apiFetch(url)` en `api.js` wrappea todos los fetch, registrando timestamp, duración (ms), URL y éxito en `API_LOG[]`.
+- Renderizado en `#apiLogEntries` (config card), scroll vertical, 30 entradas máximo.
+- Botón `#clearApiLogBtn` para borrar.
+
+### Config — tarjetas
+1. Descuentos por marca
+2. Caché de datos (con tabs IndexedDB / localStorage)
+3. Paginación
+4. Registro de llamadas API
+
+### Caché — tabs IndexedDB / localStorage
+- `initCacheTabs()` en `storage.js` maneja cambio entre tabs.
+- IndexedDB: lista provincias cacheadas (con nº gasolineras y expiración), histórico (conteo) y otras claves.
+- localStorage: solo claves con prefijo `gasolineras_`, cada una con botón ✕ para borrar individualmente.
+
+### Toolbar — grupos de filtros
+Orden actual de grupos:
+1. Provincia
+2. Localidad
+3. Combustible
+4. Marca
+5. Mapa (tipo mapa + ✕ limpiar)
+6. (actions-group con leyenda de precios)
+
+### Tabla — columnas
+- **Tabla** (`.table-area`): Marca, Precio, Distancia, Localidad, Calle (5 columnas, sin Provincia)
+- **Ambos** (`.both-table-area`): Marca, Precio, Distancia, Localidad, Calle (5 columnas)
+- Paginación por defecto: 30 filas
+
+### Histórico — combos
+- Vista tabla: combo combustible + combo días (14 por defecto), alineados a la izquierda.
+- Vista mapa popup: combo combustible (100px) + combo días (7 por defecto), estilizados como filtros.
 
 ### Tests
-- Ubicación: `test/full_test.mjs`
-- Plan: `test/TEST_PLAN.md`
-- 31 tests totales (24 HTTP + 7 file://)
+- Ubicación: `docs/test/full_test.mjs`
+- Plan: `docs/test/TEST_PLAN.md`
+- 41 tests totales (34 HTTP + 7 file://)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)
 
@@ -67,19 +109,65 @@ if (saved.activeTab) setActiveTab(saved.activeTab);
 | Archivo | Propósito |
 |---------|-----------|
 | `index.html` | Toolbar + content + tabs + bottom sheet |
-| `css/styles.css` | ~260 líneas responsive |
-| `js/state.js` | STATE global |
-| `js/storage.js` | localStorage (estado/filtros) + IndexedDB (caché/favoritos) |
-| `js/api.js` | Fetch datos, `tryAutoRestoreProvince()` |
+| `css/styles.css` | ~320 líneas responsive |
+| `js/state.js` | STATE global + definiciones combustibles |
+| `js/helpers.js` | Funciones auxiliares (precios, distancia, descuentos) |
+| `js/storage.js` | localStorage (estado/filtros) + IndexedDB (caché/favoritos) + tabs caché + API log render |
+| `js/api.js` | Fetch datos, histórico, `apiFetch()` wrapper con log, `tryAutoRestoreProvince()` |
+| `js/map.js` | Inicialización mapa Leaflet, marcadores, popups, chart popup con tooltip |
 | `js/controls.js` | `render()`, `setActiveTab()`, filtros |
-| `js/table.js` | `doSort()`, `showDetail()` |
+| `js/table.js` | `doSort()`, `showDetail()`, `loadHistory()`, helpers combustibles |
+| `js/chart-engine.js` | Dibujar gráfica histórica (canvas) en detail panel + tooltip hover |
 | `js/main.js` | Event listeners, restauración de estado |
 | `sw.js` | Service Worker (solo HTTP) |
+
+### Arquitectura del proyecto
+
+```
+petrol/
+├── index.html              → Toolbar + content + tabs + bottom sheet
+├── AGENTS.md               → Este archivo (instrucciones para IA)
+├── css/styles.css          → ~320 líneas responsive
+├── js/
+│   ├── state.js            → STATE global + definiciones combustibles
+│   ├── helpers.js          → Funciones auxiliares (precios, distancia, descuentos)
+│   ├── storage.js          → localStorage (estado/filtros) + IndexedDB (caché/favoritos)
+│   ├── api.js              → Fetch datos, histórico, apiFetch() wrapper, log
+│   ├── map.js              → Inicialización Leaflet, marcadores, popups, chart popup + tooltip
+│   ├── controls.js         → render(), setActiveTab(), filtros
+│   ├── table.js            → doSort(), showDetail(), loadHistory(), helpers combustibles
+│   ├── chart-engine.js     → Dibujar gráfica histórica (canvas) + tooltip hover
+│   └── main.js             → Event listeners, restauración de estado
+├── sw.js                   → Service Worker (solo HTTP)
+├── icons/                  → Iconos PWA
+└── docs/
+    ├── API.md              → Documentación API del Geoportal de Hidrocarburos
+    └── test/
+        ├── TEST_PLAN.md    → Plan de pruebas
+        ├── full_test.mjs   → Test suite Playwright autónomo (41 tests)
+        └── server.js       → Servidor HTTP inline para tests
+```
+
+### Decisiones técnicas clave
+- **Dropdown marcas**: `position: fixed` en lugar de `position: absolute` relativo al toolbar para evitar problemas de stacking context del flex layout
+- **Persistencia filtros**: `localStorage` clave `gasolineras_prov_filters_{provName}` — simple, síncrono, <1KB
+- **Favoritos**: IndexedDB `gasolineras-db` / `favorites` store — persistente entre sesiones
+- **Caché datos provincia**: IndexedDB + TTL configurable desde UI
+- **Histórico**: Fetch por cada fecha, almacenado en IndexedDB con clave `hist_{provId}_{dateStr}`. Días configurables por vista (14 tabla, 7 popup mapa)
+- **Gráfica histórica**: Canvas 2D con dibujo manual (sin librería de charts). Tooltip al hover con precio + fecha en dos líneas
+- **Mapa único**: Una instancia Leaflet reutilizada entre tabs vía CSS `display: none` / `block`
+- **Tabla "Ambos"**: Sin paginación — muestra todas las estaciones filtradas
+- **Tabla "Tabla"**: Paginada (default 30) con sort dual (asc/desc)
+- **Reset filtros**: Sin re-fetch cuando ya hay datos cargados
+- **API Log**: Array `API_LOG[]` con últimas 30 llamadas, timestamp, duración y estado. Visible en config
+- **Caché config**: Tabs IndexedDB (provincias/histórico) + localStorage (solo claves `gasolineras_`)
+- **Tests**: Servidor HTTP inline en Node.js, Playwright headless, no requiere procesos externos
+- **Paginación por defecto**: 30 resultados/página
 
 ### Comandos útiles
 ```powershell
 # Tests
-node test/full_test.mjs
+node docs/test/full_test.mjs
 
 # Servidor manual para depuración
 node -e "const h=require('http'),fs=require('fs');h.createServer((q,r)=>{let p=q.url=='/'?'index.html':q.url.slice(1);fs.readFile(p,(e,d)=>{if(e){r.writeHead(404);r.end('')}else{r.writeHead(200,{'Content-Type':{'html':'text/html','css':'text/css','js':'application/javascript'}[p.split('.').pop()]||'text/plain'});r.end(d)}})}).listen(8080)"

@@ -111,6 +111,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 .table-wrap th {
   background: #343a40; color: #fff; padding: 0.3rem 0.25rem; cursor: pointer;
   white-space: nowrap; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.02em;
+  text-align: left;
 }
 .table-wrap th:hover { background: #495057; }
 .table-wrap td { padding: 0.25rem 0.25rem; border-bottom: 1px solid #eee; white-space: nowrap; }
@@ -140,6 +141,15 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 .config-desc { font-size: 0.72rem; color: #888; margin-bottom: 0.3rem; }
 .cache-line { font-size: 0.75rem; color: #555; margin-bottom: 0.3rem; }
 .cache-line.muted { color: #999; word-break: break-all; }
+.config-card .config-cache-tabs { display: flex; gap: 0; margin: 0.2rem 0 0.3rem; }
+.config-card .config-cache-tab {
+  flex: 1; text-align: center; padding: 0.25rem 0.2rem;
+  cursor: pointer; font-size: 0.68rem; color: #888;
+  border: none; background: #f5f5f5; transition: all 0.15s;
+  border-radius: 6px 6px 0 0;
+}
+.config-card .config-cache-tab.active { background: #fff; color: #1a73e8; font-weight: 600; border-bottom: 2px solid #1a73e8; }
+.config-card .config-cache-tab:not(.active):hover { background: #eee; }
 
 .discount-row { display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem; }
 .discount-row input[type="text"] { flex: 1; padding: 0.2rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.72rem; }
@@ -160,7 +170,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 .info-bar .pagination button:disabled { opacity: 0.3; cursor: default; }
 
 /* === Price legend === */
-.price-legend { display: inline-flex; gap: 0.35rem; font-size: 0.62rem; color: #777; align-items: center; }
+.price-legend { display: inline-flex; gap: 0.35rem; font-size: 0.7rem; color: #777; align-items: center; }
 .price-legend span { display: inline-flex; align-items: center; gap: 2px; }
 .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; }
 .dot.g { background: #2e7d32; border: 1px solid #2e7d32; }
@@ -212,9 +222,14 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 .detail-panel .detail-tab-content[style*="display:none"], .detail-panel .detail-tab-content[style*="display: none"] { display: none; }
 
 /* === History tab content === */
-.detail-panel .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.2rem; }
-.detail-panel .history-label { font-size: 0.68rem; font-weight: 600; color: #555; }
-.detail-panel .history-fuel { font-size: 0.65rem; color: #1a73e8; }
+.detail-panel .history-header { display: flex; justify-content: flex-start; align-items: center; gap: 0.5rem; margin-bottom: 0.2rem; }
+.detail-panel .history-header select {
+  padding: 0.15rem 0.3rem; border: 1px solid #d0d0d0; border-radius: 4px;
+  font-size: 0.65rem; background: #fff; color: #333; cursor: pointer;
+}
+.detail-panel .history-header select:focus {
+  border-color: #1a73e8; outline: none; box-shadow: 0 0 0 2px rgba(26,115,232,0.1);
+}
 .detail-panel .chart-wrap { position: relative; width: 100%; min-height: 180px; }
 .detail-panel #priceChart { display: block; width: 100%; height: 180px; }
 .detail-panel .chart-loading {
@@ -234,10 +249,18 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 .popup-tab { flex: 1; text-align: center; padding: 4px 2px; cursor: pointer; font-size: 0.68rem; color: #888; border: none; background: none; transition: all 0.15s; border-radius: 0; }
 .popup-tab.active { color: #1a73e8; font-weight: 600; border-bottom: 2px solid #1a73e8; }
 .popup-tab:not(.active):hover { background: #f5f5f5; }
-.popup-chart-wrap { position: relative; width: 100%; min-height: 135px; }
-.popup-price-chart { display: block; width: 100%; height: 135px; }
+.popup-chart-wrap { position: relative; width: 100%; min-height: 160px; }
+.popup-price-chart { display: block; width: 100%; height: 160px; }
 .popup-history-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #999; background: rgba(255,255,255,0.85); }
 .popup-history-error { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.73rem; color: #c62828; background: rgba(255,255,255,0.85); }
+.popup-history-fuel { flex: 0 0 100px; min-width: 0; }
+.popup-history-fuel, .popup-history-days {
+  padding: 0.15rem 0.25rem; border: 1px solid #d0d0d0; border-radius: 4px;
+  font-size: 0.62rem; background: #fff; color: #333; cursor: pointer;
+}
+.popup-history-fuel:focus, .popup-history-days:focus {
+  border-color: #1a73e8; outline: none; box-shadow: 0 0 0 2px rgba(26,115,232,0.1);
+}
 
 /* === Brand filter dropdown === */
 #brandFilterBtn { min-width: 55px; text-align: left; }

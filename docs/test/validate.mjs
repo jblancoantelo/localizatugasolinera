@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 
 const HTTP_URL = 'http://localhost:8080';
-const FILE_URL = 'file:///E:/Temp/VS/petrol/index.html';
+const FILE_URL = new URL('../../index.html', import.meta.url).href;
 const TEST_PROVINCE = 'Madrid';
 
 const RESULTS = { passed: 0, failed: 0, skipped: 0, errors: [] };

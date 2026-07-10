@@ -27,7 +27,7 @@
   <div class="toolbar">
     <div class="toolbar-groups">
       <div class="filter-group">
-        <span class="filter-group-label">🎯 Ubicación</span>
+        <button class="btn" id="favToggleBtn" title="Favoritos">☆</button>
         <button class="btn btn-primary" id="geolocBtn">📍</button>
         <input type="number" id="maxDistance" min="1" placeholder="km" style="width:50px">
       </div>
@@ -47,15 +47,19 @@
         <span class="filter-group-label">🏷️ Marca</span>
         <button class="btn" id="brandFilterBtn">Todas</button>
       </div>
-      <div class="filter-group actions-group">
-        <button class="btn" id="favToggleBtn" title="Favoritos">☆</button>
-        <select id="mapStyle" style="max-width:70px">
+      <div class="filter-group">
+        <span class="filter-group-label">🗺️ Mapa</span>
+        <select id="mapStyle" style="max-width:75px">
           <option value="street">Calle</option>
           <option value="satellite">Satélite</option>
           <option value="standard">Estándar</option>
           <option value="cycling">Ciclismo</option>
         </select>
-        <button class="btn" id="resetFiltersBtn" title="Limpiar filtros">✕</button>
+      </div>
+      <div class="filter-group">
+        <button class="btn" id="resetFiltersBtn" title="Limpiar filtros" style="font-size:0.85rem">✕</button>
+      </div>
+      <div class="filter-group actions-group">
         <div class="price-legend" id="legend"><span><span class="dot g"></span> &lt;1.50</span><span><span class="dot o"></span> 1.50–1.70</span><span><span class="dot r"></span> &gt;1.70</span></div>
       </div>
     </div>
@@ -77,11 +81,9 @@
         <table id="table"><thead><tr>
           <th data-col="Rótulo">Marca<span class="arrow"></span></th>
           <th data-col="Precio">Precio<span class="arrow"></span></th>
-          <th data-col="Combustible">Combustible<span class="arrow"></span></th>
-          <th data-col="Provincia">Provincia<span class="arrow"></span></th>
+          <th data-col="Distancia">Distancia<span class="arrow"></span></th>
           <th data-col="Localidad">Localidad<span class="arrow"></span></th>
           <th data-col="Dirección">Calle<span class="arrow"></span></th>
-          <th data-col="Distancia">Distancia<span class="arrow"></span></th>
         </tr></thead><tbody id="tableBody"></tbody></table>
       </div>
     </div>
@@ -90,21 +92,14 @@
         <table id="tableBoth"><thead><tr>
           <th data-col="Rótulo">Marca<span class="arrow"></span></th>
           <th data-col="Precio">Precio<span class="arrow"></span></th>
-          <th data-col="Combustible">Combustible<span class="arrow"></span></th>
           <th data-col="Distancia">Distancia<span class="arrow"></span></th>
+          <th data-col="Localidad">Localidad<span class="arrow"></span></th>
+          <th data-col="Dirección">Calle<span class="arrow"></span></th>
         </tr></thead><tbody id="tableBothBody"></tbody></table>
       </div>
     </div>
     <div class="config-area">
       <div class="config-container">
-        <div class="config-card">
-          <h3>🗑️ Caché de datos</h3>
-          <p class="config-desc">Las provincias se almacenan localmente para evitar recargas innecesarias.</p>
-          <div id="cacheInfo" class="cache-line"></div>
-          <div id="provCacheInfo" class="cache-line muted"></div>
-          <label><input type="number" id="cacheTtl" min="0" value="12"> horas de caché</label>
-          <button id="clearCacheBtn" class="btn-del">🗑️ Limpiar caché</button>
-        </div>
         <div class="config-card">
           <h3>🏷️ Descuentos por marca</h3>
           <p class="config-desc">Resta céntimos al precio mostrado por marca.</p>
@@ -113,16 +108,40 @@
           <datalist id="brandOptions"></datalist>
         </div>
         <div class="config-card">
+          <h3>🗑️ Caché de datos</h3>
+          <p class="config-desc">Las provincias se almacenan localmente para evitar recargas innecesarias.</p>
+          <div class="config-cache-tabs">
+            <button class="config-cache-tab active" data-cachetab="indexeddb">IndexedDB</button>
+            <button class="config-cache-tab" data-cachetab="localstorage">localStorage</button>
+          </div>
+          <div class="config-cache-panel" data-cachepanel="indexeddb">
+            <div id="cacheInfo" class="cache-line"></div>
+            <div id="provCacheInfo" class="cache-line muted"></div>
+            <label><input type="number" id="cacheTtl" min="0" value="12"> horas de caché</label>
+            <button id="clearCacheBtn" class="btn-del">🗑️ Limpiar caché</button>
+          </div>
+          <div class="config-cache-panel" data-cachepanel="localstorage" style="display:none">
+            <div id="lsCacheInfo" class="cache-line"></div>
+          </div>
+        </div>
+        <div class="config-card">
           <h3>📄 Paginación</h3>
           <label>Resultados por página:
             <select id="pageSize">
+              <option value="15">15</option>
+              <option value="30" selected>30</option>
               <option value="50">50</option>
-              <option value="200">200</option>
+              <option value="100">100</option>
+              <option value="150">150</option>
               <option value="300">300</option>
-              <option value="500">500</option>
               <option value="0">Todos</option>
             </select>
           </label>
+        </div>
+        <div class="config-card">
+          <h3>📋 Registro de llamadas API</h3>
+          <div id="apiLogEntries" class="cache-line" style="max-height:calc(30 * 1.1em);overflow-y:auto;font-size:0.65rem;font-family:monospace"></div>
+          <button id="clearApiLogBtn" class="btn-del" style="margin-top:0.3rem">🗑️ Borrar registro</button>
         </div>
       </div>
     </div>
@@ -141,8 +160,16 @@
       </div>
       <div class="detail-tab-content" id="detailTabHistory" style="display:none">
         <div class="history-header">
-          <span class="history-label">Histórico 14 días</span>
-          <span class="history-fuel" id="historyFuel"></span>
+          <select id="historyFuel"></select>
+          <select id="historyDays">
+            <option value="7">7 días</option>
+            <option value="14" selected>14 días</option>
+            <option value="21">21 días</option>
+            <option value="30">30 días</option>
+            <option value="60">60 días</option>
+            <option value="90">90 días</option>
+            <option value="180">180 días</option>
+          </select>
         </div>
         <div class="chart-wrap" id="chartWrap">
           <canvas id="priceChart"></canvas>

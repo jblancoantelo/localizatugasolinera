@@ -1,4 +1,40 @@
 const API_BASE = 'https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/';
+const API_LOG = [];
+
+async function apiFetch(url) {
+  const start = performance.now();
+  try {
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    const ms = (performance.now() - start).toFixed(0);
+    API_LOG.unshift({ url, ms: ms + 'ms', time: new Date().toLocaleTimeString(), ok: res.ok });
+    if (API_LOG.length > 30) API_LOG.length = 30;
+    renderApiLog();
+    return res;
+  } catch (e) {
+    const ms = (performance.now() - start).toFixed(0);
+    API_LOG.unshift({ url, ms: ms + 'ms', time: new Date().toLocaleTimeString(), ok: false });
+    if (API_LOG.length > 30) API_LOG.length = 30;
+    renderApiLog();
+    throw e;
+  }
+}
+
+function renderApiLog() {
+  const el = document.getElementById('apiLogEntries');
+  if (!el) return;
+  if (!API_LOG.length) {
+    el.innerHTML = '<span style="color:#999">Sin llamadas registradas</span>';
+    return;
+  }
+  el.innerHTML = API_LOG.map(l =>
+    `<div style="margin-bottom:0.1rem">${l.time} <span style="color:${l.ok ? '#2e7d32' : '#c62828'}">${l.ms}</span> ${l.url}</div>`
+  ).join('');
+}
+
+function clearApiLog() {
+  API_LOG.length = 0;
+  renderApiLog();
+}
 
 function populateProvinceSelect(provinces) {
   STATE.provinceIdMap = {};
@@ -65,7 +101,7 @@ async function fetchProvinces() {
   if (provinces) await dbDelete('provinces_list');
 
   try {
-    const r = await fetch(API_BASE + 'Listados/Provincias/', { headers: { 'Accept': 'application/json' } });
+    const r = await apiFetch(API_BASE + 'Listados/Provincias/');
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const json = await r.json();
     if (!Array.isArray(json)) throw new Error('Formato inesperado');
@@ -107,9 +143,7 @@ async function fetchProvinceData(provinceName) {
 
   if (!data) {
     try {
-      const r = await fetch(API_BASE + 'EstacionesTerrestres/FiltroProvincia/' + provId, {
-        headers: { 'Accept': 'application/json' }
-      });
+      const r = await apiFetch(API_BASE + 'EstacionesTerrestres/FiltroProvincia/' + provId);
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const json = await r.json();
       data = json.ListaEESSPrecio || [];
@@ -228,13 +262,12 @@ function formatDateDDMMYYYY(date) {
   return d + '-' + m + '-' + y;
 }
 
-const HISTORY_DAYS = 14;
-
-async function fetchProvinceHistory(provinceName) {
+async function fetchProvinceHistory(provinceName, days) {
   const provId = STATE.provinceIdMap[provinceName];
   if (!provId) return {};
   const dates = [];
-  for (let i = HISTORY_DAYS; i >= 1; i--) {
+  if (!days) days = STATE.historyDays || 14;
+  for (let i = days; i >= 1; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
     d.setHours(0, 0, 0, 0);
@@ -253,9 +286,7 @@ async function fetchProvinceHistory(provinceName) {
         return;
       }
       try {
-        const r = await fetch(API_BASE + 'EstacionesTerrestresHist/FiltroProvincia/' + dateStr + '/' + provId, {
-          headers: { 'Accept': 'application/json' }
-        });
+        const r = await apiFetch(API_BASE + 'EstacionesTerrestresHist/FiltroProvincia/' + dateStr + '/' + provId);
         if (r.ok) {
           const json = await r.json();
           const list = json.ListaEESSPrecio || [];

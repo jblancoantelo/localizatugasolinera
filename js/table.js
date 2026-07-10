@@ -1,3 +1,33 @@
+function getAvailableFuels(station) {
+  const fuels = [];
+  for (const [name, key] of FUEL_NAMES) {
+    if (getFuelPrice(station, key) !== null) fuels.push(name);
+  }
+  return fuels;
+}
+
+function resolveHistoryFuel(station, selectedFuel) {
+  if (!selectedFuel) return getFirstFuelName(station);
+  const group = FUEL_GROUPS[selectedFuel];
+  if (group) {
+    for (const name of group) {
+      if (getFuelPrice(station, FUEL_KEYS[name]) !== null) return name;
+    }
+    return group[0];
+  }
+  return selectedFuel;
+}
+
+function populateHistoryFuelSelect(select, station, currentFuel) {
+  const fuels = getAvailableFuels(station);
+  const selected = resolveHistoryFuel(station, currentFuel);
+  select.innerHTML = fuels.map(f =>
+    `<option value="${f}"${f === selected ? ' selected' : ''}>${f}</option>`
+  ).join('');
+  if (!fuels.includes(selected)) select.value = fuels[0] || '';
+  return select.value;
+}
+
 function fuelsHtml(d) {
   const sf = STATE.selectedFuel;
   const items = [];
@@ -60,28 +90,17 @@ function switchDetailTab(tabId) {
 
 if (window._historyCache === undefined) window._historyCache = null;
 
-async function loadHistory(station) {
+async function loadChartForFuel(station, fuelName) {
   const loadingEl = document.getElementById('chartLoading');
   const chartEl = document.getElementById('priceChart');
-  const fuelLabel = document.getElementById('historyFuel');
   const errorEl = document.getElementById('chartError');
-
   const s = STATE;
-  if (!s.selectedProv) return;
   loadingEl.style.display = 'flex';
   errorEl.style.display = 'none';
-
-  let fuelName = s.selectedFuel;
-  if (!fuelName) {
-    fuelName = getFirstFuelName(station);
-  }
-
-  fuelLabel.textContent = fuelName || '';
-
   try {
-    if (!window._historyCache || window._historyCache.province !== s.selectedProv) {
-      const data = await fetchProvinceHistory(s.selectedProv);
-      window._historyCache = { province: s.selectedProv, data };
+    if (!window._historyCache || window._historyCache.province !== s.selectedProv || window._historyCache.days !== s.historyDays) {
+      const data = await fetchProvinceHistory(s.selectedProv, s.historyDays);
+      window._historyCache = { province: s.selectedProv, days: s.historyDays, data };
     }
     const stationData = window._historyCache.data;
     const history = getStationHistory(stationData, station.IDEESS, fuelName);
@@ -91,12 +110,21 @@ async function loadHistory(station) {
       errorEl.style.display = 'flex';
       return;
     }
-    drawPriceChart(chartEl, history, fuelName);
+    drawPriceChart(chartEl, history);
   } catch (e) {
     loadingEl.style.display = 'none';
     errorEl.textContent = 'Error al cargar histórico: ' + (e.message || 'desconocido');
     errorEl.style.display = 'flex';
   }
+}
+
+async function loadHistory(station) {
+  const fuelSelect = document.getElementById('historyFuel');
+  const s = STATE;
+  if (!s.selectedProv) return;
+
+  const fuelName = populateHistoryFuelSelect(fuelSelect, station, s.selectedFuel);
+  await loadChartForFuel(station, fuelName);
 }
 
 function updateDetail() {
@@ -139,7 +167,6 @@ function doSort() {
   arr.sort((a,b) => {
     let va, vb;
     if (col==='Precio') { va=getSelectedFuelPrice(a)??999; vb=getSelectedFuelPrice(b)??999; }
-    else if (col==='Combustible') { va=getSelectedFuelName(a); vb=getSelectedFuelName(b); }
     else if (col==='Distancia') { va=a._dist??99999; vb=b._dist??99999; }
     else { va=(a[col]||'').toLowerCase(); vb=(b[col]||'').toLowerCase(); }
     if (typeof va==='string') return dir==='asc'?va.localeCompare(vb):vb.localeCompare(va);
@@ -163,12 +190,11 @@ function doSort() {
     const dot = p !== null ? `<span class="dot ${fuelColor(p)}"></span> ` : '';
     const star = `<span class="fav-btn${isFav?' on':''}" data-id="${d.IDEESS}">${isFav?'★':'☆'}</span> `;
     const cheapBadge = d._cheapest ? ' <span class="cheap-badge" title="Más barato de la provincia">↓</span>' : '';
-    return `<tr class="${sel}${cheap}" data-id="${d.IDEESS}"><td>${star}${dot}${d.Rótulo||''}${cheapBadge}</td><td>${priceStr}</td><td>${fn}</td><td>${d.Provincia||''}</td><td>${d.Localidad||''}</td><td>${d.Dirección||''}</td><td>${distStr}</td></tr>`;
+    return `<tr class="${sel}${cheap}" data-id="${d.IDEESS}"><td>${star}${dot}${d.Rótulo||''}${cheapBadge}</td><td>${priceStr}</td><td>${distStr}</td><td>${d.Localidad||''}</td><td>${d.Dirección||''}</td></tr>`;
   }).join('');
 
   document.querySelector('#tableBothBody').innerHTML = arr.map(d => {
     const p = getSelectedFuelPrice(d);
-    const fn = getSelectedFuelName(d);
     const distStr = d._dist!==null ? d._dist.toFixed(1)+' km' : '';
     const isFav = s.favorites.includes(d.IDEESS);
     const sel = s.selectedId===d.IDEESS ? ' selected' : '';
@@ -177,7 +203,7 @@ function doSort() {
     const dot = p !== null ? `<span class="dot ${fuelColor(p)}"></span> ` : '';
     const star = `<span class="fav-btn${isFav?' on':''}" data-id="${d.IDEESS}">${isFav?'★':'☆'}</span> `;
     const cheapBadge = d._cheapest ? ' <span class="cheap-badge" title="Más barato de la provincia">↓</span>' : '';
-    return `<tr class="${sel}${cheap}" data-id="${d.IDEESS}"><td>${star}${dot}${d.Rótulo||''}${cheapBadge}</td><td>${priceStr}</td><td>${fn}</td><td>${distStr}</td></tr>`;
+    return `<tr class="${sel}${cheap}" data-id="${d.IDEESS}"><td>${star}${dot}${d.Rótulo||''}${cheapBadge}</td><td>${priceStr}</td><td>${distStr}</td><td>${d.Localidad||''}</td><td>${d.Dirección||''}</td></tr>`;
   }).join('');
 
   document.querySelectorAll('#table thead th').forEach(th => {

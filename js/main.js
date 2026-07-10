@@ -44,6 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (STATE.page < totalPages) { STATE.page++; doSort(); }
   });
   document.getElementById('clearCacheBtn').addEventListener('click', clearCache);
+  document.getElementById('clearApiLogBtn')?.addEventListener('click', clearApiLog);
+  initCacheTabs();
   document.getElementById('favToggleBtn').addEventListener('click', () => {
     STATE.showFavoritesOnly = !STATE.showFavoritesOnly;
     STATE.page = 1;
@@ -86,6 +88,18 @@ document.addEventListener('DOMContentLoaded', () => {
     tab.addEventListener('click', () => setActiveTab(tab.dataset.tab));
   });
 
+  document.addEventListener('change', e => {
+    const container = e.target.closest('.popup-tab-content[data-ptab-content="history"]');
+    if (!container) return;
+    if (e.target.closest('.popup-history-fuel') || e.target.closest('.popup-history-days')) {
+      const station = STATE.data.find(x => x.IDEESS === container.dataset.id);
+      if (station) {
+        const fuel = container.querySelector('.popup-history-fuel').value;
+        loadPopupChartForFuel(container, station, fuel);
+      }
+    }
+  });
+
   document.addEventListener('click', e => {
     const favBtn = e.target.closest('.fav-btn');
     if (favBtn) {
@@ -125,6 +139,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (m) { m.openPopup(); STATE.map.panTo(m.getLatLng()); }
   });
 
+  document.getElementById('historyDays')?.addEventListener('change', e => {
+    STATE.historyDays = parseInt(e.target.value) || 14;
+    window._historyCache = null;
+    const s = STATE;
+    if (s.selectedId) {
+      const d = s.data.find(x => x.IDEESS === s.selectedId);
+      if (d) loadHistory(d);
+    }
+  });
+
+  document.getElementById('historyFuel')?.addEventListener('change', e => {
+    const s = STATE;
+    if (s.selectedId) {
+      const d = s.data.find(x => x.IDEESS === s.selectedId);
+      if (d) loadChartForFuel(d, e.target.value);
+    }
+  });
+
   document.getElementById('detailClose').addEventListener('click', () => {
     document.getElementById('detailPanel').classList.remove('show');
     STATE.selectedId = null;
@@ -136,6 +168,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('addDiscountBtn').addEventListener('click', addEmptyDiscountRow);
   document.getElementById('cacheTtl').addEventListener('change', saveState);
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.ls-del-btn');
+    if (btn) {
+      localStorage.removeItem(btn.dataset.lsKey);
+      renderLocalStorageCache();
+    }
+  });
 
   const saved = loadState();
   if (saved) {
@@ -173,4 +212,5 @@ document.addEventListener('DOMContentLoaded', () => {
       updatePosInfo();
     }
   }
+  renderApiLog();
 });

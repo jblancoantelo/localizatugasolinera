@@ -127,6 +127,15 @@ function setActiveTab(tabId) {
     t.classList.toggle('active', t.dataset.tab === tabId);
   });
 
+  if (tabId !== 'tab-table' && tabId !== 'tab-both') {
+    document.getElementById('detailPanel').classList.remove('show');
+    STATE.selectedId = null;
+  }
+
+  if (tabId !== 'tab-map' && tabId !== 'tab-both') {
+    if (s.map) s.map.closePopup();
+  }
+
   if (tabId === 'tab-config') {
     renderDiscountConfig();
     renderCacheInfo();

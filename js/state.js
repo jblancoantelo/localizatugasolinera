@@ -4,8 +4,8 @@ const STATE = {
   userLat: null, userLng: null, map: null, markers: [], userMarker: null,
   markerMap: {}, tileLayer: null,
   selectedId: null, activeTab: 'tab-both', selectedTile: 'street',
-  discounts: {}, page: 1, pageSize: 50, maxDistance: '',
-  favorites: [], showFavoritesOnly: false,
+  discounts: {}, page: 1, pageSize: 30, maxDistance: '',
+  favorites: [], showFavoritesOnly: false, historyDays: 14,
   provinces: [], provinceIdMap: {},
   _prevFilteredIds: ''
 };

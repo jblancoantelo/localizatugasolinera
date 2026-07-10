@@ -5,9 +5,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
-const FILE_URL = 'file:///' + ROOT.replace(/\\/g, '/') + '/index.html';
-
+const ROOT = path.resolve(__dirname, '..', '..');
+const FILE_URL = new URL('../../index.html', import.meta.url).href;
 const RESULTS = { passed: 0, failed: 0, skipped: 0, errors: [] };
 
 function log(cat, test, ok, detail = '') {

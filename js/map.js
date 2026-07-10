@@ -36,6 +36,18 @@ function popupHtml(d) {
     ${fuelsHtml}
   </div>
   <div class="popup-tab-content" data-ptab-content="history" style="display:none" data-id="${d.IDEESS}">
+    <div style="display:flex;gap:4px;margin-bottom:6px">
+      <select class="popup-history-fuel"></select>
+      <select class="popup-history-days">
+        <option value="7" selected>7d</option>
+        <option value="14">14d</option>
+        <option value="21">21d</option>
+        <option value="30">30d</option>
+        <option value="60">60d</option>
+        <option value="90">90d</option>
+        <option value="180">180d</option>
+      </select>
+    </div>
     <div class="popup-chart-wrap">
       <canvas class="popup-price-chart"></canvas>
       <div class="popup-history-loading">Cargando histórico...</div>
@@ -125,7 +137,7 @@ function drawPopupPriceChart(canvas, data) {
 
   ctx.clearRect(0, 0, W, H);
 
-  const PAD = { top: 4, right: 14, bottom: 18, left: 42 };
+  const PAD = { top: 14, right: 14, bottom: 18, left: 38 };
   const plotW = Math.max(1, W - PAD.left - PAD.right);
   const plotH = Math.max(1, H - PAD.top - PAD.bottom);
 
@@ -153,7 +165,7 @@ function drawPopupPriceChart(canvas, data) {
     ctx.font = '9px system-ui, sans-serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
-    ctx.fillText(price.toFixed(3).replace('.', ',') + '€', PAD.left - 4, y);
+    ctx.fillText(price.toFixed(3).replace('.', ','), PAD.left - 8, y);
   }
 
   ctx.textAlign = 'center';
@@ -182,6 +194,12 @@ function drawPopupPriceChart(canvas, data) {
 
   const minD = data.reduce((a, b) => a.price < b.price ? a : b);
   const maxD = data.reduce((a, b) => a.price > b.price ? a : b);
+
+  const points = data.map((d, i) => ({
+    x: xPos(i), y: yPos(d.price), price: d.price, date: d.date
+  }));
+  canvas._chartPoints = points;
+  canvas._chartData = data;
 
   data.forEach((d, i) => {
     const x = xPos(i);
@@ -220,50 +238,126 @@ function drawPopupPriceChart(canvas, data) {
       ctx.fillText(d.price.toFixed(3).replace('.', ','), x, y - 5);
     }
   });
+
+  if (!canvas._chartTooltipAttached) {
+    canvas._chartTooltipAttached = true;
+    canvas.addEventListener('mousemove', onPopupChartHover);
+    canvas.addEventListener('mouseleave', onPopupChartLeave);
+  }
 }
 
-async function loadPopupHistory(container, stationId) {
-  container.dataset.loaded = '1';
+function onPopupChartHover(e) {
+  const canvas = e.target;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const points = canvas._chartPoints;
+  if (!points) return;
+
+  let nearest = null;
+  let minDist = 12;
+  for (const p of points) {
+    const dx = mx - p.x;
+    const dy = my - p.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < minDist) {
+      minDist = dist;
+      nearest = p;
+    }
+  }
+
+  if (nearest) {
+    drawPopupPriceChart(canvas, canvas._chartData);
+    drawPopupTooltip(canvas, nearest);
+  }
+}
+
+function onPopupChartLeave(e) {
+  const canvas = e.target;
+  if (canvas._chartData) {
+    drawPopupPriceChart(canvas, canvas._chartData);
+  }
+}
+
+function drawPopupTooltip(canvas, point) {
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  ctx.scale(dpr, dpr);
+
+  const parts = String(point.date).split('-');
+  const dateLabel = parts.length === 3 ? parts[2] + '-' + parts[1] + '-' + parts[0] : point.date;
+  const priceLabel = point.price.toFixed(3).replace('.', ',') + ' €';
+  ctx.font = 'bold 11px system-ui, sans-serif';
+  const pm = ctx.measureText(priceLabel);
+  ctx.font = '10px system-ui, sans-serif';
+  const dm = ctx.measureText(dateLabel);
+  const pw = pm.width, dw = dm.width;
+  const tw = Math.max(pw, dw);
+  const lh = 16;
+  const pad = 6;
+  const bw = tw + pad * 2;
+  const bh = lh * 2 + pad * 2;
+  let bx = point.x - bw / 2;
+  let by = point.y - bh - 10;
+  if (bx < 2) bx = 2;
+  if (bx + bw > rect.width - 2) bx = rect.width - bw - 2;
+  if (by < 2) by = point.y + 10;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.8)';
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 4);
+  ctx.fill();
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 11px system-ui, sans-serif';
+  ctx.fillText(priceLabel, bx + bw / 2, by + pad + lh / 2);
+  ctx.font = '10px system-ui, sans-serif';
+  ctx.fillText(dateLabel, bx + bw / 2, by + pad + lh + lh / 2);
+}
+
+async function loadPopupChartForFuel(container, station, fuelName) {
   const wrap = container.querySelector('.popup-chart-wrap');
   const canvas = wrap.querySelector('.popup-price-chart');
   const loadingEl = wrap.querySelector('.popup-history-loading');
   const errorEl = wrap.querySelector('.popup-history-error');
-
   const s = STATE;
-  if (!s.selectedProv) {
-    errorEl.textContent = 'Sin provincia';
-    errorEl.style.display = 'flex';
-    loadingEl.style.display = 'none';
-    return;
-  }
+  const daysEl = container.querySelector('.popup-history-days');
+  const days = parseInt(daysEl ? daysEl.value : 7, 10) || 7;
+  loadingEl.style.display = 'flex';
+  errorEl.style.display = 'none';
   try {
-    if (!window._historyCache || window._historyCache.province !== s.selectedProv) {
-      const data = await fetchProvinceHistory(s.selectedProv);
-      window._historyCache = { province: s.selectedProv, data };
+    if (!window._historyCache || window._historyCache.province !== s.selectedProv || window._historyCache.days !== days) {
+      const data = await fetchProvinceHistory(s.selectedProv, days);
+      window._historyCache = { province: s.selectedProv, days, data };
     }
     const stationData = window._historyCache.data;
-    const station = s.data.find(x => x.IDEESS === stationId);
-    if (!station) {
-      errorEl.textContent = 'Estación no encontrada';
-      errorEl.style.display = 'flex';
-      loadingEl.style.display = 'none';
-      return;
-    }
-    let fuelName = s.selectedFuel;
-    if (!fuelName) fuelName = getFirstFuelName(station);
-    const history = getStationHistory(stationData, stationId, fuelName);
+    const history = getStationHistory(stationData, station.IDEESS, fuelName);
     if (history.length < 2) {
+      loadingEl.style.display = 'none';
       errorEl.textContent = 'No hay suficientes datos históricos';
       errorEl.style.display = 'flex';
-      loadingEl.style.display = 'none';
       return;
     }
     loadingEl.style.display = 'none';
-    const last7 = history.slice(-7);
-    requestAnimationFrame(() => drawPopupPriceChart(canvas, last7));
+    const sliced = history.slice(-days);
+    requestAnimationFrame(() => drawPopupPriceChart(canvas, sliced));
   } catch (e) {
     loadingEl.style.display = 'none';
     errorEl.textContent = 'Error: ' + (e.message || 'desconocido');
     errorEl.style.display = 'flex';
   }
+}
+
+async function loadPopupHistory(container, stationId) {
+  container.dataset.loaded = '1';
+  const fuelSelect = container.querySelector('.popup-history-fuel');
+  const s = STATE;
+  if (!s.selectedProv) return;
+  const station = s.data.find(x => x.IDEESS === stationId);
+  if (!station) return;
+  const fuelName = populateHistoryFuelSelect(fuelSelect, station, s.selectedFuel);
+  await loadPopupChartForFuel(container, station, fuelName);
 }
