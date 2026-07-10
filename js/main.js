@@ -94,13 +94,19 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const histLink = e.target.closest('.popup-hist-link');
-    if (histLink) {
-      const id = histLink.dataset.id;
-      if (id) {
-        STATE.selectedId = id;
-        showDetail(id);
-        switchDetailTab('history');
+    const popupTab = e.target.closest('.popup-tab');
+    if (popupTab) {
+      const tabId = popupTab.dataset.ptab;
+      const container = popupTab.closest('.popup-container');
+      if (container) {
+        container.querySelectorAll('.popup-tab').forEach(t => t.classList.toggle('active', t.dataset.ptab === tabId));
+        container.querySelectorAll('.popup-tab-content').forEach(c => {
+          c.style.display = c.dataset.ptabContent === tabId ? 'block' : 'none';
+        });
+        if (tabId === 'history') {
+          const hc = container.querySelector('.popup-tab-content[data-ptab-content="history"]');
+          if (hc && !hc.dataset.loaded) loadPopupHistory(hc, hc.dataset.id);
+        }
       }
       return;
     }

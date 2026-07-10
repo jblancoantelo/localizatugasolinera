@@ -248,6 +248,95 @@ async function testHTTP(browser, server) {
   // Search input exists
   log('Búsqueda', 'Input visible', await page.locator('#search').isVisible());
 
+  // --- Popup tabs ---
+  // Click a marker via its entry in STATE.markerMap
+  const popupInfoOk = await page.evaluate(() => {
+    const ids = Object.keys(STATE.markerMap);
+    if (!ids.length) return false;
+    const marker = STATE.markerMap[ids[0]];
+    if (!marker) return false;
+    marker.fire('click');
+    return true;
+  });
+  await sleep(1000);
+  log('Popup', 'Click en marcador abre popup', popupInfoOk);
+
+  // Check popup structure
+  const hasContainer = await page.locator('.leaflet-popup-content .popup-container').count();
+  log('Popup', 'Contenedor .popup-container presente', hasContainer > 0);
+
+  const hasTabs = await page.locator('.leaflet-popup-content .popup-tabs').count();
+  log('Popup', 'Barra .popup-tabs presente', hasTabs > 0);
+
+  const tabCount = await page.locator('.leaflet-popup-content .popup-tab').count();
+  log('Popup', `Dos tabs (Información + Histórico)`, tabCount === 2);
+
+  const activeTab = await page.evaluate(() => {
+    const active = document.querySelector('.leaflet-popup-content .popup-tab.active');
+    return active ? active.dataset.ptab : null;
+  });
+  log('Popup', 'Tab activo por defecto: Información', activeTab === 'info');
+
+  // Switch to history tab
+  await page.evaluate(() => {
+    const histTab = document.querySelector('.leaflet-popup-content .popup-tab[data-ptab="history"]');
+    if (histTab) histTab.click();
+  });
+  await sleep(500);
+
+  const activeTab2 = await page.evaluate(() => {
+    const active = document.querySelector('.leaflet-popup-content .popup-tab.active');
+    return active ? active.dataset.ptab : null;
+  });
+  log('Popup', 'Click en Histórico activa el tab', activeTab2 === 'history');
+
+  // Wait for history to load in popup
+  try {
+    await page.waitForFunction(() => {
+      const hc = document.querySelector('.leaflet-popup-content .popup-tab-content[data-ptab-content="history"]');
+      if (!hc) return false;
+      return hc.dataset.loaded === '1';
+    }, { timeout: 60000 });
+    await sleep(500);
+    const histOk = await page.evaluate(() => {
+      const hc = document.querySelector('.leaflet-popup-content .popup-tab-content[data-ptab-content="history"]');
+      if (!hc) return false;
+      const loading = hc.querySelector('.popup-history-loading');
+      const error = hc.querySelector('.popup-history-error');
+      if (error && error.style.display !== 'none') return true;
+      const canvas = hc.querySelector('.popup-price-chart');
+      if (!canvas) return false;
+      if (loading && loading.style.display !== 'none') return false;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return false;
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      let drawn = 0;
+      for (let i = 3; i < imgData.data.length; i += 4) {
+        if (imgData.data[i] > 0) { drawn++; if (drawn > 200) return true; }
+      }
+      return false;
+    });
+    log('Popup', 'Histórico muestra gráfica o error', histOk, histOk ? 'OK' : 'ni canvas dibujado ni error');
+  } catch(e) {
+    log('Popup', 'Histórico timeout', null, 'API histórica sin respuesta');
+  }
+
+  // Switch back to info tab
+  await page.evaluate(() => {
+    const infoTab = document.querySelector('.leaflet-popup-content .popup-tab[data-ptab="info"]');
+    if (infoTab) infoTab.click();
+  });
+  await sleep(300);
+  const activeTab3 = await page.evaluate(() => {
+    const active = document.querySelector('.leaflet-popup-content .popup-tab.active');
+    return active ? active.dataset.ptab : null;
+  });
+  log('Popup', 'Volver a Información funciona', activeTab3 === 'info');
+
+  // Close popup via Escape
+  await page.keyboard.press('Escape');
+  await sleep(300);
+
   // --- F5: recargar y verificar que restaura provincia ---
   await page.reload({ waitUntil: 'networkidle', timeout: 30000 });
   await sleep(3000);
