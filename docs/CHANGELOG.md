@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## [2026-07-11] - Code Review Fixes
+
+### 🐛 Bugs Corregidos
+
+#### `checkFavoritePrices()` — `self.registration.showNotification()` en página
+- **Síntoma**: TypeError al mostrar notificación porque `self.registration` solo existe en Service Worker
+- **Solución**: Reemplazado por `navigator.serviceWorkerContainer.ready.then(r => r.showNotification(...))`
+
+#### `checkFavoritePrices()` — Comparación incorrecta de precios
+- **Síntoma**: Comparaba `oldestPrice` vs `latestPrice` (ambos del histórico) en vez de `currentPrice` vs `oldestPrice`
+- **Solución**: Ahora compara el precio actual (de `STATE.data`) con el más antiguo del histórico
+
+#### `checkFavoritePrices()` — Código muerto
+- **Síntoma**: Variable `currentData` construida con fetch + parse HTML pero nunca usada
+- **Solución**: Eliminado bloque de fetch/parse HTML redundante
+
+#### `push-notifications.js` — `navigator.serviceWorker.controller` null
+- **Síntoma**: TypeError si el SW no ha activado aún
+- **Solución**: Añadido null check antes de acceder a `pushManager`
+
 ## [2026-07-11] - Push Notifications & Bug Fixes
 
 ### ✅ Implementado

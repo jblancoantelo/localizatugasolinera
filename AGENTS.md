@@ -74,6 +74,7 @@ En `controls.js`, `setActiveTab()` cierra automáticamente:
 2. Caché de datos (con tabs IndexedDB / localStorage)
 3. Paginación
 4. Registro de llamadas API
+5. Notificaciones push
 
 ### Caché — tabs IndexedDB / localStorage
 - `initCacheTabs()` en `storage.js` maneja cambio entre tabs.
@@ -104,6 +105,7 @@ Orden actual de grupos:
 - 41 tests totales (34 HTTP + 7 file://)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)
+- Push notifications tests (13.1-13.4) pendientes de integrar en full_test.mjs
 
 ### Archivos clave
 | Archivo | Propósito |
@@ -144,10 +146,16 @@ petrol/
 ├── icons/                  → Iconos PWA
 └── docs/
     ├── API.md              → Documentación API del Geoportal de Hidrocarburos
+    ├── CHANGELOG.md         → Historial de cambios
+    ├── PUSH_NOTIFICATIONS.md → Documentación técnica push notifications
+    ├── PUSH_NOTIFICATIONS_QUICK_START.md → Guía rápida testing push
     └── test/
         ├── TEST_PLAN.md    → Plan de pruebas
         ├── full_test.mjs   → Test suite Playwright autónomo (41 tests)
-        └── server.js       → Servidor HTTP inline para tests
+        ├── server.js       → Servidor HTTP inline para tests
+        ├── validate.mjs    → Validador de sintaxis
+        ├── debug_test.mjs  → Script debug para tests
+        └── debug2.mjs      → Script debug alternativo
 ```
 
 ### Decisiones técnicas clave

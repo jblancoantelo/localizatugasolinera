@@ -2,94 +2,46 @@
 
 ## Testing Rápido (Sin Esperar 8 Horas)
 
-### Opción 1: Forzar Periodic Sync desde DevTools (Android/Desktop)
-
-**Requisitos**:
-- Chrome/Edge + DevTools abierto
-- Service Worker activo
-- Suscripción a notificaciones activa
-
-**Pasos**:
+### Opción 1: DevTools (Más Fácil)
 
 1. **Abrir la app**
    ```
    file:///e:/Temp/VS/petrol/index.html
-   o
-   http://localhost:8080/index.html
    ```
 
 2. **Agregar favorito** (obligatorio)
    - Click en una estación
-   - Click en ⭐ "Agregar a favoritos" en el detail panel
-   - Verificar en console: `STATE.favorites.length > 0`
+   - Click en ⭐ "Agregar a favoritos"
 
 3. **Suscribirse a notificaciones**
    - Click botón 🔔 en toolbar
-   - Debe mostrar "✓ Notificaciones activas" (verde)
-   - Verificar en DevTools → Application → Local Storage → buscar `push_subscription_key`
+   - Aparece "✓ Notificaciones activas" en verde
+   - Verificar localStorage: DevTools → Application → Local Storage → push_subscription_key
 
-4. **Abrir DevTools**
-   - F12 o Right-click → Inspect
-   - Tab "Application" (o "Storage" en Firefox)
-
-5. **Forzar Periodic Sync**
+4. **Triggear Periodic Sync**
    ```
    DevTools → Application → Service Workers
-   → (Seleccionar el service worker)
-   → Scroll down a "Periodic Sync" section
-   → Find tag "check-favorite-prices"
-   → Click "Dispatch" button (o similar en tu browser)
-   ```
-   
-   **Firefox alternativa**:
-   ```
-   DevTools → Console
-   → Escribe: navigator.serviceWorkerContainer.ready
-              .then(r => r.periodicSync.getTags())
-              .then(console.log)
+   → Find "check-favorite-prices" under Periodic Sync
+   → Click "Dispatch"
    ```
 
-6. **Resultado esperado**
-   - Notificación aparece automáticamente (si precio bajó comparado vs 3 días)
-   - Click en notificación → App abre con tab-table + detalle estación
-   - Si no aparece → Verificar console.log de `checkFavoritePrices()`
+5. **Resultado**
+   - Si precio bajó (comparando vs histórico de 3 días)
+   - Notificación aparece
+   - Click en notificación → App abre con detalle estación
 
-**Debugging**:
+---
+
+### Opción 1b: DevTools y consola
 ```javascript
-// En console si periodic sync no dispara:
-
-// Ver tags registrados
-navigator.serviceWorkerContainer.ready
-  .then(r => r.periodicSync.getTags())
-  .then(tags => console.log('Tags:', tags))
-
-// Ver Service Worker activo
-console.log('SW Controller:', navigator.serviceWorkerContainer.controller)
-
-// Ejecutar manualmente
-checkFavoritePrices();  // Dispara notificación si condiciones met
+// En la consola del navegador:
+navigator.serviceWorkerContainer.ready.then(reg => {
+  reg.periodicSync.getTags().then(tags => console.log('Tags:', tags));
+  reg.periodicSync.register('check-favorite-prices', { minInterval: 1000 }); // 1 segundo
+});
 ```
 
----
-
-### Opción 2: DevTools UI (Alternativa Simplificada)
-
-1. **Abrir la app** (mismo que Opción 1 pasos 1-2)
-
-2. **Suscribirse** (mismo que Opción 1 paso 3)
-
-3. **Abrir DevTools → Application → Service Workers**
-   - Buscar "Periodic Sync" section (puede estar en tab diferente según browser)
-
-4. **Click "Dispatch"** en tag 'check-favorite-prices'
-   - El OS simula que ha pasado tiempo
-   - `periodicsync` event dispara
-   - SW postMessage a página
-   - Notificación aparece
-
----
-
-### Opción 3: Console (Para Debugging)
+Luego en Android DevTools → Application → Service Workers → marcar "Bypass for network" y forzar sync.
 
 ---
 

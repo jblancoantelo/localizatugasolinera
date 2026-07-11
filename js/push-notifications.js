@@ -30,7 +30,7 @@ async function subscribeUserToPush() {
     return false;
   }
 
-  if (!('pushManager' in navigator.serviceWorker.controller)) {
+  if (!navigator.serviceWorker.controller || !('pushManager' in navigator.serviceWorker.controller)) {
     console.warn('Push notifications not supported');
     return false;
   }

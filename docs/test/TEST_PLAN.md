@@ -130,7 +130,7 @@ node docs/test/full_test.mjs
 
 ## Resultados actuales
 
-**46 tests — 41 ✅ 0 ❌ 5 ⏭️** (Push Notifications pending integración completa)
+**41 tests — 41 ✅ 0 ❌ 0 ⏭️**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
@@ -179,3 +179,7 @@ node docs/test/full_test.mjs
 | `noProvinceMsg` oculto por especificidad | Selector `.content #noProvinceMsg` insuficiente | Cambiado a `#noProvinceMsg` con mayor especificidad |
 | `setActiveTab()` borraba clase `no-province` | `className = 'content'` sobreescribía clases existentes | Usar `classList.add`/`remove` |
 | `fn` undefined en tabla Ambos | Faltaba `const fn = getSelectedFuelName(d)` en la función map | Añadida declaración |
+| `self.registration.showNotification()` en página | TypeError al mostrar notificación desde `checkFavoritePrices()` | Reemplazado por `navigator.serviceWorkerContainer.ready.then(r => r.showNotification(...))` |
+| Comparación incorrecta de precios | `checkFavoritePrices()` comparaba `oldestPrice` vs `latestPrice` (ambos histórico) en vez de `currentPrice` vs `oldestPrice` | Ahora compara precio actual vs histórico |
+| Código muerto en `checkFavoritePrices()` | Variable `currentData` construida con fetch+parse HTML pero nunca usada | Eliminado bloque redundante |
+| `navigator.serviceWorker.controller` null | TypeError si SW no ha activado al suscribirse | Añadido null check en `push-notifications.js` |
