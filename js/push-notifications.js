@@ -25,12 +25,7 @@ async function requestNotificationPermission() {
 }
 
 async function subscribeUserToPush() {
-  if (!('serviceWorker' in navigator)) {
-    console.warn('Service Workers not supported');
-    return false;
-  }
-
-  if (!navigator.serviceWorker.controller || !('pushManager' in navigator.serviceWorker.controller)) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     console.warn('Push notifications not supported');
     return false;
   }
@@ -39,7 +34,10 @@ async function subscribeUserToPush() {
     const permission = await requestNotificationPermission();
     if (!permission) return false;
 
-    const registration = await navigator.serviceWorker.ready;
+    const registration = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('SW ready timeout')), 3000))
+    ]);
     
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,

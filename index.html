@@ -147,7 +147,10 @@
         <div class="config-card">
           <h3>🔔 Notificaciones push</h3>
           <p class="config-desc">Recibe alertas cuando tus favoritos bajen de precio.</p>
-          <label><input type="checkbox" id="pushNotifToggle"> Habilitar notificaciones push</label>
+          <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
+            <label><input type="checkbox" id="pushNotifToggle"> Habilitar notificaciones push</label>
+            <button id="pushNotifTestBtn" class="btn" style="white-space:nowrap">Probar</button>
+          </div>
           <div id="pushNotifStatus" class="cache-line" style="margin-top:0.5rem;font-size:0.85rem;color:#666"></div>
           <div style="margin-top:0.5rem">
             <label>Intervalo de chequeo (horas):

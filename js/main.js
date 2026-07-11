@@ -269,6 +269,30 @@ document.addEventListener('DOMContentLoaded', () => {
     saveState();
   });
 
+  document.getElementById('pushNotifTestBtn')?.addEventListener('click', async () => {
+    if (!isPushSubscribed()) {
+      const success = await subscribeUserToPush();
+      if (success) {
+        STATE.pushNotificationsEnabled = true;
+        document.getElementById('pushNotifToggle').checked = true;
+        document.getElementById('pushNotifBtn').classList.add('active');
+        registerPeriodicSync();
+        saveState();
+        updatePushNotifStatus();
+      }
+    }
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') return;
+    }
+    const notif = new Notification('🔔 Prueba de notificaciones push', {
+      body: 'Esta es una notificación de prueba.',
+      icon: '/icons/icon-192.png'
+    });
+    setTimeout(() => notif.close(), 5000);
+  });
+
   // Initialize push notification UI
   if (isPushSubscribed()) {
     STATE.pushNotificationsEnabled = true;
