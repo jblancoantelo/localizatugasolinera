@@ -146,7 +146,7 @@ async function checkFavoritePrices() {
     }
 
     if (notificationsToShow.length > 0) {
-      const reg = await navigator.serviceWorkerContainer.ready;
+      const reg = await navigator.serviceWorker.ready;
       await reg.showNotification('Alerta de Precios', {
         body: `${notificationsToShow.length} favorito(s) tienen precios más bajos`,
         icon: 'icons/icon-192.png',

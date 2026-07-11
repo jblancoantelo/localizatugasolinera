@@ -263,7 +263,7 @@ async function runFileTests(browser) {
 
 async function main() {
   console.log('========================================');
-  console.log('  Validación Propuesta D');
+  console.log('  Pasando Tests');
   console.log('========================================');
 
   const browser = await chromium.launch({ headless: true });

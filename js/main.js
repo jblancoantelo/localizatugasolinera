@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Register periodic sync
   async function registerPeriodicSync() {
     try {
-      const reg = await navigator.serviceWorkerContainer.ready;
+      const reg = await navigator.serviceWorker.ready;
       if ('periodicSync' in reg) {
         await reg.periodicSync.register('check-favorite-prices', {
           minInterval: STATE.checkInterval * 60 * 60 * 1000

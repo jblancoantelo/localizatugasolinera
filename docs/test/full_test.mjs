@@ -393,7 +393,7 @@ async function testFILE(browser) {
 
 async function main() {
   console.log('========================================');
-  console.log('  Validación Propuesta D');
+  console.log('  Pasando Tests');
   console.log('========================================');
 
   let server;

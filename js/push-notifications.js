@@ -39,7 +39,7 @@ async function subscribeUserToPush() {
     const permission = await requestNotificationPermission();
     if (!permission) return false;
 
-    const registration = await navigator.serviceWorkerContainer.ready;
+    const registration = await navigator.serviceWorker.ready;
     
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
@@ -59,7 +59,7 @@ async function subscribeUserToPush() {
 
 async function unsubscribeUserFromPush() {
   try {
-    const registration = await navigator.serviceWorkerContainer.ready;
+    const registration = await navigator.serviceWorker.ready;
     const subscription = await registration.pushManager.getSubscription();
     
     if (subscription) {
