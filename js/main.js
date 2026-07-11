@@ -276,7 +276,6 @@ document.addEventListener('DOMContentLoaded', () => {
         STATE.pushNotificationsEnabled = true;
         document.getElementById('pushNotifToggle').checked = true;
         document.getElementById('pushNotifBtn').classList.add('active');
-        registerPeriodicSync();
         saveState();
         updatePushNotifStatus();
       }
@@ -286,11 +285,17 @@ document.addEventListener('DOMContentLoaded', () => {
       const perm = await Notification.requestPermission();
       if (perm !== 'granted') return;
     }
-    const notif = new Notification('🔔 Prueba de notificaciones push', {
-      body: 'Esta es una notificación de prueba.',
-      icon: '/icons/icon-192.png'
+    // Run actual price check and show result
+    await checkFavoritePrices();
+    // Fallback notification if no price drop was detected
+    const reg = await navigator.serviceWorker.ready;
+    await reg.showNotification('🧪 Test de notificaciones push', {
+      body: `Chequeo completado. Si hay favoritos con precios más bajos, ya deberías ver la alerta.`,
+      icon: 'icons/icon-192.png',
+      badge: 'icons/icon-192.png',
+      tag: 'push-test',
+      requireInteraction: false
     });
-    setTimeout(() => notif.close(), 5000);
   });
 
   // Initialize push notification UI
@@ -319,18 +324,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Register periodic sync
+  // Register periodic sync (with setInterval fallback for desktop)
+  let _pushIntervalId = null;
   async function registerPeriodicSync() {
+    clearInterval(_pushIntervalId);
+    _pushIntervalId = null;
+    const intervalMs = STATE.checkInterval * 60 * 60 * 1000;
     try {
       const reg = await navigator.serviceWorker.ready;
       if ('periodicSync' in reg) {
         await reg.periodicSync.register('check-favorite-prices', {
-          minInterval: STATE.checkInterval * 60 * 60 * 1000
+          minInterval: intervalMs || 60 * 60 * 1000
         });
         console.log('Periodic sync registered with interval:', STATE.checkInterval, 'hours');
+      } else {
+        console.log('periodicSync not available, using setInterval fallback');
       }
     } catch (error) {
       console.error('Error registering periodic sync:', error);
+    }
+    // setInterval fallback for desktop or when periodicSync unavailable
+    if (intervalMs > 0) {
+      _pushIntervalId = setInterval(() => checkFavoritePrices(), intervalMs);
+      console.log('setInterval fallback registered:', STATE.checkInterval, 'hours');
     }
   }
 

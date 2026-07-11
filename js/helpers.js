@@ -107,7 +107,7 @@ async function checkFavoritePrices() {
   }
 
   try {
-    const days = STATE.priceFallDays || STATE.historyDays || 14;
+    const days = STATE.priceFallDays !== undefined && STATE.priceFallDays !== null ? STATE.priceFallDays : (STATE.historyDays || 14);
     const historyData = await fetchProvinceHistory(STATE.selectedProv, days);
 
     const notificationsToShow = [];
