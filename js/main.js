@@ -211,6 +211,117 @@ document.addEventListener('DOMContentLoaded', () => {
       updateUserMarker(saved.userLat, saved.userLng);
       updatePosInfo();
     }
+    if (saved.checkInterval) STATE.checkInterval = saved.checkInterval;
+    if (saved.priceFallDays !== undefined) STATE.priceFallDays = saved.priceFallDays;
+    if (saved.pushNotificationsEnabled) STATE.pushNotificationsEnabled = saved.pushNotificationsEnabled;
   }
+
+  // Push notifications setup
+  document.getElementById('pushNotifBtn').addEventListener('click', async () => {
+    const isCurrentlySubscribed = isPushSubscribed();
+    if (isCurrentlySubscribed) {
+      await unsubscribeUserFromPush();
+      STATE.pushNotificationsEnabled = false;
+      document.getElementById('pushNotifToggle').checked = false;
+      document.getElementById('pushNotifBtn').classList.remove('active');
+    } else {
+      const success = await subscribeUserToPush();
+      if (success) {
+        STATE.pushNotificationsEnabled = true;
+        document.getElementById('pushNotifToggle').checked = true;
+        document.getElementById('pushNotifBtn').classList.add('active');
+        registerPeriodicSync();
+      }
+    }
+    saveState();
+    updatePushNotifStatus();
+  });
+
+  document.getElementById('pushNotifToggle')?.addEventListener('change', async (e) => {
+    if (e.target.checked) {
+      const success = await subscribeUserToPush();
+      if (success) {
+        STATE.pushNotificationsEnabled = true;
+        document.getElementById('pushNotifBtn').classList.add('active');
+        registerPeriodicSync();
+      } else {
+        e.target.checked = false;
+      }
+    } else {
+      await unsubscribeUserFromPush();
+      STATE.pushNotificationsEnabled = false;
+      document.getElementById('pushNotifBtn').classList.remove('active');
+    }
+    saveState();
+    updatePushNotifStatus();
+  });
+
+  document.getElementById('checkInterval')?.addEventListener('change', (e) => {
+    STATE.checkInterval = parseInt(e.target.value) || 8;
+    saveState();
+    if (STATE.pushNotificationsEnabled) {
+      registerPeriodicSync();
+    }
+  });
+
+  document.getElementById('priceFallDays')?.addEventListener('change', (e) => {
+    STATE.priceFallDays = parseInt(e.target.value) || 3;
+    saveState();
+  });
+
+  // Initialize push notification UI
+  if (isPushSubscribed()) {
+    STATE.pushNotificationsEnabled = true;
+    const toggle = document.getElementById('pushNotifToggle');
+    if (toggle) toggle.checked = true;
+    const btn = document.getElementById('pushNotifBtn');
+    if (btn) btn.classList.add('active');
+  }
+  const intervalEl = document.getElementById('checkInterval');
+  if (intervalEl) intervalEl.value = STATE.checkInterval;
+  const fallDaysEl = document.getElementById('priceFallDays');
+  if (fallDaysEl) fallDaysEl.value = STATE.priceFallDays;
+  updatePushNotifStatus();
+
+  // Handle postMessage from Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', event => {
+      if (event.data.type === 'trigger-price-check') {
+        checkFavoritePrices();
+      } else if (event.data.type === 'open-favorite') {
+        setActiveTab('tab-table');
+        showDetail(event.data.favoriteId);
+      }
+    });
+  }
+
+  // Register periodic sync
+  async function registerPeriodicSync() {
+    try {
+      const reg = await navigator.serviceWorkerContainer.ready;
+      if ('periodicSync' in reg) {
+        await reg.periodicSync.register('check-favorite-prices', {
+          minInterval: STATE.checkInterval * 60 * 60 * 1000
+        });
+        console.log('Periodic sync registered with interval:', STATE.checkInterval, 'hours');
+      }
+    } catch (error) {
+      console.error('Error registering periodic sync:', error);
+    }
+  }
+
+  function updatePushNotifStatus() {
+    const statusEl = document.getElementById('pushNotifStatus');
+    if (!statusEl) return;
+    
+    if (isPushSubscribed()) {
+      statusEl.textContent = '✓ Notificaciones activas';
+      statusEl.style.color = '#2e7d32';
+    } else {
+      statusEl.textContent = '✗ Notificaciones inactivas';
+      statusEl.style.color = '#b71c1c';
+    }
+  }
+
   renderApiLog();
 });

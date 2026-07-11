@@ -259,7 +259,10 @@ function saveState() {
       favorites: s.favorites,
       showFavoritesOnly: s.showFavoritesOnly,
       userLat: s.userLat,
-      userLng: s.userLng
+      userLng: s.userLng,
+      checkInterval: s.checkInterval,
+      priceFallDays: s.priceFallDays,
+      pushNotificationsEnabled: s.pushNotificationsEnabled
     };
     try { localStorage.setItem(STATE_KEY, JSON.stringify(data)); } catch(e) {}
     saveProvinceFilters(s.selectedProv);

@@ -25,6 +25,7 @@ const ASSETS = [
   `${BASE}js/controls.js`,
   `${BASE}js/api.js`,
   `${BASE}js/chart-engine.js`,
+  `${BASE}js/push-notifications.js`,
   `${BASE}js/main.js`
 ];
 
@@ -46,6 +47,63 @@ self.addEventListener('activate', e => {
     caches.keys().then(keys => Promise.all(
       keys.filter(k => k !== CACHE && k !== CDN_CACHE).map(k => caches.delete(k))
     )).then(() => self.clients.claim())
+  );
+});
+
+// Periodic Background Sync for checking favorite prices
+self.addEventListener('periodicsync', event => {
+  if (event.tag === 'check-favorite-prices') {
+    event.waitUntil(
+      (async () => {
+        try {
+          // Call checkFavoritePrices from helpers (requires importScripts)
+          console.log('Periodic sync triggered for price check');
+          // Price check logic will run when clients post message
+          const clients = await self.clients.matchAll();
+          clients.forEach(client => {
+            client.postMessage({ type: 'trigger-price-check' });
+          });
+        } catch (error) {
+          console.error('Error in periodic sync:', error);
+        }
+      })()
+    );
+  }
+});
+
+// Handle notification clicks
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window' }).then(clientList => {
+      // Check if app is already open
+      for (let client of clientList) {
+        if (client.url === '/' && 'focus' in client) {
+          return client.focus().then(() => {
+            if (event.notification.data && event.notification.data.alerts) {
+              const firstAlert = event.notification.data.alerts[0];
+              client.postMessage({
+                type: 'open-favorite',
+                favoriteId: firstAlert.favoriteId
+              });
+            }
+          });
+        }
+      }
+      // If app not open, open it
+      if (clients.openWindow) {
+        return clients.openWindow('/').then(client => {
+          if (client && event.notification.data && event.notification.data.alerts) {
+            const firstAlert = event.notification.data.alerts[0];
+            client.postMessage({
+              type: 'open-favorite',
+              favoriteId: firstAlert.favoriteId
+            });
+          }
+        });
+      }
+    })
   );
 });
 

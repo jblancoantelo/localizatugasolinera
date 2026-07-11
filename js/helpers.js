@@ -94,3 +94,104 @@ function getFuelPriceDisplay(st, key) {
   if (d) s += ' (-' + d + ')';
   return s;
 }
+
+async function checkFavoritePrices() {
+  if (!STATE.favorites || STATE.favorites.length === 0) {
+    console.log('No favorites to check');
+    return;
+  }
+
+  if (!STATE.selectedProv) {
+    console.log('No province selected, skipping price check');
+    return;
+  }
+
+  try {
+    // Fetch current data for the selected province
+    const url = `https://sedeaplicaciones.minetur.gob.es/PortalConsumo/publ/comun/listaEESSPorProvincia.html?provincia=${encodeURIComponent(STATE.selectedProv)}&tipo=es`;
+    const response = await fetch(url);
+    const html = await response.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const rows = doc.querySelectorAll('table tbody tr');
+    
+    const currentData = [];
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length >= 5) {
+        currentData.push({
+          IDEESS: cells[0].textContent.trim(),
+          Rótulo: cells[1].textContent.trim(),
+          Dirección: cells[2].textContent.trim(),
+          Localidad: cells[3].textContent.trim(),
+          // Parse other fields as needed
+        });
+      }
+    });
+
+    // Get historical data for last X days
+    const historyData = await fetchProvinceHistory(STATE.selectedProv, STATE.priceFallDays);
+    
+    const notificationsToShow = [];
+    
+    // Check each favorite
+    for (const favoriteId of STATE.favorites) {
+      const favorite = STATE.data.find(s => s.IDEESS === favoriteId);
+      if (!favorite) continue;
+
+      const fuelName = getFirstFuelName(favorite);
+      if (!fuelName) continue;
+
+      const currentPrice = getFirstFuelPrice(favorite);
+      if (!currentPrice) continue;
+
+      // Get historical prices from last X days
+      const stationHistory = getStationHistory(historyData, favoriteId, fuelName);
+      
+      if (stationHistory.length < 2) continue;
+
+      // Find the oldest price (X days ago)
+      const oldestRecord = stationHistory[0];
+      const latestRecord = stationHistory[stationHistory.length - 1];
+      
+      const oldestPrice = parsePrice(oldestRecord.price);
+      const latestPrice = parsePrice(latestRecord.price);
+
+      if (oldestPrice === null || latestPrice === null) continue;
+
+      const priceDifference = oldestPrice - latestPrice;
+      
+      if (priceDifference > 0) {
+        notificationsToShow.push({
+          favoriteId: favoriteId,
+          brand: favorite.Rótulo,
+          fuel: fuelName,
+          currentPrice: latestPrice,
+          oldestPrice: oldestPrice,
+          difference: priceDifference.toFixed(3),
+          address: favorite.Dirección,
+          locality: favorite.Localidad
+        });
+      }
+    }
+
+    // Show notifications
+    if (notificationsToShow.length > 0) {
+      await self.registration.showNotification('Alerta de Precios', {
+        body: `${notificationsToShow.length} favorito(s) tienen precios más bajos`,
+        icon: 'icons/icon-192.png',
+        badge: 'icons/icon-192.png',
+        tag: 'price-alert',
+        requireInteraction: true,
+        data: {
+          alerts: notificationsToShow
+        }
+      });
+      
+      console.log('Price alert notification sent:', notificationsToShow);
+    }
+
+  } catch (error) {
+    console.error('Error checking favorite prices:', error);
+  }
+}

@@ -130,7 +130,7 @@ node docs/test/full_test.mjs
 
 ## Resultados actuales
 
-**41 tests — 41 ✅ 0 ❌ 0 ⏭️**
+**46 tests — 41 ✅ 0 ❌ 5 ⏭️** (Push Notifications pending integración completa)
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
@@ -148,6 +148,22 @@ node docs/test/full_test.mjs
 | Ambos | 2 ✅ | — |
 | Config | 2 ✅ | 1 ✅ |
 | Mapa | 2 ✅ | — |
+| Push Notifications | 5 ⏭️ | — |
+
+## 13. Push Notifications (NUEVO - Pendiente Integración en full_test.mjs)
+
+| # | Acción | HTTP | file:// | Resultado esperado |
+|---|--------|------|---------|-------------------|
+| 13.1 | Botón 🔔 visible | ✅ | ✅ | `#pushNotifBtn` visible en toolbar |
+| 13.2 | Suscripción | ✅ | — | Click 🔔 → localStorage tiene `push_subscription_key` |
+| 13.3 | Status indicator | ✅ | — | Cambia a "✓ Notificaciones activas" (verde) |
+| 13.4 | Config inputs | ✅ | — | `#checkInterval` + `#priceFallDays` visibles en Config tab |
+| 13.5 | Service Worker periódico | ✅ | — | `registration.periodicSync.getTags()` incluye 'check-favorite-prices' |
+
+**Notas**:
+- Tests 13.1-13.4 pueden automatizarse con Playwright
+- Test 13.5 requiere Android real o emulador (Periodic Background Sync API)
+- Para testing sin esperar X horas, ver [PUSH_NOTIFICATIONS_QUICK_START.md](./PUSH_NOTIFICATIONS_QUICK_START.md)
 | Geo | 1 ✅ | — |
 | Búsqueda | 1 ✅ | 1 ✅ |
 | Popup | 7 ✅ | — |
