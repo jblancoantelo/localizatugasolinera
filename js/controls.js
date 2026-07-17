@@ -121,7 +121,7 @@ function setActiveTab(tabId) {
   const ca = document.getElementById('contentArea');
   const hasNoProvince = ca.classList.contains('no-province');
   ca.className = 'content ' + tabId;
-  if (hasNoProvince) ca.classList.add('no-province');
+  if (hasNoProvince && tabId !== 'tab-config') ca.classList.add('no-province');
 
   document.querySelectorAll('.bottom-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.tab === tabId);
