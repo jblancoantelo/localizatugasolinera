@@ -95,73 +95,9 @@ function getFuelPriceDisplay(st, key) {
   return s;
 }
 
-async function checkFavoritePrices() {
-  if (!STATE.favorites || STATE.favorites.length === 0) {
-    console.log('No favorites to check');
-    return;
-  }
-
-  if (!STATE.selectedProv) {
-    console.log('No province selected, skipping price check');
-    return;
-  }
-
-  try {
-    const days = STATE.priceFallDays !== undefined && STATE.priceFallDays !== null ? STATE.priceFallDays : (STATE.historyDays || 14);
-    const historyData = await fetchProvinceHistory(STATE.selectedProv, days);
-
-    const notificationsToShow = [];
-
-    for (const favoriteId of STATE.favorites) {
-      const favorite = STATE.data.find(s => s.IDEESS === favoriteId);
-      if (!favorite) continue;
-
-      const fuelName = getFirstFuelName(favorite);
-      if (!fuelName) continue;
-
-      const currentPrice = getFirstFuelPrice(favorite);
-      if (!currentPrice) continue;
-
-      const stationHistory = getStationHistory(historyData, favoriteId, fuelName);
-      if (stationHistory.length < 2) continue;
-
-      const oldestRecord = stationHistory[0];
-      const oldestPrice = parsePrice(oldestRecord.price);
-      if (oldestPrice === null) continue;
-
-      const priceDifference = oldestPrice - currentPrice;
-
-      if (priceDifference > 0) {
-        notificationsToShow.push({
-          favoriteId: favoriteId,
-          brand: favorite.Rótulo,
-          fuel: fuelName,
-          currentPrice: currentPrice,
-          oldestPrice: oldestPrice,
-          difference: priceDifference.toFixed(3),
-          address: favorite.Dirección,
-          locality: favorite.Localidad
-        });
-      }
-    }
-
-    if (notificationsToShow.length > 0) {
-      const reg = await navigator.serviceWorker.ready;
-      await reg.showNotification('Alerta de Precios', {
-        body: `${notificationsToShow.length} favorito(s) tienen precios más bajos`,
-        icon: 'icons/icon-192.png',
-        badge: 'icons/icon-192.png',
-        tag: 'price-alert',
-        requireInteraction: true,
-        data: {
-          alerts: notificationsToShow
-        }
-      });
-
-      console.log('Price alert notification sent:', notificationsToShow);
-    }
-
-  } catch (error) {
-    console.error('Error checking favorite prices:', error);
-  }
+function comparePrices(currentPrice, oldestPrice) {
+  if (currentPrice === null || oldestPrice === null) return null;
+  const diff = oldestPrice - currentPrice;
+  if (diff <= 0) return null;
+  return { difference: diff, currentPrice, oldestPrice };
 }

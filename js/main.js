@@ -167,7 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('addDiscountBtn').addEventListener('click', addEmptyDiscountRow);
-  document.getElementById('cacheTtl').addEventListener('change', saveState);
   document.addEventListener('click', e => {
     const btn = e.target.closest('.ls-del-btn');
     if (btn) {
@@ -216,7 +215,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (saved.pushNotificationsEnabled) STATE.pushNotificationsEnabled = saved.pushNotificationsEnabled;
   }
 
-  // Push notifications setup
+  // Sync push config to IndexedDB for SW access
+  setPushConfig({
+    checkInterval: STATE.checkInterval,
+    priceFallDays: STATE.priceFallDays,
+    cacheTtl: getCacheTtl()
+  });
+
+  function syncPushConfig() {
+    setPushConfig({
+      checkInterval: STATE.checkInterval,
+      priceFallDays: STATE.priceFallDays,
+      cacheTtl: getCacheTtl()
+    });
+  }
+
   document.getElementById('pushNotifBtn').addEventListener('click', async () => {
     const isCurrentlySubscribed = isPushSubscribed();
     if (isCurrentlySubscribed) {
@@ -230,6 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
         STATE.pushNotificationsEnabled = true;
         document.getElementById('pushNotifToggle').checked = true;
         document.getElementById('pushNotifBtn').classList.add('active');
+        syncPushConfig();
         registerPeriodicSync();
       }
     }
@@ -243,6 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (success) {
         STATE.pushNotificationsEnabled = true;
         document.getElementById('pushNotifBtn').classList.add('active');
+        syncPushConfig();
         registerPeriodicSync();
       } else {
         e.target.checked = false;
@@ -259,6 +274,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('checkInterval')?.addEventListener('change', (e) => {
     STATE.checkInterval = parseInt(e.target.value) || 8;
     saveState();
+    setPushConfig({
+      checkInterval: STATE.checkInterval,
+      priceFallDays: STATE.priceFallDays,
+      cacheTtl: getCacheTtl()
+    });
     if (STATE.pushNotificationsEnabled) {
       registerPeriodicSync();
     }
@@ -267,6 +287,19 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('priceFallDays')?.addEventListener('change', (e) => {
     STATE.priceFallDays = parseInt(e.target.value) || 3;
     saveState();
+    setPushConfig({
+      checkInterval: STATE.checkInterval,
+      priceFallDays: STATE.priceFallDays,
+      cacheTtl: getCacheTtl()
+    });
+  });
+
+  document.getElementById('cacheTtl')?.addEventListener('change', () => {
+    setPushConfig({
+      checkInterval: STATE.checkInterval,
+      priceFallDays: STATE.priceFallDays,
+      cacheTtl: getCacheTtl()
+    });
   });
 
   document.getElementById('pushNotifTestBtn')?.addEventListener('click', async () => {
@@ -285,16 +318,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const perm = await Notification.requestPermission();
       if (perm !== 'granted') return;
     }
-    // Run actual price check and show result
-    await checkFavoritePrices();
+    // Trigger price check via SW
+    if (navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'trigger-price-check' });
+    }
     // Fallback notification if no price drop was detected
     const reg = await navigator.serviceWorker.ready;
     await reg.showNotification('🧪 Test de notificaciones push', {
-      body: `Chequeo completado. Si hay favoritos con precios más bajos, ya deberías ver la alerta.`,
+      body: 'Chequeo completado. Si hay favoritos con precios más bajos, ya deberías ver la alerta.',
       icon: 'icons/icon-192.png',
       badge: 'icons/icon-192.png',
       tag: 'push-test',
-      requireInteraction: false
+      requireInteraction: false,
+      data: { alerts: [] }
     });
   });
 
@@ -315,9 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Handle postMessage from Service Worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', event => {
-      if (event.data.type === 'trigger-price-check') {
-        checkFavoritePrices();
-      } else if (event.data.type === 'open-favorite') {
+      if (event.data.type === 'open-favorite') {
         setActiveTab('tab-table');
         showDetail(event.data.favoriteId);
       }
@@ -345,7 +379,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // setInterval fallback for desktop or when periodicSync unavailable
     if (intervalMs > 0) {
-      _pushIntervalId = setInterval(() => checkFavoritePrices(), intervalMs);
+      _pushIntervalId = setInterval(() => {
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: 'trigger-price-check' });
+        }
+      }, intervalMs);
       console.log('setInterval fallback registered:', STATE.checkInterval, 'hours');
     }
   }

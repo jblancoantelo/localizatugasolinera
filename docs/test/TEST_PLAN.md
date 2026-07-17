@@ -19,7 +19,7 @@ node docs/test/full_test.mjs
 ### Qué hace el script:
 - Inicia servidor HTTP en :8080 sirviendo desde la raíz del proyecto
 - Lanza Chromium headless
-- Ejecuta 34 tests contra HTTP + 7 contra file://
+- Ejecuta 44 tests contra HTTP + 7 contra file://
 - Cierra servidor y navegador automáticamente
 - Exit code 0 = todo OK, 1 = algún fallo
 
@@ -168,7 +168,28 @@ node docs/test/full_test.mjs
 | Búsqueda | 1 ✅ | 1 ✅ |
 | Popup | 7 ✅ | — |
 | Persistencia | 1 ✅ | — |
-| **Total** | **34 ✅** | **7 ✅** |
+| Push Notifications | 10 ✅ | — |
+| **Total** | **44 ✅** | **7 ✅** |
+
+## 14. Push Notifications
+
+| # | Acción | HTTP | file:// | Resultado esperado |
+|---|--------|------|---------|-------------------|
+| 14.1 | Botón 🔔 visible | ✅ | ✅ | `#pushNotifBtn` visible en toolbar |
+| 14.2 | Suscripción | ✅ | — | Click 🔔 → localStorage tiene `gasolineras_push_subscription` |
+| 14.3 | Status verde | ✅ | — | `#pushNotifStatus` texto "✓ Notificaciones activas" |
+| 14.4 | Config inputs | ✅ | ✅ | `#checkInterval` + `#priceFallDays` visibles en Config tab |
+| 14.5 | Favorito en IndexedDB | ✅ | — | `toggleFavorite(id)` → IndexedDB store `favorites` contiene `{ id, provinceName, provinceId, brand }` |
+| 14.6 | checkPrices ignora caché | ✅ | — | Mockear API: `fetchProvinceData` previa (llena caché) → `checkPrices()` llama API igualmente |
+| 14.7 | Caché actualizada tras check | ✅ | — | `getCachedProvinceData(prov)` timestamp se refresca tras `checkPrices()` |
+| 14.8 | Test notification sin error | ✅ | — | Click `#pushNotifTestBtn` → sin errores en consola |
+| 14.9 | SW notificationclick URL matching | ✅ | — | `new URL(client.url).pathname` === `scopePath` evaluado como correcto |
+| 14.10 | Unsubscribe desregistra periodicSync | ✅ | — | Click 🔔 estando suscrito → `periodicSync.getTags()` vacío |
+
+**Notas**:
+- Tests 14.1-14.10 automatizados en `full_test.mjs`
+- 14.9 se evalua inyectando lógica en page context (no requiere notificación real)
+- Para testing manual sin esperar X horas, ver [PUSH_NOTIFICATIONS_QUICK_START.md](./PUSH_NOTIFICATIONS_QUICK_START.md)
 
 ## Bugs conocidos y fixes aplicados
 

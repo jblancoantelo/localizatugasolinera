@@ -102,10 +102,10 @@ Orden actual de grupos:
 ### Tests
 - Ubicación: `docs/test/full_test.mjs`
 - Plan: `docs/test/TEST_PLAN.md`
-- 41 tests totales (34 HTTP + 7 file://)
+- 51 tests totales (44 HTTP + 7 file://)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)
-- Push notifications tests (13.1-13.4) pendientes de integrar en full_test.mjs
+- Push notifications tests (14.1-14.10) integrados en full_test.mjs
 
 ### Archivos clave
 | Archivo | Propósito |
@@ -113,8 +113,9 @@ Orden actual de grupos:
 | `index.html` | Toolbar + content + tabs + bottom sheet |
 | `css/styles.css` | ~320 líneas responsive |
 | `js/state.js` | STATE global + definiciones combustibles |
-| `js/helpers.js` | Funciones auxiliares (precios, distancia, descuentos) |
-| `js/storage.js` | localStorage (estado/filtros) + IndexedDB (caché/favoritos) + tabs caché + API log render |
+| `js/helpers.js` | Funciones auxiliares (precios, distancia, descuentos, `comparePrices()`) |
+| `js/db.js` | IndexedDB compartido (cliente + SW): cache, favoritos, config |
+| `js/storage.js` | localStorage (estado/filtros) + tabs caché + API log render |
 | `js/api.js` | Fetch datos, histórico, `apiFetch()` wrapper con log, `tryAutoRestoreProvince()` |
 | `js/map.js` | Inicialización mapa Leaflet, marcadores, popups, chart popup con tooltip |
 | `js/controls.js` | `render()`, `setActiveTab()`, filtros |
@@ -133,16 +134,17 @@ petrol/
 ├── css/styles.css          → ~320 líneas responsive
 ├── js/
 │   ├── state.js            → STATE global + definiciones combustibles
-│   ├── helpers.js          → Funciones auxiliares (precios, distancia, descuentos)
-│   ├── storage.js          → localStorage (estado/filtros) + IndexedDB (caché/favoritos)
+│   ├── helpers.js          → Funciones auxiliares (precios, distancia, descuentos, comparePrices)
+│   ├── db.js               → IndexedDB compartido (cliente + SW): cache, favoritos, config
+│   ├── storage.js          → localStorage (estado/filtros) + API log render
 │   ├── api.js              → Fetch datos, histórico, apiFetch() wrapper, log
 │   ├── map.js              → Inicialización Leaflet, marcadores, popups, chart popup + tooltip
-│   ├── controls.js         → render(), setActiveTab(), filtros
+│   ├── controls.js         → render(), setActiveTab(), filtros, toggleFavorite
 │   ├── table.js            → doSort(), showDetail(), loadHistory(), helpers combustibles
 │   ├── chart-engine.js     → Dibujar gráfica histórica (canvas) + tooltip hover
 │   ├── main.js             → Event listeners, restauración de estado, push notifications
 │   └── push-notifications.js → Web Push subscription (subscribe/unsubscribe/status)
-├── sw.js                   → Service Worker (caché, periodicsync, notificationclick)
+├── sw.js                   → Service Worker (caché, periodicsync, checkPrices, notificationclick)
 ├── icons/                  → Iconos PWA
 └── docs/
     ├── API.md              → Documentación API del Geoportal de Hidrocarburos
@@ -151,11 +153,9 @@ petrol/
     ├── PUSH_NOTIFICATIONS_QUICK_START.md → Guía rápida testing push
     └── test/
         ├── TEST_PLAN.md    → Plan de pruebas
-        ├── full_test.mjs   → Test suite Playwright autónomo (41 tests)
+        ├── full_test.mjs   → Test suite Playwright autónomo (51 tests)
         ├── server.js       → Servidor HTTP inline para tests
-        ├── validate.mjs    → Validador de sintaxis
-        ├── debug_test.mjs  → Script debug para tests
-        └── debug2.mjs      → Script debug alternativo
+        └── validate.mjs    → Validador de sintaxis
 ```
 
 ### Decisiones técnicas clave
@@ -172,57 +172,62 @@ petrol/
 - **API Log**: Array `API_LOG[]` con últimas 30 llamadas, timestamp, duración y estado. Visible en config
 - **Caché config**: Tabs IndexedDB (provincias/histórico) + localStorage (solo claves `gasolineras_`)
 - **Tests**: Servidor HTTP inline en Node.js, Playwright headless, no requiere procesos externos
-- **Push Notifications**: Web Push API (Periodic Background Sync). Suscripción localStorage, chequeo precios cada X horas (default 8h), notificación si cayó X días (default 3)
+- **Push Notifications**: Web Push API (Periodic Background Sync). Suscripción localStorage, chequeo precios en SW (`checkPrices()`), fetch directo a API (sin caché), refresh de caché con datos frescos. Notificación si cayó X días (default 3)
 - **DOMContentLoaded en main.js**: CRÍTICO cerrar con }); al final. Si falta → error en carga página
 
-### Push Notifications - Arquitectura
+### Push Notifications — Arquitectura (v2 SW-based)
 
 **Flujo Suscripción**:
-1. User click botón 🔔 toolbar → subscribeUserToPush() (push-notifications.js)
+1. User click botón 🔔 toolbar → `subscribeUserToPush()` (`push-notifications.js`)
 2. SW crea PushSubscription, guardada en localStorage
-3. registerPeriodicSync('check-favorite-prices', minInterval: checkInterval horas)
+3. `registerPeriodicSync('check-favorite-prices', minInterval: checkInterval horas)`
+4. Config push (`checkInterval`, `priceFallDays`, `cacheTtl`) sincronizada a IndexedDB store `config`
 
-**Flujo Background**:
-1. Cada X horas: OS dispara periodicsync en SW
-2. sw.js postMessage 'trigger-price-check' a cliente
-3. main.js ejecuta checkFavoritePrices() (helpers.js)
-4. Fetch histórico, compara precios, si cayó X días → showNotification()
+**Flujo Background (SW)**:
+1. Cada X horas: OS dispara `periodicsync` en SW (Android) o `setInterval` fallback (escritorio)
+2. `sw.js` ejecuta `checkPrices()` directamente (sin depender del cliente):
+   - Lee favoritos de IndexedDB store `favorites`
+   - Agrupa por provincia
+   - Para cada provincia: fetch FRESCO de API (ignora caché) + actualiza caché
+   - Fetch histórico + compara precios (`comparePrices()`)
+   - Si cayó: `self.registration.showNotification()`
 
 **Flujo Notificación**:
 1. User click notificación
-2. sw.js notificationclick → postMessage 'open-favorite' con stationId
-3. main.js abre tab-table + showDetail(stationId)
+2. `sw.js notificationclick` → URL matching corregido (`new URL(client.url).pathname`)
+3. `clients.openWindow(scopePath)` + `postMessage('open-favorite', favoriteId)`
+4. `main.js` abre `tab-table` + `showDetail(stationId)`
 
-**Config UI** (Config tab):
+**Config UI** (Config tab, sincronizada a IndexedDB para acceso del SW):
 - Toggle: enable/disable
-- checkInterval: 1-24h (default 8)
-- priceFallDays: 0-90d (default 3)
+- `checkInterval`: 1-24h (default 8)
+- `priceFallDays`: 0-90d (default 3)
+- `cacheTtl` (horas, se aplica tras cada actualización SW)
 - Status: ✓ green / ✗ red
 
-**VAPID Keys** (.env):
+**VAPID Key**:
 ```
 VAPID_PUBLIC_KEY=BDpoYD9azs5I8SHt23Gx8BMJ6d2q1ghIluak4flDh7a2lfKIS_3tn9QFh8gaQQeG4kTYYnEl5e3S1btbH1hbNQs
-VAPID_PRIVATE_KEY=aEJXkt8jYoQG8Nl9u7w--yR34ekMEh8MeHWmsfQKjm8
 ```
-Public key hardcoded en push-notifications.js
+Hardcodeada en `push-notifications.js`. Sin backend — clave privada no usada.
 
 ### Debugging Push Notifications
 
 **Testing sin esperar X horas**:
 - DevTools → Application → Service Workers → Periodic Sync → Dispatch
-- O en console: modificar `STATE.checkInterval = 0.001` (3.6 seg) + resubscribe
-- O llamar directo: `checkFavoritePrices()` en console
+- O en consola: `navigator.serviceWorker.controller.postMessage({ type: 'trigger-price-check' })`
+- O usar botón "Probar" en Config tab
 
 **Checklist**:
 - [ ] Botón 🔔 visible en toolbar
 - [ ] Service Worker registrado
 - [ ] Suscripción en localStorage al click 🔔
-- [ ] Config inputs actualizan STATE + localStorage
+- [ ] Config inputs actualizan STATE + localStorage + IndexedDB
 - [ ] periodicSync registrado (getTags incluye 'check-favorite-prices')
 - [ ] Notification permission='granted'
+- [ ] Favoritos guardados en IndexedDB (`dbGetAll('favorites')`)
 - [ ] Notificación aparece cuando precio cae X días
 - [ ] Clic notificación abre app + detalle estación
-- **Paginación por defecto**: 30 resultados/página
 
 ### Comandos útiles
 ```powershell

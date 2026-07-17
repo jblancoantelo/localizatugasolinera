@@ -34,10 +34,7 @@ async function subscribeUserToPush() {
     const permission = await requestNotificationPermission();
     if (!permission) return false;
 
-    const registration = await Promise.race([
-      navigator.serviceWorker.ready,
-      new Promise((_, reject) => setTimeout(() => reject(new Error('SW ready timeout')), 3000))
-    ]);
+    const registration = await navigator.serviceWorker.ready;
     
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
@@ -63,9 +60,20 @@ async function unsubscribeUserFromPush() {
     if (subscription) {
       await subscription.unsubscribe();
       localStorage.removeItem(PUSH_SUBSCRIPTION_KEY);
-      console.log('User unsubscribed from push notifications');
-      return true;
     }
+    // Unregister periodic sync
+    try {
+      if ('periodicSync' in registration) {
+        const tags = await registration.periodicSync.getTags();
+        if (tags.includes('check-favorite-prices')) {
+          await registration.periodicSync.unregister('check-favorite-prices');
+        }
+      }
+    } catch (e) {
+      console.warn('Could not unregister periodicSync:', e.message);
+    }
+    console.log('User unsubscribed from push notifications');
+    return true;
   } catch (error) {
     console.error('Error unsubscribing from push notifications:', error);
     return false;
