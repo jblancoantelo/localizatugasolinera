@@ -282,7 +282,6 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 /* === Hide === */
 .hide { display: none !important; }
 
-#posInfo { font-size: 0.65rem; color: #999; white-space: nowrap; font-family: monospace; margin-left: auto; }
 
 /* === Responsive === */
 @media (max-width: 1024px) {

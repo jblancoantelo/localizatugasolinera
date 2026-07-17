@@ -239,7 +239,6 @@ function locateUser() {
       STATE.userLat = pos.coords.latitude;
       STATE.userLng = pos.coords.longitude;
       updateUserMarker(STATE.userLat, STATE.userLng);
-      updatePosInfo();
       btn.textContent = '📍';
       btn.classList.remove('locating');
       btn.blur();

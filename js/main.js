@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
     STATE.userLat = e.latlng.lat;
     STATE.userLng = e.latlng.lng;
     updateUserMarker(STATE.userLat, STATE.userLng);
-    updatePosInfo();
     document.getElementById('infoText').textContent = 'Posición manual establecida';
     render(false);
   });
@@ -209,7 +208,6 @@ document.addEventListener('DOMContentLoaded', () => {
       STATE.userLat = saved.userLat;
       STATE.userLng = saved.userLng;
       updateUserMarker(saved.userLat, saved.userLng);
-      updatePosInfo();
     }
   }
   renderApiLog();

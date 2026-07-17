@@ -296,14 +296,4 @@ function saveDiscountsFromUI() {
   render(false);
 }
 
-function updatePosInfo() {
-  const el = document.getElementById('posInfo');
-  if (!el) return;
-  if (STATE.userLat != null && STATE.userLng != null) {
-    const lat = STATE.userLat.toFixed(4);
-    const lng = STATE.userLng.toFixed(4);
-    el.textContent = `${lat}, ${lng}`;
-  } else {
-    el.textContent = '';
-  }
-}
+
