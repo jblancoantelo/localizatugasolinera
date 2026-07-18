@@ -471,9 +471,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (sub) {
     document.getElementById('pushNotifBtn')?.classList.add('active');
     const swOk = 'serviceWorker' in navigator && navigator.serviceWorker.controller;
-    logPushEvent('Estado inicial', 'suscrito — endpoint: ' + (sub.endpoint || '').slice(0, 30) + '… SW: ' + (swOk ? '✅ conectado' : '❌ sin controlador'));
+    const bajadaOn = STATE.pushNotificationsEnabled ? '⬇ sí' : '⬇ no';
+    const subidaOn = STATE.pushOnPriceRise ? '⬆ sí' : '⬆ no';
+    logPushEvent('Estado inicial', 'suscrito — ' + bajadaOn + ' ' + subidaOn + ' | endpoint: ' + (sub.endpoint || '').slice(0, 30) + '… SW: ' + (swOk ? '✅ conectado' : '❌ sin controlador'));
   } else {
-    logPushEvent('Estado inicial', 'no suscrito');
+    logPushEvent('Estado inicial', 'no suscrito — sin notificaciones configuradas');
   }
   const bajadaToggle = document.getElementById('pushNotifToggle');
   if (bajadaToggle) bajadaToggle.checked = STATE.pushNotificationsEnabled;
