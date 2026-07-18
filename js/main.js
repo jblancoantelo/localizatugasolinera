@@ -407,6 +407,42 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('pushNotifTestBtn')?.addEventListener('click', () => handleTestNotification('drop'));
   document.getElementById('pushRiseTestBtn')?.addEventListener('click', () => handleTestNotification('rise'));
 
+  document.getElementById('checkUpdateBtn').addEventListener('click', async () => {
+    const statusEl = document.getElementById('updateStatus');
+    if (!('serviceWorker' in navigator)) {
+      statusEl.textContent = '❌ Service Worker no disponible en esta vista';
+      return;
+    }
+    statusEl.textContent = '🔄 Buscando actualizaciones...';
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      let resolved = false;
+      const timeout = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          statusEl.textContent = '✅ Tienes la última versión';
+        }
+      }, 12000);
+      reg.addEventListener('updatefound', () => {
+        if (resolved) return;
+        const newWorker = reg.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', () => {
+          if (resolved) return;
+          if (newWorker.state === 'installed' || newWorker.state === 'activated') {
+            resolved = true;
+            clearTimeout(timeout);
+            statusEl.innerHTML = '🔄 Nueva versión disponible <button class="reload-btn btn" style="background:#1a73e8;color:#fff;border:none;padding:0.2rem 0.5rem;border-radius:4px;cursor:pointer;font-size:0.72rem">Recargar ahora</button>';
+            statusEl.querySelector('.reload-btn').addEventListener('click', () => location.reload());
+          }
+        });
+      });
+      await reg.update();
+    } catch (e) {
+      statusEl.textContent = '❌ Error al buscar actualizaciones: ' + e.message;
+    }
+  });
+
   // Initialize push notification UI
   const sub = getPushSubscription();
   if (sub) {
