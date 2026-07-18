@@ -7,7 +7,7 @@ const STATE = {
   discounts: {}, page: 1, pageSize: 30, maxDistance: '',
   favorites: [], showFavoritesOnly: false, historyDays: 14,
   provinces: [], provinceIdMap: {},
-  pushNotificationsEnabled: false, checkInterval: 8, priceFallDays: 3,
+  pushNotificationsEnabled: false, pushOnPriceRise: false, checkInterval: 8, priceFallDays: 3,
   _prevFilteredIds: ''
 };
 

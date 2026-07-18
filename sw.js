@@ -144,11 +144,13 @@ function getStationHistorySW(historyByDate, stationId, fuelName) {
   return results;
 }
 
-async function checkPrices() {
+async function checkPrices(mode) {
   try {
     const config = await getPushConfig();
     const days = config.priceFallDays || 3;
     const cacheTtl = config.cacheTtl || 12;
+    const checkDrop = mode ? mode === 'drop' : true;
+    const checkRise = mode ? mode === 'rise' : config.pushOnPriceRise === true;
 
     const favorites = await dbGetAllFavorites();
     if (!favorites || favorites.length === 0) {
@@ -202,7 +204,7 @@ async function checkPrices() {
           if (oldestPrice === null) continue;
 
           const result = comparePrices(currentPrice, oldestPrice);
-          if (result) {
+          if (result && (result.isRise ? checkRise : true)) {
             alerts.push({
               favoriteId: fav.id,
               brand: station.Rótulo,
@@ -210,6 +212,7 @@ async function checkPrices() {
               currentPrice: currentPrice,
               oldestPrice: oldestPrice,
               difference: result.difference.toFixed(3),
+              isRise: result.isRise,
               address: station.Dirección,
               locality: station.Localidad
             });
@@ -221,8 +224,14 @@ async function checkPrices() {
     }
 
     if (alerts.length > 0) {
+      const riseCount = alerts.filter(a => a.isRise).length;
+      const dropCount = alerts.filter(a => !a.isRise).length;
+      let body = '';
+      if (dropCount > 0) body += dropCount + ' favorito(s) con precios más bajos';
+      if (dropCount > 0 && riseCount > 0) body += ' · ';
+      if (riseCount > 0) body += riseCount + ' favorito(s) con precios más altos';
       await self.registration.showNotification('Alerta de Precios', {
-        body: alerts.length + ' favorito(s) tienen precios más bajos',
+        body: body,
         icon: 'icons/icon-192.png',
         badge: 'icons/icon-192.png',
         tag: 'price-alert',
@@ -248,7 +257,7 @@ self.addEventListener('periodicsync', event => {
 
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'trigger-price-check') {
-    event.waitUntil(checkPrices());
+    event.waitUntil(checkPrices(event.data.mode));
   }
 });
 

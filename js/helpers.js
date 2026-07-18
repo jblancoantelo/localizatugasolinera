@@ -98,6 +98,6 @@ function getFuelPriceDisplay(st, key) {
 function comparePrices(currentPrice, oldestPrice) {
   if (currentPrice === null || oldestPrice === null) return null;
   const diff = oldestPrice - currentPrice;
-  if (diff <= 0) return null;
-  return { difference: diff, currentPrice, oldestPrice };
+  if (diff === 0) return null;
+  return { difference: Math.abs(diff), currentPrice, oldestPrice, isRise: diff < 0 };
 }

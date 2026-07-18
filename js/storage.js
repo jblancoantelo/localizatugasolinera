@@ -102,10 +102,12 @@ function saveProvinceFilters(prov) {
 }
 
 function saveState() {
-  if (_savePending) return;
+  if (_savePending) { _savePending = 'pending'; return; }
   _savePending = true;
   Promise.resolve().then(() => {
+    const needsResave = _savePending === 'pending';
     _savePending = false;
+    if (needsResave) { saveState(); return; }
     const s = STATE;
     const center = s.map ? s.map.getCenter() : null;
     const zoom = s.map ? s.map.getZoom() : null;
@@ -131,7 +133,8 @@ function saveState() {
       userLng: s.userLng,
       checkInterval: s.checkInterval,
       priceFallDays: s.priceFallDays,
-      pushNotificationsEnabled: s.pushNotificationsEnabled
+      pushNotificationsEnabled: s.pushNotificationsEnabled,
+      pushOnPriceRise: s.pushOnPriceRise
     };
     try { localStorage.setItem(STATE_KEY, JSON.stringify(data)); } catch(e) {}
     saveProvinceFilters(s.selectedProv);

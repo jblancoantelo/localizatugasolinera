@@ -372,8 +372,7 @@ async function testHTTP(browser, server) {
     if (typeof isPushSubscribed === 'function') return isPushSubscribed();
     return false;
   });
-  const statusElVis = await page.locator('#pushNotifStatus').isVisible();
-  log('Push', '14.3 isPushSubscribed() + status visible', subDetected && statusElVis);
+  log('Push', '14.3 isPushSubscribed() true', subDetected);
 
   // 14.5 - Favorite stored in IndexedDB with province info
   const favStored = await page.evaluate(async () => {

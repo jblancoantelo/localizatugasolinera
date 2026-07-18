@@ -213,20 +213,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (saved.checkInterval) STATE.checkInterval = saved.checkInterval;
     if (saved.priceFallDays !== undefined) STATE.priceFallDays = saved.priceFallDays;
     if (saved.pushNotificationsEnabled) STATE.pushNotificationsEnabled = saved.pushNotificationsEnabled;
+    if (saved.pushOnPriceRise) STATE.pushOnPriceRise = saved.pushOnPriceRise;
   }
 
   // Sync push config to IndexedDB for SW access
   setPushConfig({
     checkInterval: STATE.checkInterval,
     priceFallDays: STATE.priceFallDays,
-    cacheTtl: getCacheTtl()
+    cacheTtl: getCacheTtl(),
+    pushOnPriceRise: STATE.pushOnPriceRise
   });
 
   function syncPushConfig() {
     setPushConfig({
       checkInterval: STATE.checkInterval,
       priceFallDays: STATE.priceFallDays,
-      cacheTtl: getCacheTtl()
+      cacheTtl: getCacheTtl(),
+      pushOnPriceRise: STATE.pushOnPriceRise
     });
   }
 
@@ -235,8 +238,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isCurrentlySubscribed) {
       await unsubscribeUserFromPush();
       STATE.pushNotificationsEnabled = false;
+      STATE.pushOnPriceRise = false;
       document.getElementById('pushNotifToggle').checked = false;
+      document.getElementById('pushRiseToggle').checked = false;
       document.getElementById('pushNotifBtn').classList.remove('active');
+      console.log('[Push] Desuscripción manual desde toolbar');
     } else {
       const success = await subscribeUserToPush();
       if (success) {
@@ -245,52 +251,91 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('pushNotifBtn').classList.add('active');
         syncPushConfig();
         registerPeriodicSync();
+        console.log('[Push] Suscripción manual desde toolbar');
       }
     }
     saveState();
-    updatePushNotifStatus();
   });
+
+  async function trySubscribe() {
+    if (isPushSubscribed()) {
+      console.log('[Push] Ya suscrito, activando sin llamar a la API');
+      document.getElementById('pushNotifBtn').classList.add('active');
+      syncPushConfig();
+      registerPeriodicSync();
+      return true;
+    }
+    const success = await subscribeUserToPush();
+    if (success) {
+      console.log('[Push] Suscripción exitosa');
+      document.getElementById('pushNotifBtn').classList.add('active');
+      syncPushConfig();
+      registerPeriodicSync();
+    } else {
+      console.log('[Push] Error al suscribir');
+    }
+    return success;
+  }
+
+  async function tryUnsubscribe() {
+    const sub = getPushSubscription();
+    if (sub && !STATE.pushNotificationsEnabled && !STATE.pushOnPriceRise) {
+      await unsubscribeUserFromPush();
+      console.log('[Push] Desuscripción completada (ningún check activo)');
+      document.getElementById('pushNotifBtn').classList.remove('active');
+    } else {
+      console.log('[Push] No se desuscribe: otros checks aún activos');
+    }
+  }
 
   document.getElementById('pushNotifToggle')?.addEventListener('change', async (e) => {
     if (e.target.checked) {
-      const success = await subscribeUserToPush();
-      if (success) {
-        STATE.pushNotificationsEnabled = true;
-        document.getElementById('pushNotifBtn').classList.add('active');
-        syncPushConfig();
-        registerPeriodicSync();
-      } else {
-        e.target.checked = false;
-      }
+      const ok = await trySubscribe();
+      STATE.pushNotificationsEnabled = ok;
+      if (!ok) e.target.checked = false;
     } else {
-      await unsubscribeUserFromPush();
       STATE.pushNotificationsEnabled = false;
-      document.getElementById('pushNotifBtn').classList.remove('active');
+      await tryUnsubscribe();
     }
     saveState();
-    updatePushNotifStatus();
+  });
+
+  document.getElementById('pushRiseToggle')?.addEventListener('change', async (e) => {
+    if (e.target.checked) {
+      const ok = await trySubscribe();
+      STATE.pushOnPriceRise = ok;
+      if (!ok) e.target.checked = false;
+    } else {
+      STATE.pushOnPriceRise = false;
+      await tryUnsubscribe();
+    }
+    saveState();
   });
 
   document.getElementById('checkInterval')?.addEventListener('change', (e) => {
-    STATE.checkInterval = parseInt(e.target.value) || 8;
+    const v = parseFloat(e.target.value);
+    STATE.checkInterval = isNaN(v) || v < 0 ? 8 : v;
     saveState();
     setPushConfig({
       checkInterval: STATE.checkInterval,
       priceFallDays: STATE.priceFallDays,
-      cacheTtl: getCacheTtl()
+      cacheTtl: getCacheTtl(),
+      pushOnPriceRise: STATE.pushOnPriceRise
     });
-    if (STATE.pushNotificationsEnabled) {
+    if (STATE.pushNotificationsEnabled || STATE.pushOnPriceRise) {
       registerPeriodicSync();
     }
   });
 
   document.getElementById('priceFallDays')?.addEventListener('change', (e) => {
-    STATE.priceFallDays = parseInt(e.target.value) || 3;
+    const v = parseInt(e.target.value);
+    STATE.priceFallDays = isNaN(v) ? 3 : v;
     saveState();
     setPushConfig({
       checkInterval: STATE.checkInterval,
       priceFallDays: STATE.priceFallDays,
-      cacheTtl: getCacheTtl()
+      cacheTtl: getCacheTtl(),
+      pushOnPriceRise: STATE.pushOnPriceRise
     });
   });
 
@@ -298,11 +343,12 @@ document.addEventListener('DOMContentLoaded', () => {
     setPushConfig({
       checkInterval: STATE.checkInterval,
       priceFallDays: STATE.priceFallDays,
-      cacheTtl: getCacheTtl()
+      cacheTtl: getCacheTtl(),
+      pushOnPriceRise: STATE.pushOnPriceRise
     });
   });
 
-  document.getElementById('pushNotifTestBtn')?.addEventListener('click', async () => {
+  async function handleTestNotification(mode) {
     if (!isPushSubscribed()) {
       const success = await subscribeUserToPush();
       if (success) {
@@ -310,7 +356,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('pushNotifToggle').checked = true;
         document.getElementById('pushNotifBtn').classList.add('active');
         saveState();
-        updatePushNotifStatus();
       }
     }
     if (!('Notification' in window)) return;
@@ -318,35 +363,38 @@ document.addEventListener('DOMContentLoaded', () => {
       const perm = await Notification.requestPermission();
       if (perm !== 'granted') return;
     }
-    // Trigger price check via SW
+    syncPushConfig();
+    registerPeriodicSync();
     if (navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type: 'trigger-price-check' });
+      navigator.serviceWorker.controller.postMessage({ type: 'trigger-price-check', mode });
     }
-    // Fallback notification if no price drop was detected
+    const label = mode === 'rise' ? 'subida' : 'bajada';
     const reg = await navigator.serviceWorker.ready;
-    await reg.showNotification('🧪 Test de notificaciones push', {
-      body: 'Chequeo completado. Si hay favoritos con precios más bajos, ya deberías ver la alerta.',
+    await reg.showNotification('🧪 Test notificaciones: ' + label, {
+      body: 'Chequeo completado para ' + label + ' de precio.',
       icon: 'icons/icon-192.png',
       badge: 'icons/icon-192.png',
       tag: 'push-test',
       requireInteraction: false,
       data: { alerts: [] }
     });
-  });
+  }
+
+  document.getElementById('pushNotifTestBtn')?.addEventListener('click', () => handleTestNotification('drop'));
+  document.getElementById('pushRiseTestBtn')?.addEventListener('click', () => handleTestNotification('rise'));
 
   // Initialize push notification UI
   if (isPushSubscribed()) {
-    STATE.pushNotificationsEnabled = true;
-    const toggle = document.getElementById('pushNotifToggle');
-    if (toggle) toggle.checked = true;
-    const btn = document.getElementById('pushNotifBtn');
-    if (btn) btn.classList.add('active');
+    document.getElementById('pushNotifBtn')?.classList.add('active');
   }
+  const bajadaToggle = document.getElementById('pushNotifToggle');
+  if (bajadaToggle) bajadaToggle.checked = STATE.pushNotificationsEnabled;
+  const riseToggle = document.getElementById('pushRiseToggle');
+  if (riseToggle) riseToggle.checked = STATE.pushOnPriceRise;
   const intervalEl = document.getElementById('checkInterval');
   if (intervalEl) intervalEl.value = STATE.checkInterval;
   const fallDaysEl = document.getElementById('priceFallDays');
   if (fallDaysEl) fallDaysEl.value = STATE.priceFallDays;
-  updatePushNotifStatus();
 
   // Handle postMessage from Service Worker
   if ('serviceWorker' in navigator) {
@@ -360,45 +408,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Register periodic sync (with setInterval fallback for desktop)
   let _pushIntervalId = null;
+  let _periodicSyncUnavailable = false;
   async function registerPeriodicSync() {
     clearInterval(_pushIntervalId);
     _pushIntervalId = null;
     const intervalMs = STATE.checkInterval * 60 * 60 * 1000;
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      if ('periodicSync' in reg) {
-        await reg.periodicSync.register('check-favorite-prices', {
-          minInterval: intervalMs || 60 * 60 * 1000
-        });
-        console.log('Periodic sync registered with interval:', STATE.checkInterval, 'hours');
-      } else {
-        console.log('periodicSync not available, using setInterval fallback');
-      }
-    } catch (error) {
-      console.error('Error registering periodic sync:', error);
-    }
-    // setInterval fallback for desktop or when periodicSync unavailable
-    if (intervalMs > 0) {
-      _pushIntervalId = setInterval(() => {
-        if (navigator.serviceWorker.controller) {
-          navigator.serviceWorker.controller.postMessage({ type: 'trigger-price-check' });
+    if (intervalMs <= 0) return;
+    if (!_periodicSyncUnavailable && 'serviceWorker' in navigator) {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        if ('periodicSync' in reg) {
+          await reg.periodicSync.register('check-favorite-prices', {
+            minInterval: intervalMs
+          });
+          console.log('Periodic sync registered with interval:', STATE.checkInterval, 'hours');
         }
-      }, intervalMs);
-      console.log('setInterval fallback registered:', STATE.checkInterval, 'hours');
-    }
-  }
-
-  function updatePushNotifStatus() {
-    const statusEl = document.getElementById('pushNotifStatus');
-    if (!statusEl) return;
-    
-    if (isPushSubscribed()) {
-      statusEl.textContent = '✓ Notificaciones activas';
-      statusEl.style.color = '#2e7d32';
+      } catch (error) {
+        _periodicSyncUnavailable = true;
+        if (error.name === 'NotAllowedError') {
+          console.warn('Periodic sync no disponible (requiere PWA instalada). Usando fallback setInterval.');
+        } else {
+          console.error('Error registering periodic sync:', error);
+        }
+      }
     } else {
-      statusEl.textContent = '✗ Notificaciones inactivas';
-      statusEl.style.color = '#b71c1c';
+      if (!('serviceWorker' in navigator)) _periodicSyncUnavailable = true;
     }
+    _pushIntervalId = setInterval(() => {
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'trigger-price-check' });
+      }
+    }, intervalMs);
+    console.log('setInterval fallback registered:', STATE.checkInterval, 'hours');
   }
 
   renderApiLog();

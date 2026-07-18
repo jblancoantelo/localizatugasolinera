@@ -176,8 +176,8 @@ async function dbRemoveFavorite(id) {
 async function getPushConfig() {
   try {
     const cfg = await dbGet('config', 'push_config');
-    return cfg || { checkInterval: 8, priceFallDays: 3, cacheTtl: 12 };
-  } catch(e) { return { checkInterval: 8, priceFallDays: 3, cacheTtl: 12 }; }
+    return cfg || { checkInterval: 8, priceFallDays: 3, cacheTtl: 12, pushOnPriceRise: false };
+  } catch(e) { return { checkInterval: 8, priceFallDays: 3, cacheTtl: 12, pushOnPriceRise: false }; }
 }
 
 async function setPushConfig(config) {
