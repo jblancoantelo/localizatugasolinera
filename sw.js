@@ -159,8 +159,8 @@ async function checkPrices(reason) {
     const days = config.priceFallDays || 3;
     const cacheTtl = config.cacheTtl || 12;
     const isModeRequest = reason === 'drop' || reason === 'rise';
-    const checkDrop = isModeRequest ? reason === 'drop' : true;
-    const checkRise = isModeRequest ? reason === 'rise' : config.pushOnPriceRise === true;
+    const checkDrop = isModeRequest ? reason === 'drop' : (config.pushNotificationsEnabled === true);
+    const checkRise = isModeRequest ? reason === 'rise' : (config.pushOnPriceRise === true);
 
     const motivo = reason === 'periodicsync' ? 'alarma periódica'
       : reason === 'drop' ? 'test bajada'

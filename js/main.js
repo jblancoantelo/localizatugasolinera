@@ -225,6 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
     priceFallDays: STATE.priceFallDays,
     priceCheckMode: STATE.priceCheckMode,
     cacheTtl: getCacheTtl(),
+    pushNotificationsEnabled: STATE.pushNotificationsEnabled,
     pushOnPriceRise: STATE.pushOnPriceRise
   });
 
@@ -234,6 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
       priceFallDays: STATE.priceFallDays,
       priceCheckMode: STATE.priceCheckMode,
       cacheTtl: getCacheTtl(),
+      pushNotificationsEnabled: STATE.pushNotificationsEnabled,
       pushOnPriceRise: STATE.pushOnPriceRise
     });
   }
@@ -313,6 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const nowSubscribed = isPushSubscribed();
     logPushEvent('🔔 bajada', (STATE.pushNotificationsEnabled ? 'activado' : 'desactivado') + ' | suscripción: ' + (wasSubscribed ? 'sí→' : 'no→') + (nowSubscribed ? 'sí' : 'no'));
     saveState();
+    syncPushConfig();
   });
 
   document.getElementById('pushRiseToggle')?.addEventListener('change', async (e) => {
@@ -328,6 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const nowSubscribed = isPushSubscribed();
     logPushEvent('📈 subida', (STATE.pushOnPriceRise ? 'activado' : 'desactivado') + ' | suscripción: ' + (wasSubscribed ? 'sí→' : 'no→') + (nowSubscribed ? 'sí' : 'no'));
     saveState();
+    syncPushConfig();
   });
 
   document.getElementById('checkInterval')?.addEventListener('change', (e) => {
@@ -340,6 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
       priceFallDays: STATE.priceFallDays,
       priceCheckMode: STATE.priceCheckMode,
       cacheTtl: getCacheTtl(),
+      pushNotificationsEnabled: STATE.pushNotificationsEnabled,
       pushOnPriceRise: STATE.pushOnPriceRise
     });
     if (STATE.pushNotificationsEnabled || STATE.pushOnPriceRise) {
@@ -357,6 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
       priceFallDays: STATE.priceFallDays,
       priceCheckMode: STATE.priceCheckMode,
       cacheTtl: getCacheTtl(),
+      pushNotificationsEnabled: STATE.pushNotificationsEnabled,
       pushOnPriceRise: STATE.pushOnPriceRise
     });
   });
@@ -367,6 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
       priceFallDays: STATE.priceFallDays,
       priceCheckMode: STATE.priceCheckMode,
       cacheTtl: getCacheTtl(),
+      pushNotificationsEnabled: STATE.pushNotificationsEnabled,
       pushOnPriceRise: STATE.pushOnPriceRise
     });
   });

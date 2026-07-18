@@ -176,8 +176,8 @@ async function dbRemoveFavorite(id) {
 async function getPushConfig() {
   try {
     const cfg = await dbGet('config', 'push_config');
-    return cfg || { checkInterval: 8, priceFallDays: 3, cacheTtl: 12, pushOnPriceRise: false, priceCheckMode: 'average' };
-  } catch(e) { return { checkInterval: 8, priceFallDays: 3, cacheTtl: 12, pushOnPriceRise: false, priceCheckMode: 'average' }; }
+    return cfg || { checkInterval: 8, priceFallDays: 3, cacheTtl: 12, pushNotificationsEnabled: false, pushOnPriceRise: false, priceCheckMode: 'average' };
+  } catch(e) { return { checkInterval: 8, priceFallDays: 3, cacheTtl: 12, pushNotificationsEnabled: false, pushOnPriceRise: false, priceCheckMode: 'average' }; }
 }
 
 async function setPushConfig(config) {
