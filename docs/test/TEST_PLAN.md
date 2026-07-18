@@ -19,7 +19,7 @@ node docs/test/full_test.mjs
 ### Qué hace el script:
 - Inicia servidor HTTP en :8080 sirviendo desde la raíz del proyecto
 - Lanza Chromium headless
-- Ejecuta 44 tests contra HTTP + 7 contra file://
+- Ejecuta 41 tests contra HTTP + 7 contra file://
 - Cierra servidor y navegador automáticamente
 - Exit code 0 = todo OK, 1 = algún fallo
 
@@ -88,7 +88,7 @@ node docs/test/full_test.mjs
 
 | # | Acción | HTTP | file:// | Resultado esperado |
 |---|--------|------|---------|-------------------|
-| 7.1 | Tarjetas de configuración | ✅ | ✅ | 4 `.config-card` (Descuentos, Caché, Paginación, Registro API) |
+| 7.1 | Tarjetas de configuración | ✅ | ✅ | 5 `.config-card` (Descuentos, Caché, Paginación, Registro actividad, Push) |
 | 7.2 | Input TTL visible | ✅ | ✅ | `#cacheTtl` visible e interactivo |
 
 ### 8. Mapa
@@ -130,11 +130,11 @@ node docs/test/full_test.mjs
 
 ## Resultados actuales
 
-**41 tests — 41 ✅ 0 ❌ 0 ⏭️**
+**49 tests — 49 ✅ 0 ❌**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
-| Carga | 3 ✅ | 1 ✅ |
+| Carga | 1 ✅ | 1 ✅ |
 | Toolbar | 1 ✅ | 1 ✅ |
 | Tabs (visibles) | 1 ✅ | 1 ✅ |
 | Inicial (mensaje) | 1 ✅ | 1 ✅ |
@@ -148,7 +148,10 @@ node docs/test/full_test.mjs
 | Ambos | 2 ✅ | — |
 | Config | 2 ✅ | 1 ✅ |
 | Mapa | 2 ✅ | — |
-| Push Notifications | 5 ⏭️ | — |
+| Popup | 7 ✅ | — |
+| Persistencia | 1 ✅ | — |
+| Push Notifications | 10 ✅ | — |
+| **Total** | **41 ✅** | **7 ✅** |
 
 ## 13. Push Notifications (NUEVO - Pendiente Integración en full_test.mjs)
 

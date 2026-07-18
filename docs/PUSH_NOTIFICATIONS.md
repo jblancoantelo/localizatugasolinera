@@ -44,10 +44,12 @@ El SW ahora contiene toda la lógica de chequeo de precios:
 - `push` event — handler para mensajes push del servidor (si se implementara)
 - `notificationclick` — URL matching corregido (`new URL(client.url).pathname`)
 - `importScripts('js/state.js', 'js/helpers.js', 'js/db.js')`
+- `sendPushLog(event, detail)` — envía eventos de log push al cliente vía postMessage
 
 ### `js/helpers.js`
 - `comparePrices(currentPrice, oldestPrice)` — función pura que retorna `{ difference, currentPrice, oldestPrice }` o `null`
 - `checkFavoritePrices()` eliminada (reemplazada por `checkPrices()` en SW)
+- `formatLogTime()` — formato `dd/mm/yy hh:mm:ss` para timestamps de logs
 
 ### `js/controls.js`
 - `toggleFavorite(id)` escribe en IndexedDB (`dbAddFavorite`/`dbRemoveFavorite`) ademas de `STATE.favorites[]`
@@ -56,10 +58,15 @@ El SW ahora contiene toda la lógica de chequeo de precios:
 - `setInterval` fallback ahora envía `postMessage({ type: 'trigger-price-check' })` al SW
 - Sincroniza configuración push con IndexedDB (`setPushConfig`)
 - Botón test → envía mensaje al SW en vez de ejecutar `checkFavoritePrices()`
+- Log de eventos push: estado inicial, toolbar, toggles bajada/subida, checkInterval, priceFallDays, PeriodicSync, setInterval, test, mensajes SW (`push-log`)
 
 ### `js/push-notifications.js`
-- `subscribeUserToPush()` — timeout eliminado
+- `subscribeUserToPush()` — timeout eliminado, loguea endpoint + claves p256dh + auth
 - `unsubscribeUserFromPush()` — también desregistra `periodicSync`
+- `PUSH_LOG[]` — array con últimas 30 entradas de eventos push
+- `logPushEvent(event, detail)` — añade entrada con timestamp `formatLogTime()` y renderiza
+- `renderPushLog()` — renderiza en `#pushLogEntries` (panel Push del config)
+- `clearPushLog()` — vacía el log
 
 ## VAPID Keys
 
@@ -76,6 +83,40 @@ Hardcodeada en `push-notifications.js`. Clave privada no necesaria (no hay backe
 | `checkInterval` | 1-24h | 8 | Horas entre chequeos |
 | `priceFallDays` | 0-90d | 3 | Días de histórico a comparar |
 | `cacheTtl` | 0-∞ | 12 | Horas de validez de caché tras actualizar |
+
+## Push Log — Registro de actividad
+
+Cada evento push se registra en el array `PUSH_LOG[]` (cliente) o se envía al cliente via `postMessage` (Service Worker).
+
+### Eventos registrados
+
+| Origen | Evento | Detalle |
+|--------|--------|---------|
+| Cliente | `Estado inicial` | `suscrito — endpoint: ... SW: ✅ conectado` / `no suscrito` |
+| Cliente | `Permission` | `granted` / `denied` / `default` |
+| Cliente | `Subscribe` | `éxito — endpoint: ... \| p256dh: ... \| auth: ... \| userVisibleOnly: true` |
+| Cliente | `Unsubscribe` | `éxito` / `error: ...` |
+| Cliente | `Toolbar` | `suscripción manual` / `desuscripción manual` |
+| Cliente | `🔔 bajada` / `📈 subida` | `activado \| suscripción: no→sí` / `desactivado \| suscripción: sí→no` |
+| Cliente | `checkInterval` / `priceFallDays` | `8h` / `3d` |
+| Cliente | `PeriodicSync` | `registrado cada 8h` / `no disponible — fallback setInterval` |
+| Cliente | `⏱️ setInterval` | `fallback cada 8h` |
+| Cliente | `🧪 Test` | `modo=bajada mensaje enviado al SW` + texto notificación mostrada |
+| SW | `⏰ periodicsync` | `iniciado — motivo: alarma periódica del SO` |
+| SW | `📩 trigger-price-check` | `recibido — motivo: test bajada / intervalo setInterval` |
+| SW | `checkPrices` | `inicio — motivo: ... \| checkDrop=true checkRise=false` |
+| SW | `checkPrices` (por estación) | `  EstaciónX: sin cambio — skip` / `  ✅ EstaciónY: ↓ bajada 0.050€ — ALERTA #N` |
+| SW | `checkPrices` | `completado: N alertas (N↓ N↑)` / `0 alertas — no se envía notificación` |
+| SW | `📨 notificación` | `mostrada: título="Alerta de Precios" body="..." tag=price-alert` |
+| SW | `📨 push recibido` | `título="..." body="..." tag=...` |
+| SW | `notificationclick` | `recibido — título="..." body="..." tag=...` |
+
+### Arquitectura del log
+
+```
+SW (checkPrices, events) → sendPushLog() → postMessage({type:'push-log'}) → main.js message handler → logPushEvent() → PUSH_LOG[] → renderPushLog()
+Cliente (toggles, config, subscribe) → logPushEvent() → PUSH_LOG[] → renderPushLog()
+```
 
 ## Estado vs localStorage
 

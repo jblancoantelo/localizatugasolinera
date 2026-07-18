@@ -1,5 +1,38 @@
 # CHANGELOG
 
+## [2026-07-18] — Logs API/Push con tabs y registro detallado
+
+### ✅ Registro de actividad (tabs API/Push)
+
+| Cambio | Detalle |
+|--------|---------|
+| `index.html` | Tarjeta "Registro de llamadas API" reemplazada por "Registro de actividad" con tabs `.config-log-tab` (API/Push) |
+| `css/styles.css` | Estilos `.config-log-tab`/`.config-log-panel` (mismo diseño que cache tabs) |
+| `js/storage.js` | Nueva función `initLogTabs()` para manejar cambio entre tabs |
+| `js/helpers.js` | Nueva función `formatLogTime()` — formato `dd/mm/yy hh:mm:ss` |
+
+### ✅ Push Log — registro detallado de eventos
+
+| Cambio | Detalle |
+|--------|---------|
+| `js/push-notifications.js` | Nuevo array `PUSH_LOG[]` + funciones `logPushEvent()`, `renderPushLog()`, `clearPushLog()` |
+| `js/push-notifications.js` | Instrumentadas `requestNotificationPermission()`, `subscribeUserToPush()`, `unsubscribeUserFromPush()` con logs |
+| `js/push-notifications.js` | Subscribe loguea endpoint completo + claves p256dh y auth |
+| `js/main.js` | Log de: toggle 🔔 bajada/subida, toolbar, estado inicial, checkInterval, priceFallDays, PeriodicSync, setInterval, test notifications |
+| `js/main.js` | SW message handler extiende para recibir `push-log` events |
+| `sw.js` | Nueva función `sendPushLog(event, detail)` envía eventos al cliente via postMessage |
+| `sw.js` | `checkPrices()` con log por estación: skip/alerta/motivo, texto exacto de notificación |
+| `sw.js` | `periodicsync`, `trigger-price-check`, `push`, `notificationclick` con motivo y detalles |
+| `js/api.js` | Timestamps cambiados a `formatLogTime()` |
+
+### ✅ Tests
+
+| Archivo | Cambio |
+|---------|--------|
+| `docs/test/full_test.mjs` | 49 tests — sin regresiones |
+
+---
+
 ## [2026-07-17] - Push SW-Based + Tests + Cleanup
 
 ### ✅ Cambios en Push Notifications (v2)

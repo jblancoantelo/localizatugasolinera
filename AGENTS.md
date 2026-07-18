@@ -64,16 +64,18 @@ En `controls.js`, `setActiveTab()` cierra automáticamente:
 - **chart-engine.js**: `drawPriceChart()` dibuja gráfica + tooltip al hover. Mouse events (`mousemove`/`mouseleave`) buscan el punto más cercano (12px radio) y muestran recuadro oscuro con precio (bold) + fecha debajo.
 - **map.js**: `drawPopupPriceChart()` tiene el mismo sistema con `onPopupChartHover`/`drawPopupTooltip`.
 
-### API Log
-- `apiFetch(url)` en `api.js` wrappea todos los fetch, registrando timestamp, duración (ms), URL y éxito en `API_LOG[]`.
-- Renderizado en `#apiLogEntries` (config card), scroll vertical, 30 entradas máximo.
-- Botón `#clearApiLogBtn` para borrar.
+### Log de actividad (tabs API / Push)
+- Tarjeta "Registro de actividad" en config con tabs `.config-log-tab` (API/Push) igual que los de caché.
+- `initLogTabs()` en `storage.js` maneja el cambio entre tabs.
+- **API**: array `API_LOG[]` en `api.js`, render en `#apiLogEntries`, 30 entradas máximo, botón `#clearApiLogBtn`.
+- **Push**: array `PUSH_LOG[]` en `push-notifications.js`, render en `#pushLogEntries`, 30 entradas máximo, botón `#clearPushLogBtn`.
+- Timestamps con formato `dd/mm/yy hh:mm:ss` usando `formatLogTime()` en `helpers.js`.
 
 ### Config — tarjetas
 1. Descuentos por marca
 2. Caché de datos (con tabs IndexedDB / localStorage)
 3. Paginación
-4. Registro de llamadas API
+4. Registro de actividad (con tabs API / Push)
 5. Notificaciones push
 
 ### Caché — tabs IndexedDB / localStorage
@@ -113,17 +115,17 @@ Orden actual de grupos:
 | `index.html` | Toolbar + content + tabs + bottom sheet |
 | `css/styles.css` | ~320 líneas responsive |
 | `js/state.js` | STATE global + definiciones combustibles |
-| `js/helpers.js` | Funciones auxiliares (precios, distancia, descuentos, `comparePrices()`) |
+| `js/helpers.js` | Funciones auxiliares (precios, distancia, descuentos, `comparePrices()`, `formatLogTime()`) |
 | `js/db.js` | IndexedDB compartido (cliente + SW): cache, favoritos, config |
-| `js/storage.js` | localStorage (estado/filtros) + tabs caché + API log render |
+| `js/storage.js` | localStorage (estado/filtros) + tabs caché + API log render + initLogTabs |
 | `js/api.js` | Fetch datos, histórico, `apiFetch()` wrapper con log, `tryAutoRestoreProvince()` |
 | `js/map.js` | Inicialización mapa Leaflet, marcadores, popups, chart popup con tooltip |
 | `js/controls.js` | `render()`, `setActiveTab()`, filtros |
 | `js/table.js` | `doSort()`, `showDetail()`, `loadHistory()`, helpers combustibles |
 | `js/chart-engine.js` | Dibujar gráfica histórica (canvas) en detail panel + tooltip hover |
 | `js/main.js` | Event listeners, restauración de estado, push notifications |
-| `js/push-notifications.js` | Gestión suscripción Web Push (subscribe/unsubscribe) |
-| `sw.js` | Service Worker (caché, periodicsync, notificationclick) |
+| `js/push-notifications.js` | Gestión suscripción Web Push (subscribe/unsubscribe) + PUSH_LOG + logPushEvent |
+| `sw.js` | Service Worker (caché, periodicsync, checkPrices, notificationclick) + sendPushLog() |
 
 ### Arquitectura del proyecto
 
@@ -136,15 +138,15 @@ petrol/
 │   ├── state.js            → STATE global + definiciones combustibles
 │   ├── helpers.js          → Funciones auxiliares (precios, distancia, descuentos, comparePrices)
 │   ├── db.js               → IndexedDB compartido (cliente + SW): cache, favoritos, config
-│   ├── storage.js          → localStorage (estado/filtros) + API log render
-│   ├── api.js              → Fetch datos, histórico, apiFetch() wrapper, log
+│   ├── storage.js          → localStorage (estado/filtros) + tabs caché/log + initCacheTabs/initLogTabs
+│   ├── api.js              → Fetch datos, histórico, apiFetch() wrapper, API_LOG, renderApiLog
 │   ├── map.js              → Inicialización Leaflet, marcadores, popups, chart popup + tooltip
 │   ├── controls.js         → render(), setActiveTab(), filtros, toggleFavorite
 │   ├── table.js            → doSort(), showDetail(), loadHistory(), helpers combustibles
 │   ├── chart-engine.js     → Dibujar gráfica histórica (canvas) + tooltip hover
 │   ├── main.js             → Event listeners, restauración de estado, push notifications
-│   └── push-notifications.js → Web Push subscription (subscribe/unsubscribe/status)
-├── sw.js                   → Service Worker (caché, periodicsync, checkPrices, notificationclick)
+│   └── push-notifications.js → Web Push subscription (subscribe/unsubscribe) + PUSH_LOG + logPushEvent
+├── sw.js                   → Service Worker (caché, periodicsync, checkPrices, notificationclick) + sendPushLog()
 ├── icons/                  → Iconos PWA
 └── docs/
     ├── API.md              → Documentación API del Geoportal de Hidrocarburos
@@ -169,7 +171,10 @@ petrol/
 - **Tabla "Ambos"**: Sin paginación — muestra todas las estaciones filtradas
 - **Tabla "Tabla"**: Paginada (default 30) con sort dual (asc/desc)
 - **Reset filtros**: Sin re-fetch cuando ya hay datos cargados
+- **Log de actividad**: Tabs API/Push en config (`.config-log-tab`/`.config-log-panel`, mismo estilo que cache tabs). `initLogTabs()` en storage.js
 - **API Log**: Array `API_LOG[]` con últimas 30 llamadas, timestamp, duración y estado. Visible en config
+- **Push Log**: Array `PUSH_LOG[]` con últimas 30 eventos push. `logPushEvent()` en push-notifications.js. El SW envía eventos al cliente via `postMessage({type:'push-log',...})` y la función `sendPushLog()` en sw.js
+- **Timestamp logs**: formato `dd/mm/yy hh:mm:ss` mediante `formatLogTime()` en helpers.js
 - **Caché config**: Tabs IndexedDB (provincias/histórico) + localStorage (solo claves `gasolineras_`)
 - **Tests**: Servidor HTTP inline en Node.js, Playwright headless, no requiere procesos externos
 - **Push Notifications**: Web Push API (Periodic Background Sync). Suscripción localStorage, chequeo precios en SW (`checkPrices()`), fetch directo a API (sin caché), refresh de caché con datos frescos. Notificación si cayó X días (default 3)
