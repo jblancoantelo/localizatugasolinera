@@ -15,7 +15,7 @@ function formatLogTime() {
   ].join('');
 }
 
-function norm(s) { return (s||'').replace(/,/g,'.').trim(); }
+function norm(s) { return String(s??'').replace(/,/g,'.').trim(); }
 
 function parsePrice(v) { let x=parseFloat(norm(v)); return isNaN(x)?null:x; }
 

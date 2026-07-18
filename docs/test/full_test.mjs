@@ -434,6 +434,78 @@ async function testHTTP(browser, server) {
   const subCleared = await page.evaluate((key) => !localStorage.getItem(key), PUSH_SUB_KEY);
   log('Push', '14.10 Unsubscribe limpia localStorage', subCleared);
 
+  // --- norm() defensive test (fix for "(s||'').replace is not a function") ---
+  const normStr = await page.evaluate(() => norm('1,234'));
+  log('norm()', 'string con coma → ' + normStr, normStr === '1.234');
+
+  const normNum = await page.evaluate(() => norm(1.234));
+  log('norm()', 'número → ' + normNum, normNum === '1.234');
+
+  const normNull = await page.evaluate(() => norm(null));
+  log('norm()', 'null → "' + normNull + '"', normNull === '');
+
+  const normUndef = await page.evaluate(() => norm(undefined));
+  log('norm()', 'undefined → "' + normUndef + '"', normUndef === '');
+
+  const normZero = await page.evaluate(() => norm(0));
+  log('norm()', 'número 0 → "' + normZero + '"', normZero === '0');
+
+  // --- parsePrice defensive test ---
+  const parseStr = await page.evaluate(() => parsePrice('1,234'));
+  log('parsePrice()', 'string "1,234" → ' + parseStr, parseStr === 1.234);
+
+  const parseNum = await page.evaluate(() => parsePrice(1.234));
+  log('parsePrice()', 'número 1.234 → ' + parseNum, parseNum === 1.234);
+
+  const parseZero = await page.evaluate(() => parsePrice(0));
+  log('parsePrice()', 'número 0 → ' + parseZero, parseZero === 0);
+
+  // --- getFirstFuelPrice con precios numéricos (simula API con números) ---
+  const numPriceOk = await page.evaluate(() => {
+    const mockStation = {};
+    // Set the first fuel (Gasolina 95 E5) price as a number (como si viniera parseado)
+    mockStation[FUEL_KEYS['Gasolina 95 E5']] = 1.359;
+    const price = getFirstFuelPrice(mockStation);
+    return price === 1.359 ? 'ok' : 'falló: ' + price;
+  });
+  log('getFirstFuelPrice()', 'precio numérico → ' + numPriceOk, numPriceOk === 'ok');
+
+  const numPriceNull = await page.evaluate(() => {
+    const mockStation = {};
+    mockStation[FUEL_KEYS['Gasolina 95 E5']] = null;
+    const price = getFirstFuelPrice(mockStation);
+    return price === null ? 'ok' : 'falló: ' + price;
+  });
+  log('getFirstFuelPrice()', 'precio null → ' + numPriceNull, numPriceNull === 'ok');
+
+  // --- getFirstFuelName con precios numéricos ---
+  const nameNumOk = await page.evaluate(() => {
+    const mockStation = {};
+    mockStation[FUEL_KEYS['Gasóleo A']] = 1.459;
+    const name = getFirstFuelName(mockStation);
+    return name === 'Gasóleo A' ? 'ok' : 'falló: ' + name;
+  });
+  log('getFirstFuelName()', 'precio numérico → ' + nameNumOk, nameNumOk === 'ok');
+
+  // --- Simulación checkPrices: getFuelPrice con number (lo que usa getStationHistorySW internamente) ---
+  const fuelPriceStrOk = await page.evaluate(() => {
+    const st = { 'Precio Gasoleo A': '1,500' };
+    return getFuelPrice(st, 'Precio Gasoleo A') === 1.5 ? 'ok' : 'falló';
+  });
+  log('getFuelPrice()', 'string con coma → ' + fuelPriceStrOk, fuelPriceStrOk === 'ok');
+
+  const fuelPriceNumOk = await page.evaluate(() => {
+    const st = { 'Precio Gasoleo A': 1.350 };
+    return getFuelPrice(st, 'Precio Gasoleo A') === 1.35 ? 'ok' : 'falló';
+  });
+  log('getFuelPrice()', 'número → ' + fuelPriceNumOk, fuelPriceNumOk === 'ok');
+
+  const compareNumOk = await page.evaluate(() => {
+    const result = comparePrices(1.25, 1.5);
+    return result && result.difference === 0.25 && !result.isRise ? 'ok' : 'falló';
+  });
+  log('comparePrices()', 'números exactos → ' + compareNumOk, compareNumOk === 'ok');
+
   await ctx.close();
 }
 
