@@ -6,13 +6,13 @@ async function apiFetch(url) {
   try {
     const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
     const ms = (performance.now() - start).toFixed(0);
-    API_LOG.unshift({ url, ms: ms + 'ms', time: new Date().toLocaleTimeString(), ok: res.ok });
+    API_LOG.unshift({ url, ms: ms + 'ms', time: formatLogTime(), ok: res.ok });
     if (API_LOG.length > 30) API_LOG.length = 30;
     renderApiLog();
     return res;
   } catch (e) {
     const ms = (performance.now() - start).toFixed(0);
-    API_LOG.unshift({ url, ms: ms + 'ms', time: new Date().toLocaleTimeString(), ok: false });
+    API_LOG.unshift({ url, ms: ms + 'ms', time: formatLogTime(), ok: false });
     if (API_LOG.length > 30) API_LOG.length = 30;
     renderApiLog();
     throw e;

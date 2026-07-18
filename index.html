@@ -140,9 +140,19 @@
           </label>
         </div>
         <div class="config-card">
-          <h3>📋 Registro de llamadas API</h3>
-          <div id="apiLogEntries" class="cache-line" style="max-height:calc(30 * 1.1em);overflow-y:auto;font-size:0.65rem;font-family:monospace"></div>
-          <button id="clearApiLogBtn" class="btn-del" style="margin-top:0.3rem">🗑️ Borrar registro</button>
+          <h3>📋 Registro de actividad</h3>
+          <div class="config-log-tabs">
+            <button class="config-log-tab active" data-logtab="api">API</button>
+            <button class="config-log-tab" data-logtab="push">Push</button>
+          </div>
+          <div class="config-log-panel" data-logpanel="api">
+            <div id="apiLogEntries" class="cache-line" style="max-height:calc(30 * 1.1em);overflow-y:auto;font-size:0.65rem;font-family:monospace"></div>
+            <button id="clearApiLogBtn" class="btn-del" style="margin-top:0.3rem">🗑️ Borrar registro</button>
+          </div>
+          <div class="config-log-panel" data-logpanel="push" style="display:none">
+            <div id="pushLogEntries" class="cache-line" style="max-height:calc(30 * 1.1em);overflow-y:auto;font-size:0.65rem;font-family:monospace"></div>
+            <button id="clearPushLogBtn" class="btn-del" style="margin-top:0.3rem">🗑️ Borrar registro</button>
+          </div>
         </div>
         <div class="config-card">
           <h3>🔔 Notificaciones push</h3>

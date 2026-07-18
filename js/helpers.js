@@ -1,3 +1,20 @@
+function formatLogTime() {
+  const d = new Date();
+  return [
+    String(d.getDate()).padStart(2, '0'),
+    '/',
+    String(d.getMonth() + 1).padStart(2, '0'),
+    '/',
+    String(d.getFullYear()).slice(-2),
+    ' ',
+    String(d.getHours()).padStart(2, '0'),
+    ':',
+    String(d.getMinutes()).padStart(2, '0'),
+    ':',
+    String(d.getSeconds()).padStart(2, '0')
+  ].join('');
+}
+
 function norm(s) { return (s||'').replace(/,/g,'.').trim(); }
 
 function parsePrice(v) { let x=parseFloat(norm(v)); return isNaN(x)?null:x; }

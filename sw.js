@@ -55,6 +55,15 @@ self.addEventListener('activate', e => {
   );
 });
 
+// ---- Push log helper (sends events to client) ----
+function sendPushLog(event, detail) {
+  self.clients.matchAll({ type: 'window' }).then(clients => {
+    for (const c of clients) {
+      c.postMessage({ type: 'push-log', event, detail });
+    }
+  });
+}
+
 // ---- Price check logic ----
 
 function formatDateDDMMYYYY(date) {
@@ -144,16 +153,25 @@ function getStationHistorySW(historyByDate, stationId, fuelName) {
   return results;
 }
 
-async function checkPrices(mode) {
+async function checkPrices(reason) {
   try {
     const config = await getPushConfig();
     const days = config.priceFallDays || 3;
     const cacheTtl = config.cacheTtl || 12;
-    const checkDrop = mode ? mode === 'drop' : true;
-    const checkRise = mode ? mode === 'rise' : config.pushOnPriceRise === true;
+    const isModeRequest = reason === 'drop' || reason === 'rise';
+    const checkDrop = isModeRequest ? reason === 'drop' : true;
+    const checkRise = isModeRequest ? reason === 'rise' : config.pushOnPriceRise === true;
+
+    const motivo = reason === 'periodicsync' ? 'alarma periódica'
+      : reason === 'drop' ? 'test bajada'
+      : reason === 'rise' ? 'test subida'
+      : reason === 'setinterval' ? 'intervalo setInterval'
+      : 'desconocido';
+    sendPushLog('checkPrices', 'inicio — motivo: ' + motivo + ' | checkDrop=' + checkDrop + ' checkRise=' + checkRise + ' días=' + days);
 
     const favorites = await dbGetAllFavorites();
     if (!favorites || favorites.length === 0) {
+      sendPushLog('checkPrices', 'no hay favoritos — fin');
       console.log('[SW] No favorites to check');
       return;
     }
@@ -166,59 +184,107 @@ async function checkPrices(mode) {
       byProvince[key].push(fav);
     }
 
+    const provCount = Object.keys(byProvince).length;
+    sendPushLog('checkPrices', 'procesando ' + favorites.length + ' favoritos en ' + provCount + ' provincias');
+
     const alerts = [];
+    let checkedCount = 0;
 
     for (const [provKey, favs] of Object.entries(byProvince)) {
       const provId = favs[0].provinceId;
       const provName = favs[0].provinceName;
-      if (!provId || !provName) continue;
+      if (!provId || !provName) {
+        sendPushLog('checkPrices', 'provincia inválida — skip');
+        continue;
+      }
 
       try {
+        sendPushLog('checkPrices', provName + ': fetch datos frescos');
         const r = await fetch(API_BASE + 'EstacionesTerrestres/FiltroProvincia/' + provId, {
           headers: { 'Accept': 'application/json' }
         });
-        if (!r.ok) continue;
+        if (!r.ok) {
+          sendPushLog('checkPrices', provName + ': HTTP ' + r.status + ' — skip');
+          continue;
+        }
         const json = await r.json();
         const freshData = json.ListaEESSPrecio || [];
-        if (!freshData.length) continue;
-
+        if (!freshData.length) {
+          sendPushLog('checkPrices', provName + ': 0 estaciones — skip');
+          continue;
+        }
+        sendPushLog('checkPrices', provName + ': ' + freshData.length + ' estaciones recibidas, guardando caché');
         await cacheProvinceData(provName, freshData, cacheTtl);
 
+        sendPushLog('checkPrices', provName + ': fetch histórico ' + days + ' días');
         const historyData = await fetchProvinceHistorySW(provId, days);
+        const histDates = Object.keys(historyData).length;
+        sendPushLog('checkPrices', provName + ': histórico ' + histDates + ' fechas');
 
         for (const fav of favs) {
           const station = freshData.find(s => s.IDEESS === fav.id);
-          if (!station) continue;
+          if (!station) {
+            sendPushLog('checkPrices', '  ' + (fav.brand || fav.id) + ': no encontrada en datos frescos — skip');
+            continue;
+          }
 
           const fuelName = getFirstFuelName(station);
-          if (!fuelName) continue;
+          if (!fuelName) {
+            sendPushLog('checkPrices', '  ' + station.Rótulo + ': sin combustible — skip');
+            continue;
+          }
 
           const currentPrice = getFirstFuelPrice(station);
-          if (currentPrice === null) continue;
+          if (currentPrice === null) {
+            sendPushLog('checkPrices', '  ' + station.Rótulo + ': sin precio — skip');
+            continue;
+          }
 
           const stationHistory = getStationHistorySW(historyData, fav.id, fuelName);
-          if (stationHistory.length < 2) continue;
+          if (stationHistory.length < 2) {
+            sendPushLog('checkPrices', '  ' + station.Rótulo + ': histórico insuficiente (' + stationHistory.length + ' puntos) — skip');
+            continue;
+          }
 
           const oldestRecord = stationHistory[0];
           const oldestPrice = parsePrice(oldestRecord.price);
-          if (oldestPrice === null) continue;
+          if (oldestPrice === null) {
+            sendPushLog('checkPrices', '  ' + station.Rótulo + ': precio histórico inválido — skip');
+            continue;
+          }
 
           const result = comparePrices(currentPrice, oldestPrice);
-          if (result && (result.isRise ? checkRise : true)) {
-            alerts.push({
-              favoriteId: fav.id,
-              brand: station.Rótulo,
-              fuel: fuelName,
-              currentPrice: currentPrice,
-              oldestPrice: oldestPrice,
-              difference: result.difference.toFixed(3),
-              isRise: result.isRise,
-              address: station.Dirección,
-              locality: station.Localidad
-            });
+          if (!result) {
+            sendPushLog('checkPrices', '  ' + station.Rótulo + ': sin cambio (' + fuelName + ' ' + currentPrice + ' → ' + oldestPrice + ') — skip');
+            continue;
           }
+
+          const dir = result.isRise ? '↑ subida' : '↓ bajada';
+          if (result.isRise && !checkRise) {
+            sendPushLog('checkPrices', '  ' + station.Rótulo + ': ' + dir + ' ' + result.difference.toFixed(3) + '€ — ignorado (subida desactivada)');
+            continue;
+          }
+          if (!result.isRise && !checkDrop) {
+            sendPushLog('checkPrices', '  ' + station.Rótulo + ': ' + dir + ' ' + result.difference.toFixed(3) + '€ — ignorado (bajada desactivada)');
+            continue;
+          }
+
+          checkedCount++;
+          alerts.push({
+            favoriteId: fav.id,
+            brand: station.Rótulo,
+            fuel: fuelName,
+            currentPrice: currentPrice,
+            oldestPrice: oldestPrice,
+            difference: result.difference.toFixed(3),
+            isRise: result.isRise,
+            address: station.Dirección,
+            locality: station.Localidad
+          });
+          sendPushLog('checkPrices', '  ✅ ' + station.Rótulo + ': ' + dir + ' ' + result.difference.toFixed(3) + '€ (' + oldestPrice + ' → ' + currentPrice + ') — ALERTA #' + alerts.length);
         }
       } catch (e) {
+        sendPushLog('checkPrices', provName + ': error — ' + e.message);
         console.warn('[SW] Error checking province', provName, e.message);
       }
     }
@@ -230,6 +296,8 @@ async function checkPrices(mode) {
       if (dropCount > 0) body += dropCount + ' favorito(s) con precios más bajos';
       if (dropCount > 0 && riseCount > 0) body += ' · ';
       if (riseCount > 0) body += riseCount + ' favorito(s) con precios más altos';
+      sendPushLog('checkPrices', 'completado: ' + checkedCount + ' alertas (' + dropCount + '↓ ' + riseCount + '↑)');
+      sendPushLog('📨 notificación', 'mostrada: título="Alerta de Precios" body="' + body + '" tag=price-alert');
       await self.registration.showNotification('Alerta de Precios', {
         body: body,
         icon: 'icons/icon-192.png',
@@ -239,8 +307,11 @@ async function checkPrices(mode) {
         data: { alerts }
       });
       console.log('[SW] Price alert sent:', alerts.length, 'alerts');
+    } else {
+      sendPushLog('checkPrices', 'completado: 0 alertas — no se envía notificación (sin cambios relevantes)');
     }
   } catch (e) {
+    sendPushLog('checkPrices', 'error general: ' + e.message);
     console.error('[SW] checkPrices error:', e.message);
   }
 }
@@ -249,7 +320,8 @@ async function checkPrices(mode) {
 
 self.addEventListener('periodicsync', event => {
   if (event.tag === 'check-favorite-prices') {
-    event.waitUntil(checkPrices());
+    sendPushLog('⏰ periodicsync', 'iniciado — motivo: alarma periódica del SO');
+    event.waitUntil(checkPrices('periodicsync'));
   }
 });
 
@@ -257,7 +329,10 @@ self.addEventListener('periodicsync', event => {
 
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'trigger-price-check') {
-    event.waitUntil(checkPrices(event.data.mode));
+    const mode = event.data.mode;
+    const motivo = mode === 'drop' ? 'test bajada' : mode === 'rise' ? 'test subida' : 'intervalo setInterval';
+    sendPushLog('📩 trigger-price-check', 'recibido — motivo: ' + motivo);
+    event.waitUntil(checkPrices(mode || 'setinterval'));
   }
 });
 
@@ -269,6 +344,7 @@ self.addEventListener('push', event => {
   const title = data.title || 'Alerta de Precios';
   const body = data.body || 'Tus favoritos tienen cambios de precio';
   const tag = data.tag || 'push-alert';
+  sendPushLog('📨 push recibido', 'título="' + title + '" body="' + body + '" tag=' + tag);
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
@@ -285,6 +361,7 @@ self.addEventListener('push', event => {
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
+  sendPushLog('notificationclick', 'recibido — título="' + event.notification.title + '" body="' + event.notification.body + '" tag=' + event.notification.tag);
 
   const scopeUrl = new URL(self.registration.scope || '/');
   const scopePath = scopeUrl.pathname.replace(/\/?$/, '/');

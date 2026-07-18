@@ -45,7 +45,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('clearCacheBtn').addEventListener('click', clearCache);
   document.getElementById('clearApiLogBtn')?.addEventListener('click', clearApiLog);
+  document.getElementById('clearPushLogBtn')?.addEventListener('click', clearPushLog);
   initCacheTabs();
+  initLogTabs();
   document.getElementById('favToggleBtn').addEventListener('click', () => {
     STATE.showFavoritesOnly = !STATE.showFavoritesOnly;
     STATE.page = 1;
@@ -242,6 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('pushNotifToggle').checked = false;
       document.getElementById('pushRiseToggle').checked = false;
       document.getElementById('pushNotifBtn').classList.remove('active');
+      logPushEvent('Toolbar', 'desuscripción manual');
       console.log('[Push] Desuscripción manual desde toolbar');
     } else {
       const success = await subscribeUserToPush();
@@ -251,6 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('pushNotifBtn').classList.add('active');
         syncPushConfig();
         registerPeriodicSync();
+        logPushEvent('Toolbar', 'suscripción manual');
         console.log('[Push] Suscripción manual desde toolbar');
       }
     }
@@ -259,6 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function trySubscribe() {
     if (isPushSubscribed()) {
+      logPushEvent('AutoSubscribe', 'ya suscrito — activando sin llamar a la API');
       console.log('[Push] Ya suscrito, activando sin llamar a la API');
       document.getElementById('pushNotifBtn').classList.add('active');
       syncPushConfig();
@@ -267,11 +272,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const success = await subscribeUserToPush();
     if (success) {
+      logPushEvent('AutoSubscribe', 'suscripción exitosa');
       console.log('[Push] Suscripción exitosa');
       document.getElementById('pushNotifBtn').classList.add('active');
       syncPushConfig();
       registerPeriodicSync();
     } else {
+      logPushEvent('AutoSubscribe', 'error al suscribir');
       console.log('[Push] Error al suscribir');
     }
     return success;
@@ -281,14 +288,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const sub = getPushSubscription();
     if (sub && !STATE.pushNotificationsEnabled && !STATE.pushOnPriceRise) {
       await unsubscribeUserFromPush();
+      logPushEvent('AutoUnsubscribe', 'ningún check activo');
       console.log('[Push] Desuscripción completada (ningún check activo)');
       document.getElementById('pushNotifBtn').classList.remove('active');
     } else {
+      logPushEvent('AutoUnsubscribe', 'otros checks aún activos — no se desuscribe');
       console.log('[Push] No se desuscribe: otros checks aún activos');
     }
   }
 
   document.getElementById('pushNotifToggle')?.addEventListener('change', async (e) => {
+    const wasSubscribed = isPushSubscribed();
     if (e.target.checked) {
       const ok = await trySubscribe();
       STATE.pushNotificationsEnabled = ok;
@@ -297,10 +307,13 @@ document.addEventListener('DOMContentLoaded', () => {
       STATE.pushNotificationsEnabled = false;
       await tryUnsubscribe();
     }
+    const nowSubscribed = isPushSubscribed();
+    logPushEvent('🔔 bajada', (STATE.pushNotificationsEnabled ? 'activado' : 'desactivado') + ' | suscripción: ' + (wasSubscribed ? 'sí→' : 'no→') + (nowSubscribed ? 'sí' : 'no'));
     saveState();
   });
 
   document.getElementById('pushRiseToggle')?.addEventListener('change', async (e) => {
+    const wasSubscribed = isPushSubscribed();
     if (e.target.checked) {
       const ok = await trySubscribe();
       STATE.pushOnPriceRise = ok;
@@ -309,12 +322,15 @@ document.addEventListener('DOMContentLoaded', () => {
       STATE.pushOnPriceRise = false;
       await tryUnsubscribe();
     }
+    const nowSubscribed = isPushSubscribed();
+    logPushEvent('📈 subida', (STATE.pushOnPriceRise ? 'activado' : 'desactivado') + ' | suscripción: ' + (wasSubscribed ? 'sí→' : 'no→') + (nowSubscribed ? 'sí' : 'no'));
     saveState();
   });
 
   document.getElementById('checkInterval')?.addEventListener('change', (e) => {
     const v = parseFloat(e.target.value);
     STATE.checkInterval = isNaN(v) || v < 0 ? 8 : v;
+    logPushEvent('checkInterval', STATE.checkInterval + 'h');
     saveState();
     setPushConfig({
       checkInterval: STATE.checkInterval,
@@ -330,6 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('priceFallDays')?.addEventListener('change', (e) => {
     const v = parseInt(e.target.value);
     STATE.priceFallDays = isNaN(v) ? 3 : v;
+    logPushEvent('priceFallDays', STATE.priceFallDays + 'd');
     saveState();
     setPushConfig({
       checkInterval: STATE.checkInterval,
@@ -365,13 +382,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     syncPushConfig();
     registerPeriodicSync();
-    if (navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type: 'trigger-price-check', mode });
-    }
     const label = mode === 'rise' ? 'subida' : 'bajada';
+    const swCtrl = navigator.serviceWorker.controller;
+    if (swCtrl) {
+      swCtrl.postMessage({ type: 'trigger-price-check', mode });
+      logPushEvent('🧪 Test', 'modo=' + label + ' mensaje enviado al SW (id=' + swCtrl.id + ')');
+    } else {
+      logPushEvent('🧪 Test', 'modo=' + label + ' ⚠️ SW sin controlador — no se puede enviar mensaje');
+    }
+    const testTitle = '🧪 Test notificaciones: ' + label;
+    const testBody = 'Chequeo completado para ' + label + ' de precio.';
+    logPushEvent('🧪 Test', 'notificación mostrada: título="' + testTitle + '" body="' + testBody + '"');
     const reg = await navigator.serviceWorker.ready;
-    await reg.showNotification('🧪 Test notificaciones: ' + label, {
-      body: 'Chequeo completado para ' + label + ' de precio.',
+    await reg.showNotification(testTitle, {
+      body: testBody,
       icon: 'icons/icon-192.png',
       badge: 'icons/icon-192.png',
       tag: 'push-test',
@@ -384,8 +408,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('pushRiseTestBtn')?.addEventListener('click', () => handleTestNotification('rise'));
 
   // Initialize push notification UI
-  if (isPushSubscribed()) {
+  const sub = getPushSubscription();
+  if (sub) {
     document.getElementById('pushNotifBtn')?.classList.add('active');
+    const swOk = 'serviceWorker' in navigator && navigator.serviceWorker.controller;
+    logPushEvent('Estado inicial', 'suscrito — endpoint: ' + (sub.endpoint || '').slice(0, 30) + '… SW: ' + (swOk ? '✅ conectado' : '❌ sin controlador'));
+  } else {
+    logPushEvent('Estado inicial', 'no suscrito');
   }
   const bajadaToggle = document.getElementById('pushNotifToggle');
   if (bajadaToggle) bajadaToggle.checked = STATE.pushNotificationsEnabled;
@@ -402,6 +431,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (event.data.type === 'open-favorite') {
         setActiveTab('tab-table');
         showDetail(event.data.favoriteId);
+      }
+      if (event.data.type === 'push-log') {
+        logPushEvent(event.data.event, event.data.detail);
       }
     });
   }
@@ -421,13 +453,16 @@ document.addEventListener('DOMContentLoaded', () => {
           await reg.periodicSync.register('check-favorite-prices', {
             minInterval: intervalMs
           });
+          logPushEvent('PeriodicSync', 'registrado cada ' + STATE.checkInterval + 'h');
           console.log('Periodic sync registered with interval:', STATE.checkInterval, 'hours');
         }
       } catch (error) {
         _periodicSyncUnavailable = true;
         if (error.name === 'NotAllowedError') {
+          logPushEvent('PeriodicSync', 'no disponible (requiere PWA instalada) — usando fallback setInterval');
           console.warn('Periodic sync no disponible (requiere PWA instalada). Usando fallback setInterval.');
         } else {
+          logPushEvent('PeriodicSync', 'error: ' + error.message);
           console.error('Error registering periodic sync:', error);
         }
       }
@@ -439,8 +474,10 @@ document.addEventListener('DOMContentLoaded', () => {
         navigator.serviceWorker.controller.postMessage({ type: 'trigger-price-check' });
       }
     }, intervalMs);
+    logPushEvent('⏱️ setInterval', 'fallback cada ' + STATE.checkInterval + 'h');
     console.log('setInterval fallback registered:', STATE.checkInterval, 'hours');
   }
 
   renderApiLog();
+  renderPushLog();
 });

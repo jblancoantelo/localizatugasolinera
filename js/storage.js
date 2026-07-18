@@ -169,6 +169,19 @@ function renderLocalStorageCache() {
   }
 }
 
+function initLogTabs() {
+  document.querySelectorAll('.config-log-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.config-log-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const id = tab.dataset.logtab;
+      document.querySelectorAll('.config-log-panel').forEach(p => p.style.display = 'none');
+      const panel = document.querySelector('.config-log-panel[data-logpanel="' + id + '"]');
+      if (panel) panel.style.display = 'block';
+    });
+  });
+}
+
 function initCacheTabs() {
   document.querySelectorAll('.config-cache-tab').forEach(tab => {
     tab.addEventListener('click', () => {
