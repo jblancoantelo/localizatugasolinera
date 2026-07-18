@@ -214,6 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (saved.checkInterval) STATE.checkInterval = saved.checkInterval;
     if (saved.priceFallDays !== undefined) STATE.priceFallDays = saved.priceFallDays;
+    if (saved.priceCheckMode === 'average' || saved.priceCheckMode === 'consecutive') STATE.priceCheckMode = saved.priceCheckMode;
     if (saved.pushNotificationsEnabled) STATE.pushNotificationsEnabled = saved.pushNotificationsEnabled;
     if (saved.pushOnPriceRise) STATE.pushOnPriceRise = saved.pushOnPriceRise;
   }
@@ -222,6 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setPushConfig({
     checkInterval: STATE.checkInterval,
     priceFallDays: STATE.priceFallDays,
+    priceCheckMode: STATE.priceCheckMode,
     cacheTtl: getCacheTtl(),
     pushOnPriceRise: STATE.pushOnPriceRise
   });
@@ -230,6 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setPushConfig({
       checkInterval: STATE.checkInterval,
       priceFallDays: STATE.priceFallDays,
+      priceCheckMode: STATE.priceCheckMode,
       cacheTtl: getCacheTtl(),
       pushOnPriceRise: STATE.pushOnPriceRise
     });
@@ -335,6 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setPushConfig({
       checkInterval: STATE.checkInterval,
       priceFallDays: STATE.priceFallDays,
+      priceCheckMode: STATE.priceCheckMode,
       cacheTtl: getCacheTtl(),
       pushOnPriceRise: STATE.pushOnPriceRise
     });
@@ -351,6 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setPushConfig({
       checkInterval: STATE.checkInterval,
       priceFallDays: STATE.priceFallDays,
+      priceCheckMode: STATE.priceCheckMode,
       cacheTtl: getCacheTtl(),
       pushOnPriceRise: STATE.pushOnPriceRise
     });
@@ -360,8 +365,19 @@ document.addEventListener('DOMContentLoaded', () => {
     setPushConfig({
       checkInterval: STATE.checkInterval,
       priceFallDays: STATE.priceFallDays,
+      priceCheckMode: STATE.priceCheckMode,
       cacheTtl: getCacheTtl(),
       pushOnPriceRise: STATE.pushOnPriceRise
+    });
+  });
+
+  document.querySelectorAll('input[name="priceCheckMode"]')?.forEach(el => {
+    el.addEventListener('change', (e) => {
+      if (!e.target.checked) return;
+      STATE.priceCheckMode = e.target.value;
+      logPushEvent('priceCheckMode', STATE.priceCheckMode);
+      saveState();
+      syncPushConfig();
     });
   });
 
@@ -460,6 +476,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (intervalEl) intervalEl.value = STATE.checkInterval;
   const fallDaysEl = document.getElementById('priceFallDays');
   if (fallDaysEl) fallDaysEl.value = STATE.priceFallDays;
+  const modeRadio = document.querySelector('input[name="priceCheckMode"][value="' + STATE.priceCheckMode + '"]');
+  if (modeRadio) modeRadio.checked = true;
 
   // Handle postMessage from Service Worker
   if ('serviceWorker' in navigator) {

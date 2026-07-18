@@ -246,16 +246,52 @@ async function checkPrices(reason) {
             continue;
           }
 
-          const oldestRecord = stationHistory[0];
-          const oldestPrice = parsePrice(oldestRecord.price);
-          if (oldestPrice === null) {
-            sendPushLog('checkPrices', '  ' + station.Rótulo + ': precio histórico inválido — skip');
-            continue;
+          let refPrice, result, modeLabel;
+          if (config.priceCheckMode === 'consecutive') {
+            const window = stationHistory.slice(-days);
+            if (window.length < 2) {
+              sendPushLog('checkPrices', '  ' + station.Rótulo + ': ventana consecutiva insuficiente (' + window.length + ' puntos) — skip');
+              continue;
+            }
+            let allDrop = true, allRise = true;
+            for (let i = 0; i < window.length - 1; i++) {
+              const p1 = parsePrice(window[i].price);
+              const p2 = parsePrice(window[i + 1].price);
+              if (p1 === null || p2 === null) { allDrop = false; allRise = false; break; }
+              const d = p1 - p2;
+              if (d > 0) allRise = false;
+              else if (d < 0) allDrop = false;
+              else { allDrop = false; allRise = false; break; }
+            }
+            if (!allDrop && !allRise) {
+              sendPushLog('checkPrices', '  ' + station.Rótulo + ': sin tendencia consecutiva (' + fuelName + ') — skip');
+              continue;
+            }
+            refPrice = parsePrice(window[0].price);
+            if (refPrice === null) {
+              sendPushLog('checkPrices', '  ' + station.Rótulo + ': precio referencia inválido — skip');
+              continue;
+            }
+            result = comparePrices(currentPrice, refPrice);
+            modeLabel = 'tendencia ' + (allDrop ? '↓ bajada' : '↑ subida') + ' ' + window.length + 'd';
+          } else {
+            let sum = 0;
+            let count = 0;
+            for (const rec of stationHistory) {
+              const p = parsePrice(rec.price);
+              if (p !== null) { sum += p; count++; }
+            }
+            if (count < 1) {
+              sendPushLog('checkPrices', '  ' + station.Rótulo + ': sin precios válidos en histórico — skip');
+              continue;
+            }
+            refPrice = sum / count;
+            result = comparePrices(currentPrice, refPrice);
+            modeLabel = 'promedio ' + refPrice.toFixed(3);
           }
 
-          const result = comparePrices(currentPrice, oldestPrice);
           if (!result) {
-            sendPushLog('checkPrices', '  ' + station.Rótulo + ': sin cambio (' + fuelName + ' ' + currentPrice + ' → ' + oldestPrice + ') — skip');
+            sendPushLog('checkPrices', '  ' + station.Rótulo + ': sin cambio (' + fuelName + ' ' + currentPrice + ' vs ' + modeLabel + ') — skip');
             continue;
           }
 
@@ -275,13 +311,13 @@ async function checkPrices(reason) {
             brand: station.Rótulo,
             fuel: fuelName,
             currentPrice: currentPrice,
-            oldestPrice: oldestPrice,
+            avgPrice: refPrice,
             difference: result.difference.toFixed(3),
             isRise: result.isRise,
             address: station.Dirección,
             locality: station.Localidad
           });
-          sendPushLog('checkPrices', '  ✅ ' + station.Rótulo + ': ' + dir + ' ' + result.difference.toFixed(3) + '€ (' + oldestPrice + ' → ' + currentPrice + ') — ALERTA #' + alerts.length);
+          sendPushLog('checkPrices', '  ✅ ' + station.Rótulo + ': ' + dir + ' ' + result.difference.toFixed(3) + '€ (' + modeLabel + ' → ' + currentPrice + ') — ALERTA #' + alerts.length);
         }
       } catch (e) {
         sendPushLog('checkPrices', provName + ': error — ' + e.message);

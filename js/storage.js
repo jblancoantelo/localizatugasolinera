@@ -133,6 +133,7 @@ function saveState() {
       userLng: s.userLng,
       checkInterval: s.checkInterval,
       priceFallDays: s.priceFallDays,
+      priceCheckMode: s.priceCheckMode,
       pushNotificationsEnabled: s.pushNotificationsEnabled,
       pushOnPriceRise: s.pushOnPriceRise
     };

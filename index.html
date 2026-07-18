@@ -176,6 +176,17 @@
               <input type="number" id="priceFallDays" min="0" max="90" value="3" style="width:50px">
             </label>
           </div>
+          <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
+            <span style="font-size:0.72rem;color:#888">Método de detección:</span>
+            <label style="font-size:0.72rem;display:flex;align-items:center;gap:0.2rem;cursor:pointer">
+              <input type="radio" name="priceCheckMode" value="average" checked>
+              Promedio
+            </label>
+            <label style="font-size:0.72rem;display:flex;align-items:center;gap:0.2rem;cursor:pointer">
+              <input type="radio" name="priceCheckMode" value="consecutive">
+              Consecutivos
+            </label>
+          </div>
         </div>
         <div class="config-card">
           <h3>🔄 Actualización de la app</h3>
