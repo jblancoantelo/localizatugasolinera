@@ -20,13 +20,33 @@ async function renderCacheInfo() {
   if (!el) return;
   const prov = STATE.selectedProv;
   if (!prov) {
-    el.innerHTML = '<span style="color:#999">Selecciona una provincia</span>';
+    try {
+      const keys = await dbGetAllKeys();
+      const provKeys = keys.filter(k => typeof k === 'string' && k.startsWith('prov_'));
+      if (!provKeys.length) {
+        el.innerHTML = '<span style="color:#999">Sin provincias en caché</span>';
+        return;
+      }
+      const items = [];
+      for (const key of provKeys) {
+        const entry = await dbGet(key);
+        if (entry && Array.isArray(entry.data)) {
+          const provName = key.slice(5);
+          const ttl = (entry.ttl || 12) * 60 * 60 * 1000;
+          const valid = Date.now() - entry.timestamp <= ttl;
+          items.push(`${provName} (${entry.data.length})${valid ? '' : ' ⏳'}`);
+        }
+      }
+      el.innerHTML = '<span>' + items.join(' · ') + '</span>';
+    } catch(e) {
+      el.innerHTML = '<span style="color:#999">No disponible</span>';
+    }
     return;
   }
   try {
     const cached = await dbGet('cache', 'prov_' + prov);
     if (!cached || !cached.timestamp || !Array.isArray(cached.data)) {
-      el.innerHTML = '<span style="color:#999">Sin datos en caché</span>';
+      el.innerHTML = '<span style="color:#999">Provincias: Sin datos en IndexedDB</span>';
       return;
     }
     const count = cached.data.length;
@@ -46,7 +66,7 @@ async function renderProvinceCacheInfo() {
   try {
     const keys = await dbGetAllKeys('cache');
     if (!keys.length) {
-      el.innerHTML = '<span style="color:#999">Sin datos en IndexedDB</span>';
+      el.innerHTML = '<span style="color:#999">General: Sin datos en IndexedDB</span>';
       return;
     }
     const sections = [];

@@ -6,13 +6,13 @@ async function apiFetch(url) {
   try {
     const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
     const ms = (performance.now() - start).toFixed(0);
-    API_LOG.unshift({ url, ms: ms + 'ms', time: formatLogTime(), ok: res.ok });
+    API_LOG.unshift({ url, ms: ms + 'ms', time: (() => { const d = new Date(); return d.getDate().toString().padStart(2,'0') + '/' + (d.getMonth()+1).toString().padStart(2,'0') + '/' + d.getFullYear().toString().slice(-2) + ' ' + d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0') + ':' + d.getSeconds().toString().padStart(2,'0'); })(), ok: res.ok });
     if (API_LOG.length > 30) API_LOG.length = 30;
     renderApiLog();
     return res;
   } catch (e) {
     const ms = (performance.now() - start).toFixed(0);
-    API_LOG.unshift({ url, ms: ms + 'ms', time: formatLogTime(), ok: false });
+    API_LOG.unshift({ url, ms: ms + 'ms', time: (() => { const d = new Date(); return d.getDate().toString().padStart(2,'0') + '/' + (d.getMonth()+1).toString().padStart(2,'0') + '/' + d.getFullYear().toString().slice(-2) + ' ' + d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0') + ':' + d.getSeconds().toString().padStart(2,'0'); })(), ok: false });
     if (API_LOG.length > 30) API_LOG.length = 30;
     renderApiLog();
     throw e;
@@ -239,7 +239,6 @@ function locateUser() {
       STATE.userLat = pos.coords.latitude;
       STATE.userLng = pos.coords.longitude;
       updateUserMarker(STATE.userLat, STATE.userLng);
-      updatePosInfo();
       btn.textContent = '📍';
       btn.classList.remove('locating');
       btn.blur();

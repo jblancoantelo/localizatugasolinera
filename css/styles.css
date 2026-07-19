@@ -85,13 +85,13 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 .tab-both .config-area, .tab-both #noProvinceMsg { display: none; }
 
 .tab-config #map, .tab-config .table-area, .tab-config .both-table-area, .tab-config #noProvinceMsg { display: none; }
-.tab-config .config-area { display: block; }
 
 .content.no-province #noProvinceMsg { display: flex; }
 .content.no-province #map { display: none; }
 .content.no-province .table-area { display: none; }
 .content.no-province .both-table-area { display: none; }
 .content.no-province .config-area { display: none; }
+.content.tab-config .config-area { display: block; }
 
 /* === Loading overlay === */
 .content.loading::after {
@@ -294,7 +294,6 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 /* === Hide === */
 .hide { display: none !important; }
 
-#posInfo { font-size: 0.65rem; color: #999; white-space: nowrap; font-family: monospace; margin-left: auto; }
 
 /* === Responsive === */
 @media (max-width: 1024px) {
