@@ -488,6 +488,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const modeRadio = document.querySelector('input[name="priceCheckMode"][value="' + STATE.priceCheckMode + '"]');
   if (modeRadio) modeRadio.checked = true;
 
+  // Start periodic sync + initial check if already subscribed
+  if (sub && (STATE.pushNotificationsEnabled || STATE.pushOnPriceRise)) {
+    registerPeriodicSync();
+    if (navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'trigger-price-check' });
+      logPushEvent('⏰ Startup', 'check inicial enviado al SW');
+    } else {
+      logPushEvent('⏰ Startup', '⚠️ SW sin controlador — check inicial diferido');
+      navigator.serviceWorker.ready.then(() => {
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: 'trigger-price-check' });
+          logPushEvent('⏰ Startup', 'check inicial enviado tras SW ready');
+        }
+      });
+    }
+  }
+
   // Handle postMessage from Service Worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', event => {
