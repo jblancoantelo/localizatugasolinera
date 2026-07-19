@@ -157,7 +157,7 @@ function getStationHistorySW(historyByDate, stationId, fuelName) {
 async function checkPrices(reason) {
   try {
     const config = await getPushConfig();
-    const days = config.priceFallDays || 14;
+    const days = Math.max(config.priceFallDays || 14, 2);
     const cacheTtl = config.cacheTtl || 12;
     const isModeRequest = reason === 'drop' || reason === 'rise';
     const checkDrop = isModeRequest ? reason === 'drop' : (config.pushNotificationsEnabled === true);

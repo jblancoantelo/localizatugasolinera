@@ -354,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('priceFallDays')?.addEventListener('change', (e) => {
     const v = parseInt(e.target.value);
-    STATE.priceFallDays = isNaN(v) ? 14 : v;
+    STATE.priceFallDays = isNaN(v) || v < 2 ? 14 : v;
     logPushEvent('priceFallDays', STATE.priceFallDays + 'd');
     saveState();
     setPushConfig({
