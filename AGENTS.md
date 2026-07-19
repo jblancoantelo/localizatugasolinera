@@ -1,5 +1,9 @@
 # AGENTS.md
 
+## Documentación principal
+
+Ver [`README.md`](./README.md) para visión general del proyecto, funcionalidades y stack técnico.
+
 ## Workflow obligatorio
 
 1. **Siempre ejecutar tests completos** tras cualquier cambio:
@@ -115,57 +119,6 @@ Orden actual de grupos:
 - Motivo: `navigator.serviceWorker.ready.then(r => r.update())` solo detecta cambios en `sw.js`; si no se incrementa la versión, los nuevos assets no se descargan
 - El botón "Comprobar actualizaciones" en la UI usa `reg.update()` + `updatefound` para detectar el cambio y ofrecer recarga
 
-### Archivos clave
-| Archivo | Propósito |
-|---------|-----------|
-| `index.html` | Toolbar + content + tabs + bottom sheet |
-| `css/styles.css` | ~320 líneas responsive |
-| `js/state.js` | STATE global + definiciones combustibles |
-| `js/helpers.js` | Funciones auxiliares (precios, distancia, descuentos, `comparePrices()`, `formatLogTime()`) |
-| `js/db.js` | IndexedDB compartido (cliente + SW): cache, favoritos, config |
-| `js/storage.js` | localStorage (estado/filtros) + tabs caché + API log render + initLogTabs |
-| `js/api.js` | Fetch datos, histórico, `apiFetch()` wrapper con log, `tryAutoRestoreProvince()` |
-| `js/map.js` | Inicialización mapa Leaflet, marcadores, popups, chart popup con tooltip |
-| `js/controls.js` | `render()`, `setActiveTab()`, filtros |
-| `js/table.js` | `doSort()`, `showDetail()`, `loadHistory()`, helpers combustibles |
-| `js/chart-engine.js` | Dibujar gráfica histórica (canvas) en detail panel + tooltip hover |
-| `js/main.js` | Event listeners, restauración de estado, push notifications |
-| `js/push-notifications.js` | Gestión suscripción Web Push (subscribe/unsubscribe) + PUSH_LOG + logPushEvent |
-| `sw.js` | Service Worker (caché, periodicsync, checkPrices, notificationclick) + sendPushLog() |
-
-### Arquitectura del proyecto
-
-```
-petrol/
-├── index.html              → Toolbar + content + tabs + bottom sheet
-├── AGENTS.md               → Este archivo (instrucciones para IA)
-├── css/styles.css          → ~320 líneas responsive
-├── js/
-│   ├── state.js            → STATE global + definiciones combustibles
-│   ├── helpers.js          → Funciones auxiliares (precios, distancia, descuentos, comparePrices)
-│   ├── db.js               → IndexedDB compartido (cliente + SW): cache, favoritos, config
-│   ├── storage.js          → localStorage (estado/filtros) + tabs caché/log + initCacheTabs/initLogTabs
-│   ├── api.js              → Fetch datos, histórico, apiFetch() wrapper, API_LOG, renderApiLog
-│   ├── map.js              → Inicialización Leaflet, marcadores, popups, chart popup + tooltip
-│   ├── controls.js         → render(), setActiveTab(), filtros, toggleFavorite
-│   ├── table.js            → doSort(), showDetail(), loadHistory(), helpers combustibles
-│   ├── chart-engine.js     → Dibujar gráfica histórica (canvas) + tooltip hover
-│   ├── main.js             → Event listeners, restauración de estado, push notifications
-│   └── push-notifications.js → Web Push subscription (subscribe/unsubscribe) + PUSH_LOG + logPushEvent
-├── sw.js                   → Service Worker (caché, periodicsync, checkPrices, notificationclick) + sendPushLog()
-├── icons/                  → Iconos PWA
-└── docs/
-    ├── API.md              → Documentación API del Geoportal de Hidrocarburos
-    ├── CHANGELOG.md         → Historial de cambios
-    ├── PUSH_NOTIFICATIONS.md → Documentación técnica push notifications
-    ├── PUSH_NOTIFICATIONS_QUICK_START.md → Guía rápida testing push
-    └── test/
-        ├── TEST_PLAN.md    → Plan de pruebas
-        ├── full_test.mjs   → Test suite Playwright autónomo (51 tests)
-        ├── server.js       → Servidor HTTP inline para tests
-        └── validate.mjs    → Validador de sintaxis
-```
-
 ### Decisiones técnicas clave
 - **Dropdown marcas**: `position: fixed` en lugar de `position: absolute` relativo al toolbar para evitar problemas de stacking context del flex layout
 - **Persistencia filtros**: `localStorage` clave `gasolineras_prov_filters_{provName}` — simple, síncrono, <1KB
@@ -183,8 +136,7 @@ petrol/
 - **Timestamp logs**: formato `dd/mm/yy hh:mm:ss` mediante `formatLogTime()` en helpers.js
 - **Caché config**: Tabs IndexedDB (provincias/histórico) + localStorage (solo claves `gasolineras_`)
 - **Tests**: Servidor HTTP inline en Node.js, Playwright headless, no requiere procesos externos
-- **Push Notifications**: Web Push API (Periodic Background Sync). Suscripción localStorage, chequeo precios en SW (`checkPrices()`), fetch directo a API (sin caché), refresh de caché con datos frescos. Notificación si cayó X días (default 3)
-- **DOMContentLoaded en main.js**: CRÍTICO cerrar con }); al final. Si falta → error en carga página
+- **DOMContentLoaded en main.js**: CRÍTICO cerrar con `});` al final. Si falta → error en carga página
 
 ### Push Notifications — Arquitectura (v2 SW-based)
 
@@ -216,11 +168,7 @@ petrol/
 - `cacheTtl` (horas, se aplica tras cada actualización SW)
 - Status: ✓ green / ✗ red
 
-**VAPID Key**:
-```
-VAPID_PUBLIC_KEY=BDpoYD9azs5I8SHt23Gx8BMJ6d2q1ghIluak4flDh7a2lfKIS_3tn9QFh8gaQQeG4kTYYnEl5e3S1btbH1hbNQs
-```
-Hardcodeada en `push-notifications.js`. Sin backend — clave privada no usada.
+**VAPID Key**: hardcodeada en `push-notifications.js`. Sin backend — clave privada no usada.
 
 ### Debugging Push Notifications
 
@@ -247,7 +195,23 @@ node docs/test/full_test.mjs
 
 # Servidor manual para depuración
 node -e "const h=require('http'),fs=require('fs');h.createServer((q,r)=>{let p=q.url=='/'?'index.html':q.url.slice(1);fs.readFile(p,(e,d)=>{if(e){r.writeHead(404);r.end('')}else{r.writeHead(200,{'Content-Type':{'html':'text/html','css':'text/css','js':'application/javascript'}[p.split('.').pop()]||'text/plain'});r.end(d)}})}).listen(8080)"
-
-# Forzar recarga sin caché
-# Abrir DevTools → Network → Disable cache, luego F5
 ```
+
+### Archivos clave
+
+| Archivo | Propósito |
+|---------|-----------|
+| `index.html` | Toolbar + content + tabs + bottom sheet |
+| `css/styles.css` | ~340 líneas responsive |
+| `js/state.js` | STATE global + definiciones combustibles |
+| `js/helpers.js` | Funciones auxiliares (precios, distancia, descuentos, `comparePrices()`, `formatLogTime()`) |
+| `js/db.js` | IndexedDB compartido (cliente + SW): cache, favoritos, config |
+| `js/storage.js` | localStorage (estado/filtros) + tabs caché + API log render + initLogTabs |
+| `js/api.js` | Fetch datos, histórico, `apiFetch()` wrapper con log, `tryAutoRestoreProvince()` |
+| `js/map.js` | Inicialización mapa Leaflet, marcadores, popups, chart popup con tooltip |
+| `js/controls.js` | `render()`, `setActiveTab()`, filtros, `toggleFavorite()` |
+| `js/table.js` | `doSort()`, `showDetail()`, `loadHistory()`, helpers combustibles |
+| `js/chart-engine.js` | Dibujar gráfica histórica (canvas) en detail panel + tooltip hover |
+| `js/main.js` | Event listeners, restauración de estado, push notifications |
+| `js/push-notifications.js` | Gestión suscripción Web Push (subscribe/unsubscribe) + PUSH_LOG + logPushEvent |
+| `sw.js` | Service Worker (caché, periodicsync, checkPrices, notificationclick) + sendPushLog() |

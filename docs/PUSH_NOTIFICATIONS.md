@@ -1,12 +1,12 @@
-# Push Notifications - Documentación Técnica
+# Push Notifications — Documentación Técnica
 
 **Estado**: ✅ Reimplementado (v2 - SW-based)
 **Fecha**: 2026-07-17
 **Última actualización**: Refactor: toda la lógica de chequeo ahora corre en el Service Worker
 
-## Arquitectura
-
 Sin backend ni servidor push externo. El chequeo de precios lo ejecuta el Service Worker directamente contra la API del Geoportal de Hidrocarburos.
+
+## Arquitectura
 
 ### Flujo de datos
 
@@ -23,6 +23,13 @@ Sin backend ni servidor push externo. El chequeo de precios lo ejecuta el Servic
 6. Click en notificación → clients.openWindow + postMessage → app abre con detalle
 ```
 
+### Arquitectura del log
+
+```
+SW (checkPrices, events) → sendPushLog() → postMessage({type:'push-log'}) → main.js message handler → logPushEvent() → PUSH_LOG[] → renderPushLog()
+Cliente (toggles, config, subscribe) → logPushEvent() → PUSH_LOG[] → renderPushLog()
+```
+
 ## Componentes
 
 ### `js/db.js` (COMPARTIDO)
@@ -34,7 +41,7 @@ Funciones IndexedDB compartidas entre cliente y Service Worker:
 - `dbGetAllFavorites()`, `dbAddFavorite(fav)`, `dbRemoveFavorite(id)`
 - `getPushConfig()`, `setPushConfig(config)`
 
-### `sw.js` (MODIFICADO)
+### `sw.js`
 El SW ahora contiene toda la lógica de chequeo de precios:
 - `checkPrices()` — función principal, lee favoritos de IndexedDB, fetchea API, compara, notifica
 - `fetchProvinceHistorySW(provinceId, days)` — obtiene histórico desde la API
@@ -52,7 +59,7 @@ El SW ahora contiene toda la lógica de chequeo de precios:
 - `formatLogTime()` — formato `dd/mm/yy hh:mm:ss` para timestamps de logs
 
 ### `js/controls.js`
-- `toggleFavorite(id)` escribe en IndexedDB (`dbAddFavorite`/`dbRemoveFavorite`) ademas de `STATE.favorites[]`
+- `toggleFavorite(id)` escribe en IndexedDB (`dbAddFavorite`/`dbRemoveFavorite`) además de `STATE.favorites[]`
 
 ### `js/main.js`
 - `setInterval` fallback ahora envía `postMessage({ type: 'trigger-price-check' })` al SW
@@ -111,14 +118,7 @@ Cada evento push se registra en el array `PUSH_LOG[]` (cliente) o se envía al c
 | SW | `📨 push recibido` | `título="..." body="..." tag=...` |
 | SW | `notificationclick` | `recibido — título="..." body="..." tag=...` |
 
-### Arquitectura del log
-
-```
-SW (checkPrices, events) → sendPushLog() → postMessage({type:'push-log'}) → main.js message handler → logPushEvent() → PUSH_LOG[] → renderPushLog()
-Cliente (toggles, config, subscribe) → logPushEvent() → PUSH_LOG[] → renderPushLog()
-```
-
-## Estado vs localStorage
+## Claves de almacenamiento
 
 | Clave | Store | Propósito |
 |-------|-------|-----------|
@@ -127,6 +127,62 @@ Cliente (toggles, config, subscribe) → logPushEvent() → PUSH_LOG[] → rende
 | `gasolineras_db` / `cache` | IndexedDB | Caché de datos de provincias e histórico |
 | `gasolineras_push_subscription` | localStorage | PushSubscription JSON |
 | `gasolineras_state` | localStorage | Estado global de la app (UI) |
+
+## Testing rápido (sin esperar X horas)
+
+### Opción 1: DevTools + Dispatch
+
+1. Abrir la app en localhost (no file://, necesita SW)
+2. Agregar favorito: click en una estación → ★
+3. Suscribirse: click 🔔 en toolbar → aceptar permisos
+4. Verificar: `#pushNotifStatus` muestra "✓ Notificaciones activas"
+5. Forzar chequeo:
+   ```
+   DevTools → Application → Service Workers
+   → Periodic Sync → "check-favorite-prices" → [Dispatch]
+   ```
+   O en consola:
+   ```javascript
+   navigator.serviceWorker.ready.then(reg =>
+     reg.periodicSync.register('check-favorite-prices', { minInterval: 1000 })
+   );
+   ```
+6. Resultado: si el precio bajó vs histórico, aparece notificación
+
+### Opción 2: Botón "Probar"
+
+Click en `#pushNotifTestBtn` (Config tab) → envía `trigger-price-check` al SW → muestra notificación de confirmación.
+
+### Opción 3: setInterval fallback
+
+En escritorio, si `periodicSync` no está disponible, se usa `setInterval`. Abrir app, suscribirse, esperar el intervalo configurado.
+
+## Debug desde consola
+
+```javascript
+// Ver favoritos en IndexedDB
+dbGetAll('favorites').then(f => console.log('Favoritos:', f));
+
+// Ver configuración push
+getPushConfig().then(c => console.log('Config:', c));
+
+// Forzar chequeo desde el SW
+navigator.serviceWorker.controller.postMessage({ type: 'trigger-price-check' });
+
+// Ver suscripción push
+isPushSubscribed();
+getPushSubscription();
+
+// Ver periodicSync tags
+navigator.serviceWorker.ready.then(r => r.periodicSync.getTags()).then(t => console.log(t));
+```
+
+## Notas
+
+- El servidor HTTP de test (`localhost`) permite SW y notificaciones (aunque no sea HTTPS)
+- `file://` NO tiene SW → notificaciones no funcionan
+- En Android, periodicSync requiere PWA instalada en home screen
+- En escritorio, funciona el `setInterval` mientras la pestaña esté abierta
 
 ## Problemas conocidos
 
