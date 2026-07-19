@@ -491,7 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Start periodic sync + initial check if already subscribed
   if (sub) {
     registerPeriodicSync().then(() => {
-      logPushEvent('⏰ Startup', '✅ push lanzado — periodicSync cada ' + STATE.checkInterval + 'h, modo=' + STATE.priceCheckMode + ', bajada=' + (STATE.pushNotificationsEnabled ? 'sí' : 'no') + ', subida=' + (STATE.pushOnPriceRise ? 'sí' : 'no'));
+      const _c = []; if (STATE.pushNotificationsEnabled) _c.push('bajada'); if (STATE.pushOnPriceRise) _c.push('subida'); logPushEvent('⏰ Startup', '✅ push lanzado — ' + (_c.length ? _c.join(' + ') : 'ningún check') + ', cada ' + STATE.checkInterval + 'h, modo ' + STATE.priceCheckMode);
     });
     if (navigator.serviceWorker.controller) {
       navigator.serviceWorker.controller.postMessage({ type: 'trigger-price-check' });
