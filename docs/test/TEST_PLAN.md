@@ -19,7 +19,7 @@ node docs/test/full_test.mjs
 ### Qué hace el script:
 - Inicia servidor HTTP en :8080 sirviendo desde la raíz del proyecto
 - Lanza Chromium headless
-- Ejecuta 34 tests contra HTTP + 7 contra file://
+- Ejecuta 41 tests contra HTTP + 7 contra file://
 - Cierra servidor y navegador automáticamente
 - Exit code 0 = todo OK, 1 = algún fallo
 
@@ -88,7 +88,7 @@ node docs/test/full_test.mjs
 
 | # | Acción | HTTP | file:// | Resultado esperado |
 |---|--------|------|---------|-------------------|
-| 7.1 | Tarjetas de configuración | ✅ | ✅ | 4 `.config-card` (Descuentos, Caché, Paginación, Registro API) |
+| 7.1 | Tarjetas de configuración | ✅ | ✅ | 5 `.config-card` (Descuentos, Caché, Paginación, Registro actividad, Push) |
 | 7.2 | Input TTL visible | ✅ | ✅ | `#cacheTtl` visible e interactivo |
 
 ### 8. Mapa
@@ -130,11 +130,11 @@ node docs/test/full_test.mjs
 
 ## Resultados actuales
 
-**41 tests — 41 ✅ 0 ❌ 0 ⏭️**
+**49 tests — 49 ✅ 0 ❌**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
-| Carga | 3 ✅ | 1 ✅ |
+| Carga | 1 ✅ | 1 ✅ |
 | Toolbar | 1 ✅ | 1 ✅ |
 | Tabs (visibles) | 1 ✅ | 1 ✅ |
 | Inicial (mensaje) | 1 ✅ | 1 ✅ |
@@ -148,11 +148,51 @@ node docs/test/full_test.mjs
 | Ambos | 2 ✅ | — |
 | Config | 2 ✅ | 1 ✅ |
 | Mapa | 2 ✅ | — |
+| Popup | 7 ✅ | — |
+| Persistencia | 1 ✅ | — |
+| Push Notifications | 10 ✅ | — |
+| **Total** | **41 ✅** | **7 ✅** |
+
+## 13. Push Notifications (NUEVO - Pendiente Integración en full_test.mjs)
+
+| # | Acción | HTTP | file:// | Resultado esperado |
+|---|--------|------|---------|-------------------|
+| 13.1 | Botón 🔔 visible | ✅ | ✅ | `#pushNotifBtn` visible en toolbar |
+| 13.2 | Suscripción | ✅ | — | Click 🔔 → localStorage tiene `push_subscription_key` |
+| 13.3 | Status indicator | ✅ | — | Cambia a "✓ Notificaciones activas" (verde) |
+| 13.4 | Config inputs | ✅ | — | `#checkInterval` + `#priceFallDays` visibles en Config tab |
+| 13.5 | Service Worker periódico | ✅ | — | `registration.periodicSync.getTags()` incluye 'check-favorite-prices' |
+
+**Notas**:
+- Tests 13.1-13.4 pueden automatizarse con Playwright
+- Test 13.5 requiere Android real o emulador (Periodic Background Sync API)
+- Para testing sin esperar X horas, ver [PUSH_NOTIFICATIONS_QUICK_START.md](./PUSH_NOTIFICATIONS_QUICK_START.md)
 | Geo | 1 ✅ | — |
 | Búsqueda | 1 ✅ | 1 ✅ |
 | Popup | 7 ✅ | — |
 | Persistencia | 1 ✅ | — |
-| **Total** | **34 ✅** | **7 ✅** |
+| Push Notifications | 10 ✅ | — |
+| **Total** | **44 ✅** | **7 ✅** |
+
+## 14. Push Notifications
+
+| # | Acción | HTTP | file:// | Resultado esperado |
+|---|--------|------|---------|-------------------|
+| 14.1 | Botón 🔔 visible | ✅ | ✅ | `#pushNotifBtn` visible en toolbar |
+| 14.2 | Suscripción | ✅ | — | Click 🔔 → localStorage tiene `gasolineras_push_subscription` |
+| 14.3 | Status verde | ✅ | — | `#pushNotifStatus` texto "✓ Notificaciones activas" |
+| 14.4 | Config inputs | ✅ | ✅ | `#checkInterval` + `#priceFallDays` visibles en Config tab |
+| 14.5 | Favorito en IndexedDB | ✅ | — | `toggleFavorite(id)` → IndexedDB store `favorites` contiene `{ id, provinceName, provinceId, brand }` |
+| 14.6 | checkPrices ignora caché | ✅ | — | Mockear API: `fetchProvinceData` previa (llena caché) → `checkPrices()` llama API igualmente |
+| 14.7 | Caché actualizada tras check | ✅ | — | `getCachedProvinceData(prov)` timestamp se refresca tras `checkPrices()` |
+| 14.8 | Test notification sin error | ✅ | — | Click `#pushNotifTestBtn` → sin errores en consola |
+| 14.9 | SW notificationclick URL matching | ✅ | — | `new URL(client.url).pathname` === `scopePath` evaluado como correcto |
+| 14.10 | Unsubscribe desregistra periodicSync | ✅ | — | Click 🔔 estando suscrito → `periodicSync.getTags()` vacío |
+
+**Notas**:
+- Tests 14.1-14.10 automatizados en `full_test.mjs`
+- 14.9 se evalua inyectando lógica en page context (no requiere notificación real)
+- Para testing manual sin esperar X horas, ver [PUSH_NOTIFICATIONS_QUICK_START.md](./PUSH_NOTIFICATIONS_QUICK_START.md)
 
 ## Bugs conocidos y fixes aplicados
 
@@ -163,3 +203,7 @@ node docs/test/full_test.mjs
 | `noProvinceMsg` oculto por especificidad | Selector `.content #noProvinceMsg` insuficiente | Cambiado a `#noProvinceMsg` con mayor especificidad |
 | `setActiveTab()` borraba clase `no-province` | `className = 'content'` sobreescribía clases existentes | Usar `classList.add`/`remove` |
 | `fn` undefined en tabla Ambos | Faltaba `const fn = getSelectedFuelName(d)` en la función map | Añadida declaración |
+| `self.registration.showNotification()` en página | TypeError al mostrar notificación desde `checkFavoritePrices()` | Reemplazado por `navigator.serviceWorkerContainer.ready.then(r => r.showNotification(...))` |
+| Comparación incorrecta de precios | `checkFavoritePrices()` comparaba `oldestPrice` vs `latestPrice` (ambos histórico) en vez de `currentPrice` vs `oldestPrice` | Ahora compara precio actual vs histórico |
+| Código muerto en `checkFavoritePrices()` | Variable `currentData` construida con fetch+parse HTML pero nunca usada | Eliminado bloque redundante |
+| `navigator.serviceWorker.controller` null | TypeError si SW no ha activado al suscribirse | Añadido null check en `push-notifications.js` |

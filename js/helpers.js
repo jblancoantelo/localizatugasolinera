@@ -1,4 +1,21 @@
-function norm(s) { return (s||'').replace(/,/g,'.').trim(); }
+function formatLogTime() {
+  const d = new Date();
+  return [
+    String(d.getDate()).padStart(2, '0'),
+    '/',
+    String(d.getMonth() + 1).padStart(2, '0'),
+    '/',
+    String(d.getFullYear()).slice(-2),
+    ' ',
+    String(d.getHours()).padStart(2, '0'),
+    ':',
+    String(d.getMinutes()).padStart(2, '0'),
+    ':',
+    String(d.getSeconds()).padStart(2, '0')
+  ].join('');
+}
+
+function norm(s) { return String(s??'').replace(/,/g,'.').trim(); }
 
 function parsePrice(v) { let x=parseFloat(norm(v)); return isNaN(x)?null:x; }
 
@@ -93,4 +110,11 @@ function getFuelPriceDisplay(st, key) {
   let s = dv.toFixed(3).replace('.', ',') + ' €/L';
   if (d) s += ' (-' + d + ')';
   return s;
+}
+
+function comparePrices(currentPrice, oldestPrice) {
+  if (currentPrice === null || oldestPrice === null) return null;
+  const diff = oldestPrice - currentPrice;
+  if (diff === 0) return null;
+  return { difference: Math.abs(diff), currentPrice, oldestPrice, isRise: diff < 0 };
 }

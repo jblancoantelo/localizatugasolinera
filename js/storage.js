@@ -3,90 +3,6 @@ let _savePending = false;
 
 const STATE_KEY = 'gasolineras_state';
 const PROV_FILTER_PREFIX = 'gasolineras_prov_filters_';
-const DB_NAME = 'gasolineras_db';
-const DB_VERSION = 1;
-const STORE_NAME = 'cache';
-
-const provinceCacheMap = new Map();
-
-function openDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
-      }
-    };
-    req.onsuccess = (e) => resolve(e.target.result);
-    req.onerror = (e) => { console.warn('IndexedDB error:', e.target.error); reject(e.target.error); };
-  });
-}
-
-function dbGet(key) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const db = await openDB();
-      const tx = db.transaction(STORE_NAME, 'readonly');
-      const store = tx.objectStore(STORE_NAME);
-      const req = store.get(key);
-      req.onsuccess = () => { db.close(); resolve(req.result); };
-      req.onerror = () => { db.close(); resolve(null); };
-    } catch(e) { resolve(null); }
-  });
-}
-
-function dbPut(key, value) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const db = await openDB();
-      const tx = db.transaction(STORE_NAME, 'readwrite');
-      const store = tx.objectStore(STORE_NAME);
-      const req = store.put(value, key);
-      req.onsuccess = () => { db.close(); resolve(); };
-      req.onerror = () => { db.close(); resolve(); };
-    } catch(e) { resolve(); }
-  });
-}
-
-function dbDelete(key) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const db = await openDB();
-      const tx = db.transaction(STORE_NAME, 'readwrite');
-      const store = tx.objectStore(STORE_NAME);
-      const req = store.delete(key);
-      req.onsuccess = () => { db.close(); resolve(); };
-      req.onerror = () => { db.close(); resolve(); };
-    } catch(e) { resolve(); }
-  });
-}
-
-function dbClear() {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const db = await openDB();
-      const tx = db.transaction(STORE_NAME, 'readwrite');
-      const store = tx.objectStore(STORE_NAME);
-      const req = store.clear();
-      req.onsuccess = () => { db.close(); resolve(); };
-      req.onerror = () => { db.close(); resolve(); };
-    } catch(e) { resolve(); }
-  });
-}
-
-function dbGetAllKeys() {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const db = await openDB();
-      const tx = db.transaction(STORE_NAME, 'readonly');
-      const store = tx.objectStore(STORE_NAME);
-      const req = store.getAllKeys();
-      req.onsuccess = () => { db.close(); resolve(req.result); };
-      req.onerror = () => { db.close(); resolve([]); };
-    } catch(e) { resolve([]); }
-  });
-}
 
 function getCacheTtl() {
   const v = parseInt(document.getElementById('cacheTtl').value);
@@ -96,53 +12,6 @@ function getCacheTtl() {
 function isLocalStorageAvailable() {
   try { const k = '_test_'; localStorage.setItem(k, '1'); localStorage.removeItem(k); return true; }
   catch(e) { return false; }
-}
-
-async function getCachedProvinceData(province) {
-  if (provinceCacheMap.has(province)) {
-    return provinceCacheMap.get(province);
-  }
-  try {
-    const cached = await dbGet('prov_' + province);
-    if (!cached || !cached.timestamp || !Array.isArray(cached.data)) return null;
-    const ttl = (cached.ttl || 12) * 60 * 60 * 1000;
-    if (Date.now() - cached.timestamp > ttl) {
-      await dbDelete('prov_' + province);
-      return null;
-    }
-    provinceCacheMap.set(province, cached.data);
-    return cached.data;
-  } catch(e) {
-    return null;
-  }
-}
-
-async function cacheProvinceData(province, data) {
-  provinceCacheMap.set(province, data);
-  try {
-    const ttl = getCacheTtl();
-    await dbPut('prov_' + province, { data, timestamp: Date.now(), ttl });
-  } catch(e) {}
-}
-
-async function getCachedProvinces() {
-  try {
-    const cached = await dbGet('provinces_list');
-    if (!cached || !cached.timestamp || !Array.isArray(cached.data)) return null;
-    if (Date.now() - cached.timestamp > 7 * 24 * 60 * 60 * 1000) {
-      await dbDelete('provinces_list');
-      return null;
-    }
-    return cached.data;
-  } catch(e) {
-    return null;
-  }
-}
-
-async function setCachedProvinces(data) {
-  try {
-    await dbPut('provinces_list', { data, timestamp: Date.now() });
-  } catch(e) {}
 }
 
 async function renderCacheInfo() {
@@ -175,7 +44,7 @@ async function renderCacheInfo() {
     return;
   }
   try {
-    const cached = await dbGet('prov_' + prov);
+    const cached = await dbGet('cache', 'prov_' + prov);
     if (!cached || !cached.timestamp || !Array.isArray(cached.data)) {
       el.innerHTML = '<span style="color:#999">Provincias: Sin datos en IndexedDB</span>';
       return;
@@ -184,8 +53,8 @@ async function renderCacheInfo() {
     const loaded = new Date(cached.timestamp);
     const ttlHours = cached.ttl || 12;
     const expires = new Date(cached.timestamp + ttlHours * 60 * 60 * 1000);
-    _cacheExpiryLabel = ` · Expira ${expires.toLocaleString([], {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}`;
-    el.innerHTML = `<span>${count} gasolineras · Cargado: ${loaded.toLocaleString()}${_cacheExpiryLabel}</span>`;
+    _cacheExpiryLabel = ' · Expira ' + expires.toLocaleString([], {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    el.innerHTML = '<span>' + count + ' gasolineras · Cargado: ' + loaded.toLocaleString() + _cacheExpiryLabel + '</span>';
   } catch(e) {
     el.innerHTML = '<span style="color:#999">No disponible</span>';
   }
@@ -195,7 +64,7 @@ async function renderProvinceCacheInfo() {
   const el = document.getElementById('provCacheInfo');
   if (!el) return;
   try {
-    const keys = await dbGetAllKeys();
+    const keys = await dbGetAllKeys('cache');
     if (!keys.length) {
       el.innerHTML = '<span style="color:#999">General: Sin datos en IndexedDB</span>';
       return;
@@ -205,23 +74,23 @@ async function renderProvinceCacheInfo() {
     if (provKeys.length) {
       const items = [];
       for (const key of provKeys) {
-        const entry = await dbGet(key);
+        const entry = await dbGet('cache', key);
         if (entry && Array.isArray(entry.data)) {
           const provName = key.slice(5);
           const ttl = (entry.ttl || 12) * 60 * 60 * 1000;
           const valid = Date.now() - entry.timestamp <= ttl;
-          items.push(`${provName} (${entry.data.length})${valid ? '' : ' ⏳'}`);
+          items.push(provName + ' (' + entry.data.length + ')' + (valid ? '' : ' ⏳'));
         }
       }
-      sections.push(`<b>Provincias (${items.length}):</b> ${items.join(' · ')}`);
+      sections.push('<b>Provincias (' + items.length + '):</b> ' + items.join(' · '));
     }
     const histKeys = keys.filter(k => typeof k === 'string' && k.startsWith('hist_'));
     if (histKeys.length) {
-      sections.push(`<b>Histórico:</b> ${histKeys.length} entradas`);
+      sections.push('<b>Histórico:</b> ' + histKeys.length + ' entradas');
     }
     const otherKeys = keys.filter(k => typeof k === 'string' && !k.startsWith('prov_') && !k.startsWith('hist_'));
     if (otherKeys.length) {
-      sections.push(`<b>Otras (${otherKeys.length}):</b> ${otherKeys.join(', ')}`);
+      sections.push('<b>Otras (' + otherKeys.length + '):</b> ' + otherKeys.join(', '));
     }
     el.innerHTML = '<span>' + sections.join('<br>') + '</span>';
   } catch(e) {
@@ -253,10 +122,12 @@ function saveProvinceFilters(prov) {
 }
 
 function saveState() {
-  if (_savePending) return;
+  if (_savePending) { _savePending = 'pending'; return; }
   _savePending = true;
   Promise.resolve().then(() => {
+    const needsResave = _savePending === 'pending';
     _savePending = false;
+    if (needsResave) { saveState(); return; }
     const s = STATE;
     const center = s.map ? s.map.getCenter() : null;
     const zoom = s.map ? s.map.getZoom() : null;
@@ -279,7 +150,12 @@ function saveState() {
       favorites: s.favorites,
       showFavoritesOnly: s.showFavoritesOnly,
       userLat: s.userLat,
-      userLng: s.userLng
+      userLng: s.userLng,
+      checkInterval: s.checkInterval,
+      priceFallDays: s.priceFallDays,
+      priceCheckMode: s.priceCheckMode,
+      pushNotificationsEnabled: s.pushNotificationsEnabled,
+      pushOnPriceRise: s.pushOnPriceRise
     };
     try { localStorage.setItem(STATE_KEY, JSON.stringify(data)); } catch(e) {}
     saveProvinceFilters(s.selectedProv);
@@ -305,13 +181,26 @@ function renderLocalStorageCache() {
       const val = localStorage.getItem(key);
       let desc = val;
       try { const p = JSON.parse(val); desc = typeof p === 'object' ? JSON.stringify(p).slice(0, 120) + (JSON.stringify(p).length > 120 ? '…' : '') : val; } catch(e) {}
-      const btn = `<button class="ls-del-btn" data-ls-key="${key}" style="background:#e65100;color:#fff;border:none;border-radius:3px;padding:0 4px;cursor:pointer;font-size:0.6rem;margin-right:4px">✕</button>`;
-      items.push(`<div style="margin-bottom:0.2rem;font-size:0.7rem">${btn}<b>${key}</b>: ${desc}</div>`);
+      const btn = '<button class="ls-del-btn" data-ls-key="' + key + '" style="background:#e65100;color:#fff;border:none;border-radius:3px;padding:0 4px;cursor:pointer;font-size:0.6rem;margin-right:4px">✕</button>';
+      items.push('<div style="margin-bottom:0.2rem;font-size:0.7rem">' + btn + '<b>' + key + '</b>: ' + desc + '</div>');
     }
     el.innerHTML = items.length ? items.join('') : '<span style="color:#999">Sin datos de la app en localStorage</span>';
   } catch(e) {
     el.innerHTML = '<span style="color:#999">No disponible</span>';
   }
+}
+
+function initLogTabs() {
+  document.querySelectorAll('.config-log-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.config-log-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const id = tab.dataset.logtab;
+      document.querySelectorAll('.config-log-panel').forEach(p => p.style.display = 'none');
+      const panel = document.querySelector('.config-log-panel[data-logpanel="' + id + '"]');
+      if (panel) panel.style.display = 'block';
+    });
+  });
 }
 
 function initCacheTabs() {
@@ -321,7 +210,7 @@ function initCacheTabs() {
       tab.classList.add('active');
       const id = tab.dataset.cachetab;
       document.querySelectorAll('.config-cache-panel').forEach(p => p.style.display = 'none');
-      const panel = document.querySelector(`.config-cache-panel[data-cachepanel="${id}"]`);
+      const panel = document.querySelector('.config-cache-panel[data-cachepanel="' + id + '"]');
       if (panel) panel.style.display = 'block';
       if (id === 'localstorage') renderLocalStorageCache();
     });

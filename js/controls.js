@@ -101,8 +101,21 @@ function render(fitBounds) {
 function toggleFavorite(id) {
   const s = STATE;
   const idx = s.favorites.indexOf(id);
-  if (idx >= 0) s.favorites.splice(idx, 1);
-  else s.favorites.push(id);
+  if (idx >= 0) {
+    s.favorites.splice(idx, 1);
+    dbRemoveFavorite(id);
+  } else {
+    s.favorites.push(id);
+    const d = s.data.find(x => x.IDEESS === id);
+    if (d) {
+      dbAddFavorite({
+        id: d.IDEESS,
+        provinceName: s.selectedProv,
+        provinceId: s.provinceIdMap ? s.provinceIdMap[s.selectedProv] : null,
+        brand: d.Rótulo
+      });
+    }
+  }
   render(false);
   const d = s.data.find(x => x.IDEESS === id);
   if (d) {
@@ -110,7 +123,7 @@ function toggleFavorite(id) {
     if (m && m.getPopup()) m.setPopupContent(popupHtml(d));
     if (s.selectedId === id) {
       const isFav = s.favorites.includes(id);
-      document.getElementById('detailBrand').innerHTML = `<span class="fav-btn${isFav ? ' on' : ''}" data-id="${id}">${isFav ? '★' : '☆'}</span> ${d.Rótulo || ''}`;
+      document.getElementById('detailBrand').innerHTML = '<span class="fav-btn' + (isFav ? ' on' : '') + '" data-id="' + id + '">' + (isFav ? '★' : '☆') + '</span> ' + (d.Rótulo || '');
     }
   }
 }

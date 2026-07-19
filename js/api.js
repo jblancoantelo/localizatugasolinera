@@ -218,7 +218,7 @@ async function clearCache() {
       }
     }
   } catch (e) {}
-  provinceCacheMap.clear();
+  clearProvinceCacheMap();
   STATE.data = [];
   STATE.filtered = [];
   window._historyCache = null;
