@@ -157,7 +157,7 @@ function getStationHistorySW(historyByDate, stationId, fuelName) {
 async function checkPrices(reason) {
   try {
     const config = await getPushConfig();
-    const days = config.priceFallDays || 3;
+    const days = config.priceFallDays || 14;
     const cacheTtl = config.cacheTtl || 12;
     const isModeRequest = reason === 'drop' || reason === 'rise';
     const checkDrop = isModeRequest ? reason === 'drop' : (config.pushNotificationsEnabled === true);
@@ -217,8 +217,9 @@ async function checkPrices(reason) {
         sendPushLog('checkPrices', provName + ': ' + freshData.length + ' estaciones recibidas, guardando caché');
         await cacheProvinceData(provName, freshData, cacheTtl);
 
-        sendPushLog('checkPrices', provName + ': fetch histórico ' + days + ' días');
-        const historyData = await fetchProvinceHistorySW(provId, days);
+        const fetchDays = Math.max(days, 14);
+        sendPushLog('checkPrices', provName + ': fetch histórico ' + fetchDays + ' días (ventana=' + days + ')');
+        const historyData = await fetchProvinceHistorySW(provId, fetchDays);
         const histDates = Object.keys(historyData).length;
         sendPushLog('checkPrices', provName + ': histórico ' + histDates + ' fechas');
 
@@ -276,9 +277,14 @@ async function checkPrices(reason) {
             result = comparePrices(currentPrice, refPrice);
             modeLabel = 'tendencia ' + (allDrop ? '↓ bajada' : '↑ subida') + ' ' + window.length + 'd';
           } else {
+            const window = stationHistory.slice(-days);
+            if (window.length < 2) {
+              sendPushLog('checkPrices', '  ' + station.Rótulo + ': ventana promedio insuficiente (' + window.length + ' puntos) — skip');
+              continue;
+            }
             let sum = 0;
             let count = 0;
-            for (const rec of stationHistory) {
+            for (const rec of window) {
               const p = parsePrice(rec.price);
               if (p !== null) { sum += p; count++; }
             }
@@ -288,7 +294,7 @@ async function checkPrices(reason) {
             }
             refPrice = sum / count;
             result = comparePrices(currentPrice, refPrice);
-            modeLabel = 'promedio ' + refPrice.toFixed(3);
+            modeLabel = 'promedio ' + refPrice.toFixed(3) + ' (' + count + 'd)';
           }
 
           if (!result) {
