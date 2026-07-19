@@ -109,6 +109,12 @@ Orden actual de grupos:
 - Servidor HTTP inline (no requiere procesos externos)
 - Push notifications tests (14.1-14.10) integrados en full_test.mjs
 
+### Actualización de assets y `APP_VERSION`
+- `sw.js` tiene una constante `APP_VERSION` (entero)
+- Cada vez que se modifica un asset (`.html`, `.css`, `.js`, `.json`, iconos), **hay que incrementar `APP_VERSION`** en `sw.js`
+- Motivo: `navigator.serviceWorker.ready.then(r => r.update())` solo detecta cambios en `sw.js`; si no se incrementa la versión, los nuevos assets no se descargan
+- El botón "Comprobar actualizaciones" en la UI usa `reg.update()` + `updatefound` para detectar el cambio y ofrecer recarga
+
 ### Archivos clave
 | Archivo | Propósito |
 |---------|-----------|

@@ -2,6 +2,7 @@ const CACHE = 'gasolineras-v3';
 const CDN_CACHE = 'gasolineras-cdn-v1';
 const API_HOST = 'sedeaplicaciones.minetur.gob.es';
 const API_BASE = 'https://' + API_HOST + '/ServiciosRESTCarburantes/PreciosCarburantes/';
+const APP_VERSION = 2;
 
 importScripts('js/state.js', 'js/helpers.js', 'js/db.js');
 
@@ -369,6 +370,11 @@ self.addEventListener('message', event => {
     const motivo = mode === 'drop' ? 'test bajada' : mode === 'rise' ? 'test subida' : 'intervalo setInterval';
     sendPushLog('📩 trigger-price-check', 'recibido — motivo: ' + motivo);
     event.waitUntil(checkPrices(mode || 'setinterval'));
+  }
+  if (event.data && event.data.type === 'get-version') {
+    if (event.ports && event.ports.length) {
+      event.ports[0].postMessage({ version: APP_VERSION });
+    }
   }
 });
 

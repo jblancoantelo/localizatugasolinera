@@ -437,15 +437,48 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     statusEl.textContent = '🔄 Buscando actualizaciones...';
+
+    async function getCurrentSwVersion() {
+      return new Promise(resolve => {
+        const timer = setTimeout(() => resolve(0), 2000);
+        try {
+          const mc = new MessageChannel();
+          mc.port1.onmessage = e => { clearTimeout(timer); resolve(e.data.version || 0); };
+          navigator.serviceWorker.controller.postMessage({ type: 'get-version' }, [mc.port2]);
+        } catch { clearTimeout(timer); resolve(0); }
+      });
+    }
+
+    async function showUpdateFound() {
+      statusEl.innerHTML = '🔄 Nueva versión disponible <button class="reload-btn btn" style="background:#1a73e8;color:#fff;border:none;padding:0.2rem 0.5rem;border-radius:4px;cursor:pointer;font-size:0.72rem">Recargar ahora</button>';
+      statusEl.querySelector('.reload-btn').addEventListener('click', () => location.reload());
+    }
+
     try {
       const reg = await navigator.serviceWorker.ready;
+      const currentVersion = await getCurrentSwVersion();
+
+      // Method 1: Standard SW update check via reg.update()
       let resolved = false;
-      const timeout = setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
+      const timeout = setTimeout(async () => {
+        if (resolved) return;
+        resolved = true;
+        // Method 2: Direct version comparison (catches asset-only changes)
+        try {
+          const resp = await fetch('sw.js?t=' + Date.now(), { cache: 'no-cache' });
+          const text = await resp.text();
+          const match = text.match(/const APP_VERSION\s*=\s*(\d+)/);
+          const serverVersion = match ? parseInt(match[1]) : 0;
+          if (serverVersion > currentVersion) {
+            await showUpdateFound();
+          } else {
+            statusEl.textContent = '✅ Tienes la última versión (v' + currentVersion + ')';
+          }
+        } catch {
           statusEl.textContent = '✅ Tienes la última versión';
         }
       }, 12000);
+
       reg.addEventListener('updatefound', () => {
         if (resolved) return;
         const newWorker = reg.installing;
@@ -455,8 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (newWorker.state === 'installed' || newWorker.state === 'activated') {
             resolved = true;
             clearTimeout(timeout);
-            statusEl.innerHTML = '🔄 Nueva versión disponible <button class="reload-btn btn" style="background:#1a73e8;color:#fff;border:none;padding:0.2rem 0.5rem;border-radius:4px;cursor:pointer;font-size:0.72rem">Recargar ahora</button>';
-            statusEl.querySelector('.reload-btn').addEventListener('click', () => location.reload());
+            showUpdateFound();
           }
         });
       });
