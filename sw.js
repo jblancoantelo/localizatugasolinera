@@ -335,12 +335,13 @@ async function checkPrices(reason) {
     if (alerts.length > 0) {
       const riseCount = alerts.filter(a => a.isRise).length;
       const dropCount = alerts.filter(a => !a.isRise).length;
-      let body = '';
-      if (dropCount > 0) body += dropCount + ' favorito(s) con precios más bajos';
-      if (dropCount > 0 && riseCount > 0) body += ' · ';
-      if (riseCount > 0) body += riseCount + ' favorito(s) con precios más altos';
+      const lines = alerts.slice(0, 4).map(a =>
+        (a.isRise ? '↑' : '↓') + ' ' + a.brand + ' · ' + a.fuel + ' ' + (a.isRise ? '+' : '') + a.difference + '€'
+      );
+      const more = alerts.length > 4 ? ' (+' + (alerts.length - 4) + ' más)' : '';
+      const body = lines.join('\n') + more;
       sendPushLog('checkPrices', 'completado: ' + checkedCount + ' alertas (' + dropCount + '↓ ' + riseCount + '↑)');
-      sendPushLog('📨 notificación', 'mostrada: título="Alerta de Precios" body="' + body + '" tag=price-alert');
+      sendPushLog('📨 notificación', 'mostrada: título="Alerta de Precios" body="' + body.replace(/\n/g, ' | ') + '" tag=price-alert');
       await self.registration.showNotification('Alerta de Precios', {
         body: body,
         icon: 'icons/icon-192.png',
