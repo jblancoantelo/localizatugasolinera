@@ -2,7 +2,7 @@
 
 Aplicación web progresiva (PWA) para consultar **precios de carburantes en estaciones de servicio de España** en tiempo real, usando datos oficiales del [Geoportal de Hidrocarburos](https://geoportalgasolineras.es/) del Ministerio para la Transición Ecológica.
 
-> 🧪 Este proyecto ha sido desarrollado íntegramente con **OpenCode** usando modelos de lenguaje libres (DeepSeek), sin depender de APIs de pago ni modelos propietarios. Todo el código es **software libre** — puedes usarlo, estudiarlo, modificarlo y compartirlo.
+> 🧪 Este proyecto ha sido desarrollado íntegramente con **[OpenCode](https://opencode.ai)** usando modelos de lenguaje libres (DeepSeek), sin depender de APIs de pago ni modelos propietarios.
 
 ---
 
@@ -103,4 +103,6 @@ Todo el código de este proyecto es **software libre**. Puedes consultar los té
 
 ---
 
-> Desarrollado con [OpenCode](https://opencode.ai) y modelos de lenguaje libres — sin bloqueos, sin suscripciones, sin dependencias propietarias.
+## TODOs
+- Chat conversacional
+- Rediseño web responsible y con modo landscape mobile
