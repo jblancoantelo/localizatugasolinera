@@ -8,12 +8,14 @@ async function apiFetch(url) {
     const ms = (performance.now() - start).toFixed(0);
     API_LOG.unshift({ url, ms: ms + 'ms', time: (() => { const d = new Date(); return d.getDate().toString().padStart(2,'0') + '/' + (d.getMonth()+1).toString().padStart(2,'0') + '/' + d.getFullYear().toString().slice(-2) + ' ' + d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0') + ':' + d.getSeconds().toString().padStart(2,'0'); })(), ok: res.ok });
     if (API_LOG.length > 30) API_LOG.length = 30;
+    try { localStorage.setItem('gasolineras_api_log', JSON.stringify(API_LOG)); } catch(e) {}
     renderApiLog();
     return res;
   } catch (e) {
     const ms = (performance.now() - start).toFixed(0);
     API_LOG.unshift({ url, ms: ms + 'ms', time: (() => { const d = new Date(); return d.getDate().toString().padStart(2,'0') + '/' + (d.getMonth()+1).toString().padStart(2,'0') + '/' + d.getFullYear().toString().slice(-2) + ' ' + d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0') + ':' + d.getSeconds().toString().padStart(2,'0'); })(), ok: false });
     if (API_LOG.length > 30) API_LOG.length = 30;
+    try { localStorage.setItem('gasolineras_api_log', JSON.stringify(API_LOG)); } catch(e) {}
     renderApiLog();
     throw e;
   }
@@ -33,6 +35,7 @@ function renderApiLog() {
 
 function clearApiLog() {
   API_LOG.length = 0;
+  try { localStorage.removeItem('gasolineras_api_log'); } catch(e) {}
   renderApiLog();
 }
 

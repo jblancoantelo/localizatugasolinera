@@ -113,6 +113,7 @@ function logPushEvent(event, detail) {
     detail
   });
   if (PUSH_LOG.length > 30) PUSH_LOG.length = 30;
+  try { localStorage.setItem('gasolineras_push_log', JSON.stringify(PUSH_LOG)); } catch(e) {}
   renderPushLog();
 }
 
@@ -130,6 +131,7 @@ function renderPushLog() {
 
 function clearPushLog() {
   PUSH_LOG.length = 0;
+  try { localStorage.removeItem('gasolineras_push_log'); } catch(e) {}
   renderPushLog();
 }
 
