@@ -428,6 +428,27 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('pushNotifTestBtn')?.addEventListener('click', () => handleTestNotification('drop'));
   document.getElementById('pushRiseTestBtn')?.addEventListener('click', () => handleTestNotification('rise'));
 
+  async function getCurrentSwVersion() {
+    return new Promise(resolve => {
+      const timer = setTimeout(() => resolve(0), 2000);
+      try {
+        const mc = new MessageChannel();
+        mc.port1.onmessage = e => { clearTimeout(timer); resolve(e.data.version || 0); };
+        navigator.serviceWorker.controller.postMessage({ type: 'get-version' }, [mc.port2]);
+      } catch { clearTimeout(timer); resolve(0); }
+    });
+  }
+
+  async function showAppVersion() {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const ver = await getCurrentSwVersion();
+      const el = document.getElementById('appCurrentVersion');
+      if (el) el.textContent = 'v' + ver;
+    } catch {}
+  }
+
   document.getElementById('checkUpdateBtn').addEventListener('click', async () => {
     const statusEl = document.getElementById('updateStatus');
     if (!('serviceWorker' in navigator)) {
@@ -435,17 +456,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     statusEl.textContent = '🔄 Buscando actualizaciones...';
-
-    async function getCurrentSwVersion() {
-      return new Promise(resolve => {
-        const timer = setTimeout(() => resolve(0), 2000);
-        try {
-          const mc = new MessageChannel();
-          mc.port1.onmessage = e => { clearTimeout(timer); resolve(e.data.version || 0); };
-          navigator.serviceWorker.controller.postMessage({ type: 'get-version' }, [mc.port2]);
-        } catch { clearTimeout(timer); resolve(0); }
-      });
-    }
 
     async function showUpdateFound() {
       statusEl.innerHTML = '🔄 Nueva versión disponible <button class="reload-btn btn" style="background:#1a73e8;color:#fff;border:none;padding:0.2rem 0.5rem;border-radius:4px;cursor:pointer;font-size:0.72rem">Recargar ahora</button>';
@@ -495,6 +505,9 @@ document.addEventListener('DOMContentLoaded', () => {
       statusEl.textContent = '❌ Error al buscar actualizaciones: ' + e.message;
     }
   });
+
+  // Show current app version in config
+  showAppVersion();
 
   // Initialize push notification UI
   const sub = getPushSubscription();

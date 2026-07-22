@@ -6,14 +6,20 @@ Ver [`README.md`](./README.md) para visión general del proyecto, funcionalidade
 
 ## Workflow obligatorio
 
-1. **Siempre ejecutar tests completos** tras cualquier cambio:
+1. **Antes de commit, incrementar APP_VERSION** automáticamente:
+   ```powershell
+   node scripts/bump-version.mjs
+   ```
+   (Incrementa `APP_VERSION` en `sw.js` para que el SW detecte cambios)
+
+2. **Siempre ejecutar tests completos** tras cualquier cambio:
    ```powershell
    Get-Process -Name "node" -ErrorAction SilentlyContinue | Stop-Process -Force
    node docs/test/full_test.mjs
    ```
    Si los tests no existen o fallan, no continuar hasta que pasen todos.
 
-2. **Commit**: preguntar al usuario antes de hacer commit. Si confirma:
+3. **Commit**: preguntar al usuario antes de hacer commit. Si confirma:
    ```powershell
    git add -A
    git commit -m "mensaje descriptivo"
@@ -114,10 +120,11 @@ Orden actual de grupos:
 - Push notifications tests (14.1-14.10) integrados en full_test.mjs
 
 ### Actualización de assets y `APP_VERSION`
-- `sw.js` tiene una constante `APP_VERSION` (entero)
-- Cada vez que se modifica un asset (`.html`, `.css`, `.js`, `.json`, iconos), **hay que incrementar `APP_VERSION`** en `sw.js`
+- `sw.js` tiene una constante `APP_VERSION` (entero), incrementada automáticamente por `scripts/bump-version.mjs`
+- El script se ejecuta **manualmente** antes de cada commit (ver workflow obligatorio)
 - Motivo: `navigator.serviceWorker.ready.then(r => r.update())` solo detecta cambios en `sw.js`; si no se incrementa la versión, los nuevos assets no se descargan
 - El botón "Comprobar actualizaciones" en la UI usa `reg.update()` + `updatefound` para detectar el cambio y ofrecer recarga
+- En config se muestra la versión actual (`#appCurrentVersion`) al cargar la aplicación
 
 ### Decisiones técnicas clave
 - **Dropdown marcas**: `position: fixed` en lugar de `position: absolute` relativo al toolbar para evitar problemas de stacking context del flex layout
@@ -190,6 +197,9 @@ Orden actual de grupos:
 
 ### Comandos útiles
 ```powershell
+# Bump APP_VERSION
+node scripts/bump-version.mjs
+
 # Tests
 node docs/test/full_test.mjs
 
