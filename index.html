@@ -56,6 +56,8 @@
           <option value="standard">Estándar</option>
           <option value="cycling">Ciclismo</option>
         </select>
+        <span class="filter-sep"></span>
+        <button class="btn" id="searchToggleBtn" title="Buscar">🔍</button>
       </div>
       <div class="filter-group">
         <button class="btn" id="resetFiltersBtn" title="Limpiar filtros" style="font-size:0.85rem">✕</button>
@@ -64,7 +66,7 @@
         <div class="price-legend" id="legend"><span><span class="dot g"></span> &lt;1.50</span><span><span class="dot o"></span> 1.50–1.70</span><span><span class="dot r"></span> &gt;1.70</span></div>
       </div>
     </div>
-    <div class="search-row">
+    <div class="search-row hide" id="searchRow">
       <input type="text" id="search" placeholder="Buscar localidad, calle o marca...">
     </div>
   </div>

@@ -93,7 +93,9 @@ async function runHTTPTests(browser) {
         await sleep(100);
       }
 
-      // Search
+      // Search input
+      await page.locator('#searchToggleBtn').click();
+      await sleep(100);
       const searchInput = page.locator('#search');
       await searchInput.fill('');
       logResult('Búsqueda', 'Input vacío sin error', 'PASS');
@@ -254,7 +256,9 @@ async function runFileTests(browser) {
   const configCards = await page.locator('.config-card').count();
   logResult('Config', 'Config accesible sin datos', configCards >= 1 ? 'PASS' : 'FAIL');
 
-  // Search input should be present
+  // Search toggle should show input
+  await page.locator('#searchToggleBtn').click();
+  await sleep(100);
   const searchVisible = await page.locator('#search').isVisible();
   logResult('Búsqueda', 'Input de búsqueda visible', searchVisible ? 'PASS' : 'FAIL');
 

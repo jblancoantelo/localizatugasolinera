@@ -13,6 +13,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   fetchProvinces();
 
+  document.getElementById('searchToggleBtn').addEventListener('click', () => {
+    const row = document.getElementById('searchRow');
+    const isHidden = row.classList.contains('hide');
+    row.classList.toggle('hide', !isHidden);
+    document.getElementById('searchToggleBtn').classList.toggle('btn-active', isHidden);
+    if (isHidden) document.getElementById('search').focus();
+  });
   document.getElementById('search').addEventListener('input', () => { STATE.page = 1; render(false); });
   document.getElementById('fuelFilter').addEventListener('change', e => { STATE.selectedFuel = e.target.value; STATE.page = 1; render(false); });
   document.getElementById('provFilter').addEventListener('change', e => {
@@ -63,6 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
       STATE.maxDistance = '';
       STATE.showFavoritesOnly = false;
       document.getElementById('search').value = '';
+      document.getElementById('searchRow').classList.add('hide');
+      document.getElementById('searchToggleBtn').classList.remove('btn-active');
       document.getElementById('maxDistance').value = '';
       document.getElementById('fuelFilter').value = '';
       document.getElementById('locFilter').value = '';

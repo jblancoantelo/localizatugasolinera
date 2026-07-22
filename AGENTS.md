@@ -19,7 +19,7 @@ Ver [`README.md`](./README.md) para visión general del proyecto, funcionalidade
    ```
    Si los tests no existen o fallan, no continuar hasta que pasen todos.
 
-3. **Commit**: preguntar al usuario antes de hacer commit. Si confirma:
+3. **Commit**: preguntar al usuario antes de hacer commit. Si confirma, escribir **siempre un mensaje descriptivo** que resuma los cambios (nunca "fix", "update" o similar genérico). Ejemplo: `"Añade lupa para toggle del filtro de búsqueda y mejora responsive mobile"`.
    ```powershell
    git add -A
    git commit -m "mensaje descriptivo"

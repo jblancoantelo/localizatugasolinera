@@ -26,6 +26,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
   letter-spacing: 0.02em; color: #888; white-space: nowrap;
 }
 
+.filter-sep { display: inline-block; width: 1px; height: 14px; background: #d0d0d0; margin: 0 2px; flex-shrink: 0; }
 .filter-group input, .filter-group select {
   padding: 0.2rem 0.35rem; border: 1px solid #d0d0d0; border-radius: 4px;
   font-size: 0.72rem; background: #fff; max-width: 115px;
@@ -48,6 +49,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
   padding: 0.2rem 0.5rem 0.3rem;
   display: flex; gap: 0.4rem; align-items: center;
 }
+.search-row.hide { display: none; }
 .search-row input {
   flex: 1; padding: 0.3rem 0.5rem; border: 1px solid #d0d0d0; border-radius: 6px;
   font-size: 0.75rem;
@@ -298,14 +300,16 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 /* === Responsive === */
 @media (max-width: 1024px) {
   .toolbar-groups { flex-wrap: wrap; }
-  .filter-group { border-right: none; flex: 1 0 auto; min-width: 100px; }
-  .actions-group { flex: 1 0 100%; justify-content: flex-start; }
+  .filter-group { border-right: none; flex: 1 0 auto; min-width: 80px; }
+  .actions-group { flex: 0 1 auto; justify-content: flex-end; min-width: 0; }
 }
 
 @media (max-width: 768px) {
 
-  .toolbar-groups { padding: 0.15rem 0.25rem; gap: 0.1rem; }
-  .filter-group { padding: 0.1rem 0.25rem; min-width: 70px; }
+  .toolbar-groups { padding: 0.1rem 0.15rem; gap: 0.05rem; }
+  .filter-group { padding: 0.1rem 0.2rem; min-width: 55px; }
+  .price-legend { font-size: 0.6rem; gap: 0.2rem; }
+  .filter-sep { display: none; }
   .filter-group-label .label-text { display: none; }
   .filter-group input, .filter-group select { font-size: 0.65rem; padding: 0.15rem 0.25rem; max-width: 85px; }
   .filter-group .btn { font-size: 0.62rem; padding: 0.15rem 0.3rem; }
@@ -321,7 +325,9 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 }
 
 @media (max-width: 480px) {
-  .filter-group { min-width: 50px; }
+  .filter-group { min-width: 40px; padding: 0.05rem 0.1rem; }
+  .filter-group select, .filter-group input { max-width: 65px; }
+  .price-legend span:nth-child(2) { display: none; }
   .table-wrap th:nth-child(4), .table-wrap td:nth-child(4),
   .table-wrap th:nth-child(5), .table-wrap td:nth-child(5) { display: none; }
 }

@@ -244,7 +244,9 @@ async function testHTTP(browser, server) {
   // Geolocate button exists
   log('Geo', 'Botón visible', await page.locator('#geolocBtn').isVisible());
 
-  // Search input exists
+  // Search toggle shows input
+  await page.locator('#searchToggleBtn').click();
+  await sleep(200);
   log('Búsqueda', 'Input visible', await page.locator('#search').isVisible());
 
   // --- Popup tabs ---
@@ -546,6 +548,8 @@ async function testFILE(browser) {
   await sleep(300);
   log('Config', 'Accesible sin datos', await page.locator('.config-card').count() >= 1);
 
+  await page.locator('#searchToggleBtn').click();
+  await sleep(200);
   log('Búsqueda', 'Input presente', await page.locator('#search').isVisible());
 
   await ctx.close();
