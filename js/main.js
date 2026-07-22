@@ -515,6 +515,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Initialize AI chat
+  initAiProviderTabs();
+  initAiChat();
+
   // Show current app version in config
   showAppVersion();
 

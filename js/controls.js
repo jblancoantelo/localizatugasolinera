@@ -145,6 +145,14 @@ function setActiveTab(tabId) {
     STATE.selectedId = null;
   }
 
+  if (tabId === 'tab-ia') {
+    for (const provider of Object.keys(AI_PROVIDERS)) {
+      const id = 'iaStatus' + provider.charAt(0).toUpperCase() + provider.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+      const el = document.getElementById(id);
+      if (el) updateAiStatus(provider);
+    }
+  }
+
   if (tabId !== 'tab-map' && tabId !== 'tab-both') {
     if (s.map) s.map.closePopup();
   }

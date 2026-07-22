@@ -101,6 +101,102 @@
         </tr></thead><tbody id="tableBothBody"></tbody></table>
       </div>
     </div>
+    <div class="ia-area">
+      <div class="ia-container">
+        <div class="ia-provider-tabs" id="iaProviderTabs">
+          <button class="ia-provider-tab active" data-iaprovider="chrome-nano">Chrome Built-in AI</button>
+          <button class="ia-provider-tab" data-iaprovider="gemini-studio">Google Gemini (AI Studio)</button>
+          <button class="ia-provider-tab" data-iaprovider="groq">Groq</button>
+          <button class="ia-provider-tab" data-iaprovider="mistral">Mistral</button>
+          <button class="ia-provider-tab" data-iaprovider="gemini-api">Gemini API</button>
+          <button class="ia-provider-tab" data-iaprovider="openrouter">OpenRouter</button>
+        </div>
+        <div class="ia-provider-panel active" data-iapanel="chrome-nano">
+          <div class="ia-config">
+            <span style="font-size:0.65rem;color:#888">🤖 Gemini Nano integrado en Chrome</span>
+            <label><select id="iaModelChromeNano"><option value="gemini-nano">Gemini Nano</option></select></label>
+          </div>
+          <div class="ia-chat">
+            <div class="ia-messages" id="iaMessagesChromeNano"></div>
+            <div class="ia-input-row">
+              <input type="text" id="iaInputChromeNano" placeholder="Escribe un mensaje...">
+              <button id="iaSendChromeNano">Enviar</button>
+            </div>
+            <div class="ia-status" id="iaStatusChromeNano">Esperando mensaje...</div>
+          </div>
+        </div>
+        <div class="ia-provider-panel" data-iapanel="gemini-studio">
+          <div class="ia-config">
+            <label>🔑 <input type="password" id="iaKeyGeminiStudio" placeholder="API Key" style="width:160px"></label>
+            <label><select id="iaModelGeminiStudio"><option value="gemini-2.5-flash">Gemini 2.5 Flash</option><option value="gemini-2.0-flash">Gemini 2.0 Flash</option></select></label>
+          </div>
+          <div class="ia-chat">
+            <div class="ia-messages" id="iaMessagesGeminiStudio"></div>
+            <div class="ia-input-row">
+              <input type="text" id="iaInputGeminiStudio" placeholder="Escribe un mensaje...">
+              <button id="iaSendGeminiStudio">Enviar</button>
+            </div>
+            <div class="ia-status" id="iaStatusGeminiStudio">Necesitas API Key de aistudio.google.com</div>
+          </div>
+        </div>
+        <div class="ia-provider-panel" data-iapanel="groq">
+          <div class="ia-config">
+            <label>🔑 <input type="password" id="iaKeyGroq" placeholder="API Key" style="width:160px"></label>
+            <label><select id="iaModelGroq"><option value="llama-3.3-70b-versatile">Llama 3.3 70B</option><option value="llama-4-scout-17b-16e-instruct">Llama 4 Scout</option><option value="mixtral-8x7b-32768">Mixtral 8x7B</option><option value="gemma2-9b-it">Gemma 2 9B</option></select></label>
+          </div>
+          <div class="ia-chat">
+            <div class="ia-messages" id="iaMessagesGroq"></div>
+            <div class="ia-input-row">
+              <input type="text" id="iaInputGroq" placeholder="Escribe un mensaje...">
+              <button id="iaSendGroq">Enviar</button>
+            </div>
+            <div class="ia-status" id="iaStatusGroq">Necesitas API Key de console.groq.com</div>
+          </div>
+        </div>
+        <div class="ia-provider-panel" data-iapanel="mistral">
+          <div class="ia-config">
+            <label>🔑 <input type="password" id="iaKeyMistral" placeholder="API Key" style="width:160px"></label>
+            <label><select id="iaModelMistral"><option value="mistral-small-latest">Mistral Small</option><option value="mistral-medium-latest">Mistral Medium</option><option value="mistral-large-latest">Mistral Large</option><option value="codestral-latest">Codestral</option></select></label>
+          </div>
+          <div class="ia-chat">
+            <div class="ia-messages" id="iaMessagesMistral"></div>
+            <div class="ia-input-row">
+              <input type="text" id="iaInputMistral" placeholder="Escribe un mensaje...">
+              <button id="iaSendMistral">Enviar</button>
+            </div>
+            <div class="ia-status" id="iaStatusMistral">Necesitas API Key de console.mistral.ai</div>
+          </div>
+        </div>
+        <div class="ia-provider-panel" data-iapanel="gemini-api">
+          <div class="ia-config">
+            <label>🔑 <input type="password" id="iaKeyGeminiApi" placeholder="API Key" style="width:160px"></label>
+            <label><select id="iaModelGeminiApi"><option value="gemini-2.5-flash">Gemini 2.5 Flash</option><option value="gemini-2.5-pro">Gemini 2.5 Pro</option><option value="gemini-2.0-flash">Gemini 2.0 Flash</option></select></label>
+          </div>
+          <div class="ia-chat">
+            <div class="ia-messages" id="iaMessagesGeminiApi"></div>
+            <div class="ia-input-row">
+              <input type="text" id="iaInputGeminiApi" placeholder="Escribe un mensaje...">
+              <button id="iaSendGeminiApi">Enviar</button>
+            </div>
+            <div class="ia-status" id="iaStatusGeminiApi">Necesitas API Key de Google AI Studio</div>
+          </div>
+        </div>
+        <div class="ia-provider-panel" data-iapanel="openrouter">
+          <div class="ia-config">
+            <label>🔑 <input type="password" id="iaKeyOpenrouter" placeholder="API Key" style="width:160px"></label>
+            <label><select id="iaModelOpenrouter"><option value="deepseek/deepseek-r1:free">DeepSeek R1</option><option value="meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 70B</option><option value="qwen/qwen3-coder-480b:free">Qwen3 Coder 480B</option><option value="google/gemma-3-12b-it:free">Gemma 3 12B</option></select></label>
+          </div>
+          <div class="ia-chat">
+            <div class="ia-messages" id="iaMessagesOpenrouter"></div>
+            <div class="ia-input-row">
+              <input type="text" id="iaInputOpenrouter" placeholder="Escribe un mensaje...">
+              <button id="iaSendOpenrouter">Enviar</button>
+            </div>
+            <div class="ia-status" id="iaStatusOpenrouter">Necesitas API Key de openrouter.ai</div>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="config-area">
       <div class="config-container">
         <div class="config-card">
@@ -246,6 +342,7 @@
     <button class="bottom-tab active" data-tab="tab-map"><span class="tab-icon">🗺️</span> Mapa</button>
     <button class="bottom-tab" data-tab="tab-table"><span class="tab-icon">☰</span> Tabla</button>
     <button class="bottom-tab" data-tab="tab-both"><span class="tab-icon">⊞</span> Ambos</button>
+    <button class="bottom-tab" data-tab="tab-ia"><span class="tab-icon">🤖</span> IA</button>
     <button class="bottom-tab" data-tab="tab-config"><span class="tab-icon">⚙️</span> Config</button>
   </div>
 </div>
@@ -259,6 +356,7 @@
 <script src="js/api.js"></script>
 <script src="js/chart-engine.js"></script>
 <script src="js/push-notifications.js"></script>
+<script src="js/ai-chat.js"></script>
 <script src="js/main.js"></script>
 <script>
 if (location.protocol.startsWith('http')) {

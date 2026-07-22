@@ -86,6 +86,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 .tab-both .both-table-area { display: block; flex: 1; }
 .tab-both .config-area, .tab-both #noProvinceMsg { display: none; }
 
+.tab-ia #map, .tab-ia .table-area, .tab-ia .both-table-area, .tab-ia .config-area, .tab-ia #noProvinceMsg { display: none; }
 .tab-config #map, .tab-config .table-area, .tab-config .both-table-area, .tab-config #noProvinceMsg { display: none; }
 
 .content.no-province #noProvinceMsg { display: flex; }
@@ -93,6 +94,8 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 .content.no-province .table-area { display: none; }
 .content.no-province .both-table-area { display: none; }
 .content.no-province .config-area { display: none; }
+.content.no-province .ia-area { display: none; }
+.content.tab-ia .ia-area { display: flex; }
 .content.tab-config .config-area { display: block; }
 
 /* === Loading overlay === */
@@ -130,6 +133,47 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 .table-wrap .fav-btn { cursor: pointer; color: #999; margin-right: 2px; user-select: none; }
 .table-wrap .fav-btn:hover { color: #f9a825; }
 .table-wrap .fav-btn.on { color: #f9a825; }
+
+/* === IA tab === */
+.ia-area { display: none; flex: 1; overflow: hidden; flex-direction: column; background: #f8f9fa; }
+.content.tab-ia .ia-area { display: flex; }
+.content.tab-ia #map, .content.tab-ia .table-area, .content.tab-ia .both-table-area, .content.tab-ia .config-area, .content.tab-ia #noProvinceMsg { display: none; }
+
+.ia-container { display: flex; flex-direction: column; flex: 1; overflow: hidden; padding: 0.5rem; }
+.ia-provider-tabs { display: flex; gap: 0; flex-shrink: 0; overflow-x: auto; }
+.ia-provider-tab {
+  flex: 1; text-align: center; padding: 0.3rem 0.15rem;
+  cursor: pointer; font-size: 0.6rem; color: #888;
+  border: none; background: #f0f0f0; transition: all 0.15s;
+  white-space: nowrap; min-width: 0;
+}
+.ia-provider-tab.active { background: #fff; color: #1a73e8; font-weight: 600; border-bottom: 2px solid #1a73e8; }
+.ia-provider-tab:not(.active):hover { background: #e8e8e8; }
+
+.ia-provider-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; background: #fff; border-radius: 0 0 8px 8px; }
+.ia-provider-panel.active { display: flex; }
+
+.ia-config { padding: 0.4rem 0.5rem; border-bottom: 1px solid #eee; flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; }
+.ia-config label { font-size: 0.65rem; color: #666; display: flex; align-items: center; gap: 0.2rem; }
+.ia-config input[type="text"], .ia-config input[type="password"] { padding: 0.15rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.65rem; width: 120px; }
+.ia-config select { padding: 0.15rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.65rem; }
+
+.ia-chat { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.ia-messages { flex: 1; overflow-y: auto; padding: 0.4rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.ia-msg { padding: 0.35rem 0.5rem; border-radius: 8px; font-size: 0.72rem; line-height: 1.4; max-width: 85%; word-wrap: break-word; }
+.ia-msg.user { background: #e3f2fd; align-self: flex-end; color: #1565c0; }
+.ia-msg.assistant { background: #f5f5f5; align-self: flex-start; color: #333; }
+.ia-msg.error { background: #ffebee; align-self: flex-start; color: #c62828; }
+.ia-msg.empty { color: #999; font-style: italic; background: none; align-self: center; }
+.ia-msg.loading { color: #999; font-style: italic; background: none; align-self: flex-start; }
+
+.ia-input-row { display: flex; padding: 0.4rem; border-top: 1px solid #eee; gap: 0.3rem; flex-shrink: 0; }
+.ia-input-row input { flex: 1; padding: 0.3rem 0.5rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.72rem; }
+.ia-input-row input:focus { border-color: #1a73e8; outline: none; box-shadow: 0 0 0 2px rgba(26,115,232,0.1); }
+.ia-input-row button { background: #1a73e8; color: #fff; border: none; border-radius: 6px; padding: 0.3rem 0.6rem; cursor: pointer; font-size: 0.7rem; white-space: nowrap; }
+.ia-input-row button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.ia-status { padding: 0.2rem 0.5rem; font-size: 0.6rem; color: #999; border-top: 1px solid #eee; flex-shrink: 0; }
 
 /* === Config tab === */
 .config-container { padding: 1rem; }
