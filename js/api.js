@@ -151,7 +151,7 @@ async function fetchProvinceData(provinceName) {
       const json = await r.json();
       data = json.ListaEESSPrecio || [];
       if (!data.length) throw new Error('Sin datos');
-      await cacheProvinceData(provinceName, data);
+      await cacheProvinceData(provinceName, data, getCacheTtl());
     } catch (e) {
       document.getElementById('infoText').textContent = 'Error al cargar ' + provinceName + ': ' + e.message;
       setLoading(false);

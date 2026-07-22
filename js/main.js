@@ -11,6 +11,18 @@ document.addEventListener('DOMContentLoaded', () => {
     render(false);
   });
 
+  // Restore logs BEFORE any API call (fetchProvinces overwrites localStorage)
+  try {
+    const savedApi = localStorage.getItem('gasolineras_api_log');
+    if (savedApi) { const p = JSON.parse(savedApi); if (Array.isArray(p)) { API_LOG.length = 0; p.forEach(l => API_LOG.push(l)); } }
+  } catch(e) {}
+  try {
+    const savedPush = localStorage.getItem('gasolineras_push_log');
+    if (savedPush) { const p = JSON.parse(savedPush); if (Array.isArray(p)) { PUSH_LOG.length = 0; p.forEach(l => PUSH_LOG.push(l)); } }
+  } catch(e) {}
+  renderApiLog();
+  renderPushLog();
+
   fetchProvinces();
 
   document.getElementById('searchToggleBtn').addEventListener('click', () => {
@@ -439,12 +451,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function getCurrentSwVersion() {
     return new Promise(resolve => {
-      const timer = setTimeout(() => resolve(0), 2000);
+      const timer = setTimeout(() => resolve({ version: 0, buildTime: '' }), 2000);
       try {
         const mc = new MessageChannel();
-        mc.port1.onmessage = e => { clearTimeout(timer); resolve(e.data.version || 0); };
+        mc.port1.onmessage = e => { clearTimeout(timer); resolve({ version: e.data.version || 0, buildTime: e.data.buildTime || '' }); };
         navigator.serviceWorker.controller.postMessage({ type: 'get-version' }, [mc.port2]);
-      } catch { clearTimeout(timer); resolve(0); }
+      } catch { clearTimeout(timer); resolve({ version: 0, buildTime: '' }); }
     });
   }
 
@@ -454,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const reg = await navigator.serviceWorker.ready;
       const ver = await getCurrentSwVersion();
       const el = document.getElementById('appCurrentVersion');
-      if (el) el.textContent = 'v' + ver;
+      if (el) el.textContent = 'v' + ver.version + (ver.buildTime ? ' (' + ver.buildTime + ')' : '');
     } catch {}
   }
 
@@ -466,14 +478,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     statusEl.textContent = '🔄 Buscando actualizaciones...';
 
-    async function showUpdateFound() {
-      statusEl.innerHTML = '🔄 Nueva versión disponible <button class="reload-btn btn" style="background:#1a73e8;color:#fff;border:none;padding:0.2rem 0.5rem;border-radius:4px;cursor:pointer;font-size:0.72rem">Recargar ahora</button>';
+    async function showUpdateFound(serverLabel, versionLabel) {
+      statusEl.innerHTML = '🔄 Nueva versión disponible ' + (serverLabel || '') + ' (actual ' + (versionLabel || '') + ') <button class="reload-btn btn" style="background:#1a73e8;color:#fff;border:none;padding:0.2rem 0.5rem;border-radius:4px;cursor:pointer;font-size:0.72rem">Recargar ahora</button>';
       statusEl.querySelector('.reload-btn').addEventListener('click', () => location.reload());
     }
 
     try {
       const reg = await navigator.serviceWorker.ready;
       const currentVersion = await getCurrentSwVersion();
+      const versionLabel = 'v' + currentVersion.version + (currentVersion.buildTime ? ' (' + currentVersion.buildTime + ')' : '');
 
       // Method 1: Standard SW update check via reg.update()
       let resolved = false;
@@ -486,13 +499,15 @@ document.addEventListener('DOMContentLoaded', () => {
           const text = await resp.text();
           const match = text.match(/const APP_VERSION\s*=\s*(\d+)/);
           const serverVersion = match ? parseInt(match[1]) : 0;
-          if (serverVersion > currentVersion) {
-            await showUpdateFound();
+          const serverBuild = text.match(/const BUILD_TIME\s*=\s*'([^']+)'/) ? text.match(/const BUILD_TIME\s*=\s*'([^']+)'/)[1] : '';
+          const serverLabel = 'v' + serverVersion + (serverBuild ? ' (' + serverBuild + ')' : '');
+          if (serverVersion > currentVersion.version) {
+            await showUpdateFound(serverLabel, versionLabel);
           } else {
-            statusEl.textContent = '✅ Tienes la última versión (v' + currentVersion + ')';
+            statusEl.textContent = '✅ Tienes la última versión (' + versionLabel + ')';
           }
         } catch {
-          statusEl.textContent = '✅ Tienes la última versión';
+          statusEl.textContent = '✅ Tienes la última versión (' + versionLabel + ')';
         }
       }, 12000);
 
@@ -505,7 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (newWorker.state === 'installed' || newWorker.state === 'activated') {
             resolved = true;
             clearTimeout(timeout);
-            showUpdateFound();
+            showUpdateFound('', versionLabel);
           }
         });
       });
@@ -616,14 +631,4 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('setInterval fallback registered:', STATE.checkInterval, 'hours');
   }
 
-  try {
-    const savedApi = localStorage.getItem('gasolineras_api_log');
-    if (savedApi) { const p = JSON.parse(savedApi); if (Array.isArray(p)) { API_LOG.length = 0; p.forEach(l => API_LOG.push(l)); } }
-  } catch(e) {}
-  try {
-    const savedPush = localStorage.getItem('gasolineras_push_log');
-    if (savedPush) { const p = JSON.parse(savedPush); if (Array.isArray(p)) { PUSH_LOG.length = 0; p.forEach(l => PUSH_LOG.push(l)); } }
-  } catch(e) {}
-  renderApiLog();
-  renderPushLog();
 });

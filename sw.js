@@ -2,7 +2,8 @@ const CACHE = 'gasolineras-v3';
 const CDN_CACHE = 'gasolineras-cdn-v1';
 const API_HOST = 'sedeaplicaciones.minetur.gob.es';
 const API_BASE = 'https://' + API_HOST + '/ServiciosRESTCarburantes/PreciosCarburantes/';
-const APP_VERSION = 7;
+const APP_VERSION = 9;
+const BUILD_TIME = '20260722-235242';
 
 importScripts('js/state.js', 'js/helpers.js', 'js/db.js');
 
@@ -170,7 +171,15 @@ async function checkPrices(reason) {
       : 'desconocido';
     sendPushLog('checkPrices', 'inicio — motivo: ' + motivo + ' | checkDrop=' + checkDrop + ' checkRise=' + checkRise + ' días=' + days);
 
-    const favorites = await dbGetAllFavorites();
+    let favorites;
+    try {
+      favorites = await dbGetAllFavorites();
+      sendPushLog('checkPrices', 'dbGetAllFavorites OK → ' + (favorites ? favorites.length : 'null') + ' favoritos');
+    } catch (e) {
+      sendPushLog('checkPrices', 'ERROR en dbGetAllFavorites: ' + e.message);
+      console.error('[SW] dbGetAllFavorites error:', e.message);
+      favorites = null;
+    }
     if (!favorites || favorites.length === 0) {
       sendPushLog('checkPrices', 'no hay favoritos — fin');
       console.log('[SW] No favorites to check');
@@ -380,7 +389,7 @@ self.addEventListener('message', event => {
   }
   if (event.data && event.data.type === 'get-version') {
     if (event.ports && event.ports.length) {
-      event.ports[0].postMessage({ version: APP_VERSION });
+      event.ports[0].postMessage({ version: APP_VERSION, buildTime: BUILD_TIME });
     }
   }
 });
