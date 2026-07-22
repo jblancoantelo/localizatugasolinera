@@ -11,6 +11,18 @@ document.addEventListener('DOMContentLoaded', () => {
     render(false);
   });
 
+  // Restore logs BEFORE any API call (fetchProvinces overwrites localStorage)
+  try {
+    const savedApi = localStorage.getItem('gasolineras_api_log');
+    if (savedApi) { const p = JSON.parse(savedApi); if (Array.isArray(p)) { API_LOG.length = 0; p.forEach(l => API_LOG.push(l)); } }
+  } catch(e) {}
+  try {
+    const savedPush = localStorage.getItem('gasolineras_push_log');
+    if (savedPush) { const p = JSON.parse(savedPush); if (Array.isArray(p)) { PUSH_LOG.length = 0; p.forEach(l => PUSH_LOG.push(l)); } }
+  } catch(e) {}
+  renderApiLog();
+  renderPushLog();
+
   fetchProvinces();
 
   document.getElementById('searchToggleBtn').addEventListener('click', () => {
@@ -612,14 +624,4 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('setInterval fallback registered:', STATE.checkInterval, 'hours');
   }
 
-  try {
-    const savedApi = localStorage.getItem('gasolineras_api_log');
-    if (savedApi) { const p = JSON.parse(savedApi); if (Array.isArray(p)) { API_LOG.length = 0; p.forEach(l => API_LOG.push(l)); } }
-  } catch(e) {}
-  try {
-    const savedPush = localStorage.getItem('gasolineras_push_log');
-    if (savedPush) { const p = JSON.parse(savedPush); if (Array.isArray(p)) { PUSH_LOG.length = 0; p.forEach(l => PUSH_LOG.push(l)); } }
-  } catch(e) {}
-  renderApiLog();
-  renderPushLog();
 });
