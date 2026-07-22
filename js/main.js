@@ -532,6 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize AI chat
   initAiProviderTabs();
+  renderAiKeysConfig();
   initAiChat();
 
   // Show current app version in config

@@ -161,6 +161,7 @@ function setActiveTab(tabId) {
     renderDiscountConfig();
     renderCacheInfo();
     renderProvinceCacheInfo();
+    renderAiKeysConfig();
   }
 
   if (tabId === 'tab-map' || tabId === 'tab-both') {

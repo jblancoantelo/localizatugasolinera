@@ -95,6 +95,19 @@ const AI_PROVIDERS = {
 
 const AI_KEYS_KEY = 'gasolineras_ai_keys';
 
+const AI_KEYS_KEY = 'gasolineras_ai_keys';
+const AI_DEFAULT_KEYS = {
+  'gemini-api': 'AQ.Ab8RN6ItEzvCHwJgOpOXRFQlnw1RfoE5isdD967JFv7n2TgSzA',
+  'gemini-studio': 'AQ.Ab8RN6ItEzvCHwJgOpOXRFQlnw1RfoE5isdD967JFv7n2TgSzA',
+  'groq': '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',
+  'mistral': 'cMHt0ShJ1OlpN6vy1x6UMoTXPIwokKNA',
+  'openrouter': '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'
+};
+
+function getProviderInputId(provider, prefix) {
+  return prefix + provider.charAt(0).toUpperCase() + provider.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+}
+
 function loadAiApiKeys() {
   try {
     const raw = localStorage.getItem(AI_KEYS_KEY);
@@ -103,10 +116,14 @@ function loadAiApiKeys() {
   } catch { return {}; }
 }
 
-function saveAiApiKey(provider, key) {
-  const keys = loadAiApiKeys();
-  keys[provider] = key;
+function saveAiApiKeys(keys) {
   localStorage.setItem(AI_KEYS_KEY, JSON.stringify(keys));
+  // Sync to AI_PROVIDERS and config inputs
+  for (const [provider, k] of Object.entries(keys)) {
+    if (AI_PROVIDERS[provider]) AI_PROVIDERS[provider].key = k;
+    const cfgInput = document.getElementById(getProviderInputId(provider, 'iaKey'));
+    if (cfgInput && cfgInput.value !== k) cfgInput.value = k;
+  }
 }
 
 function initAiProviderTabs() {
@@ -119,29 +136,52 @@ function initAiProviderTabs() {
       document.querySelectorAll('.ia-provider-panel').forEach(p => p.classList.remove('active'));
       const panel = document.querySelector('.ia-provider-panel[data-iapanel="' + id + '"]');
       if (panel) panel.classList.add('active');
+      updateAiStatus(id);
     });
   });
 }
 
-function initAiChat() {
+function renderAiKeysConfig() {
   const keys = loadAiApiKeys();
-  for (const [provider, config] of Object.entries(AI_PROVIDERS)) {
-    const keyInput = document.getElementById('iaKey' + provider.charAt(0).toUpperCase() + provider.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase()));
-    if (keyInput) {
-      if (keys[provider]) {
-        keyInput.value = keys[provider];
-        config.key = keys[provider];
-      }
-      keyInput.addEventListener('change', () => {
-        saveAiApiKey(provider, keyInput.value);
-        config.key = keyInput.value;
-        updateAiStatus(provider);
-      });
+  // Apply default keys if not already stored
+  let changed = false;
+  for (const [provider, defaultKey] of Object.entries(AI_DEFAULT_KEYS)) {
+    if (!keys[provider]) {
+      keys[provider] = defaultKey;
+      AI_PROVIDERS[provider].key = defaultKey;
+      changed = true;
     }
-    const modelSelect = document.getElementById('iaModel' + provider.charAt(0).toUpperCase() + provider.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase()));
-    const input = document.getElementById('iaInput' + provider.charAt(0).toUpperCase() + provider.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase()));
-    const sendBtn = document.getElementById('iaSend' + provider.charAt(0).toUpperCase() + provider.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase()));
-    const messagesEl = document.getElementById('iaMessages' + provider.charAt(0).toUpperCase() + provider.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase()));
+  }
+  if (changed) saveAiApiKeys(keys);
+
+  for (const provider of Object.keys(AI_PROVIDERS)) {
+    if (provider === 'chrome-nano') continue;
+    const cfgInput = document.getElementById(getProviderInputId(provider, 'iaKey'));
+    if (!cfgInput) continue;
+    const stored = keys[provider] || '';
+    cfgInput.value = stored;
+    AI_PROVIDERS[provider].key = stored;
+    cfgInput.addEventListener('change', () => {
+      const allKeys = loadAiApiKeys();
+      allKeys[provider] = cfgInput.value;
+      AI_PROVIDERS[provider].key = cfgInput.value;
+      saveAiApiKeys(allKeys);
+      updateAiStatus(provider);
+    });
+  }
+}
+
+function initAiChat() {
+  // First sync keys from config inputs (already populated by renderAiKeysConfig)
+  for (const [provider, config] of Object.entries(AI_PROVIDERS)) {
+    if (provider !== 'chrome-nano') {
+      const cfgInput = document.getElementById(getProviderInputId(provider, 'iaKey'));
+      if (cfgInput && cfgInput.value) config.key = cfgInput.value;
+    }
+    const modelSelect = document.getElementById(getProviderInputId(provider, 'iaModel'));
+    const input = document.getElementById(getProviderInputId(provider, 'iaInput'));
+    const sendBtn = document.getElementById(getProviderInputId(provider, 'iaSend'));
+    const messagesEl = document.getElementById(getProviderInputId(provider, 'iaMessages'));
 
     if (!input || !sendBtn || !messagesEl) continue;
 
@@ -161,8 +201,7 @@ function initAiChat() {
 }
 
 function getMessagesForProvider(provider) {
-  const id = 'iaMessages' + provider.charAt(0).toUpperCase() + provider.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-  const el = document.getElementById(id);
+  const el = document.getElementById(getProviderInputId(provider, 'iaMessages'));
   if (!el) return [];
   const msgs = [];
   el.querySelectorAll('.ia-msg:not(.empty):not(.loading)').forEach(m => {
@@ -177,11 +216,12 @@ async function handleAiSend(provider, modelSelect, input, messagesEl, sendBtn) {
   if (!text) return;
 
   const config = AI_PROVIDERS[provider];
-  const apiKey = config.key;
+  const cfgInput = document.getElementById(getProviderInputId(provider, 'iaKey'));
+  const apiKey = (cfgInput && cfgInput.value) || config.key;
   const model = modelSelect ? modelSelect.value : config.defaultModel;
 
   if (provider !== 'chrome-nano' && !apiKey) {
-    addAiMessage(messagesEl, 'Por favor, introduce una API Key válida en la configuración.', 'error');
+    addAiMessage(messagesEl, 'Por favor, introduce una API Key válida en Config → IA.', 'error');
     return;
   }
 
@@ -223,7 +263,7 @@ function addAiMessage(container, text, className) {
 }
 
 function updateAiStatus(provider, override) {
-  const id = 'iaStatus' + provider.charAt(0).toUpperCase() + provider.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+  const id = getProviderInputId(provider, 'iaStatus');
   const el = document.getElementById(id);
   if (!el) return;
   if (override) { el.textContent = override; return; }
@@ -232,5 +272,7 @@ function updateAiStatus(provider, override) {
     el.textContent = window.ai ? '✅ Gemini Nano disponible' : '❌ No disponible (Chrome Canary/Dev)';
     return;
   }
-  el.textContent = config.key ? '✅ API Key configurada' : '⚠️ Sin API Key';
+  const cfgInput = document.getElementById(getProviderInputId(provider, 'iaKey'));
+  const hasKey = cfgInput ? !!cfgInput.value : !!config.key;
+  el.textContent = hasKey ? '✅ API Key configurada' : '⚠️ Sin API Key — ve a Config → IA';
 }
