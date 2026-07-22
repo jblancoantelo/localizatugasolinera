@@ -306,7 +306,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 
   .toolbar-groups { padding: 0.15rem 0.25rem; gap: 0.1rem; }
   .filter-group { padding: 0.1rem 0.25rem; min-width: 70px; }
-  .filter-group-label { display: none; }
+  .filter-group-label .label-text { display: none; }
   .filter-group input, .filter-group select { font-size: 0.65rem; padding: 0.15rem 0.25rem; max-width: 85px; }
   .filter-group .btn { font-size: 0.62rem; padding: 0.15rem 0.3rem; }
   .search-row { padding: 0.1rem 0.3rem 0.2rem; }

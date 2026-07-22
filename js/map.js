@@ -352,12 +352,12 @@ async function loadPopupChartForFuel(container, station, fuelName) {
 }
 
 async function loadPopupHistory(container, stationId) {
-  container.dataset.loaded = '1';
   const fuelSelect = container.querySelector('.popup-history-fuel');
   const s = STATE;
-  if (!s.selectedProv) return;
+  if (!s.selectedProv) { container.dataset.loaded = '1'; return; }
   const station = s.data.find(x => x.IDEESS === stationId);
-  if (!station) return;
+  if (!station) { container.dataset.loaded = '1'; return; }
   const fuelName = populateHistoryFuelSelect(fuelSelect, station, s.selectedFuel);
   await loadPopupChartForFuel(container, station, fuelName);
+  container.dataset.loaded = '1';
 }
