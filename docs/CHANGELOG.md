@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2026-07-22] — Search toggle con lupa + responsive compacto
+
+| Cambio | Detalle |
+|--------|---------|
+| `index.html` | Añadido `#searchToggleBtn` (🔍) en grupo Mapa con separador `.filter-sep`; `.search-row` empieza oculto (`.hide`) |
+| `css/styles.css` | Nuevo `.filter-sep` (línea vertical 1px); `.search-row.hide`; responsive: actions-group ya no fuerza fila completa (`flex: 0 1 auto`), min-width reducidos, padding/gaps más ajustados, leyenda precios más pequeña, rango medio oculto en ≤480px, separador oculto en ≤768px |
+| `js/main.js` | Event listener `#searchToggleBtn` toggle search row; reset filtros también oculta search row y botón 🔍 |
+| `docs/test/full_test.mjs` | Tests actualizados: click en 🔍 antes de verificar input visible |
+| `docs/test/validate.mjs` | Ídem |
+| `AGENTS.md` | Nueva sección "Search toggle (🔍)", actualizado orden toolbar, test count 63, reset filtros |
+
+---
+
 ## [2026-07-18] — Logs API/Push con tabs y registro detallado
 
 ### ✅ Registro de actividad (tabs API/Push)

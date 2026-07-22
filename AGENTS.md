@@ -99,8 +99,16 @@ Orden actual de grupos:
 2. Localidad
 3. Combustible
 4. Marca
-5. Mapa (tipo mapa + ✕ limpiar)
-6. (actions-group con leyenda de precios)
+5. Mapa (tipo mapa + separador + 🔍 search toggle)
+6. ✕ Limpiar filtros
+7. (actions-group con leyenda de precios)
+
+### Search toggle (🔍)
+- **`#searchToggleBtn`** en el grupo Mapa, tras separador `.filter-sep`
+- Muestra/oculta `.search-row` (que empieza oculto con clase `.hide`)
+- Al abrir, hace foco automático en el input (`#search`)
+- Al resetear filtros, también se oculta la fila de búsqueda
+- El separador `.filter-sep` es una línea vertical de 1px, se oculta en ≤768px
 
 ### Tabla — columnas
 - **Tabla** (`.table-area`): Marca, Precio, Distancia, Localidad, Calle (5 columnas, sin Provincia)
@@ -114,7 +122,7 @@ Orden actual de grupos:
 ### Tests
 - Ubicación: `docs/test/full_test.mjs`
 - Plan: `docs/test/TEST_PLAN.md`
-- 51 tests totales (44 HTTP + 7 file://)
+- 63 tests totales (56 HTTP + 7 file://)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)
 - Push notifications tests (14.1-14.10) integrados en full_test.mjs
@@ -137,6 +145,7 @@ Orden actual de grupos:
 - **Tabla "Ambos"**: Sin paginación — muestra todas las estaciones filtradas
 - **Tabla "Tabla"**: Paginada (default 30) con sort dual (asc/desc)
 - **Reset filtros**: Sin re-fetch cuando ya hay datos cargados
+- **Reset filtros**: También oculta `.search-row` y desactiva el botón 🔍
 - **Log de actividad**: Tabs API/Push en config (`.config-log-tab`/`.config-log-panel`, mismo estilo que cache tabs). `initLogTabs()` en storage.js
 - **API Log**: Array `API_LOG[]` con últimas 30 llamadas, timestamp, duración y estado. Visible en config
 - **Push Log**: Array `PUSH_LOG[]` con últimas 30 eventos push. `logPushEvent()` en push-notifications.js. El SW envía eventos al cliente via `postMessage({type:'push-log',...})` y la función `sendPushLog()` en sw.js
@@ -212,7 +221,7 @@ node -e "const h=require('http'),fs=require('fs');h.createServer((q,r)=>{let p=q
 | Archivo | Propósito |
 |---------|-----------|
 | `index.html` | Toolbar + content + tabs + bottom sheet |
-| `css/styles.css` | ~340 líneas responsive |
+| `css/styles.css` | ~342 líneas responsive |
 | `js/state.js` | STATE global + definiciones combustibles |
 | `js/helpers.js` | Funciones auxiliares (precios, distancia, descuentos, `comparePrices()`, `formatLogTime()`) |
 | `js/db.js` | IndexedDB compartido (cliente + SW): cache, favoritos, config |

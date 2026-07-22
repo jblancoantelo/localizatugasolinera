@@ -11,7 +11,7 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 ### 🔍 Consulta de precios
 - Datos en tiempo real desde la API oficial del Ministerio (actualización cada 30 minutos)
 - Filtros por **provincia**, **localidad**, **combustible**, **marca** y **distancia máxima**
-- Búsqueda textual por localidad, dirección o nombre de estación
+- Búsqueda textual por localidad, dirección o nombre de estación (toggle con 🔍 en toolbar)
 - Leyenda dinámica de precios (verde < naranja < rojo) según percentiles
 
 ### 🗺️ Vista Mapa
@@ -86,13 +86,13 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 
 | Componente | Tecnología |
 |------------|------------|
-| App shell | HTML5 + CSS3 (responsive, ~340 líneas) |
+| App shell | HTML5 + CSS3 (responsive, ~342 líneas) |
 | Mapas | [Leaflet](https://leafletjs.com/) 1.9.4 con tiles OSM / CartoDB / ESRI / CyclOSM |
 | Gráficas | Canvas 2D nativo — sin librerías de charts |
 | Persistencia | IndexedDB + localStorage |
 | Notificaciones | Web Push API + Periodic Background Sync |
 | Service Worker | Cache-first + Network-first híbrido |
-| Tests | Playwright (51 tests, servidor HTTP inline) |
+| Tests | Playwright (63 tests, servidor HTTP inline) |
 | Desarrollo | [OpenCode](https://opencode.ai) con modelos DeepSeek (libres) |
 
 ---
