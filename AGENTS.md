@@ -87,6 +87,43 @@ En `controls.js`, `setActiveTab()` cierra automáticamente:
 3. Paginación
 4. Registro de actividad (con tabs API / Push)
 5. Notificaciones push
+6. Claves API - IA (contraseña + carga de claves cifradas)
+
+### Chat IA — `ai-chat.js`
+
+**Proveedores** (orden en UI):
+1. Groq (`groq`)
+2. Mistral (`mistral`)
+3. OpenRouter (`openrouter`)
+4. Google Gemini (`google`)
+5. Chrome Built-in AI (`chrome-nano`)
+
+**API Keys**: cifradas en código fuente con XOR + base64. Se descargan al introducir la passphrase correcta en Config y pulsar "Cargar claves". Si ya hay claves cargadas aparece enlace "Volver a cargar".
+
+**Contexto automático (`getAiContext()`)**:
+- Provincia + nº gasolineras cargadas
+- Top 30 estaciones (nombre, precio, dirección)
+- Favoritos del usuario
+- Estado de caché (dataSource cache/fresh)
+- Se inyecta como system message antes del primer user message
+
+**Histórico**: si el user query contiene palabras clave (historial, histórico, evolución, tendencia, gráfica, precio ayer), se precarga `loadHistory()` para todas las estaciones antes de enviar a la IA.
+
+**Cancelar**: AbortController aborta el fetch. Botón "Cancelar" aparece en el mensaje de loading y desaparece al completar/fallar.
+
+**Editar**: botón ✎ en cada mensaje del usuario. Al pulsarlo:
+- Restaura el texto en el input
+- Elimina ese mensaje y todos los posteriores del DOM
+- El usuario puede corregir y reenviar
+
+**Modelos por proveedor**:
+- Groq: `llama-3.3-70b-versatile`, `mixtral-8x7b-32768`, `gemma2-9b-it`
+- Mistral: `mistral-small-latest`, `mistral-large-latest`
+- OpenRouter: `nvidia/nemotron-3-ultra-550b-a55b`, `poolside/laguna-m.1` (solo gratuitos)
+- Google Gemini: `gemini-2.0-flash-lite`, `gemini-2.0-flash`, `gemini-1.5-flash`
+- Chrome Built-in AI: session de IA nativa del navegador
+
+**UI**: cada proveedor tiene su propio panel (`.ia-provider-panel`) dentro de `.ia-providers-container`. Los tabs de proveedor están en `.ia-tabs` con botones `.ia-tab`.
 
 ### Caché — tabs IndexedDB / localStorage
 - `initCacheTabs()` en `storage.js` maneja cambio entre tabs.

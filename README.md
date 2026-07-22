@@ -73,12 +73,22 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 - Página offline (`offline.html`)
 - Botón "Comprobar actualizaciones" que detecta cambios en `sw.js`
 
+### 🤖 Chat IA integrado
+- **5 proveedores** seleccionables con pestañas: Groq, Mistral, OpenRouter, Google Gemini, Chrome Built-in AI
+- Las API Keys se guardan cifradas (XOR + base64) en el código fuente y se descargan en Config con una contraseña
+- **Contexto automático**: cada mensaje incluye los datos actuales de la app (provincia, gasolineras, precios, favoritos)
+- Precarga de históricos si la pregunta menciona evolución de precios
+- Botón **Cancelar** para abortar mensaje en curso (AbortController)
+- Botón **✎ Editar** en mensajes enviados para corregir y reenviar
+- Modelos gratuitos por proveedor (sin coste de API)
+
 ### ⚙️ Panel de Configuración
 - **Descuentos por marca**: descuento en céntimos/litro para ajustar precios
 - **Caché de datos**: tabs IndexedDB / localStorage con información detallada
 - **Paginación**: número de filas por página en la vista tabla (0 = todas)
 - **Registro de actividad**: tabs API / Push
 - **Notificaciones push**: activación, intervalo, días, modo de detección
+- **Claves API - IA**: campo de contraseña para cargar claves cifradas, con opción "Volver a cargar"
 
 ---
 
@@ -92,17 +102,30 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 | Persistencia | IndexedDB + localStorage |
 | Notificaciones | Web Push API + Periodic Background Sync |
 | Service Worker | Cache-first + Network-first híbrido |
+| Chat IA | 5 proveedores (Groq, Mistral, OpenRouter, Google Gemini, Chrome Built-in AI) |
 | Tests | Playwright (63 tests, servidor HTTP inline) |
 | Desarrollo | [OpenCode](https://opencode.ai) con modelos DeepSeek (libres) |
 
 ---
 
-## Licencia
+## Roadmap / Ideas futuras
 
-Todo el código de este proyecto es **software libre**. Puedes consultar los términos de la licencia en el repositorio.
+### Chat IA — Próximas mejoras consideradas
+- **Streaming de respuestas** (SSE) para mostrar el texto en tiempo real
+- **Persistencia del historial** de chat en IndexedDB entre sesiones
+- **Prompt personalizado** por el usuario en la UI de Config
+- **Selección de temperatura / max_tokens** por proveedor
+- **Comparativa entre modelos**: enviar misma pregunta a varios proveedores simultáneamente
+- **Exportar conversación** (JSON / texto)
+- **Entrada por voz** (Web Speech API)
+- **Imagen y análisis visual** con Gemini Vision (modelos multimodales)
+- **RAG de gasolineras**: búsqueda semántica sobre los datos cargados
+- **Atajo de teclado** para enfoque rápido del input de chat
+- **Auto-detección** del proveedor más rápido disponible
+
+### Otras funcionalidades exploradas
+- Conteo de tokens (tiktoken) para no exceder límites de contexto
+- Chat dentro del panel de detalle de cada estación
+- Sugerencias de preguntas frecuentes sobre precios
 
 ---
-
-## TODOs
-- Chat conversacional
-- Rediseño web responsible y con modo landscape mobile
