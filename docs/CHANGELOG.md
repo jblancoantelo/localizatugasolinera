@@ -1,5 +1,44 @@
 # CHANGELOG
 
+## [2026-09-26] — Chat IA: claves cifradas por proveedor + modelos resucitados
+
+### 🔑 Claves de API
+
+| Cambio | Detalle |
+|--------|---------|
+| `js/ai-chat.js` | `AI_KEY_PREFIXES` + `isAiKeyFormatValid()`: validación de prefijo **por proveedor** (`google`→`AIza`, `groq`→`gsk_`, `mistral`→`cMHt`, `openrouter`→`sk-or-v1-`) |
+| `js/ai-chat.js` | `tryDecryptDefaultKeys()` ahora devuelve `{ keys, invalid }`; devuelve `null` solo si **ningún** descifrado es válido (= contraseña incorrecta) |
+| `js/ai-chat.js` | `handleLoadDefaultKeys()` no persiste las claves con formato incorrecto y avisa: *"N clave(s) con formato incorrecto (…)"* |
+| `js/ai-chat.js` | `updateAiStatus()` muestra `❌ Formato de clave incorrecto para <provider>` en el panel |
+| `js/ai-chat.js` | `saveAiApiKeys()` ignora claves vacías (dejaban la UI creyendo que había claves cargadas) |
+| `js/ai-chat.js` | Clave de Google re-cifrada: el blob anterior contenía un token OAuth (`AQ.…`) en vez de una API key `AIza…` |
+| `js/ai-chat.js` | Clave de Groq re-cifrada (la anterior devolvía `401 invalid_api_key`) |
+
+Motivo: la validación anterior era una lista global de prefijos (`['AIza','AQ.','gsk_','cMHt','sk-or-']`), así que una clave del proveedor equivocado pasaba el check como "contraseña correcta" y solo fallaba al enviar la petición, sin avisar.
+
+### 🤖 Modelos por proveedor (verificados contra las APIs)
+
+| Proveedor | Antes | Ahora |
+|-----------|-------|-------|
+| Groq | `llama-3.3-70b-versatile` (404), `llama-4-scout`, `llama-3.1-8b`, `mixtral-8x7b`, `gemma2-9b` | `qwen/qwen3.8-27b` (default), `openai/gpt-oss-20b`, `openai/gpt-oss-120b`, `allam-2-7b` |
+| Mistral | `mistral-small-latest` (default), `mistral-large-latest` (*not available in your subscription tier*), `open-mistral-nemo` | `open-mistral-nemo` (default), `ministral-8b-latest`, `codestral-latest`, `mistral-small-latest`, `mistral-medium-latest` |
+| OpenRouter | `nvidia/nemotron-3-ultra-550b-a55b` (**ya de pago**), `poolside/laguna-m.1` (**no existe**) | `nvidia/nemotron-3-ultra-550b-a55b:free` (default), `nvidia/nemotron-3-super-120b-a12b:free` |
+| Google | `gemini-2.5-flash` (*no longer available to new users*), `gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-1.5-pro` (404) | `gemini-3.8-flash` (default), `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.7-flash` |
+
+- `defaultModel` sincronizado con el primer `<option>` de cada `#iaModel<Provider>` en `index.html`
+- `openai/gpt-oss-*` son modelos *reasoning*: pueden devolver `content` vacío al gastar el `max_tokens` en `reasoning`, por eso no son el default de Groq
+
+### 📚 Documentación
+| Archivo | Cambio |
+|---------|--------|
+| `AGENTS.md` | Sección "Validación de formato por proveedor" + modelos verificados + avisos de caducidad |
+| `docs/mejoras-petrol.md` | Entrada de esta corrección |
+
+### 🧪 Tests
+- 66 tests (59 HTTP + 7 file://) en verde
+
+---
+
 ## [2026-07-22] — Search toggle con lupa + responsive compacto
 
 | Cambio | Detalle |

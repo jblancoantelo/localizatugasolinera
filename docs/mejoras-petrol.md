@@ -1,5 +1,49 @@
 # Mejoras realizadas — Precios Gasolina España
 
+## 2026-09-26 — Chat IA: claves por proveedor + modelos resucitados
+
+### Diagnóstico: por qué fallaban los chats
+Las cuatro claves fallaban, pero por **motivos distintos**. El cifrado (XOR + base64) nunca estuvo roto: la contraseña es correcta y 3 de 4 blobs descifraban bien. Los fallos eran de las **claves** y de los **modelos** configurados:
+
+| Proveedor | Clave | Resultado real |
+|-----------|-------|----------------|
+| Groq | `gsk_…` (antigua) | `401 invalid_api_key` — revocada |
+| Google | prefijo `AQ.` | `401 UNAUTHENTICATED` — era un token OAuth, no una API key `AIza…` |
+| Mistral | prefijo `cMHt` | Válida, pero `429 Rate limit exceeded` intermitente |
+| OpenRouter | prefijo `sk-or-v1-` | Correcta |
+
+### Validación de formato por proveedor
+- El check anterior usaba una lista **global** de prefijos (`['AIza','AQ.','gsk_','cMHt','sk-or-']`). La clave OAuth de Google empezaba por `AQ.`, así que pasaba como "contraseña correcta" y se guardaba: el error solo aparecía al enviar.
+- Ahora `AI_KEY_PREFIXES` + `isAiKeyFormatValid()` validan **por proveedor**, `tryDecryptDefaultKeys()` devuelve `{ keys, invalid }` y `null` únicamente si ningún descifrado es válido (contraseña incorrecta).
+- Las claves con formato incorrecto no se persisten, y el panel del proveedor avisa: `❌ Formato de clave incorrecto para google (debe empezar por AIza)`.
+- `saveAiApiKeys()` ya no guarda claves vacías (dejaban la UI diciendo "claves cargadas" sin ninguna).
+
+### Modelos: 11 de 15 estaban muertos
+Verificados uno a uno contra las APIs (`/models` + llamada de chat real):
+
+- **Google**: los 4 fallaban. `gemini-2.5-flash` → *"no longer available to new users"*; `gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-1.5-pro` → 404. Ahora `gemini-3.8-flash` (default), `3.5-flash`, `3.5-flash-lite`, `3.7-flash`.
+- **OpenRouter**: `poolside/laguna-m.1` no existe y `nemotron-3-ultra-550b-a55b` (sin sufijo) **ya cobra** (0.0000006/0.0000024). Ahora solo variantes `:free`.
+- **Groq**: los 5 modelos de la lista no existen en la cuenta → 404. Ahora `qwen/qwen3.8-27b` (default) + `gpt-oss`.
+- **Mistral**: `mistral-large-latest` → *"not available in your subscription tier"*. Default movido a `open-mistral-nemo`.
+- `defaultModel` sincronizado con el primer `<option>` de cada desplegable en `index.html`.
+- `openai/gpt-oss-*` son reasoning: devuelven `content` vacío al gastar el `max_tokens` en `reasoning`, por eso no van como default.
+
+### Archivos modificados
+| Archivo | Cambio |
+|---------|--------|
+| `js/ai-chat.js` | `AI_KEY_PREFIXES`, `isAiKeyFormatValid()`, `tryDecryptDefaultKeys()` → `{keys, invalid}`, `saveAiApiKeys()` con `invalid`, `updateAiStatus()` con aviso, blobs de google y groq re-cifrados, listas de modelos de los 4 proveedores |
+| `index.html` | `<option>` de los 4 selectores de modelo sincronizados |
+| `AGENTS.md` | Sección de validación por proveedor + modelos verificados |
+| `docs/CHANGELOG.md`, `docs/mejoras-petrol.md` | Esta entrada |
+
+### Tests
+- 66 tests en verde. Verificado además en navegador real: contraseña incorrecta, contraseña correcta, clave del proveedor equivocado, persistencia tras F5.
+
+### Nota de entorno
+`node_modules` estaba vacío (Playwright no resoluble) y el suite fallaba con `exit -1`. Resuelto con `npm install`. Si vuelve a aparecer un crash raro del suite, comprobar el puerto 8080 y que `npm install` esté al día.
+
+---
+
 ## 2026-07-22 — Lupa search toggle + responsive
 
 ### Filtro de búsqueda con lupa (🔍)

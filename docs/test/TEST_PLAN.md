@@ -19,7 +19,7 @@ node docs/test/full_test.mjs
 ### Qué hace el script:
 - Inicia servidor HTTP en :8080 sirviendo desde la raíz del proyecto
 - Lanza Chromium headless
-- Ejecuta 41 tests contra HTTP + 7 contra file://
+- Ejecuta 59 tests contra HTTP + 7 contra file://
 - Cierra servidor y navegador automáticamente
 - Exit code 0 = todo OK, 1 = algún fallo
 
@@ -127,10 +127,11 @@ node docs/test/full_test.mjs
 | # | Acción | HTTP | file:// | Resultado esperado |
 |---|--------|------|---------|-------------------|
 | 12.1 | Recargar página | ✅ | — | Provincia seleccionada se restaura desde localStorage |
+| 12.2 | Toggle solo favoritos + F5 | ✅ | — | `STATE.showFavoritesOnly === true` se mantiene tras recargar |
 
 ## Resultados actuales
 
-**49 tests — 49 ✅ 0 ❌**
+**66 tests — 66 ✅ 0 ❌**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
@@ -148,31 +149,28 @@ node docs/test/full_test.mjs
 | Ambos | 2 ✅ | — |
 | Config | 2 ✅ | 1 ✅ |
 | Mapa | 2 ✅ | — |
-| Popup | 7 ✅ | — |
-| Persistencia | 1 ✅ | — |
-| Push Notifications | 10 ✅ | — |
-| **Total** | **41 ✅** | **7 ✅** |
-
-## 13. Push Notifications (NUEVO - Pendiente Integración en full_test.mjs)
-
-| # | Acción | HTTP | file:// | Resultado esperado |
-|---|--------|------|---------|-------------------|
-| 13.1 | Botón 🔔 visible | ✅ | ✅ | `#pushNotifBtn` visible en toolbar |
-| 13.2 | Suscripción | ✅ | — | Click 🔔 → localStorage tiene `push_subscription_key` |
-| 13.3 | Status indicator | ✅ | — | Cambia a "✓ Notificaciones activas" (verde) |
-| 13.4 | Config inputs | ✅ | — | `#checkInterval` + `#priceFallDays` visibles en Config tab |
-| 13.5 | Service Worker periódico | ✅ | — | `registration.periodicSync.getTags()` incluye 'check-favorite-prices' |
-
-**Notas**:
-- Tests 13.1-13.4 pueden automatizarse con Playwright
-- Test 13.5 requiere Android real o emulador (Periodic Background Sync API)
-- Para testing sin esperar X horas, ver [PUSH_NOTIFICATIONS_QUICK_START.md](./PUSH_NOTIFICATIONS_QUICK_START.md)
 | Geo | 1 ✅ | — |
 | Búsqueda | 1 ✅ | 1 ✅ |
 | Popup | 7 ✅ | — |
-| Persistencia | 1 ✅ | — |
+| Persistencia | 4 ✅ | — |
 | Push Notifications | 10 ✅ | — |
-| **Total** | **44 ✅** | **7 ✅** |
+| Helpers (norm/parsePrice/comparePrices) | 15 ✅ | — |
+| **Total** | **59 ✅** | **7 ✅** |
+
+## 13. Validación de claves IA (verificación manual asistida)
+
+No automatizado en `full_test.mjs` (requiere el módulo real de IA). Verificado con Playwright evaluando `js/ai-chat.js` en la página.
+
+| # | Acción | Resultado esperado |
+|---|--------|-------------------|
+| 13.1 | `tryDecryptDefaultKeys('roiroi')` | `{ keys, invalid: [] }` — 4/4 válidas |
+| 13.2 | `tryDecryptDefaultKeys('malaclave')` | `null` — "❌ Contraseña incorrecta", no persiste nada |
+| 13.3 | `tryDecryptDefaultKeys('roiroix')` | 3 válidas + `[openrouter]` en `invalid` (detección por proveedor) |
+| 13.4 | Clave `AQ.…` en `#iaKeyGoogle` | `❌ Formato de clave incorrecto para google (debe empezar por AIza)` |
+| 13.5 | Clave `sk-or-v1-…` en `#iaKeyGroq` | `❌ Formato de clave incorrecto para groq (debe empezar por gsk_)` |
+| 13.6 | Vaciar un campo de clave | No se persiste `""`; `loadAiApiKeys()` no lo contiene |
+| 13.7 | Cargar claves correctas + F5 | `✅ Claves cargadas desde almacenamiento`, botón "Volver a cargar" visible |
+| 13.8 | `defaultModel` vs primer `<option>` | Coinciden en los 4 proveedores |
 
 ## 14. Push Notifications
 
@@ -207,3 +205,5 @@ node docs/test/full_test.mjs
 | Comparación incorrecta de precios | `checkFavoritePrices()` comparaba `oldestPrice` vs `latestPrice` (ambos histórico) en vez de `currentPrice` vs `oldestPrice` | Ahora compara precio actual vs histórico |
 | Código muerto en `checkFavoritePrices()` | Variable `currentData` construida con fetch+parse HTML pero nunca usada | Eliminado bloque redundante |
 | `navigator.serviceWorker.controller` null | TypeError si SW no ha activado al suscribirse | Añadido null check en `push-notifications.js` |
+| Validación global de prefijos de clave IA | `tryDecryptDefaultKeys()` usaba una lista global (`['AIza','AQ.','gsk_','cMHt','sk-or-']`): una clave del proveedor equivocado pasaba como "contraseña correcta" y solo fallaba al enviar | `AI_KEY_PREFIXES` por proveedor + `isAiKeyFormatValid()`; devuelve `{ keys, invalid }` y no persiste las inválidas |
+| Modelos de IA obsoletos | 11 de 15 modelos devolvían 404 / no existían / eran de pago; los 4 chats fallaban | Listas resucitadas y verificadas contra las APIs reales (ver `docs/CHANGELOG.md` 2026-09-26) |

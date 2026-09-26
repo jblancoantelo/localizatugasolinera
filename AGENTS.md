@@ -105,7 +105,15 @@ En `controls.js`, `setActiveTab()` cierra automáticamente:
 4. Google Gemini (`google`)
 5. Chrome Built-in AI (`chrome-nano`)
 
-**API Keys**: cifradas en código fuente con XOR + base64. Se descargan al introducir la passphrase correcta en Config y pulsar "Cargar claves". Si ya hay claves cargadas aparece enlace "Volver a cargar".
+**API Keys**: cifradas en código fuente con XOR + base64 (contraseña de 6 chars, misma para las 4). Se descargan al introducir la passphrase correcta en Config y pulsar "Cargar claves". Si ya hay claves cargadas aparece enlace "Volver a cargar".
+
+**Validación de formato por proveedor** (`AI_KEY_PREFIXES` + `isAiKeyFormatValid()`):
+- Prefijos obligatorios: `google`→`AIza`, `groq`→`gsk_`, `mistral`→`cMHt`, `openrouter`→`sk-or-v1-`
+- `tryDecryptDefaultKeys()` devuelve `{ keys, invalid }`, o `null` si **ningún** descifrado tiene el prefijo de su proveedor (= contraseña incorrecta)
+- Las claves con formato incorrecto **no se persisten** en `localStorage` y el panel del proveedor muestra `❌ Formato de clave incorrecto para <provider>`
+- Motivo: una clave del proveedor equivocado solo fallaría al enviar la petición, sin avisar
+
+⚠️ **Los modelos de IA caducan con frecuencia**. Antes de tocar la lista, verificar contra la API real (`/models` de cada proveedor o una llamada de chat). Historial de retiradas: los 4 modelos de Google (`gemini-2.5-flash` "no longer available to new users", `gemini-2.0-flash`, `gemini-1.5-*`), `poolside/laguna-m.1` (no existe) y los 5 modelos de Groq (`llama-3.3-70b-versatile`, `llama-4-scout`, `llama-3.1-8b`, `mixtral-8x7b`, `gemma2-9b`) devolvían 404.
 
 **Contexto automático (`getAiContext()`)**:
 - Provincia + nº gasolineras cargadas
@@ -123,12 +131,16 @@ En `controls.js`, `setActiveTab()` cierra automáticamente:
 - Elimina ese mensaje y todos los posteriores del DOM
 - El usuario puede corregir y reenviar
 
-**Modelos por proveedor**:
-- Groq: `llama-3.3-70b-versatile`, `mixtral-8x7b-32768`, `gemma2-9b-it`
-- Mistral: `mistral-small-latest`, `mistral-large-latest`
-- OpenRouter: `nvidia/nemotron-3-ultra-550b-a55b`, `poolside/laguna-m.1` (solo gratuitos)
-- Google Gemini: `gemini-2.0-flash-lite`, `gemini-2.0-flash`, `gemini-1.5-flash`
+**Modelos por proveedor** (verificados contra las APIs el 2026-09-26):
+- Groq: `qwen/qwen3.8-27b` (default), `openai/gpt-oss-20b`, `openai/gpt-oss-120b`, `allam-2-7b`
+- Mistral: `open-mistral-nemo` (default), `ministral-8b-latest`, `codestral-latest`, `mistral-small-latest`, `mistral-medium-latest`
+- OpenRouter: `nvidia/nemotron-3-ultra-550b-a55b:free` (default), `nvidia/nemotron-3-super-120b-a12b:free`
+- Google Gemini: `gemini-3.8-flash` (default), `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.7-flash`
 - Chrome Built-in AI: session de IA nativa del navegador
+
+⚠️ `defaultModel` **debe coincidir con el primer `<option>`** de `#iaModel<Provider>` en `index.html` (si no, el modelo por defecto no existe en el desplegable).
+⚠️ Los modelos `openai/gpt-oss-*` de Groq son **reasoning**: pueden devolver `content` vacío porque gastan el `max_tokens` en `reasoning`. No usarlos como default.
+⚠️ `mistral-large-latest` responde *"not available in your subscription tier"*. El tier free da 429 (`Rate limit exceeded`) de forma intermitente.
 
 **UI**: cada proveedor tiene su propio panel (`.ia-provider-panel`) dentro de `.ia-providers-container`. Los tabs de proveedor están en `.ia-tabs` con botones `.ia-tab`.
 

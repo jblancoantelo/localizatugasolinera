@@ -17,8 +17,8 @@ const AI_PROVIDERS = {
   'mistral': {
     key: null,
     endpoint: 'https://api.mistral.ai/v1/chat/completions',
-    defaultModel: 'mistral-small-latest',
-    models: ['mistral-small-latest', 'mistral-medium-latest', 'mistral-large-latest', 'codestral-latest', 'open-mistral-nemo', 'ministral-8b-latest'],
+    defaultModel: 'open-mistral-nemo',
+    models: ['open-mistral-nemo', 'ministral-8b-latest', 'codestral-latest', 'mistral-small-latest', 'mistral-medium-latest'],
     async send(apiKey, model, messages, signal) {
       const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
         method: 'POST', headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
@@ -32,8 +32,8 @@ const AI_PROVIDERS = {
   'openrouter': {
     key: null,
     endpoint: 'https://openrouter.ai/api/v1/chat/completions',
-    defaultModel: 'nvidia/nemotron-3-ultra-550b-a55b',
-    models: ['nvidia/nemotron-3-ultra-550b-a55b', 'poolside/laguna-m.1'],
+    defaultModel: 'nvidia/nemotron-3-ultra-550b-a55b:free',
+    models: ['nvidia/nemotron-3-ultra-550b-a55b:free', 'nvidia/nemotron-3-super-120b-a12b:free'],
     async send(apiKey, model, messages, signal) {
       const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST', headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json', 'HTTP-Referer': location.origin, 'X-Title': 'Precios Gasolina España' },
@@ -47,8 +47,8 @@ const AI_PROVIDERS = {
   'google': {
     key: null,
     endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
-    defaultModel: 'gemini-2.5-flash',
-    models: ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'],
+    defaultModel: 'gemini-3.8-flash',
+    models: ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.7-flash'],
     async send(apiKey, model, messages, signal) {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const contents = messages.map(m => ({ parts: [{ text: m.content }] }));
@@ -82,11 +82,27 @@ const AI_PROVIDERS = {
 const AI_KEYS_KEY = 'gasolineras_ai_keys';
 
 const AI_ENCRYPTED_KEYS = {
-  'google': 'Mz5HMw1RICFfOxssCBkqOhgjFSAZPTc7ND4FHBhYIAkGN1oAAQstS1leOCkfRQFbJgg6CC4=',
+  'google': 'MyYTEzwQMDgxJ0JcJw4xEVwmICFeCAEcKl0+JSAvXwwKCwQBGlkk',
   'groq': 'FRwCLS0cBxkFKAEiICkuJV4ZRi4/GwkZJSgNCw1aNDYwORZfIyoiJj0sEV8cJAdYGBYfPwgYEwk=',
   'mistral': 'ESIhBl86GiVYPQMZPFkfC14RRDokHTsxIiYeHQQiPC4=',
   'openrouter': 'AQREHR1EBF5EFF4NEV4LSg1QRlxbEV9YQVkMR15QRAsKEF9eRVsKFAxQE1hQQQlZFA0LQVhQSl9RRwsKS1lfQlhZRFsNRVwIEw=='
 };
+
+// Prefijo obligatorio de la API key segun proveedor (evita guardar una clave
+// del proveedor equivocado, que solo fallaria al enviar la peticion)
+const AI_KEY_PREFIXES = {
+  'google': ['AIza'],
+  'groq': ['gsk_'],
+  'mistral': ['cMHt'],
+  'openrouter': ['sk-or-v1-']
+};
+
+function isAiKeyFormatValid(provider, key) {
+  const prefixes = AI_KEY_PREFIXES[provider];
+  if (!prefixes) return true;
+  if (!key) return false;
+  return prefixes.some(p => key.startsWith(p));
+}
 
 function xorDecryptBase64(enc, passphrase) {
   try {
@@ -99,15 +115,18 @@ function xorDecryptBase64(enc, passphrase) {
   } catch { return ''; }
 }
 
+// Devuelve { keys, invalid } si la contrasena es correcta, o null si es incorrecta.
+// Se considera incorrecta cuando NINGUN descifrado tiene el prefijo de su
+// proveedor: una contrasena valida puede fallar solo en un proveedor si ese
+// blob esta corrupto o contiene una clave de otro servicio.
 function tryDecryptDefaultKeys(passphrase) {
-  const result = {};
+  const keys = {};
   for (const [provider, enc] of Object.entries(AI_ENCRYPTED_KEYS)) {
-    result[provider] = xorDecryptBase64(enc, passphrase);
+    keys[provider] = xorDecryptBase64(enc, passphrase);
   }
-  // Validate: all decrypted keys should start with expected prefixes
-  const prefixes = ['AIza', 'AQ.', 'gsk_', 'cMHt', 'sk-or-'];
-  const allValid = Object.values(result).every(k => prefixes.some(p => k.startsWith(p)));
-  return allValid ? result : null;
+  const invalid = Object.keys(keys).filter(p => !isAiKeyFormatValid(p, keys[p]));
+  if (invalid.length === Object.keys(keys).length) return null;
+  return { keys, invalid };
 }
 
 function getProviderInputId(provider, prefix) {
@@ -122,10 +141,16 @@ function loadAiApiKeys() {
   } catch { return {}; }
 }
 
-function saveAiApiKeys(keys) {
-  localStorage.setItem(AI_KEYS_KEY, JSON.stringify(keys));
-  // Sync to AI_PROVIDERS and config inputs
+function saveAiApiKeys(keys, invalid = []) {
+  const stored = {};
   for (const [provider, k] of Object.entries(keys)) {
+    // No persistir claves vacias: dejarian la UI creyendo que hay claves cargadas
+    if (!k || invalid.includes(provider)) continue;
+    stored[provider] = k;
+  }
+  localStorage.setItem(AI_KEYS_KEY, JSON.stringify(stored));
+  // Sync to AI_PROVIDERS and config inputs
+  for (const [provider, k] of Object.entries(stored)) {
     if (AI_PROVIDERS[provider]) AI_PROVIDERS[provider].key = k;
     const cfgInput = document.getElementById(getProviderInputId(provider, 'iaKey'));
     if (cfgInput && cfgInput.value !== k) cfgInput.value = k;
@@ -215,17 +240,24 @@ function handleLoadDefaultKeys() {
     if (passStatus) passStatus.textContent = '❌ Contraseña incorrecta';
     return;
   }
-  for (const [provider, k] of Object.entries(decrypted)) {
+  const { keys, invalid } = decrypted;
+  for (const [provider, k] of Object.entries(keys)) {
+    if (invalid.includes(provider)) continue;
     AI_PROVIDERS[provider].key = k;
     const cfgInput = document.getElementById(getProviderInputId(provider, 'iaKey'));
     if (cfgInput) cfgInput.value = k;
+    updateAiStatus(provider);
   }
-  saveAiApiKeys(decrypted);
+  saveAiApiKeys(keys, invalid);
   if (passInput) passInput.value = '';
   if (passInput) passInput.style.display = 'none';
   if (passBtn) passBtn.style.display = 'none';
   if (reloadBtn) reloadBtn.style.display = 'inline';
-  if (passStatus) passStatus.textContent = '✅ Claves cargadas correctamente';
+  if (passStatus) {
+    passStatus.textContent = invalid.length
+      ? '⚠️ ' + invalid.length + ' clave(s) con formato incorrecto (' + invalid.join(', ') + '). Introdúcelas a mano en sus campos.'
+      : '✅ Claves cargadas correctamente';
+  }
 }
 
 function initAiChat() {
@@ -493,6 +525,12 @@ function updateAiStatus(provider, override) {
     return;
   }
   const cfgInput = document.getElementById(getProviderInputId(provider, 'iaKey'));
-  const hasKey = cfgInput ? !!cfgInput.value : !!config.key;
-  el.textContent = hasKey ? '✅ API Key configurada' : '⚠️ Sin API Key — ve a Config → IA';
+  const key = cfgInput && cfgInput.value ? cfgInput.value : (config.key || '');
+  if (!key) {
+    el.textContent = '⚠️ Sin API Key — ve a Config → IA';
+  } else if (!isAiKeyFormatValid(provider, key)) {
+    el.textContent = '❌ Formato de clave incorrecto para ' + provider + ' (debe empezar por ' + AI_KEY_PREFIXES[provider][0] + ')';
+  } else {
+    el.textContent = '✅ API Key configurada';
+  }
 }
