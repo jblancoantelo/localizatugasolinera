@@ -2,8 +2,8 @@ const AI_PROVIDERS = {
   'groq': {
     key: null,
     endpoint: 'https://api.groq.com/openai/v1/chat/completions',
-    defaultModel: 'llama-3.3-70b-versatile',
-    models: ['llama-3.3-70b-versatile', 'llama-4-scout-17b-16e-instruct', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma2-9b-it'],
+    defaultModel: 'qwen/qwen3.8-27b',
+    models: ['qwen/qwen3.8-27b', 'openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'allam-2-7b'],
     async send(apiKey, model, messages, signal) {
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST', headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
@@ -83,7 +83,7 @@ const AI_KEYS_KEY = 'gasolineras_ai_keys';
 
 const AI_ENCRYPTED_KEYS = {
   'google': 'Mz5HMw1RICFfOxssCBkqOhgjFSAZPTc7ND4FHBhYIAkGN1oAAQstS1leOCkfRQFbJgg6CC4=',
-  'groq': 'FRwCLQRdH1xZFlw8HwoQKBpdB1daIz4eJSgNCw1aNDZaHiIIQDssFl4YGVgBQyQbA1cNCgkBMzw=',
+  'groq': 'FRwCLS0cBxkFKAEiICkuJV4ZRi4/GwkZJSgNCw1aNDYwORZfIyoiJj0sEV8cJAdYGBYfPwgYEwk=',
   'mistral': 'ESIhBl86GiVYPQMZPFkfC14RRDokHTsxIiYeHQQiPC4=',
   'openrouter': 'AQREHR1EBF5EFF4NEV4LSg1QRlxbEV9YQVkMR15QRAsKEF9eRVsKFAxQE1hQQQlZFA0LQVhQSl9RRwsKS1lfQlhZRFsNRVwIEw=='
 };
