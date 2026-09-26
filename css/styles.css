@@ -43,7 +43,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 .filter-group .btn-primary { background: #1a73e8; color: #fff; border-color: #1a73e8; }
 .filter-group .btn-primary:hover { background: #1557b0; }
 .filter-group .btn-primary.locating { background: #1557b0; }
-.filter-group .btn-active { background: #fff8e1; color: #f9a825; border-color: #f9a825; }
+.filter-group .btn-active, .filter-group .btn.active { background: #fff8e1; color: #f9a825; border-color: #f9a825; }
 
 .search-row {
   padding: 0.2rem 0.5rem 0.3rem;

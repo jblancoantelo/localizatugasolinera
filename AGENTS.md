@@ -65,6 +65,13 @@ if (saved.activeTab) setActiveTab(saved.activeTab);
 
 **Regla general**: cada propiedad guardada en `saveState()` (storage.js) debe tener su restauración correspondiente en `loadState()` (`main.js`). Las que no necesitan restauración en `loadState` se restauran desde `loadProvinceFilters` dentro de `fetchProvinceData()`.
 
+#### Flag `STATE.booting` — segunda barrera
+
+- `STATE.booting` arranca en `true` (`state.js`) y `saveProvinceFilters()` hace `if (!prov || STATE.booting) return;`
+- Motivo: el microtask de `saveState()` se dispara en el arranque (vía `setActiveTab()`) y escribía `gasolineras_prov_filters_{prov}` con valores por defecto **antes** de que `loadProvinceFilters()` los leyera. Perdía `showFavoritesOnly`, `selectedBrands` y `search`
+- Se pone a `false` en dos sitios de `api.js`: tras restaurar los filtros en `fetchProvinceData()` y en el `catch` de `fetchProvinces()` (para no dejarlo colgado si falla la red)
+- **Al añadir una llamada a `saveState()` durante el arranque, restaurar el flag si hace falta**: restaurarla en `loadState()` sigue siendo obligatorio (defensa en profundidad), pero el flag protege el resto de filtros sin tocar `main.js`
+
 ### setActiveTab — cierre de paneles
 En `controls.js`, `setActiveTab()` cierra automáticamente:
 - `#detailPanel` al salir de `tab-table` o `tab-both`
@@ -159,7 +166,7 @@ Orden actual de grupos:
 ### Tests
 - Ubicación: `docs/test/full_test.mjs`
 - Plan: `docs/test/TEST_PLAN.md`
-- 63 tests totales (56 HTTP + 7 file://)
+- 66 tests totales (59 HTTP + 7 file://)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)
 - Push notifications tests (14.1-14.10) integrados en full_test.mjs

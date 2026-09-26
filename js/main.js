@@ -204,6 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (saved.sortCol) STATE.sortCol = saved.sortCol;
     if (saved.sortDir) STATE.sortDir = saved.sortDir;
     if (saved.selectedProv) STATE.selectedProv = saved.selectedProv;
+    if (saved.showFavoritesOnly !== undefined) STATE.showFavoritesOnly = !!saved.showFavoritesOnly;
     if (saved.activeTab) setActiveTab(saved.activeTab);
     if (saved.selectedTile) { document.getElementById('mapStyle').value = saved.selectedTile; setTileLayer(saved.selectedTile); }
     if (saved.mapCenter && saved.mapZoom) {

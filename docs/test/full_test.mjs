@@ -348,6 +348,27 @@ async function testHTTP(browser, server) {
   const provRestored = reloadedProv === firstProv;
   log('Persistencia', `Provincia restaurada tras F5: "${reloadedProv}"`, provRestored);
 
+  // --- Persistencia filtro "solo favoritos" tras F5 ---
+  await page.locator('#favToggleBtn').click();
+  await sleep(800);
+  const favOn = await page.evaluate(() => typeof STATE !== 'undefined' && STATE.showFavoritesOnly === true);
+  log('Persistencia', 'Toggle solo favoritos se activa', favOn);
+  const favSaved = await page.evaluate(() => {
+    const raw = localStorage.getItem('gasolineras_prov_filters_' + STATE.selectedProv);
+    if (!raw) return false;
+    return JSON.parse(raw).showFavoritesOnly === true;
+  });
+  log('Persistencia', 'showFavoritesOnly guardado en filtros de provincia', favSaved);
+
+  await page.reload({ waitUntil: 'networkidle', timeout: 30000 });
+  await sleep(3000);
+  const favRestored = await page.evaluate(() => typeof STATE !== 'undefined' && STATE.showFavoritesOnly === true);
+  log('Persistencia', 'Solo favoritos se mantiene tras F5', favRestored);
+  if (favRestored) {
+    await page.locator('#favToggleBtn').click();
+    await sleep(500);
+  }
+
   // --- Push Notifications ---
   const PUSH_SUB_KEY = 'gasolineras_push_subscription';
 

@@ -116,6 +116,7 @@ async function fetchProvinces() {
     tryAutoRestoreProvince();
   } catch (e) {
     document.getElementById('infoText').textContent = 'Error al cargar provincias: ' + e.message;
+    STATE.booting = false;
   }
   try { await dbDelete('main_cache'); } catch(e) {}
 }
@@ -193,6 +194,7 @@ async function fetchProvinceData(provinceName) {
     document.getElementById('fuelFilter').value = '';
     document.getElementById('locFilter').value = '';
   }
+  STATE.booting = false;
 
   const savedGlobal = loadState();
   if (savedGlobal) {

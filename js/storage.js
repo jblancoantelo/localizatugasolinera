@@ -106,7 +106,7 @@ function loadProvinceFilters(prov) {
 }
 
 function saveProvinceFilters(prov) {
-  if (!prov) return;
+  if (!prov || STATE.booting) return;
   try {
     const filters = {
       search: document.getElementById('search').value,
