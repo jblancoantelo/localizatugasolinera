@@ -1,0 +1,17 @@
+# Worker del proxy de NVIDIA (ver nvidia-proxy.js para el porqué).
+#
+#   npm i -g wrangler
+#   wrangler secret put NVIDIA_API_KEY     # la clave nvapi-... nunca sale del Worker
+#   wrangler deploy
+#
+# name: nombre único del Worker. La URL que imprime (https://<name>.workers.dev)
+# es la que se pega en la app: Config -> IA -> "NVIDIA (vía proxy)".
+name = "petrol-nvidia-proxy"
+main = "nvidia-proxy.js"
+compatibility_date = "2026-09-27"
+
+# Opcional: restringe qué orígenes pueden usar el proxy. Sin comentarlo
+# responde Access-Control-Allow-Origin: * (necesario si la app se abre desde
+# file://, desde localhost o desde cualquier hosting).
+# [vars]
+# ALLOWED_ORIGIN = "https://tu-dominio.pages.dev"

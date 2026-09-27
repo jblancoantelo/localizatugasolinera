@@ -1,5 +1,30 @@
 # Mejoras realizadas — Precios Gasolina España
 
+## 2026-09-27 — NVIDIA NIM vía Cloudflare Worker + histórico detallado en el chat IA
+
+### NVIDIA con proxy propio
+- `workers/nvidia-proxy.js` (nuevo): solo reenvía `POST /v1/chat/completions` y `GET /v1/models`, responde al preflight con 204 y propaga los errores de NVIDIA (401/404/429) para que la app distinga cuota de modelo retirado. La clave viaja como secreto `NVIDIA_API_KEY`; el navegador no la ve.
+- `workers/wrangler.toml` (nuevo): nombre del Worker y `ALLOWED_ORIGIN` opcional (sin él responde `*`, necesario si la app se abre desde `file://`, `localhost` o cualquier hosting).
+- `AI_PROVIDERS.nvidia`: `viaProxy: true` con rutas **relativas** (`/v1/chat/completions`, `/v1/models`) resueltas por `aiProviderUrl()` contra la URL guardada en `gasolineras_ai_nvidia_proxy`.
+- `isAiProviderReady('nvidia')` depende de la URL, no de una clave: sin proxy el chat avisa y `refreshAiModels()` no llama a nada.
+- Config → IA: campo `iaProxyNvidia`; al cambiarlo se normaliza (`https://` añadido, barra final quitada) y se invalida el catálogo cacheado.
+- 7 modelos de chat verificados: Nemotron 3 Ultra 550B (default), Nemotron 3 Super, Nemotron 3.5 Lightning, `moonshotai/kimi-k3`, `z-ai/glm-5.3`, `z-ai/glm-5.3-flash`, `openai/gpt-oss-20b`. `max_tokens: 2048` porque varios son *reasoning*.
+
+### El modelo ya puede consultar el histórico de las gasolineras
+- `wantsStationHistory()` decide si se descarga el histórico: `true` si la pregunta usa palabras clave (`AI_HISTORY_WORDS`: historial, evolución, tendencia, antes, subida, mínimo, gráfica, cuándo…) **o** si nombra la marca de alguna estación cargada. Con `false` no se lanza ninguna petición.
+- `buildAiHistoryLines()` genera la sección `=== HISTÓRICO DE PRECIOS` con:
+  - periodo real disponible y el aviso de que un día sin precio no significa precio constante,
+  - **provincia**: media/mín/máx/nº de estaciones y la más barata de las últimas 10 jornadas, tendencia en €/L y % y el mínimo histórico provincial,
+  - **por gasolinera** (máx. 12, empezando por las nombradas en la pregunta, luego favoritos y las más baratas): `[IDEESS] marca | localidad | dirección`, serie de hasta 10 precios con fecha y resumen con precio actual, mín/máx con su fecha, media, variación en €/L y % y nº de días con precio,
+  - **mayores subidas y bajadas** del periodo con `📈`/`📉`.
+- `AI_CONTEXT_INSTRUCTION` y el `Top 30` incluyen ahora el `IDEESS`, para que la IA pueda citar la estación concreta.
+- `fmtEur()` formatea a 3 decimales con coma (precios y porcentajes).
+
+### Tests
+- 139 tests (132 HTTP + 7 file://) en verde. Nuevos: proxy de NVIDIA (normalización de URL, ausencia de clave en el navegador, envío y catálogo vía proxy, 404 propagado, invalidación al cambiar la URL) y contexto histórico (serie con fecha, mín/máx/media/variación, favoritos incluidos, subidas y bajadas, y que sin palabras clave no se pida histórico).
+
+---
+
 ## 2026-09-27 — Chat IA: LLM7.io integrado + auto-refresh del catálogo de modelos
 
 ### Criterio: CORS medido en navegador real, no con `curl`
@@ -8,16 +33,33 @@ navegador acepta su preflight. Se comprobó con Chromium (preflight `OPTIONS` +
 petición real con `Origin`) y **el Service Worker se descartó como causa**:
 registrando y desregistrando el SW el resultado fue idéntico.
 
-### Descartados por CORS (el navegador rechaza el preflight)
+### Descartados por CORS en llamada directa (el navegador rechaza el preflight)
 | Proveedor | Endpoint | Preflight |
 |-----------|----------|-----------|
-| NVIDIA NIM | `integrate.api.nvidia.com/v1` | sin `access-control-allow-origin` |
+| NVIDIA NIM | `integrate.api.nvidia.com/v1` | sin `access-control-allow-origin` → **resuelto con Worker** (ver más abajo) |
 | Cerebras | `api.cerebras.ai/v1` | sin CORS |
 | Chutes | `llm.chutes.ai/v1` | sin CORS |
 | Z.ai (Zhipu) | `api.z.ai/api/paas/v4` | sin CORS |
 | SambaNova | `api.sambanova.ai/v1` | `allow-origin: null` |
 | Cloudflare Workers AI | `api.cloudflare.com/client/v4/.../ai/run` | sin CORS |
 | Pollinations | `text.pollinations.ai/openai` | responde, pero Turnstile en el navegador |
+
+### NVIDIA NIM: viable con proxy propio
+Su gateway solo devuelve `Access-Control-Allow-Origin` para el origen
+`https://build.nvidia.com`, así que la llamada directa desde la app es
+imposible (comprobado con `OPTIONS` y en Chromium real). Como la app no tiene
+backend, la solución es un Cloudflare Worker (`workers/nvidia-proxy.js`):
+
+| Pieza | Dónde | Contenido |
+|-------|-------|-----------|
+| Worker | `workers/nvidia-proxy.js` | reenvía solo `/v1/chat/completions` y `/v1/models` con el secreto `NVIDIA_API_KEY`; el navegador nunca ve la clave |
+| Config | `wrangler.toml` | nombre del Worker; `ALLOWED_ORIGIN` opcional para limitar qué orígenes lo usan |
+| App | `AI_PROVIDERS.nvidia` | `viaProxy: true` + rutas relativas; la URL se guarda en `gasolineras_ai_nvidia_proxy` y se pide en Config → IA |
+
+Despliegue: `wrangler secret put NVIDIA_API_KEY` y `wrangler deploy`. La clave
+nunca se escribe en el repo. Catálogo verificado (82 modelos), 7 de chat
+verificados: Nemotron 3 Ultra/Super/3.5 Lightning, `moonshotai/kimi-k3`,
+`z-ai/glm-5.3`, `z-ai/glm-5.3-flash`, `openai/gpt-oss-20b`.
 
 ### Viable sin backend
 | Proveedor | Endpoint | Clave | Notas |

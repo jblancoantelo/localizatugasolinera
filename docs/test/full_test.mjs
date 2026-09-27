@@ -555,9 +555,7 @@ async function testAiChat(page) {
     keyOptional: AI_PROVIDERS.llm7.keyOptional === true,
     anon: AI_PROVIDERS.llm7.anonymousKey,
     listModelsNoAuth: AI_PROVIDERS.llm7.listModelsNoAuth === true,
-    conProxy: Object.values(AI_PROVIDERS).some(p => p.viaProxy),
-    helpersProxy: [typeof getAiProxyUrl, typeof setAiProxyUrl, typeof aiProviderUrl, typeof normalizeAiProxyUrl].join(','),
-    sinCampoProxy: !document.querySelector('[id^="iaProxy"]')
+    llm7Proxy: !!AI_PROVIDERS.llm7.viaProxy
   }));
   log('IA', 'LLM7 llama directo a api.llm7.io (NVIDIA/Cerebras/Chutes/Z.ai lo bloquean: sin CORS)',
     directo.endpoint === 'https://api.llm7.io/v1/chat/completions' && directo.listModels === 'https://api.llm7.io/v1/models',
@@ -568,13 +566,66 @@ async function testAiChat(page) {
     directo.listModelsNoAuth === true, String(directo.listModelsNoAuth));
   log('IA', 'La cabecera Authorization solo se omite en el listado de LLM7',
     await page.evaluate(() => {
-      const c = { listModelsUrl: 'x', listModelsNoAuth: AI_PROVIDERS.llm7.listModelsNoAuth };
       const manda = (conf, p) => p !== 'google' && !conf.listModelsNoAuth;
-      return manda(c, 'llm7') === false && manda({}, 'groq') === true && manda({}, 'mistral') === true
+      return manda({ listModelsNoAuth: AI_PROVIDERS.llm7.listModelsNoAuth }, 'llm7') === false
+          && manda({}, 'groq') === true && manda({}, 'mistral') === true
           && manda({}, 'openrouter') === true && manda({}, 'google') === false;
     }));
-  log('IA', 'Ya no queda andamiaje de proxy en la app',
-    directo.conProxy === false && directo.sinCampoProxy && /undefined/.test(directo.helpersProxy), directo.helpersProxy);
+  log('IA', 'Ningún proveedor con clave usa proxy: solo NVIDIA', directo.llm7Proxy === false, String(directo.llm7Proxy));
+
+  // --- NVIDIA: único proveedor vía proxy, porque su gateway no da CORS ---
+  // Comprobado con OPTIONS + Chromium: desde la app la llamada directa muere
+  // con "No 'Access-Control-Allow-Origin' header" (solo vale build.nvidia.com).
+  const nvidiaEls = await page.evaluate(() => ['iaModelNvidia', 'iaProxyNvidia', 'iaInputNvidia', 'iaSendNvidia', 'iaMessagesNvidia', 'iaStatusNvidia', 'iaRefreshModelsNvidia', 'iaModelsStatusNvidia']
+    .every(id => !!document.getElementById(id))
+    && document.querySelectorAll('.ia-provider-tab[data-iaprovider="nvidia"]').length === 1
+    && document.querySelectorAll('.ia-provider-panel[data-iapanel="nvidia"]').length === 1);
+  log('IA', 'NVIDIA: tab + panel + los 8 ids de elementos existen', nvidiaEls);
+
+  const viaProxy = await page.evaluate(() => ({
+    flag: AI_PROVIDERS.nvidia.viaProxy === true,
+    soloNVIDIA: Object.keys(AI_PROVIDERS).filter(p => AI_PROVIDERS[p].viaProxy).join(','),
+    endpointRelativo: AI_PROVIDERS.nvidia.endpoint === '/v1/chat/completions',
+    listRelativo: AI_PROVIDERS.nvidia.listModelsUrl === '/v1/models',
+    sinCampoClave: !document.getElementById('iaKeyNvidia'),
+    niEnPrefijos: !AI_KEY_PREFIXES.nvidia,
+    niCifrada: !AI_ENCRYPTED_KEYS.nvidia
+  }));
+  log('IA', 'NVIDIA es el único viaProxy, con rutas relativas al Worker',
+    viaProxy.flag && viaProxy.soloNVIDIA === 'nvidia' && viaProxy.endpointRelativo && viaProxy.listRelativo,
+    viaProxy.soloNVIDIA);
+  log('IA', 'NVIDIA no tiene API Key en el navegador (ni campo, ni prefijo, ni blob cifrado)',
+    viaProxy.sinCampoClave && viaProxy.niEnPrefijos && viaProxy.niCifrada, JSON.stringify(viaProxy));
+
+  const normalizeOk = await page.evaluate(() => {
+    setAiProxyUrl('nvidia', '  petrol-nv.workers.dev/  ');
+    const a = getAiProxyUrl('nvidia');
+    const b = aiProviderUrl('nvidia', '/v1/models');
+    setAiProxyUrl('nvidia', '');
+    let error = 'sin error';
+    try { aiProviderUrl('nvidia', '/v1/models'); } catch (e) { error = e.message; }
+    return { a, b, error, listo: isAiProviderReady('nvidia'), msg: aiProviderNotReadyMessage('nvidia') };
+  });
+  log('IA', 'normalizeAiProxyUrl() añade https:// y quita la barra final',
+    normalizeOk.a === 'https://petrol-nv.workers.dev' && normalizeOk.b === 'https://petrol-nv.workers.dev/v1/models',
+    normalizeOk.a + ' -> ' + normalizeOk.b);
+  log('IA', 'Sin URL de proxy NVIDIA no está listo y el aviso lo dice',
+    normalizeOk.listo === false && /proxy/i.test(normalizeOk.msg) && /Config/.test(normalizeOk.error), normalizeOk.msg);
+
+  const statusProxy = await page.evaluate(() => {
+    const el = document.getElementById('iaStatusNvidia');
+    updateAiStatus('nvidia');
+    const sin = el.textContent;
+    setAiProxyUrl('nvidia', 'https://petrol-nv.workers.dev');
+    updateAiStatus('nvidia');
+    const con = el.textContent;
+    setAiProxyUrl('nvidia', '');
+    return { sin, con };
+  });
+  log('IA', 'El estado del panel NVIDIA refleja si hay proxy',
+    /Sin proxy/.test(statusProxy.sin) && /Proxy configurado/.test(statusProxy.con),
+    statusProxy.sin + ' | ' + statusProxy.con);
+
 
   // --- aiApiKey(): cae al literal anónimo si el campo está vacío ---
   const keyAnon = await page.evaluate(() => {
@@ -643,15 +694,18 @@ async function testAiChat(page) {
     }
     return bad;
   });
-  log('IA', 'defaultModel == primer <option> en los 5 proveedores', defaultsOk.length === 0, defaultsOk.join(' | '));
+  log('IA', 'defaultModel == primer <option> en los 6 proveedores', defaultsOk.length === 0, defaultsOk.join(' | '));
 
   // --- Todo proveedor con clave obligatoria tiene prefijo declarado ---
   const prefixesOk = await page.evaluate(() => {
     const declarados = Object.keys(AI_KEY_PREFIXES);
     const noRechazados = declarados.filter(p => isAiKeyFormatValid(p, 'clave-inventada-123'));
-    const conClave = Object.keys(AI_PROVIDERS).filter(p => p !== 'chrome-nano' && !AI_PROVIDERS[p].keyOptional);
+    // Ni los que accede en anónimo (llm7) ni los que usan proxy (nvidia) manejan
+    // una clave en el navegador: a ninguno se le exige prefijo.
+    const conClave = Object.keys(AI_PROVIDERS).filter(p => p !== 'chrome-nano'
+      && !AI_PROVIDERS[p].keyOptional && !AI_PROVIDERS[p].viaProxy);
     const sinPrefijo = conClave.filter(p => !AI_KEY_PREFIXES[p]);
-    const opcionalConPrefijo = Object.keys(AI_PROVIDERS).filter(p => AI_PROVIDERS[p].keyOptional && AI_KEY_PREFIXES[p]);
+    const opcionalConPrefijo = Object.keys(AI_PROVIDERS).filter(p => (AI_PROVIDERS[p].keyOptional || AI_PROVIDERS[p].viaProxy) && AI_KEY_PREFIXES[p]);
     return { total: declarados.length, noRechazados, sinPrefijo, opcionalConPrefijo, conClave: conClave.length };
   });
   log('IA', 'isAiKeyFormatValid() rechaza la clave inventada en los 4 proveedores con clave',
@@ -659,8 +713,9 @@ async function testAiChat(page) {
     'no rechazados: ' + prefixesOk.noRechazados.join(','));
   log('IA', 'Todo proveedor con clave obligatoria tiene prefijo declarado',
     prefixesOk.sinPrefijo.length === 0, prefixesOk.sinPrefijo.join(','));
-  log('IA', 'El proveedor con clave opcional (llm7) no declara prefijo',
+  log('IA', 'Los proveedores sin clave en el navegador (llm7, nvidia) no declaran prefijo',
     prefixesOk.opcionalConPrefijo.length === 0 && prefixesOk.conClave === 4, prefixesOk.opcionalConPrefijo.join(','));
+
 
   // --- Descifrado: roundtrip con una contraseña de prueba (no se expone la real) ---
   const decryptOk = await page.evaluate(() => {
@@ -982,16 +1037,194 @@ async function testAiChat(page) {
   log('IA', 'Un 404 de modelo se propaga como error (dispara el aviso de "elige otro")',
     /model not found/.test(sendReasoning.err) && sendReasoning.errEsDeModelo, sendReasoning.err.slice(0, 60));
 
+  // --- NVIDIA: el envío va al proxy y NUNCA directo a integrate.api.nvidia.com ---
+  // Directo moriría con "No 'Access-Control-Allow-Origin' header": el gateway de
+  // NVIDIA solo da CORS al origen build.nvidia.com.
+  await page.evaluate(() => {
+    setAiProxyUrl('nvidia', 'https://petrol-nv.workers.dev');
+    window.__proxyCalls = [];
+    window.__proxyMock = { status: 200, body: { choices: [{ message: { content: 'Madrid' } }] } };
+    const real = window.__realFetch;
+    window.fetch = async (input, opts) => {
+      const u = typeof input === 'string' ? input : (input && input.url) || '';
+      if (!u.includes('workers.dev')) return real(input, opts);
+      window.__proxyCalls.push({ url: u, headers: (opts && opts.headers) || {}, body: (opts && opts.body) || '' });
+      return new Response(JSON.stringify(window.__proxyMock.body), { status: window.__proxyMock.status, headers: { 'Content-Type': 'application/json' } });
+    };
+  });
+  const sendProxy = await page.evaluate(async () => {
+    const r = await AI_PROVIDERS.nvidia.send(aiApiKey('nvidia'), 'nvidia/nemotron-3-ultra-550b-a55b', [{ role: 'user', content: 'hola' }]);
+    const c = window.__proxyCalls[0] || {};
+    return {
+      texto: r, url: c.url, cabeceras: Object.keys(c.headers || {}),
+      modelo: JSON.parse(c.body || '{}').model,
+      maxTokens: JSON.parse(c.body || '{}').max_tokens
+    };
+  });
+  log('IA', 'NVIDIA envía al proxy configurado, no a integrate.api.nvidia.com',
+    sendProxy.url === 'https://petrol-nv.workers.dev/v1/chat/completions', sendProxy.url);
+  log('IA', 'La petición al proxy no lleva API Key (la añade el Worker con su secreto)',
+    !sendProxy.cabeceras.includes('Authorization'), sendProxy.cabeceras.join(','));
+  log('IA', 'NVIDIA sube max_tokens a 2048 (sus modelos razonan antes de contestar)',
+    sendProxy.maxTokens === 2048 && sendProxy.modelo === 'nvidia/nemotron-3-ultra-550b-a55b', 'max_tokens=' + sendProxy.maxTokens);
+  log('IA', 'La respuesta del proxy se pinta en el chat', sendProxy.texto === 'Madrid', sendProxy.texto);
+
+  const sendProxyErr = await page.evaluate(async () => {
+    window.__proxyMock.body = { choices: [{ message: { content: '', reasoning_content: 'pienso...' }, finish_reason: 'length' }] };
+    const vacio = await AI_PROVIDERS.nvidia.send(null, 'z-ai/glm-5.3-flash', [{ role: 'user', content: 'hola' }]);
+    window.__proxyMock.status = 404;
+    window.__proxyMock.body = { detail: "Function 'abc': Not found for account" };
+    let err = '', esDeModelo = false;
+    try { await AI_PROVIDERS.nvidia.send(null, 'nvidia/nemotron-4-340b-instruct', [{ role: 'user', content: 'hola' }]); }
+    catch (e) { err = e.message; esDeModelo = AI_MODEL_ERROR_RE.test(e.message); }
+    return { vacio, err, esDeModelo };
+  });
+  log('IA', 'NVIDIA: si el modelo solo razona y se queda sin tokens, avisa en vez de quedar en blanco',
+    /se pasó el tiempo pensando/.test(sendProxyErr.vacio), sendProxyErr.vacio.slice(0, 60));
+  log('IA', 'NVIDIA: un 404 del proxy (modelo no desplegado) dispara el aviso de "elige otro"',
+    /Not found for account/.test(sendProxyErr.err) && sendProxyErr.esDeModelo, sendProxyErr.err.slice(0, 60));
+
+  // --- Catálogo de NVIDIA vía proxy: se pide al Worker y sin Authorization ---
+  await page.evaluate(() => {
+    window.__proxyMock = { status: 200, body: { data: [{ id: 'nvidia/nemotron-3-ultra-550b-a55b' }, { id: 'moonshotai/kimi-k3' }, { id: 'nvidia/nemotron-3-embed-1b' }, { id: 'deepseek-ai/deepseek-v4.1-flash' }] } };
+    window.__proxyCalls = [];
+    invalidateAiModelsCache('nvidia');
+  });
+  const catalogo = await page.evaluate(async () => {
+    const r = await refreshAiModels('nvidia', { force: true });
+    const c = window.__proxyCalls[0] || {};
+    return {
+      ok: r.ok, models: r.models || [], url: c.url, cabeceras: Object.keys(c.headers || {}),
+      status: document.getElementById('iaModelsStatusNvidia').textContent,
+      opciones: document.getElementById('iaModelNvidia').options.length
+    };
+  });
+  log('IA', 'El catálogo de NVIDIA se pide al proxy (filtra 1 embedding de 4)',
+    catalogo.ok && catalogo.models.length === 3, JSON.stringify(catalogo.models));
+  log('IA', 'Al proxy no se le manda Authorization ni al listar ni al chatear',
+    !catalogo.cabeceras.includes('Authorization'), catalogo.cabeceras.join(','));
+  log('IA', 'El desplegable de NVIDIA une proxy + lista fija (7 → 8)',
+    catalogo.url === 'https://petrol-nv.workers.dev/v1/models' && catalogo.opciones === 8,
+    catalogo.url + ' | ' + catalogo.opciones + ' opciones');
+
+  // --- Cambiar la URL del proxy invalida el catálogo (detrás hay otra cuenta) ---
+  const cambioProxy = await page.evaluate(async () => {
+    const antes = { cacheado: !!loadAiModelsCache().nvidia, url: getAiProxyUrl('nvidia') };
+    const input = document.getElementById('iaProxyNvidia');
+    input.value = 'otro-worker.workers.dev/';
+    input.dispatchEvent(new Event('change'));
+    return { antes, justoDespues: !!loadAiModelsCache().nvidia, guardado: localStorage.getItem(AI_PROXY_KEY), enElInput: input.value };
+  });
+  log('IA', 'Al cambiar la URL del proxy se borra el catálogo anterior',
+    cambioProxy.antes.cacheado && cambioProxy.justoDespues === false, JSON.stringify(cambioProxy.antes));
+  log('IA', 'La URL del proxy se persiste normalizada en localStorage y en el input',
+    cambioProxy.guardado === 'https://otro-worker.workers.dev' && cambioProxy.enElInput === 'https://otro-worker.workers.dev',
+    cambioProxy.guardado);
+
+  // --- Sin URL de proxy no se intenta nada ---
+  const sinProxy = await page.evaluate(async () => {
+    setAiProxyUrl('nvidia', '');
+    window.__proxyCalls = [];
+    const r = await refreshAiModels('nvidia', { force: true });
+    return { reason: r.reason, llamadas: window.__proxyCalls.length, listo: isAiProviderReady('nvidia') };
+  });
+  log('IA', 'Sin URL de proxy no se llama al Worker', sinProxy.reason === 'nokey' && sinProxy.llamadas === 0 && !sinProxy.listo, sinProxy.reason);
+
+  // --- Contexto histórico que recibe el modelo ---
+  // Objetivo: que la IA pueda responder "¿cómo evolucionó el precio en X?" con
+  // serie de precios + fecha, mínimo, máximo y variación, sin inventarse nada.
+  const histCtx = await page.evaluate(async () => {
+    const stations = [
+      { IDEESS: 1001, 'Rótulo': 'Repsol', Localidad: 'Madrid', 'Dirección': 'Calle Mayor 1', 'Precio Gasolina 95 E5': '1,455' },
+      { IDEESS: 1002, 'Rótulo': 'Cepsa', Localidad: 'Getafe', 'Dirección': 'Av. del Sol 2', 'Precio Gasolina 95 E5': '1,600' },
+      { IDEESS: 1003, 'Rótulo': 'Galp', Localidad: 'Alcalá', 'Dirección': 'Ctra. M-2 3', 'Precio Gasolina 95 E5': '1,520' }
+    ];
+    // El histórico se pide para las fechas reales de los últimos días: aquí se
+    // genera una serie por fecha, con Repsol bajando 0,005 €/L por día y Cepsa
+    // subiendo 0,010 (para que haya subidas y bajadas en el mismo periodo).
+    const precio = (fecha, ideess) => {
+      const dia = Number(fecha.slice(0, 2));
+      const base = { 1001: 1.512, 1002: 1.650, 1003: 1.530 }[ideess];
+      const paso = { 1001: -0.005, 1002: 0.010, 1003: -0.002 }[ideess];
+      return (base + paso * (dia - 13)).toFixed(3).replace('.', ',');
+    };
+    const snap = fecha => stations.map(s => ({ ...s, 'Precio Gasolina 95 E5': precio(fecha, s.IDEESS) }));
+
+    const prev = { data: STATE.data, favs: STATE.favorites, prov: STATE.selectedProv, fuel: STATE.selectedFuel, map: STATE.provinceIdMap, days: STATE.historyDays };
+    window.__realFetch = window.fetch.bind(window);
+    const real = window.__realFetch;
+    window.__histCalls = 0;
+    window.fetch = async (input, opts) => {
+      const u = typeof input === 'string' ? input : (input && input.url) || '';
+      if (!u.includes('EstacionesTerrestresHist')) return real(input, opts);
+      const d = /FiltroProvincia\/(\d{2}-\d{2}-\d{4})/.exec(u);
+      window.__histCalls++;
+      return new Response(JSON.stringify({ ListaEESSPrecio: d ? snap(d[1]) : [] }), { headers: { 'Content-Type': 'application/json' } });
+    };
+    STATE.data = stations;
+    STATE.favorites = [1002];
+    STATE.selectedProv = 'Madrid';
+    STATE.selectedFuel = 'Gasolina 95 E5';
+    STATE.provinceIdMap = { Madrid: '01' };
+
+    const ctx = await getAiContext('¿cómo ha evolucionado el precio en Repsol y cuál es el más barato?');
+    const llamadas1 = window.__histCalls;
+    const ctx2 = await getAiContext('hola, gracias');
+    const ctx3 = await getAiContext('¿qué tal está el precio de la gasolina?');
+    const llamadas2 = window.__histCalls;
+    window.fetch = real;
+    STATE.data = prev.data; STATE.favorites = prev.favs; STATE.selectedProv = prev.prov;
+    STATE.selectedFuel = prev.fuel; STATE.provinceIdMap = prev.map; STATE.historyDays = prev.days;
+    return { ctx, sinHistoria: ctx2, sinNombre: ctx3, llamadas1, llamadas2 };
+  });
+  const serie = /\[1001\] Repsol[\s\S]*?Serie [^:]*: ([^\n]+)/.exec(histCtx.ctx);
+  const puntos = serie ? serie[1].split(' | ') : [];
+  const ultimo = puntos.length ? parseFloat(puntos[puntos.length - 1].split(': ')[1].replace(',', '.')) : null;
+  const minInforme = /mín ([\d,]+) \(\d{2}-\d{2}-\d{4}\)/.exec(histCtx.ctx);
+  const resumen = /Resumen: ahora 1,455[^\n]*/.exec(histCtx.ctx);
+  const histGates = await page.evaluate(() => ({
+    hola: AI_HISTORY_WORDS.test('hola, gracias'),
+    queTal: AI_HISTORY_WORDS.test('¿qué tal está el precio de la gasolina?'),
+    evo: AI_HISTORY_WORDS.test('¿cómo ha evolucionado el precio en Repsol?')
+  }));
+  // Ojo: el marcador de la sección es "=== HISTÓRICO DE PRECIOS", no la palabra
+  // suelta, porque la instrucción del sistema también la nombra.
+  const SECCION = /=== HISTÓRICO DE PRECIOS/;
+  log('IA', 'El contexto incluye la serie histórica de la gasolinera nombrada, con fecha y precio',
+    SECCION.test(histCtx.ctx) && /\[1001\] Repsol \| Madrid \| Calle Mayor 1/.test(histCtx.ctx)
+    && puntos.length === 10 && /^\d{2}-\d{2}: [\d,]+$/.test(puntos[0].trim()), puntos[0] || 'sin serie');
+  log('IA', 'El mínimo coincide con el último precio de la serie (Repsol baja cada día)',
+    ultimo !== null && minInforme !== null && Math.abs(ultimo - parseFloat(minInforme[1].replace(',', '.'))) < 0.0001,
+    'último=' + ultimo + ' mín=' + (minInforme && minInforme[1]));
+  log('IA', 'Cada estación con histórico trae ahora/mín/máx/media/variación y nº de días',
+    !!resumen && /^Resumen: ahora 1,455 \| .+ [\d,]+ \(\d{2}-\d{2}-\d{4}\) \| .+ [\d,]+ \(\d{2}-\d{2}-\d{4}\) \| media [\d,]+ \| desde \d{2}-\d{2} [-+][\d,]+ \([-+][\d,]+%\) \| \d+ d..s con precio$/.test(resumen[0]),
+    resumen ? resumen[0].trim() : 'sin resumen');
+  log('IA', 'Incluye favoritos y las más baratas, y la tendencia de la provincia',
+    /\[1002\] Cepsa/.test(histCtx.ctx) && /\[1003\] Galp/.test(histCtx.ctx) && /Tendencia provincial/.test(histCtx.ctx)
+    && /El precio más bajo visto en toda la provincia/.test(histCtx.ctx), 'Cepsa y Galp presentes');
+  log('IA', 'Señala las mayores subidas y bajadas del periodo (📈 Cepsa / 📉 Repsol)',
+    /Mayores subidas y bajadas/.test(histCtx.ctx) && /📈 [^\n]*Cepsa/.test(histCtx.ctx) && /📉 [^\n]*Repsol/.test(histCtx.ctx),
+    (/📈[^\n]*/.exec(histCtx.ctx) || [''])[0].trim());
+  log('IA', 'Sin palabras de histórico ni nombre de marca NO se descarga el histórico',
+    !SECCION.test(histCtx.sinHistoria) && !SECCION.test(histCtx.sinNombre) && !histGates.hola && !histGates.queTal && histGates.evo,
+    'regex: ' + JSON.stringify(histGates));
+  log('IA', 'La segunda pregunta con histórico reutiliza la caché (no repite las 14 fechas)',
+    histCtx.llamadas1 === histCtx.llamadas2, histCtx.llamadas1 + ' → ' + histCtx.llamadas2);
+
   // --- Restaurar fetch y limpiar ---
   await page.evaluate(() => {
     if (window.__realFetch) window.fetch = window.__realFetch;
     localStorage.removeItem(AI_MODELS_CACHE_KEY);
     localStorage.removeItem(AI_KEYS_KEY);
+    localStorage.removeItem(AI_PROXY_KEY);
     const input = document.getElementById('iaKeyLlm7');
     if (input) input.value = '';
     AI_PROVIDERS.llm7.key = null;
+    const proxyInput = document.getElementById('iaProxyNvidia');
+    if (proxyInput) proxyInput.value = '';
   });
 }
+
 
 
 async function testFILE(browser) {

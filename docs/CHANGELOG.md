@@ -1,5 +1,38 @@
 # CHANGELOG
 
+## [2026-09-27] — NVIDIA NIM vía Cloudflare Worker + histórico de gasolineras en el chat IA
+
+### 🆕 Proveedor NVIDIA NIM (proxy propio)
+
+| Cambio | Detalle |
+|--------|---------|
+| `workers/nvidia-proxy.js` | **Nuevo**: Worker que reenvía solo `POST /v1/chat/completions` y `GET /v1/models` a `integrate.api.nvidia.com` con el secreto `NVIDIA_API_KEY`. Responde 204 al preflight y propaga el estado/cuerpo de NVIDIA (401/404/429) reescribiendo solo la cabecera CORS |
+| `workers/wrangler.toml` | **Nuevo**: nombre del Worker, entrypoint y `ALLOWED_ORIGIN` opcional (sin él responde `*`) |
+| `js/ai-chat.js` | `AI_PROVIDERS.nvidia` con `viaProxy: true` y rutas **relativas** (`/v1/chat/completions`, `/v1/models`) resueltas por `aiProviderUrl()`; 7 modelos de chat verificados y `max_tokens: 2048` (varios son *reasoning*) |
+| `js/ai-chat.js` | `AI_PROXY_KEY = 'gasolineras_ai_nvidia_proxy'`, `normalizeAiProxyUrl()`, `getAiProxyUrl()`, `setAiProxyUrl()`, `aiProviderUrl()` |
+| `js/ai-chat.js` | NVIDIA **no** tiene clave en el navegador: sin campo, sin `AI_KEY_PREFIXES` y sin `AI_ENCRYPTED_KEYS`. `isAiProviderReady('nvidia')` depende de la URL del proxy |
+| `js/ai-chat.js` | `aiModelReply(model, data, alternativeModel)` compartido: avisa cuando el modelo solo razonó y se quedó sin tokens en vez de devolver un mensaje vacío |
+| `index.html` | Pestaña y panel NVIDIA (`iaModelNvidia`, `iaInputNvidia`, `iaSendNvidia`, `iaMessagesNvidia`, `iaStatusNvidia`, `iaRefreshModelsNvidia`, `iaModelsStatusNvidia`) y campo `iaProxyNvidia` en Config → IA |
+| `sw.js` | `APP_VERSION` 15 → 16 |
+
+### 📈 El modelo ya puede consultar el histórico de las gasolineras
+
+| Cambio | Detalle |
+|--------|---------|
+| `js/ai-chat.js` | `wantsStationHistory(userText, stations)`: descarga el histórico si la pregunta usa palabras clave (`AI_HISTORY_WORDS`) **o** si nombra la marca de alguna estación cargada. Antes solo la opción "media/mín/máx por día" |
+| `js/ai-chat.js` | `buildAiHistoryLines()`: sección `=== HISTÓRICO DE PRECIOS` con periodo real, evolución de la provincia (media/mín/máx/nº estaciones, la más barata de cada día, tendencia en €/L y %, mínimo histórico) y **hasta 12 gasolineras** con su serie de precios fechada + resumen (actual, mín/máx con fecha, media, variación en €/L y %, nº de días) |
+| `js/ai-chat.js` | `stationSeries()` y `stationHistoryBlock()` para cruzar cada `IDEESS` con los listados diarios; las estaciones nombradas en la pregunta van primero, luego favoritos y las más baratas |
+| `js/ai-chat.js` | Nuevas "mayores subidas y bajadas" del periodo (`📈`/`📉`) sobre una muestra de las 60 más baratas |
+| `js/ai-chat.js` | `AI_CONTEXT_INSTRUCTION` y el Top 30 incluyen el `IDEESS` y las reglas de formato (fecha `dd-mm-aaaa`, 3 decimales) para que la IA cite la estación y la fecha |
+
+### 🧪 Verificación
+
+- Suite completa: **139 tests** (0 fallos).
+- Clave NVIDIA validada contra la API real: 82 modelos en el catálogo; el Worker se probó localmente (preflight 204, `/v1/models` 200, chat 200 y 404 propagado).
+- El Service Worker queda descartado como causa del fallo de CORS: registrando y desregistrando el SW el resultado es idéntico.
+
+---
+
 ## [2026-09-27] — Chat IA: LLM7.io (sin clave) + catálogo de modelos automático
 
 ### 🆕 Proveedor LLM7.io

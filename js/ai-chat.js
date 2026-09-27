@@ -1,3 +1,18 @@
+// Varios modelos gratuitos de estos proveedores son "reasoning": gastan el
+// presupuesto de max_tokens pensando y devuelven `content` vacío. En vez de
+// dejar el chat en blanco se explica y se sugiere un modelo que responda ya.
+// `alternativeModel` es lo que se le ofrece al usuario en ese mensaje.
+function aiModelReply(model, data, alternativeModel) {
+  const msg = data.choices?.[0]?.message;
+  const content = (msg?.content || '').trim();
+  if (content) return content;
+  if (msg?.reasoning_content) {
+    return '<b>' + model + ' se pasó el tiempo pensando y no llegó a responder.</b>'
+      + '<br><span class="ia-warn-detail">Es un modelo de razonamiento: consume el máximo de tokens para pensar antes de contestar. Prueba con ' + alternativeModel + ' o formula una pregunta más corta.</span>';
+  }
+  return '(sin respuesta)';
+}
+
 const AI_PROVIDERS = {
   'groq': {
     key: null,
@@ -12,7 +27,7 @@ const AI_PROVIDERS = {
       });
       if (!res.ok) throw await aiHttpError(res);
       const data = await res.json();
-      return data.choices?.[0]?.message?.content || '(sin respuesta)';
+      return aiModelReply(model, data, 'Qwen 3.8 27B');
     }
   },
   'mistral': {
@@ -28,7 +43,7 @@ const AI_PROVIDERS = {
       });
       if (!res.ok) throw await aiHttpError(res);
       const data = await res.json();
-      return data.choices?.[0]?.message?.content || '(sin respuesta)';
+      return aiModelReply(model, data, 'Mistral Nemo');
     }
   },
   'openrouter': {
@@ -49,7 +64,7 @@ const AI_PROVIDERS = {
       });
       if (!res.ok) throw await aiHttpError(res);
       const data = await res.json();
-      return data.choices?.[0]?.message?.content || '(sin respuesta)';
+      return aiModelReply(model, data, 'Nemotron 3 Ultra (gratis)');
     }
   },
   // LLM7.io (https://llm7.io). Se eligio como sustituto de NVIDIA porque SI
@@ -100,16 +115,41 @@ const AI_PROVIDERS = {
       });
       if (!res.ok) throw await aiHttpError(res);
       const data = await res.json();
-      const msg = data.choices?.[0]?.message;
-      const content = (msg?.content || '').trim();
-      if (content) return content;
-      // Los modelos "reasoning" (GLM-5.3-Flash, minimax-m2.7) pueden gastar
-      // todo el presupuesto pensando y devolver content vacio.
-      if (msg?.reasoning_content) {
-        return '<b>' + model + ' se pasó el tiempo pensando y no llegó a responder.</b>'
-          + '<br><span class="ia-warn-detail">Es un modelo de razonamiento: consume el máximo de tokens para pensar antes de contestar. Prueba con Codestral Latest o formula una pregunta más corta.</span>';
-      }
-      return '(sin respuesta)';
+      return aiModelReply(model, data, 'Codestral Latest');
+    }
+  },
+  // NVIDIA NIM (build.nvidia.com) es el unico de la lista con catalogo grande
+  // (82 ids) y cuota gratis por cuenta, pero su gateway SOLO devuelve
+  // Access-Control-Allow-Origin cuando el origen de la peticion es
+  // https://build.nvidia.com. Comprobado con OPTIONS y con Chromium real: desde
+  // cualquier otra pagina no llega la cabecera y el navegador aborta con
+  // "No 'Access-Control-Allow-Origin' header", asi que no sirve sin proxy.
+  // La solucion es un proxy propio (workers/nvidia-proxy.js, un Cloudflare
+  // Worker) que guarda la clave nvapi- en un secreto y la anade al reenviar.
+  // Por eso viaProxy: aqui no hay API Key, solo la URL del Worker.
+  'nvidia': {
+    key: null,
+    viaProxy: true,
+    endpoint: '/v1/chat/completions',
+    listModelsUrl: '/v1/models',
+    defaultModel: 'nvidia/nemotron-3-ultra-550b-a55b',
+    // Verificados uno a uno contra la API real el 2026-09-27. El catalogo
+    // lista 82 ids pero muchos devuelven 404 "Function not found for account"
+    // (no estan desplegados para una cuenta nueva): kimi-k2.6,
+    // deepseek-v4.1-flash, nemotron-4-340b-instruct, nemotron-nano-3-30b-a3b,
+    // nemotron-ultra-253b-v1, gemma-3-12b-it, phi-3.5-moe-instruct...
+    models: ['nvidia/nemotron-3-ultra-550b-a55b', 'nvidia/nemotron-3-super-120b-a12b', 'nvidia/nemotron-3.5-lightning-30b-a3b', 'moonshotai/kimi-k3', 'z-ai/glm-5.3', 'z-ai/glm-5.3-flash', 'openai/gpt-oss-20b'],
+    async send(apiKey, model, messages, signal) {
+      // max_tokens alto a proposito: varios de estos modelos razonan antes de
+      // responder y con 1024 se quedaban sin tokens (glm-5.3-flash consumia
+      // ~1000 caracteres solo en razonamiento y devolvia content vacio).
+      const res = await fetch(aiProviderUrl('nvidia', '/v1/chat/completions'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, messages, max_tokens: 2048 }), signal
+      });
+      if (!res.ok) throw await aiHttpError(res);
+      const data = await res.json();
+      return aiModelReply(model, data, 'Nemotron 3 Ultra o Kimi K3');
     }
   },
   'google': {
@@ -156,6 +196,11 @@ const AI_PROVIDERS = {
 
 const AI_KEYS_KEY = 'gasolineras_ai_keys';
 
+// URL del proxy de NVIDIA (Cloudflare Worker). La clave nvapi- vive en el
+// secreto NVIDIA_API_KEY del Worker, asi que en el navegador solo se guarda
+// la direccion: no hay ni clave ni prefijo que validar para este proveedor.
+const AI_PROXY_KEY = 'gasolineras_ai_nvidia_proxy';
+
 const AI_ENCRYPTED_KEYS = {
   'google': 'MyYTEzwQMDgxJ0JcJw4xEVwmICFeCAEcKl0+JSAvXwwKCwQBGlkk',
   'groq': 'FRwCLS0cBxkFKAEiICkuJV4ZRi4/GwkZJSgNCw1aNDYwORZfIyoiJj0sEV8cJAdYGBYfPwgYEwk=',
@@ -166,6 +211,7 @@ const AI_ENCRYPTED_KEYS = {
 // Prefijo obligatorio de la API key segun proveedor (evita guardar una clave
 // del proveedor equivocado, que solo fallaria al enviar la peticion).
 // llm7 NO aparece: su clave es opcional y no tiene prefijo reconocible.
+// nvidia tampoco: su clave no sale del proxy, vive en el secreto del Worker.
 const AI_KEY_PREFIXES = {
   'google': ['AIza'],
   'groq': ['gsk_'],
@@ -191,17 +237,52 @@ function aiApiKey(provider) {
   return key;
 }
 
-// Un proveedor con clave opcional esta listo siempre (accede en anonimo); el
-// resto, en cuanto tenga una clave.
+// --- Proxy de NVIDIA ------------------------------------------------------
+// Normaliza lo que el usuario pega: sin esquema, con barra final o con spaces.
+function normalizeAiProxyUrl(raw) {
+  let url = (raw || '').trim();
+  if (!url) return '';
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  return url.replace(/\/+$/, '');
+}
+
+function getAiProxyUrl(provider) {
+  if (provider !== 'nvidia') return '';
+  return normalizeAiProxyUrl(localStorage.getItem(AI_PROXY_KEY));
+}
+
+function setAiProxyUrl(provider, url) {
+  if (provider !== 'nvidia') return;
+  try { localStorage.setItem(AI_PROXY_KEY, normalizeAiProxyUrl(url)); } catch {}
+}
+
+// URL absoluta de una ruta del proveedor, resolviendo el proxy si hace falta.
+function aiProviderUrl(provider, path) {
+  const config = AI_PROVIDERS[provider];
+  if (!config) return path;
+  if (config.viaProxy) {
+    const base = getAiProxyUrl(provider);
+    if (!base) throw new Error('Falta la URL del proxy de NVIDIA (Config → IA).');
+    return base + path;
+  }
+  return path;
+}
+
+// Un proveedor viaProxy esta listo en cuanto tenga la URL del proxy; uno con
+// clave opcional siempre (accede en anonimo); el resto, en cuanto tenga clave.
 function isAiProviderReady(provider) {
   const config = AI_PROVIDERS[provider];
   if (!config) return false;
+  if (config.viaProxy) return !!getAiProxyUrl(provider);
   if (config.keyOptional) return true;
   const cfgInput = document.getElementById(getProviderInputId(provider, 'iaKey'));
   return !!(cfgInput && cfgInput.value ? cfgInput.value : config.key);
 }
 
 function aiProviderNotReadyMessage(provider) {
+  if (AI_PROVIDERS[provider] && AI_PROVIDERS[provider].viaProxy) {
+    return 'Configura la URL del proxy de NVIDIA en Config → IA para poder usarlo.';
+  }
   return 'Por favor, introduce una API Key válida en Config → IA.';
 }
 
@@ -298,12 +379,14 @@ function isAiModelsCacheStale(provider) {
 async function fetchAiModels(provider, apiKey, signal) {
   const config = AI_PROVIDERS[provider];
   if (!config || !config.listModelsUrl) return null;
-  const base = config.listModelsUrl;
+  // viaProxy: la ruta es relativa al Worker y no viaja ninguna clave (la pone el
+  // Worker al reenviar). El resto usa su /models con la clave del usuario.
+  const base = config.viaProxy ? aiProviderUrl(provider, config.listModelsUrl) : config.listModelsUrl;
   const url = provider === 'google'
     ? `${base}?key=${encodeURIComponent(apiKey)}&pageSize=200`
     : base;
   const headers = { 'Accept': 'application/json' };
-  if (provider !== 'google' && !config.listModelsNoAuth) headers['Authorization'] = 'Bearer ' + apiKey;
+  if (provider !== 'google' && !config.viaProxy && !config.listModelsNoAuth) headers['Authorization'] = 'Bearer ' + apiKey;
   const res = await fetch(url, { headers, signal });
   if (!res.ok) throw await aiHttpError(res);
   const data = await res.json();
@@ -355,8 +438,8 @@ function populateAiModelSelect(provider, remoteModels) {
 async function refreshAiModels(provider, opts = {}) {
   const config = AI_PROVIDERS[provider];
   if (!config || !config.listModelsUrl) return { ok: false, models: null, reason: 'unsupported' };
+  if (!isAiProviderReady(provider)) return { ok: false, models: null, reason: 'nokey' };
   const apiKey = aiApiKey(provider);
-  if (!apiKey) return { ok: false, models: null, reason: 'nokey' };
 
   if (!opts.force) {
     const cached = getAiCachedModels(provider);
@@ -399,8 +482,8 @@ function markAiModelsStatus(provider, text) {
 }
 
 // Refresco silencioso al abrir la pestaña del proveedor: si el proveedor no
-// esta listo (sin clave) se deja el desplegable con la lista fija; si lo esta,
-// se sincroniza con el catalogo real (usando la cache).
+// esta listo (sin clave, o sin URL de proxy) se deja el desplegable con la
+// lista fija; si lo esta, se sincroniza con el catalogo real (usando la cache).
 function autoRefreshAiModels(provider) {
   if (!AI_PROVIDERS[provider] || !AI_PROVIDERS[provider].listModelsUrl) return;
   if (!isAiProviderReady(provider)) return;
@@ -569,6 +652,7 @@ function renderAiKeysConfig() {
 
   for (const provider of Object.keys(AI_PROVIDERS)) {
     if (provider === 'chrome-nano') continue;
+    if (AI_PROVIDERS[provider].viaProxy) { initAiProxyConfig(provider); continue; }
     const cfgInput = document.getElementById(getProviderInputId(provider, 'iaKey'));
     if (!cfgInput) continue;
     const stored = keys[provider] || '';
@@ -586,6 +670,28 @@ function renderAiKeysConfig() {
       autoRefreshAiModels(provider);
     });
   }
+}
+
+// Alta de un proveedor viaProxy (NVIDIA): no hay input de clave, sino la URL
+// del Worker. Al cambiarla se resincroniza el catalogo igual que al cambiar una
+// clave, porque detras del proxy hay una cuenta que puede no ser la misma.
+function initAiProxyConfig(provider) {
+  const input = document.getElementById(getProviderInputId(provider, 'iaProxy'));
+  if (!input || input.dataset.listener) return;
+  input.dataset.listener = '1';
+  input.value = getAiProxyUrl(provider);
+  input.addEventListener('change', () => {
+    setAiProxyUrl(provider, input.value);
+    input.value = getAiProxyUrl(provider);
+    updateAiStatus(provider);
+    invalidateAiModelsCache(provider);
+    if (isAiProviderReady(provider)) {
+      markAiModelsStatus(provider, '⏳ Consultando el proxy…');
+      autoRefreshAiModels(provider);
+    } else {
+      markAiModelsStatus(provider, '');
+    }
+  });
 }
 
 function handleLoadDefaultKeys() {
@@ -654,7 +760,7 @@ function initAiChat() {
 
 const AI_ABORT = {};
 
-const AI_CONTEXT_INSTRUCTION = 'Eres un asistente experto en precios de gasolina en España. Responde SIEMPRE en español, de forma clara y concisa (máximo 3 párrafos). Usa los DATOS ACTUALES que se proporcionan a continuación para responder. Si te preguntan por datos históricos o estaciones específicas, busca la información en los datos proporcionados. Si no hay datos suficientes, indícalo claramente.';
+const AI_CONTEXT_INSTRUCTION = 'Eres un asistente experto en precios de gasolina en España. Responde SIEMPRE en español, de forma clara y concisa (máximo 3 párrafos). Usa los DATOS ACTUALES que se proporcionan a continuación para responder. Si te preguntan por datos históricos o estaciones específicas, busca la información en los datos proporcionados. Cuando el usuario pregunte por la evolución de precios de una gasolinera concreta, usa la sección HISTÓRICO DE PRECIOS: incluye la serie de precios con su fecha, el mínimo, el máximo y la variación, citando siempre las fechas (dd-mm-aaaa) y los precios en €/L con 3 decimales. Si no hay datos suficientes, indícalo claramente y di qué gasolinera o localidad habría que consultar.';
 
 async function getAiContext(userText) {
   const lines = [];
@@ -698,7 +804,7 @@ async function getAiContext(userText) {
     lines.push(`\nTOP 30 GASOLINERAS por precio (${fuelName}):`);
     withPrice.slice(0, 30).forEach((x, i) => {
       const s = x.s;
-      const parts = [`${i+1}. ${s.Rótulo || 'Sin marca'} - ${x.p.toFixed(3).replace('.', ',')}€/L`];
+      const parts = [`${i+1}. [id ${s.IDEESS}] ${s.Rótulo || 'Sin marca'} - ${x.p.toFixed(3).replace('.', ',')}€/L`];
       if (s.Localidad) parts.push(s.Localidad);
       if (s.Dirección) parts.push(s.Dirección);
       if (s._dist != null) parts.push(`${s._dist.toFixed(1)}km`);
@@ -736,39 +842,163 @@ async function getAiContext(userText) {
     }
   } catch {}
 
-  // Pre-fetch history data if user query mentions history
-  if (/\b(histori|evoluci|tendencia|cambio|subi|baj|ayer|semana|mes|gráfic|chart|trend)\b/i.test(userText)) {
-    lines.push('\n=== DATOS HISTÓRICOS ===');
-    try {
-      if (STATE.selectedProv) {
-        const historyData = await fetchProvinceHistory(STATE.selectedProv, STATE.historyDays || 14);
-        if (historyData && Object.keys(historyData).length > 0) {
-          const dates = Object.keys(historyData).sort();
-          lines.push(`Histórico de ${dates.length} días para ${STATE.selectedProv}:`);
-          for (const dateStr of dates.slice(-7)) {
-            const list = historyData[dateStr];
-            if (list && list.length) {
-              const prices = list
-                .map(s => getSelectedFuelPrice(s))
-                .filter(p => p !== null);
-              if (prices.length) {
-                const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
-                const min = Math.min(...prices);
-                const max = Math.max(...prices);
-                lines.push(`  ${dateStr}: media ${avg.toFixed(3).replace('.', ',')}€/L | mínimo ${min.toFixed(3).replace('.', ',')}€/L | máximo ${max.toFixed(3).replace('.', ',')}€/L`);
-              }
-            }
-          }
-        } else {
-          lines.push('  No hay datos históricos disponibles en caché.');
-        }
-      }
-    } catch (e) {
-      lines.push('  Error al recuperar histórico: ' + e.message);
-    }
+  // El histórico se carga si la pregunta lo pide explícitamente o si nombra una
+  // gasolinera concreta (p. ej. "¿cuánto costaba en Repsol antes?").
+  if (wantsStationHistory(userText, stations)) {
+    lines.push(...(await buildAiHistoryLines(userText, stations, fuelName)));
   }
 
   return lines.join('\n');
+}
+
+const AI_HISTORY_WORDS = /\b(histori\w*|evoluci\w*|tendencia\w*|trend|ayer|antes|pasad\w*|antigu\w*|demes\w*|hace\s+\d+|ultim\w*|recient\w*|variaci\w*|diferencia\w*|compar\w*|cambi\w*|cambio\w*|sub\w*|baj\w*|subid\w*|rebaj\w*|mínim\w*|minim\w*|máxim\w*|maxim\w*|máxim\w*|gráfic\w*|chart|serie\w*|diari\w*|fecha\w*|cuánd\w*|cuanto\s+cost\w*|precio\w*\s+de\s+antes)\b/i;
+
+function wantsStationHistory(userText, stations) {
+  if (!userText) return false;
+  if (AI_HISTORY_WORDS.test(userText)) return true;
+  // También si nombra la marca o la localidad de alguna estación cargada.
+  const t = normalizeStr(userText);
+  if (t.length < 4) return false;
+  return (stations || []).some(s => {
+    const nombre = normalizeStr(s['Rótulo'] || '');
+    return nombre.length >= 4 && t.includes(nombre);
+  });
+}
+
+const fmtEur = v => (typeof v === 'number' ? v.toFixed(3).replace('.', ',') : '—');
+
+// Serie temporal de una estación a partir del histórico de la provincia.
+function stationSeries(historyData, dates, station) {
+  const serie = [];
+  for (const d of dates) {
+    const found = (historyData[d] || []).find(s => s.IDEESS === station.IDEESS);
+    if (found) {
+      const p = getSelectedFuelPrice(found);
+      if (p !== null) serie.push({ fecha: d, precio: p });
+    }
+  }
+  return serie;
+}
+
+function stationHistoryBlock(historyData, dates, station, fuelName) {
+  const serie = stationSeries(historyData, dates, station);
+  if (!serie.length) return null;
+  const precios = serie.map(x => x.precio);
+  const min = Math.min(...precios);
+  const max = Math.max(...precios);
+  const avg = precios.reduce((a, b) => a + b, 0) / precios.length;
+  const primera = serie[0];
+  const ultima = serie[serie.length - 1];
+  const delta = ultima.precio - primera.precio;
+  const pct = primera.precio ? (delta / primera.precio) * 100 : 0;
+  const fMin = serie.find(x => x.precio === min).fecha;
+  const fMax = serie.find(x => x.precio === max).fecha;
+  const actual = getSelectedFuelPrice(station);
+
+  const out = [];
+  out.push(`[${station.IDEESS}] ${station['Rótulo'] || 'Sin marca'}${station.Localidad ? ' | ' + station.Localidad : ''}${station['Dirección'] ? ' | ' + station['Dirección'] : ''}`);
+  out.push(`   Serie ${fuelName} (€/L): ${serie.slice(-10).map(x => `${x.fecha.slice(0,5)}: ${fmtEur(x.precio)}`).join(' | ')}`);
+  out.push(`   Resumen: ahora ${fmtEur(actual)} | mín ${fmtEur(min)} (${fMin}) | máx ${fmtEur(max)} (${fMax}) | media ${fmtEur(avg)} | desde ${primera.fecha.slice(0,5)} ${delta >= 0 ? '+' : ''}${fmtEur(delta)} (${pct >= 0 ? '+' : ''}${pct.toFixed(1).replace('.', ',')}%) | ${serie.length} días con precio`);
+  return out.join('\n');
+}
+
+async function buildAiHistoryLines(userText, stations, fuelName) {
+  const lines = ['\n=== HISTÓRICO DE PRECIOS (Ministerio: instantánea diaria por gasolinera) ==='];
+  const days = Math.max(STATE.historyDays || 14, 14);
+  let historyData = {};
+  try {
+    historyData = (STATE.selectedProv ? await fetchProvinceHistory(STATE.selectedProv, days) : {}) || {};
+  } catch (e) {
+    lines.push('  Error al recuperar histórico: ' + e.message);
+    return lines;
+  }
+  const dates = Object.keys(historyData).sort();
+  if (!dates.length) {
+    lines.push('  No hay datos históricos disponibles en caché para esta provincia.');
+    return lines;
+  }
+  lines.push(`Periodo: ${dates[0]} → ${dates[dates.length - 1]} (${dates.length} días con datos). Fechas en dd-mm-aaaa. Importante: una fecha ausente significa que esa gasolinera no reportaba precio ese día, NO que mantuviera el precio.`);
+
+  // --- Evolución de la provincia ---
+  const daily = [];
+  for (const d of dates) {
+    const precios = (historyData[d] || []).map(s => getSelectedFuelPrice(s)).filter(p => p !== null);
+    if (!precios.length) continue;
+    const sorted = (historyData[d] || [])
+      .map(s => ({ s, p: getSelectedFuelPrice(s) }))
+      .filter(x => x.p !== null)
+      .sort((a, b) => a.p - b.p);
+    daily.push({
+      fecha: d,
+      media: precios.reduce((a, b) => a + b, 0) / precios.length,
+      min: precios.reduce((a, b) => Math.min(a, b), Infinity),
+      max: precios.reduce((a, b) => Math.max(a, b), -Infinity),
+      n: precios.length,
+      cheapest: sorted[0]
+    });
+  }
+  lines.push('\n--- Provincia (mediana de mercado por día, últimas 10 jornadas) ---');
+  for (const d of daily.slice(-10)) {
+    lines.push(`  ${d.fecha}: media ${fmtEur(d.media)} | mín ${fmtEur(d.min)} | máx ${fmtEur(d.max)} | ${d.n} gasolineras | más barata: ${d.cheapest.s['Rótulo'] || '?'} (${d.cheapest.s.Localidad || '?'}) ${fmtEur(d.cheapest.p)}`);
+  }
+  if (daily.length > 1) {
+    const first = daily[0];
+    const last = daily[daily.length - 1];
+    const dAvg = last.media - first.media;
+    const pct = first.media ? (dAvg / first.media) * 100 : 0;
+    const lowest = daily.reduce((a, b) => (b.min < a.min ? b : a));
+    lines.push(`  Tendencia provincial (${fuelName}): ${first.fecha} → ${last.fecha}, media ${fmtEur(first.media)} → ${fmtEur(last.media)} (${dAvg >= 0 ? '+' : ''}${fmtEur(dAvg)} €/L, ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%). El precio más bajo visto en toda la provincia fue ${fmtEur(lowest.min)} el ${lowest.fecha}.`);
+  }
+
+  // --- Historial por gasolinera ---
+  // Prioridad: las nombradas en la pregunta, los favoritos y las más baratas.
+  const t = normalizeStr(userText || '');
+  const nombradas = stations.filter(s => {
+    const n = normalizeStr(s['Rótulo'] || '');
+    return n.length >= 4 && t.includes(n);
+  });
+  const conPrecio = stations
+    .map(s => ({ s, p: getSelectedFuelPrice(s) }))
+    .filter(x => x.p !== null)
+    .sort((a, b) => a.p - b.p)
+    .map(x => x.s);
+  const favoritos = stations.filter(s => STATE.favorites.includes(s.IDEESS));
+  const elegidas = [];
+  const push = s => { if (s && !elegidas.some(x => x.IDEESS === s.IDEESS) && elegidas.length < 12) elegidas.push(s); };
+  nombradas.forEach(push);
+  favoritos.forEach(push);
+  conPrecio.slice(0, 8).forEach(push);
+
+  lines.push(`\n--- Historial por gasolinera (máx. 12; las nombradas en tu pregunta van primero) ---`);
+  if (!elegidas.length) {
+    lines.push('  No hay estaciones con las que cruzar el histórico.');
+  } else {
+    let impresas = 0;
+    for (const s of elegidas) {
+      const bloque = stationHistoryBlock(historyData, dates, s, fuelName);
+      if (bloque) { lines.push('  ' + bloque); impresas++; }
+    }
+    if (!impresas) lines.push('  Ninguna de esas estaciones tiene precios en el histórico cargado.');
+  }
+
+  // --- Quién se movió más en el periodo ---
+  const variaciones = [];
+  for (const s of conPrecio.slice(0, 60)) {
+    const serie = stationSeries(historyData, dates, s);
+    if (serie.length < 2) continue;
+    const d = serie[serie.length - 1].precio - serie[0].precio;
+    variaciones.push({ s, d, desde: serie[0].fecha, hasta: serie[serie.length - 1].fecha });
+  }
+  variaciones.sort((a, b) => a.d - b.d);
+  const fmtVar = v => `${v.s['Rótulo'] || '?'} (${v.s.Localidad || '?'}) ${v.d >= 0 ? '+' : ''}${fmtEur(v.d)} desde ${v.desde.slice(0,5)}`;
+  if (variaciones.length >= 3) {
+    lines.push('\n---|Mayores subidas y bajadas del periodo (muestra de las 60 más baratas) ---');
+    variaciones.slice(0, 3).forEach(v => lines.push('  📈 ' + fmtVar(v)));
+    variaciones.slice(-3).reverse().forEach(v => lines.push('  📉 ' + fmtVar(v)));
+  }
+
+  lines.push('\nInstrucciones: cita siempre la fecha (dd-mm-aaaa) y el precio en €/L con 3 decimales. Si la pregunta es sobre una gasolinera que no aparece arriba, dilo y ofrece consultarla indicando su marca y localidad.');
+  return lines;
 }
 
 function getMessagesForProvider(provider) {
@@ -891,6 +1121,12 @@ function updateAiStatus(provider, override) {
   const config = AI_PROVIDERS[provider];
   if (provider === 'chrome-nano') {
     el.textContent = window.ai ? '✅ Gemini Nano disponible' : '❌ No disponible (Chrome Canary/Dev)';
+    return;
+  }
+  if (config.viaProxy) {
+    el.textContent = getAiProxyUrl(provider)
+      ? '✅ Proxy configurado'
+      : '⚠️ Sin proxy — ve a Config → IA';
     return;
   }
   if (config.keyOptional) {

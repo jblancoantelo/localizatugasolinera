@@ -102,11 +102,19 @@ En `controls.js`, `setActiveTab()` cierra automáticamente:
 1. Groq (`groq`)
 2. Mistral (`mistral`)
 3. OpenRouter (`openrouter`)
-4. Google Gemini (`google`)
-5. LLM7.io (`llm7`)
-6. Chrome Built-in AI (`chrome-nano`)
+4. LLM7.io (`llm7`)
+5. NVIDIA NIM (`nvidia`) — **vía proxy, ver abajo**
+6. Google Gemini (`google`)
+7. Chrome Built-in AI (`chrome-nano`)
 
-⚠️ **La app es una PWA estática sin backend, así que un proveedor solo sirve si el navegador acepta su preflight.** Antes de añadir uno, medir el CORS en Chromium real (preflight `OPTIONS` + petición con `Origin`), no con `curl`: NVIDIA NIM, Cerebras, Chutes, Z.ai, SambaNova y Cloudflare Workers AI quedan descartados. El Service Worker **no** es la causa de un fallo de CORS: comprobado registrando y desregistrando el SW, el resultado es idéntico.
+⚠️ **La app es una PWA estática sin backend, así que un proveedor solo sirve si el navegador acepta su preflight.** Antes de añadir uno, medir el CORS en Chromium real (preflight `OPTIONS` + petición con `Origin`), no con `curl`: Cerebras, Chutes, Z.ai, SambaNova y Cloudflare Workers AI quedan descartados. El Service Worker **no** es la causa de un fallo de CORS: comprobado registrando y desregistrando el SW, el resultado es idéntico.
+
+**NVIDIA NIM (`nvidia`) — el único que va por proxy**: su gateway solo devuelve `Access-Control-Allow-Origin` para el origen `https://build.nvidia.com`, así que desde la app la llamada directa muere con `No 'Access-Control-Allow-Origin' header` (comprobado con `OPTIONS` y en Chromium real). Solución: `workers/nvidia-proxy.js` (Cloudflare Worker) que reenvía solo `/v1/chat/completions` y `/v1/models` usando el secreto `NVIDIA_API_KEY`:
+- El navegador **no** tiene clave de NVIDIA: ni campo, ni `AI_KEY_PREFIXES`, ni `AI_ENCRYPTED_KEYS`. Solo guarda la URL del Worker en `gasolineras_ai_nvidia_proxy`.
+- `viaProxy: true` + `endpoint`/`listModelsUrl` **relativos** (`/v1/chat/completions`, `/v1/models`); `aiProviderUrl()` los resuelve contra la URL configurada y `normalizeAiProxyUrl()` añade `https://` y quita la barra final.
+- `isAiProviderReady('nvidia')` depende de la URL, no de una clave; sin ella el chat avisa y `refreshAiModels()` no llama a nada (`reason: 'nokey'`).
+- Cambiar la URL en Config invalida el catálogo cacheado (`invalidateAiModelsCache`).
+- Despliegue: `wrangler secret put NVIDIA_API_KEY` + `wrangler deploy`; la clave nunca se escribe en el repo. `ALLOWED_ORIGIN` en `wrangler.toml` es opcional (sin él responde `*`).
 
 **API Keys**: cifradas en código fuente con XOR + base64 (contraseña de 6 chars, misma para las 4). Se descargan al introducir la passphrase correcta en Config y pulsar "Cargar claves". Si ya hay claves cargadas aparece enlace "Volver a cargar".
 
@@ -126,12 +134,21 @@ En `controls.js`, `setActiveTab()` cierra automáticamente:
 
 **Contexto automático (`getAiContext()`)**:
 - Provincia + nº gasolineras cargadas
-- Top 30 estaciones (nombre, precio, dirección)
+- Top 30 estaciones (`[id IDEESS]` + nombre, precio, localidad, dirección) para que la IA pueda citar la estación
 - Favoritos del usuario
 - Estado de caché (dataSource cache/fresh)
 - Se inyecta como system message antes del primer user message
 
-**Histórico**: si el user query contiene palabras clave (historial, histórico, evolución, tendencia, gráfica, precio ayer), se precarga `loadHistory()` para todas las estaciones antes de enviar a la IA.
+**Histórico**: `wantsStationHistory()` decide si se carga. Devuelve `true` si el user query contiene palabras clave (`AI_HISTORY_WORDS`: historial, evolución, tendencia, antes, ayer, subida, bajada, mínimo, gráfica, cuándo…) **o** si nombra la marca de alguna estación cargada (normalizado con `normalizeStr`). Con `false` no se pide nada (evita 14 fetches por mensaje).
+
+`buildAiHistoryLines()` monta la sección `=== HISTÓRICO DE PRECIOS`:
+- Periodo real disponible (las fechas del Ministerio son `dd-mm-aaaa`) + aviso de que un día sin precio no significa precio constante
+- **Provincia**: media/mín/máx/nº estaciones y la más barata de las últimas 10 jornadas, más la tendencia (variación en €/L y %) y el mínimo histórico provincial
+- **Por gasolinera** (máx. 12, primero las nombradas en la pregunta, luego favoritos y las más baratas): `[IDEESS] marca | localidad | dirección`, la serie de hasta 10 precios con su fecha y un resumen con precio actual, mín/máx (con su fecha), media, variación en €/L y % y nº de días con precio
+- **Mayores subidas y bajadas** del periodo (muestra de las 60 más baratas) con `📈`/`📉`
+- Instrucciones de formato (fecha `dd-mm-aaaa`, precio con 3 decimales)
+
+`stationSeries()` cruza cada estación (`IDEESS`) con los listados diarios; `fmtEur()` formatea a 3 decimales con coma.
 
 **Cancelar**: AbortController aborta el fetch. Botón "Cancelar" aparece en el mensaje de loading y desaparece al completar/fallar.
 
@@ -146,6 +163,7 @@ En `controls.js`, `setActiveTab()` cierra automáticamente:
 - OpenRouter: `nvidia/nemotron-3-ultra-550b-a55b:free` (default), `nvidia/nemotron-3-super-120b-a12b:free`
 - Google Gemini: `gemini-3.8-flash` (default), `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.7-flash`
 - LLM7.io: `codestral-latest` (default), `GLM-5.3-Flash`, `minimax-m2.7`, `mistral-Nemo-Instruct-2407`
+- NVIDIA (vía proxy): `nvidia/nemotron-3-ultra-550b-a55b` (default), `nvidia/nemotron-3-super-120b-a12b`, `nvidia/nemotron-3.5-lightning-30b-a3b`, `moonshotai/kimi-k3`, `z-ai/glm-5.3`, `z-ai/glm-5.3-flash`, `openai/gpt-oss-20b`
 - Chrome Built-in AI: session de IA nativa del navegador
 
 ⚠️ `defaultModel` **debe coincidir con el primer `<option>`** de `#iaModel<Provider>` en `index.html` (si no, el modelo por defecto no existe en el desplegable).
@@ -195,7 +213,7 @@ Orden actual de grupos:
 ### Tests
 - Ubicación: `docs/test/full_test.mjs`
 - Plan: `docs/test/TEST_PLAN.md`
-- 66 tests totales (59 HTTP + 7 file://)
+- 139 tests totales (132 HTTP + 7 file://)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)
 - Push notifications tests (14.1-14.10) integrados en full_test.mjs
@@ -307,3 +325,5 @@ node -e "const h=require('http'),fs=require('fs');h.createServer((q,r)=>{let p=q
 | `js/main.js` | Event listeners, restauración de estado, push notifications |
 | `js/push-notifications.js` | Gestión suscripción Web Push (subscribe/unsubscribe) + PUSH_LOG + logPushEvent |
 | `sw.js` | Service Worker (caché, periodicsync, checkPrices, notificationclick) + sendPushLog() |
+| `workers/nvidia-proxy.js` | Cloudflare Worker del proxy de NVIDIA (CORS + secreto `NVIDIA_API_KEY`) |
+| `workers/wrangler.toml` | Nombre del Worker, entrypoint y `ALLOWED_ORIGIN` opcional |

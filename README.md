@@ -74,12 +74,13 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 - Botón "Comprobar actualizaciones" que detecta cambios en `sw.js`
 
 ### 🤖 Chat IA integrado
-- **6 proveedores** seleccionables con pestañas: Groq, Mistral, OpenRouter, Google Gemini, LLM7.io y Chrome Built-in AI
+- **7 proveedores** seleccionables con pestañas: Groq, Mistral, OpenRouter, LLM7.io, NVIDIA, Google Gemini y Chrome Built-in AI
 - Las API Keys se guardan cifradas (XOR + base64) en el código fuente y se descargan en Config con una contraseña
 - **LLM7.io funciona sin clave**: sin API Key accede en modo anónimo (500k tokens/24 h); con una clave gratuita de `dash.llm7.io` el límite sube a 1M/día
+- **NVIDIA NIM vía Cloudflare Worker**: su API solo habilita el origen `build.nvidia.com`, así que la llamada directa desde el navegador es imposible. Se incluye `workers/nvidia-proxy.js`, que reenvía `/v1/chat/completions` y `/v1/models` con la clave guardada como secreto del Worker (`wrangler secret put NVIDIA_API_KEY`); en Config solo se pega la URL
 - **Catálogo de modelos automático**: los modelos gratuitos rotan con frecuencia, así que el desplegable se descarga de la API de cada proveedor (caché 24 h, botón 🔄 para refrescar) y avisa si el modelo elegido ya no está disponible
-- **Contexto automático**: cada mensaje incluye los datos actuales de la app (provincia, gasolineras, precios, favoritos)
-- Precarga de históricos si la pregunta menciona evolución de precios
+- **Contexto automático**: cada mensaje incluye los datos actuales de la app (provincia, gasolineras, precios, favoritos) y el `IDEESS` de cada estación
+- **Histórico para la IA**: si la pregunta pide evolución, tendencia o nombra una marca concreta, se cargan los últimos 14 días del Ministerio y se le pasan las medias de la provincia, la serie de precios con fecha de hasta 12 gasolineras (con mín/máx/variación) y las mayores subidas y bajadas
 - Botón **Cancelar** para abortar mensaje en curso (AbortController)
 - Botón **✎ Editar** en mensajes enviados para corregir y reenviar
 - Modelos gratuitos por proveedor (sin coste de API)
@@ -104,8 +105,8 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 | Persistencia | IndexedDB + localStorage |
 | Notificaciones | Web Push API + Periodic Background Sync |
 | Service Worker | Cache-first + Network-first híbrido |
-| Chat IA | 6 proveedores (Groq, Mistral, OpenRouter, Google Gemini, LLM7.io, Chrome Built-in AI) |
-| Tests | Playwright (114 tests, servidor HTTP inline) |
+| Chat IA | 7 proveedores (Groq, Mistral, OpenRouter, LLM7.io, NVIDIA vía Worker, Google Gemini, Chrome Built-in AI) |
+| Tests | Playwright (139 tests, servidor HTTP inline) |
 | Desarrollo | [OpenCode](https://opencode.ai) con modelos DeepSeek (libres) |
 
 ---

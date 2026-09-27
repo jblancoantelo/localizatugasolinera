@@ -108,6 +108,7 @@
           <button class="ia-provider-tab" data-iaprovider="mistral">Mistral</button>
           <button class="ia-provider-tab" data-iaprovider="openrouter">OpenRouter</button>
           <button class="ia-provider-tab" data-iaprovider="llm7">LLM7.io</button>
+          <button class="ia-provider-tab" data-iaprovider="nvidia">NVIDIA</button>
           <button class="ia-provider-tab" data-iaprovider="google">Google Gemini</button>
           <button class="ia-provider-tab" data-iaprovider="chrome-nano">Chrome Built-in AI</button>
         </div>
@@ -168,6 +169,21 @@
             <div class="ia-input-row">
               <input type="text" id="iaInputLlm7" placeholder="Escribe un mensaje...">
               <button id="iaSendLlm7">Enviar</button>
+            </div>
+          </div>
+        </div>
+        <div class="ia-provider-panel" data-iapanel="nvidia">
+          <div class="ia-config">
+            <label><select id="iaModelNvidia"><option value="nvidia/nemotron-3-ultra-550b-a55b">Nemotron 3 Ultra 550B</option><option value="nvidia/nemotron-3-super-120b-a12b">Nemotron 3 Super</option><option value="nvidia/nemotron-3.5-lightning-30b-a3b">Nemotron 3.5 Lightning</option><option value="moonshotai/kimi-k3">Kimi K3</option><option value="z-ai/glm-5.3">GLM 5.3</option><option value="z-ai/glm-5.3-flash">GLM 5.3 Flash</option><option value="openai/gpt-oss-20b">GPT-OSS 20B</option></select></label>
+            <button class="ia-refresh-btn" id="iaRefreshModelsNvidia" title="Actualizar lista de modelos de NVIDIA (vía proxy)">🔄</button>
+            <span class="ia-models-count" id="iaModelsStatusNvidia"></span>
+            <span id="iaStatusNvidia" style="font-size:0.6rem;color:#999">⚠️ Sin proxy — ve a Config → IA</span>
+          </div>
+          <div class="ia-chat">
+            <div class="ia-messages" id="iaMessagesNvidia"></div>
+            <div class="ia-input-row">
+              <input type="text" id="iaInputNvidia" placeholder="Escribe un mensaje...">
+              <button id="iaSendNvidia">Enviar</button>
             </div>
           </div>
         </div>
@@ -306,6 +322,8 @@
             <label>LLM7.io <span style="color:#888">(opcional):</span><br><input type="password" id="iaKeyLlm7" placeholder="Deja vacío para acceso anónimo" style="width:100%;padding:0.2rem;border:1px solid #ddd;border-radius:4px;font-size:0.65rem"></label>
           </div>
           <p class="config-desc" style="margin-top:0.4rem">LLM7.io funciona sin clave (acceso anónimo, 500k tokens/día). Con un token gratuito de <a href="https://dash.llm7.io" target="_blank" rel="noopener">dash.llm7.io</a> el límite sube a 1M tokens/día. Los catálogos de modelos se actualizan solos: si un modelo desaparece, el chat te avisa y te ofrece la lista nueva sin necesidad de tocar código.</p>
+          <p class="config-desc" style="margin-top:0.5rem"><b>NVIDIA (vía proxy):</b> su API solo habilita el origen <code>build.nvidia.com</code>, así que desde la app el navegador la rechaza. Despliega <code>workers/nvidia-proxy.js</code> en Cloudflare, guarda allí la clave <code>nvapi-…</code> con <code>wrangler secret put NVIDIA_API_KEY</code> y pega aquí la URL del Worker (la clave no se guarda en el navegador):</p>
+          <input type="url" id="iaProxyNvidia" placeholder="https://petrol-nvidia-proxy.tu-usuario.workers.dev" style="width:100%;padding:0.2rem;border:1px solid #ddd;border-radius:4px;font-size:0.65rem">
         </div>
         <div class="config-card">
           <h3>🔄 Actualización de la app</h3>
