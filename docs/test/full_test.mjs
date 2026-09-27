@@ -601,30 +601,52 @@ async function testAiChat(page) {
     setAiProxyUrl('nvidia', '  petrol-nv.workers.dev/  ');
     const a = getAiProxyUrl('nvidia');
     const b = aiProviderUrl('nvidia', '/v1/models');
+    const esPropia = isDefaultProxyUrl('nvidia');
     setAiProxyUrl('nvidia', '');
-    let error = 'sin error';
-    try { aiProviderUrl('nvidia', '/v1/models'); } catch (e) { error = e.message; }
-    return { a, b, error, listo: isAiProviderReady('nvidia'), msg: aiProviderNotReadyMessage('nvidia') };
+    // Sin nada guardado se cae a la URL predefinida del wrangler.toml.
+    const predef = getAiProxyUrl('nvidia');
+    return {
+      a, b, esPropia, predef, def: AI_PROXY_NVIDIA_DEFAULT,
+      esPredef: isDefaultProxyUrl('nvidia'),
+      resuelta: aiProviderUrl('nvidia', '/v1/models'),
+      listo: isAiProviderReady('nvidia'),
+      enElInput: document.getElementById('iaProxyNvidia').value,
+      aviso: aiProviderNotReadyMessage('nvidia')
+    };
   });
   log('IA', 'normalizeAiProxyUrl() añade https:// y quita la barra final',
-    normalizeOk.a === 'https://petrol-nv.workers.dev' && normalizeOk.b === 'https://petrol-nv.workers.dev/v1/models',
-    normalizeOk.a + ' -> ' + normalizeOk.b);
-  log('IA', 'Sin URL de proxy NVIDIA no está listo y el aviso lo dice',
-    normalizeOk.listo === false && /proxy/i.test(normalizeOk.msg) && /Config/.test(normalizeOk.error), normalizeOk.msg);
+    normalizeOk.a === 'https://petrol-nv.workers.dev' && normalizeOk.b === 'https://petrol-nv.workers.dev/v1/models'
+    && normalizeOk.esPropia === false, normalizeOk.a + ' -> ' + normalizeOk.b);
+  log('IA', 'NVIDIA tiene URL predefinida: sin configurar ya usa el proxy del wrangler.toml',
+    normalizeOk.predef === normalizeOk.def && normalizeOk.esPredef && normalizeOk.listo
+    && normalizeOk.resuelta === normalizeOk.def + '/v1/models', normalizeOk.predef);
+  log('IA', 'El input de Config trae la URL predefinida puesta (editable)',
+    normalizeOk.enElInput === normalizeOk.def, normalizeOk.enElInput);
 
   const statusProxy = await page.evaluate(() => {
     const el = document.getElementById('iaStatusNvidia');
-    updateAiStatus('nvidia');
-    const sin = el.textContent;
-    setAiProxyUrl('nvidia', 'https://petrol-nv.workers.dev');
-    updateAiStatus('nvidia');
-    const con = el.textContent;
     setAiProxyUrl('nvidia', '');
-    return { sin, con };
+    updateAiStatus('nvidia');
+    const predef = el.textContent;
+    setAiProxyUrl('nvidia', 'https://otro.workers.dev');
+    updateAiStatus('nvidia');
+    const propia = el.textContent;
+    setAiProxyUrl('nvidia', '');
+    return { predef, propia };
   });
-  log('IA', 'El estado del panel NVIDIA refleja si hay proxy',
-    /Sin proxy/.test(statusProxy.sin) && /Proxy configurado/.test(statusProxy.con),
-    statusProxy.sin + ' | ' + statusProxy.con);
+  log('IA', 'El estado del panel distingue la URL por defecto de la que puso el usuario',
+    /por defecto/i.test(statusProxy.predef) && /Proxy configurado/.test(statusProxy.propia) && !/por defecto/.test(statusProxy.propia),
+    statusProxy.predef + ' | ' + statusProxy.propia);
+
+  const resetProxy = await page.evaluate(() => {
+    setAiProxyUrl('nvidia', 'https://otro.workers.dev');
+    document.getElementById('iaProxyResetBtn').click();
+    return { guardado: localStorage.getItem(AI_PROXY_KEY), enElInput: document.getElementById('iaProxyNvidia').value,
+      def: AI_PROXY_NVIDIA_DEFAULT, estado: document.getElementById('iaStatusNvidia').textContent };
+  });
+  log('IA', '"Usar la predefinida" borra la URL guardada y vuelve a la del wrangler.toml',
+    resetProxy.guardado === '' && resetProxy.enElInput === resetProxy.def
+    && /por defecto/i.test(resetProxy.estado), resetProxy.enElInput);
 
 
   // --- aiApiKey(): cae al literal anónimo si el campo está vacío ---
@@ -1121,14 +1143,17 @@ async function testAiChat(page) {
     cambioProxy.guardado === 'https://otro-worker.workers.dev' && cambioProxy.enElInput === 'https://otro-worker.workers.dev',
     cambioProxy.guardado);
 
-  // --- Sin URL de proxy no se intenta nada ---
+  // --- Sin URL guardada se usa la predefinida (no hay estado "sin proxy") ---
   const sinProxy = await page.evaluate(async () => {
     setAiProxyUrl('nvidia', '');
     window.__proxyCalls = [];
     const r = await refreshAiModels('nvidia', { force: true });
-    return { reason: r.reason, llamadas: window.__proxyCalls.length, listo: isAiProviderReady('nvidia') };
+    const c = window.__proxyCalls[0] || {};
+    return { ok: r.ok, url: c.url, def: AI_PROXY_NVIDIA_DEFAULT, esPredef: isDefaultProxyUrl('nvidia'), listo: isAiProviderReady('nvidia') };
   });
-  log('IA', 'Sin URL de proxy no se llama al Worker', sinProxy.reason === 'nokey' && sinProxy.llamadas === 0 && !sinProxy.listo, sinProxy.reason);
+  log('IA', 'Sin URL guardada se consulta la predefinida (el proveedor funciona de salida)',
+    sinProxy.ok && sinProxy.url === sinProxy.def + '/v1/models' && sinProxy.esPredef && sinProxy.listo,
+    sinProxy.url);
 
   // --- Contexto histórico que recibe el modelo ---
   // Objetivo: que la IA pueda responder "¿cómo evolucionó el precio en X?" con
@@ -1202,14 +1227,123 @@ async function testAiChat(page) {
   log('IA', 'Incluye favoritos y las más baratas, y la tendencia de la provincia',
     /\[1002\] Cepsa/.test(histCtx.ctx) && /\[1003\] Galp/.test(histCtx.ctx) && /Tendencia provincial/.test(histCtx.ctx)
     && /El precio más bajo visto en toda la provincia/.test(histCtx.ctx), 'Cepsa y Galp presentes');
-  log('IA', 'Señala las mayores subidas y bajadas del periodo (📈 Cepsa / 📉 Repsol)',
-    /Mayores subidas y bajadas/.test(histCtx.ctx) && /📈 [^\n]*Cepsa/.test(histCtx.ctx) && /📉 [^\n]*Repsol/.test(histCtx.ctx),
+  log('IA', 'Señala la mayor bajada (📉 Repsol) y la mayor subida (📈 Cepsa) del periodo',
+    /mayor bajada y mayor subida/i.test(histCtx.ctx) && /📈 [^\n]*Cepsa/.test(histCtx.ctx) && /📉 [^\n]*Repsol/.test(histCtx.ctx),
     (/📈[^\n]*/.exec(histCtx.ctx) || [''])[0].trim());
   log('IA', 'Sin palabras de histórico ni nombre de marca NO se descarga el histórico',
     !SECCION.test(histCtx.sinHistoria) && !SECCION.test(histCtx.sinNombre) && !histGates.hola && !histGates.queTal && histGates.evo,
     'regex: ' + JSON.stringify(histGates));
   log('IA', 'La segunda pregunta con histórico reutiliza la caché (no repite las 14 fechas)',
     histCtx.llamadas1 === histCtx.llamadas2, histCtx.llamadas1 + ' → ' + histCtx.llamadas2);
+
+  // --- Rango de días: el mismo catálogo que los combos de la app ---
+  const rangoOk = await page.evaluate(() => {
+    const antes = STATE.historyDays;
+    STATE.historyDays = 30;
+    const casos = [
+      ['¿cómo evoluciona en 60 días?', 60],
+      ['evolución de los últimos 7 días', 7],
+      ['variación en 21 jornadas', 21],
+      ['¿y en 6 semanas?', 42],
+      ['hace 3 meses', 90],
+      ['durante el último año', 180],
+      ['más de 400 días', 180],
+      ['solo 1 día', 7],
+      ['evolución (sin cifra)', 30]
+    ];
+    const res = casos.map(([q, exp]) => [q, resolveAiHistoryDays(q), exp]);
+    STATE.historyDays = antes;
+    const conDefecto = resolveAiHistoryDays('evolución');
+    // Los <option> del modal de detalle y del popup del mapa deben coincidir
+    // con la constante que usa la IA.
+    const detalle = [...document.getElementById('historyDays').options].map(o => +o.value);
+    const popup = [...new DOMParser().parseFromString(popupHtml({ 'Rótulo': 'X' }), 'text/html')
+      .querySelectorAll('.popup-history-days option')].map(o => +o.getAttribute('value'));
+    return { res, conDefecto, antes, detalle, popup, opciones: HISTORY_DAYS_OPTIONS };
+  });
+  const rangoFallos = rangoOk.res.filter(([, got, exp]) => got !== exp);
+  log('IA', 'resolveAiHistoryDays() entiende "60 días", "21 jornadas", "6 semanas", "3 meses" y "1 año"',
+    rangoFallos.length === 0, rangoFallos.map(([q, g, e]) => `${q} → ${g} (esperado ${e})`).join(' | '));
+  log('IA', 'Acota el rango al de la app y, sin cifra en la pregunta, usa STATE.historyDays',
+    rangoOk.res[7][1] === 7 && rangoOk.res[8][1] === 30 && rangoOk.conDefecto === rangoOk.antes,
+    '1 día → 7 | sin cifra → ' + rangoOk.res[8][1] + ' y luego ' + rangoOk.conDefecto);
+  log('IA', 'HISTORY_DAYS_OPTIONS coincide con los combos de la app (modal y popup del mapa)',
+    rangoOk.detalle.join(',') === rangoOk.opciones.join(',') && rangoOk.popup.join(',') === rangoOk.opciones.join(','),
+    'modal: ' + rangoOk.detalle.join(',') + ' | popup: ' + rangoOk.popup.join(','));
+
+  // --- El rango pedido llega al contexto y reutiliza la caché de la app ---
+  const rangoCtx = await page.evaluate(async () => {
+    const prev = { data: STATE.data, favs: STATE.favorites, prov: STATE.selectedProv, fuel: STATE.selectedFuel, map: STATE.provinceIdMap, days: STATE.historyDays, cache: window._historyCache, ai: window._aiHistoryCache };
+    const stations = [
+      { IDEESS: 1001, 'Rótulo': 'Repsol', Localidad: 'Madrid', 'Precio Gasolina 95 E5': '1,455', 'Precio Gasoleo A': '1,390' },
+      { IDEESS: 1002, 'Rótulo': 'Cepsa', Localidad: 'Getafe', 'Precio Gasolina 95 E5': '1,600', 'Precio Gasoleo A': '1,510' }
+    ];
+    const precio = (fecha, st) => {
+      const dia = Number(fecha.slice(0, 2));
+      const base = { 1001: [1.512, 1.390], 1002: [1.650, 1.510] }[st.IDEESS];
+      const paso = st.IDEESS === 1001 ? -0.005 : 0.010;
+      return (base[0] + paso * (dia - 13)).toFixed(3).replace('.', ',') + '|' + (base[1] + paso * (dia - 13)).toFixed(3).replace('.', ',');
+    };
+    window.__histCalls = 0;
+    window.fetch = async (input, opts) => {
+      const u = typeof input === 'string' ? input : (input && input.url) || '';
+      if (!u.includes('EstacionesTerrestresHist')) return window.__realFetch(input, opts);
+      const d = /FiltroProvincia\/(\d{2}-\d{2}-\d{4})/.exec(u);
+      window.__histCalls++;
+      const lista = d ? stations.map(st => {
+        const [g, d2] = precio(d[1], st).split('|');
+        return { ...st, 'Precio Gasolina 95 E5': g, 'Precio Gasoleo A': d2 };
+      }) : [];
+      return new Response(JSON.stringify({ ListaEESSPrecio: lista }), { headers: { 'Content-Type': 'application/json' } });
+    };
+    STATE.data = stations;
+    STATE.favorites = [];
+    STATE.selectedProv = 'Madrid';
+    STATE.selectedFuel = 'Gasolina 95 E5';
+    STATE.provinceIdMap = { Madrid: '01' };
+    window._historyCache = null;
+    window._aiHistoryCache = null;
+
+    const ctx60 = await getAiContext('¿cómo ha evolucionado en 60 días?');
+    const llamadas60 = window.__histCalls;
+    // Segunda pregunta más corta: debe reutilizar la caché de 60 días (0 fetches)
+    const ctx7 = await getAiContext('¿y en los últimos 7 días?');
+    const llamadas7 = window.__histCalls;
+    // Con el modal abierto se usa su combustible (Gasóleo A)
+    document.getElementById('detailPanel').classList.add('show');
+    const sel = document.getElementById('historyFuel');
+    sel.innerHTML = '<option value="Gasolina 95 E5">95</option><option value="Gasóleo A" selected>Gasóleo A</option>';
+    const ctxDiesel = await getAiContext('evolución de los últimos 7 días');
+    const fueraModal = (() => { document.getElementById('detailPanel').classList.remove('show'); return aiHistoryFuelName(stations[0]); })();
+    const conModal = (() => { document.getElementById('detailPanel').classList.add('show'); const v = aiHistoryFuelName(stations[0]); document.getElementById('detailPanel').classList.remove('show'); return v; })();
+
+    window.fetch = window.__realFetch;
+    STATE.data = prev.data; STATE.favorites = prev.favs; STATE.selectedProv = prev.prov;
+    STATE.selectedFuel = prev.fuel; STATE.provinceIdMap = prev.map; STATE.historyDays = prev.days;
+    window._historyCache = prev.cache; window._aiHistoryCache = prev.ai;
+    return { ctx60, llamadas60, ctx7, llamadas7, ctxDiesel, fueraModal, conModal,
+      flags: {
+        rango60: /Rango: 60 días/.test(ctx60),
+        rango7: /Rango: 7 días/.test(ctx7),
+        hist7: /HISTÓRICO DE PRECIOS/.test(ctx7),
+        reut: /reutilizando la caché/.test(ctx7),
+        err: /Error al recuperar histórico/.test(ctx7)
+      } };
+  });
+  const jornadas = ctx => {
+    const m = /Periodo con datos: \d{2}-\d{2}-\d{4} → \d{2}-\d{2}-\d{4} \((\d+) jornadas/.exec(ctx);
+    return m ? +m[1] : -1;
+  };
+  const f = rangoCtx.flags;
+  log('IA', 'El rango pedido llega al contexto (60 días) y recorta la caché amplia al pedir 7',
+    f.rango60 && jornadas(rangoCtx.ctx60) === 60 && f.rango7 && jornadas(rangoCtx.ctx7) === 7 && f.reut,
+    `60d:${f.rango60}/${jornadas(rangoCtx.ctx60)} 7d:${f.rango7}/${jornadas(rangoCtx.ctx7)} hist:${f.hist7} reut:${f.reut} err:${f.err} llamadas:${rangoCtx.llamadas60}→${rangoCtx.llamadas7}`);
+  log('IA', 'La segunda pregunta reutiliza la caché (60 fechas ya descargadas, 0 peticiones nuevas)',
+    rangoCtx.llamadas60 === 60 && rangoCtx.llamadas7 === rangoCtx.llamadas60,
+    rangoCtx.llamadas60 + ' → ' + rangoCtx.llamadas7);
+  log('IA', 'Con el modal de histórico abierto la IA usa su combustible (Gasóleo A)',
+    /Combustible analizado: Gasóleo A/.test(rangoCtx.ctxDiesel) && rangoCtx.conModal === 'Gasóleo A'
+    && rangoCtx.fueraModal === 'Gasolina 95 E5', rangoCtx.conModal + ' vs ' + rangoCtx.fueraModal);
 
   // --- Restaurar fetch y limpiar ---
   await page.evaluate(() => {

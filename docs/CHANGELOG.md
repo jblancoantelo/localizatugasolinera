@@ -1,5 +1,38 @@
 # CHANGELOG
 
+## [2026-09-27] — Histórico de la IA con los rangos del modal + URL NVIDIA por defecto
+
+### 📈 El histórico del chat ya usa los mismos datos y rangos que el modal
+
+| Cambio | Detalle |
+|--------|---------|
+| `js/state.js` | **Nuevo**: `HISTORY_DAYS_OPTIONS = [7, 14, 21, 30, 60, 90, 180]` y `HISTORY_DAYS_DEFAULT = 14`, la misma lista que los combos de la app |
+| `js/ai-chat.js` | `resolveAiHistoryDays(userText)`: si la pregunta trae rango explícito (`60 días`, `21 jornadas`, `6 semanas`, `3 meses`, `1 año`, `semestre`) se respeta, si no se usa el seleccionado en el modal (`STATE.historyDays`), y siempre se acota al rango de la app (7–180 días) |
+| `js/ai-chat.js` | `getAiHistoryData(days)`: reutiliza `window._historyCache` (modal de detalle y popup del mapa) si cubre el rango pedido, y guarda `window._aiHistoryCache` para no repetir descargas al ampliarlo. Un rango menor recorta la caché en vez de volver a pedir fechas |
+| `js/ai-chat.js` | `aiHistoryFuelName()`: con el modal de histórico abierto se usa su combustible (`#historyFuel`), si no el filtro de la app. `stationSeries()` ahora llama a `getStationHistory()`, o sea **la misma serie que dibuja la gráfica**, con soporte de grupos de combustibles y descuento por marca |
+| `js/ai-chat.js` | `stationHistoryBlock()` añade el precio actual con tu descuento, la media, el mínimo/máximo con fecha y la variación, e indica el grupo de combustibles usado |
+| `js/ai-chat.js` | El bloque del periodo declara el rango usado y si lo estás viendo ("los que has pedido" o "el que tienes seleccionado en el histórico de la app") |
+| `js/ai-chat.js` | `wantsStationHistory()` también dispara con un rango explícito, no solo con palabras clave: "¿cuál era el precio hace 3 meses?" ya no se queda sin datos |
+| `js/api.js` | `sortHistoryDates()`: las fechas del Ministerio (`dd-mm-aaaa`) no ordenan bien con `sort()`; el comparador correcto se comparte con `getStationHistory()` y con el chat |
+| `js/ai-chat.js` | Corrección de las flechas: `📉` para la mayor bajada y `📈` para la mayor subida del periodo (estaban invertidas) |
+| `sw.js` | `APP_VERSION` 16 → 17 |
+
+### 🔗 NVIDIA con URL predefinida (sigue siendo editable)
+
+| Cambio | Detalle |
+|--------|---------|
+| `js/ai-chat.js` | `AI_PROXY_NVIDIA_DEFAULT = 'https://petrol-nvidia-proxy.workers.dev'`: si no hay nada en `gasolineras_ai_nvidia_proxy` se usa esa, así que el proveedor funciona sin configurar nada |
+| `index.html` | Botón **↺ Usar la predefinida** (`iaProxyResetBtn`) junto al campo `iaProxyNvidia`, valor inicial y aviso de que la URL cambia al desplegar el Worker |
+| `js/ai-chat.js` | Estado del proveedor: "✅ Proxy por defecto (cámbialo en Config → IA)" o "✅ Proxy configurado" |
+| `js/ai-chat.js` | Cambiar o restablecer la URL invalida el catálogo de modelos cacheado y refresca los desplegables |
+
+### 🧪 Verificación
+
+- Suite completa: **147 tests** (0 fallos), 8 nuevos sobre rango dinámico, reutilización de caché, combustible del modal y orden de fechas.
+- El rango se recorta sobre la caché amplia: 60 días descargados y una segunda pregunta de 7 días con **0 peticiones** adicionales.
+
+---
+
 ## [2026-09-27] — NVIDIA NIM vía Cloudflare Worker + histórico de gasolineras en el chat IA
 
 ### 🆕 Proveedor NVIDIA NIM (proxy propio)

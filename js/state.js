@@ -27,6 +27,12 @@ const FUEL_KEYS = {
 
 const FUEL_NAMES = Object.entries(FUEL_KEYS);
 
+// Rangos de días que ofrecen los combos de histórico (modal de detalle y popup
+// del mapa). Fuente única de verdad: el test comprueba que el HTML coincide y
+// el chat de IA usa exactamente los mismos valores.
+const HISTORY_DAYS_OPTIONS = [7, 14, 21, 30, 60, 90, 180];
+const HISTORY_DAYS_DEFAULT = 14;
+
 const FUEL_GROUPS = {
   'Gasolina': ['Gasolina 95 E5', 'Gasolina 98 E5', 'Gasolina 95 E10', 'Gasolina 98 E10'],
   'Gasóleo': ['Gasóleo A', 'Gasóleo Premium', 'Gasóleo B'],

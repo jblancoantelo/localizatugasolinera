@@ -139,16 +139,25 @@ En `controls.js`, `setActiveTab()` cierra automáticamente:
 - Estado de caché (dataSource cache/fresh)
 - Se inyecta como system message antes del primer user message
 
-**Histórico**: `wantsStationHistory()` decide si se carga. Devuelve `true` si el user query contiene palabras clave (`AI_HISTORY_WORDS`: historial, evolución, tendencia, antes, ayer, subida, bajada, mínimo, gráfica, cuándo…) **o** si nombra la marca de alguna estación cargada (normalizado con `normalizeStr`). Con `false` no se pide nada (evita 14 fetches por mensaje).
+**Histórico**: `wantsStationHistory()` decide si se carga. Devuelve `true` si el user query contiene palabras clave (`AI_HISTORY_WORDS`: historial, evolución, tendencia, antes, ayer, subida, bajada, mínimo, gráfica, cuándo…) **o** si trae un rango explícito (`AI_HISTORY_RANGE_RE`: "60 días", "6 semanas", "3 meses", "1 año") **o** si nombra la marca de alguna estación cargada (normalizado con `normalizeStr`). Con `false` no se pide nada (evita N fetches por mensaje).
+
+**Rango de días** (`resolveAiHistoryDays()`): la IA usa **los mismos rangos que el modal**, `HISTORY_DAYS_OPTIONS = [7, 14, 21, 30, 60, 90, 180]` en `js/state.js`:
+1. Si la pregunta trae cifra + unidad (`30 días`, `21 jornadas`, `6 semanas` ×7, `3 meses` ×30) se respeta, clampada a 7–180
+2. `1 año`, `semestre` o `medio año` → 180
+3. Si no, `STATE.historyDays` (lo que el usuario tiene elegido en el modal)
+- Un rango menor que el de la caché **recorta** en memoria, no vuelve a descargar
+
+**Datos compartidos** (`getAiHistoryData(days)`): reutiliza `window._historyCache` (modal de detalle y popup del mapa) si cubre el rango, y guarda `window._aiHistoryCache` para ampliarlo sin repetir fetches.
 
 `buildAiHistoryLines()` monta la sección `=== HISTÓRICO DE PRECIOS`:
-- Periodo real disponible (las fechas del Ministerio son `dd-mm-aaaa`) + aviso de que un día sin precio no significa precio constante
+- Rango usado (y si lo has pedido tú o viene del modal) + periodo real disponible (las fechas del Ministerio son `dd-mm-aaaa`) + aviso de que un día sin precio no significa precio constante
+- Combustible analizado: `aiHistoryFuelName()` usa el de `#historyFuel` si el modal está abierto, si no `STATE.selectedFuel`
 - **Provincia**: media/mín/máx/nº estaciones y la más barata de las últimas 10 jornadas, más la tendencia (variación en €/L y %) y el mínimo histórico provincial
-- **Por gasolinera** (máx. 12, primero las nombradas en la pregunta, luego favoritos y las más baratas): `[IDEESS] marca | localidad | dirección`, la serie de hasta 10 precios con su fecha y un resumen con precio actual, mín/máx (con su fecha), media, variación en €/L y % y nº de días con precio
-- **Mayores subidas y bajadas** del periodo (muestra de las 60 más baratas) con `📈`/`📉`
+- **Por gasolinera** (máx. 12, primero las nombradas en la pregunta, luego favoritos y las más baratas): `[IDEESS] marca | localidad | dirección`, la serie de hasta 10 precios con su fecha y un resumen con precio actual (con descuento), mín/máx (con su fecha), media, variación en €/L y % y nº de días con precio
+- **Mayor bajada (`📉`) y mayor subida (`📈`)** del periodo (muestra de las 60 más baratas)
 - Instrucciones de formato (fecha `dd-mm-aaaa`, precio con 3 decimales)
 
-`stationSeries()` cruza cada estación (`IDEESS`) con los listados diarios; `fmtEur()` formatea a 3 decimales con coma.
+`stationSeries()` llama a `getStationHistory()` (`js/api.js`), o sea la misma serie que dibuja la gráfica del modal, con soporte de grupos de combustibles; `sortHistoryDates()` ordena las fechas `dd-mm-aaaa` correctamente (un `sort()` normal las desordena) y `fmtEur()` formatea a 3 decimales con coma.
 
 **Cancelar**: AbortController aborta el fetch. Botón "Cancelar" aparece en el mensaje de loading y desaparece al completar/fallar.
 
@@ -213,7 +222,7 @@ Orden actual de grupos:
 ### Tests
 - Ubicación: `docs/test/full_test.mjs`
 - Plan: `docs/test/TEST_PLAN.md`
-- 139 tests totales (132 HTTP + 7 file://)
+- 147 tests totales (140 HTTP + 7 file://)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)
 - Push notifications tests (14.1-14.10) integrados en full_test.mjs

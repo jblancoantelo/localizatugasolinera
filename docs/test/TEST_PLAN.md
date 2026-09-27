@@ -131,7 +131,7 @@ node docs/test/full_test.mjs
 
 ## Resultados actuales
 
-**139 tests — 139 ✅ 0 ❌**
+**147 tests — 147 ✅ 0 ❌**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
@@ -155,8 +155,8 @@ node docs/test/full_test.mjs
 | Persistencia | 4 ✅ | — |
 | Push Notifications | 10 ✅ | — |
 | Helpers (norm/parsePrice/comparePrices) | 15 ✅ | — |
-| Chat IA (sección 15) | 73 ✅ | — |
-| **Total** | **132 ✅** | **7 ✅** |
+| Chat IA (sección 15) | 81 ✅ | — |
+| **Total** | **140 ✅** | **7 ✅** |
 
 ## 15. Chat IA (automatizado)
 
@@ -192,6 +192,14 @@ nombrada (10 puntos), el resumen con actual/mín/máx/media/variación y nº de
 días, favoritos y más baratas incluidos, la tendencia provincial y las mayores
 subidas/bajadas, y **no** se descarga nada si la pregunta no usa palabras clave
 ni nombra una marca (`AI_HISTORY_WORDS`).
+
+**Rango de días del histórico** (4 tests nuevos): `resolveAiHistoryDays()`
+entiende "60 días", "21 jornadas", "6 semanas", "3 meses" y "1 año"; acota al
+rango de la app (1 día → 7, 400 días → 180) y sin cifra usa `STATE.historyDays`;
+`HISTORY_DAYS_OPTIONS` coincide con los `<option>` del modal de detalle y del
+popup del mapa; el rango pedido llega al contexto (60 jornadas) y al pedir 7
+días se recorta la caché de 60 **sin nuevas peticiones**; con el modal de
+histórico abierto la IA usa su combustible (`#historyFuel`).
 
 Verificado además fuera de la suite, contra la API real sin clave: catálogo de 4
 modelos, caché reutilizada sin peticiones y respuesta correcta con datos de la

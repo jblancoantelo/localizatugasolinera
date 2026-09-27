@@ -1,5 +1,29 @@
 # Mejoras realizadas — Precios Gasolina España
 
+## 2026-09-27 — El histórico de la IA usa los mismos rangos y datos que el modal
+
+### Rango de días dinámico (7 a 180)
+- `HISTORY_DAYS_OPTIONS = [7, 14, 21, 30, 60, 90, 180]` en `js/state.js`: la lista oficial de la app, la misma que los combos del modal de detalle y del popup del mapa.
+- `resolveAiHistoryDays()` respeta el rango que pidas en la pregunta (`60 días`, `21 jornadas`, `6 semanas` ×7, `3 meses` ×30, `1 año`/`semestre` → 180), lo acota al rango de la app y, si no dices nada, usa el que tengas seleccionado en el modal (`STATE.historyDays`).
+- `wantsStationHistory()` ahora también dispara con un rango explícito, así que "¿cuál era el precio hace 3 meses?" ya no se queda sin datos.
+- Antes el chat pedía siempre 14 días como mínimo; con 60 días descargas 60 fechas y al preguntar por 7 días **no vuelve a descargar**: recorta la caché en memoria.
+
+### Los mismos datos que la gráfica del modal
+- `getAiHistoryData()` reutiliza `window._historyCache` (lo que cargan el modal de detalle y el popup del mapa) si cubre el rango, y guarda `window._aiHistoryCache` para ampliarlo sin repetir peticiones.
+- `stationSeries()` llama a `getStationHistory()`, la misma función que dibuja la gráfica, con lo que hereda los grupos de combustibles; `aiHistoryFuelName()` usa el combustible del modal si está abierto y si no el filtro de la app.
+- `sortHistoryDates()` en `js/api.js`: las fechas del Ministerio son `dd-mm-aaaa` y un `sort()` normal las desordena ("29-08" > "01-09"), lo que alteraba mínimos y máximos. El comparador correcto se comparte con `getStationHistory()`.
+- El bloque del periodo indica el rango usado y si lo pediste tú o viene del combo del modal, y cada estación incluye el precio actual con tu descuento por marca.
+- Corregidas las flechas del periodo: `📉` para la mayor bajada y `📈` para la mayor subida (estaban al revés).
+
+### NVIDIA con URL predefinida
+- `AI_PROXY_NVIDIA_DEFAULT = 'https://petrol-nvidia-proxy.workers.dev'`: si no has configurado nada, el proveedor funciona sin tocar Config; el botón **↺ Usar la predefinida** (`iaProxyResetBtn`) la restablece y vuelve a invalidar el catálogo.
+- El estado del proveedor distingue "Proxy por defecto (cámbialo en Config → IA)" de "Proxy configurado". Recuerda: si `wrangler deploy` devuelve una URL con subdominio, hay que copiarla al campo `iaProxyNvidia`.
+
+### Tests
+- 147 tests (140 HTTP + 7 file://) en verde. Nuevos: parsing de rangos ("60 días", "21 jornadas", "6 semanas", "3 meses", "1 año", recorte a 7–180), coincidencia de `HISTORY_DAYS_OPTIONS` con los combos del modal y del popup, rango pedido llegando al contexto, recorte sin peticiones nuevas, combustible del modal y orden correcto de fechas.
+
+---
+
 ## 2026-09-27 — NVIDIA NIM vía Cloudflare Worker + histórico detallado en el chat IA
 
 ### NVIDIA con proxy propio

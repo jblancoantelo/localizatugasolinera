@@ -304,15 +304,22 @@ async function fetchProvinceHistory(provinceName, days) {
   return results;
 }
 
+// Las fechas del Ministerio vienen como dd-mm-aaaa, asi que un sort() normal
+// las ordenaria mal ("29-08" > "01-09"). Este es el comparador correcto y lo
+// reutiliza tambien el chat de IA.
+function sortHistoryDates(keys) {
+  return keys.slice().sort((a, b) => {
+    const [da, ma, ya] = a.split('-');
+    const [db, mb, yb] = b.split('-');
+    return new Date(+ya, +ma - 1, +da) - new Date(+yb, +mb - 1, +db);
+  });
+}
+
 function getStationHistory(historyByDate, stationId, fuelName) {
   const isGroup = FUEL_GROUPS[fuelName] ? true : false;
   const groupMembers = isGroup ? FUEL_GROUPS[fuelName] : [fuelName];
   const results = [];
-  const dates = Object.keys(historyByDate).sort((a, b) => {
-    const [da, ma, ya] = a.split('-');
-    const [db, mb, yb] = b.split('-');
-    return new Date(ya, ma - 1, da) - new Date(yb, mb - 1, db);
-  });
+  const dates = sortHistoryDates(Object.keys(historyByDate));
   for (const dateStr of dates) {
     const list = historyByDate[dateStr];
     if (!list || !list.length) continue;

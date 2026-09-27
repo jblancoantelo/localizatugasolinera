@@ -238,6 +238,12 @@ function aiApiKey(provider) {
 }
 
 // --- Proxy de NVIDIA ------------------------------------------------------
+// URL predefinida: el Worker tal como lo despliega `wrangler deploy` con el
+// name de workers/wrangler.toml. Sirve para no tener que escribirla la primera
+// vez; si al desplegar tu Worker salio con otro subdominio (las cuentas nuevas
+// reciben https://<name>.<tu-subdominio>.workers.dev), cambiala en Config → IA.
+const AI_PROXY_NVIDIA_DEFAULT = 'https://petrol-nvidia-proxy.workers.dev';
+
 // Normaliza lo que el usuario pega: sin esquema, con barra final o con spaces.
 function normalizeAiProxyUrl(raw) {
   let url = (raw || '').trim();
@@ -248,7 +254,13 @@ function normalizeAiProxyUrl(raw) {
 
 function getAiProxyUrl(provider) {
   if (provider !== 'nvidia') return '';
-  return normalizeAiProxyUrl(localStorage.getItem(AI_PROXY_KEY));
+  // Sin nada guardado se usa la predefinida, asi el proveedor funciona de
+  // salida. isDefaultProxyUrl() permite distinguirla de la que puso el usuario.
+  return normalizeAiProxyUrl(localStorage.getItem(AI_PROXY_KEY)) || AI_PROXY_NVIDIA_DEFAULT;
+}
+
+function isDefaultProxyUrl(provider) {
+  return provider === 'nvidia' && !normalizeAiProxyUrl(localStorage.getItem(AI_PROXY_KEY));
 }
 
 function setAiProxyUrl(provider, url) {
@@ -281,7 +293,7 @@ function isAiProviderReady(provider) {
 
 function aiProviderNotReadyMessage(provider) {
   if (AI_PROVIDERS[provider] && AI_PROVIDERS[provider].viaProxy) {
-    return 'Configura la URL del proxy de NVIDIA en Config → IA para poder usarlo.';
+    return 'El proxy de NVIDIA no responde. Revisa su URL en Config → IA y que el Worker esté desplegado.';
   }
   return 'Por favor, introduce una API Key válida en Config → IA.';
 }
@@ -692,6 +704,19 @@ function initAiProxyConfig(provider) {
       markAiModelsStatus(provider, '');
     }
   });
+  const reset = document.getElementById('iaProxyResetBtn');
+  if (reset && !reset.dataset.listener) {
+    reset.dataset.listener = '1';
+    reset.addEventListener('click', () => {
+      // Vuelve a la URL predefinida del wrangler.toml y borra la guardada.
+      setAiProxyUrl(provider, '');
+      input.value = getAiProxyUrl(provider);
+      updateAiStatus(provider);
+      invalidateAiModelsCache(provider);
+      markAiModelsStatus(provider, '⏳ Consultando el proxy…');
+      autoRefreshAiModels(provider);
+    });
+  }
 }
 
 function handleLoadDefaultKeys() {
@@ -845,7 +870,7 @@ async function getAiContext(userText) {
   // El histórico se carga si la pregunta lo pide explícitamente o si nombra una
   // gasolinera concreta (p. ej. "¿cuánto costaba en Repsol antes?").
   if (wantsStationHistory(userText, stations)) {
-    lines.push(...(await buildAiHistoryLines(userText, stations, fuelName)));
+    lines.push(...(await buildAiHistoryLines(userText, stations)));
   }
 
   return lines.join('\n');
@@ -853,9 +878,15 @@ async function getAiContext(userText) {
 
 const AI_HISTORY_WORDS = /\b(histori\w*|evoluci\w*|tendencia\w*|trend|ayer|antes|pasad\w*|antigu\w*|demes\w*|hace\s+\d+|ultim\w*|recient\w*|variaci\w*|diferencia\w*|compar\w*|cambi\w*|cambio\w*|sub\w*|baj\w*|subid\w*|rebaj\w*|mínim\w*|minim\w*|máxim\w*|maxim\w*|máxim\w*|gráfic\w*|chart|serie\w*|diari\w*|fecha\w*|cuánd\w*|cuanto\s+cost\w*|precio\w*\s+de\s+antes)\b/i;
 
+// Rango explícito en la pregunta: "en 30 días", "6 semanas", "3 meses", "1 año".
+const AI_HISTORY_RANGE_RE = /(\d{1,3})\s*(d[ií]as?|jornadas?|semanas?|mes(?:es)?)|\b(a[nñ]o|semestre|medio\s+a[nñ]o)\b/i;
+
 function wantsStationHistory(userText, stations) {
   if (!userText) return false;
   if (AI_HISTORY_WORDS.test(userText)) return true;
+  // Un rango explícito ("en 7 días", "3 meses") implica histórico aunque no
+  // use ninguna palabra clave.
+  if (AI_HISTORY_RANGE_RE.test(userText)) return true;
   // También si nombra la marca o la localidad de alguna estación cargada.
   const t = normalizeStr(userText);
   if (t.length < 4) return false;
@@ -867,77 +898,137 @@ function wantsStationHistory(userText, stations) {
 
 const fmtEur = v => (typeof v === 'number' ? v.toFixed(3).replace('.', ',') : '—');
 
-// Serie temporal de una estación a partir del histórico de la provincia.
-function stationSeries(historyData, dates, station) {
-  const serie = [];
-  for (const d of dates) {
-    const found = (historyData[d] || []).find(s => s.IDEESS === station.IDEESS);
-    if (found) {
-      const p = getSelectedFuelPrice(found);
-      if (p !== null) serie.push({ fecha: d, precio: p });
-    }
+// Cuántos días pedir. Si la pregunta trae un rango explícito ("en 30 días",
+// "6 semanas", "3 meses") se respeta; si no, se usa el que tiene elegido el
+// usuario en el combo del modal de histórico. Mismo rango que la app:
+// HISTORY_DAYS_OPTIONS (7 a 180 días).
+function resolveAiHistoryDays(userText) {
+  const min = HISTORY_DAYS_OPTIONS[0];
+  const max = HISTORY_DAYS_OPTIONS[HISTORY_DAYS_OPTIONS.length - 1];
+  const txt = userText || '';
+  const m = /(\d{1,3})\s*(d[ií]as?|jornadas?|semanas?|mes(?:es)?)/i.exec(txt);
+  if (m) {
+    const n = parseInt(m[1], 10);
+    const unit = m[2].toLowerCase();
+    const mult = /^se/.test(unit) ? 7 : /^me/.test(unit) ? 30 : 1;
+    const days = n * mult;
+    return Math.min(max, Math.max(min, days));
   }
-  return serie;
+  if (/\b(a[nñ]o|semestre|medio a[nñ]o)\b/i.test(txt)) return max;
+  const actual = parseInt(STATE.historyDays, 10);
+  if (actual >= min && actual <= max) return actual;
+  return HISTORY_DAYS_DEFAULT;
 }
 
-function stationHistoryBlock(historyData, dates, station, fuelName) {
-  const serie = stationSeries(historyData, dates, station);
+// Datos del histórico reutilizando lo que ya tenga cargado el resto de la app
+// (window._historyCache lo rellenan el modal de detalle y el popup del mapa), y
+// su propia caché para no repetir peticiones al ampliar el rango.
+async function getAiHistoryData(days) {
+  const prov = STATE.selectedProv;
+  const usable = c => c && c.province === prov && c.days >= days;
+  if (usable(window._historyCache)) {
+    return { data: window._historyCache.data, dias: window._historyCache.days, reutilizado: true };
+  }
+  if (usable(window._aiHistoryCache)) {
+    return { data: window._aiHistoryCache.data, dias: window._aiHistoryCache.days, reutilizado: true };
+  }
+  const data = await fetchProvinceHistory(prov, days);
+  window._aiHistoryCache = { province: prov, days, data };
+  return { data, dias: days, reutilizado: false };
+}
+
+// Combustible del histórico: si el modal de detalle está abierto se usa el suyo
+// (es lo que el usuario está viendo en la gráfica); si no, el filtro de la app.
+function aiHistoryFuelName(station) {
+  const panel = document.getElementById('historyFuel');
+  const detail = document.getElementById('detailPanel');
+  if (panel && panel.value && detail && detail.classList.contains('show')) return panel.value;
+  return resolveHistoryFuel(station, STATE.selectedFuel);
+}
+
+// Serie temporal de una estación: la misma que dibuja la gráfica del modal.
+function stationSeries(historyData, dates, station, fuelName) {
+  const sub = {};
+  for (const d of dates) if (historyData[d]) sub[d] = historyData[d];
+  return getStationHistory(sub, station.IDEESS, fuelName);
+}
+
+function stationHistoryBlock(historyData, dates, station) {
+  const fuelName = aiHistoryFuelName(station);
+  const serie = stationSeries(historyData, dates, station, fuelName);
   if (!serie.length) return null;
-  const precios = serie.map(x => x.precio);
+  const precios = serie.map(x => x.price);
   const min = Math.min(...precios);
   const max = Math.max(...precios);
   const avg = precios.reduce((a, b) => a + b, 0) / precios.length;
   const primera = serie[0];
   const ultima = serie[serie.length - 1];
-  const delta = ultima.precio - primera.precio;
-  const pct = primera.precio ? (delta / primera.precio) * 100 : 0;
-  const fMin = serie.find(x => x.precio === min).fecha;
-  const fMax = serie.find(x => x.precio === max).fecha;
-  const actual = getSelectedFuelPrice(station);
+  const delta = ultima.price - primera.price;
+  const pct = primera.price ? (delta / primera.price) * 100 : 0;
+  const fMin = serie.find(x => x.price === min).date;
+  const fMax = serie.find(x => x.price === max).date;
+  const key = FUEL_KEYS[fuelName];
+  const ahora = key ? getFuelPrice(station, key) : getFirstFuelPrice(station);
+  const desc = getDiscount(station);
 
   const out = [];
   out.push(`[${station.IDEESS}] ${station['Rótulo'] || 'Sin marca'}${station.Localidad ? ' | ' + station.Localidad : ''}${station['Dirección'] ? ' | ' + station['Dirección'] : ''}`);
-  out.push(`   Serie ${fuelName} (€/L): ${serie.slice(-10).map(x => `${x.fecha.slice(0,5)}: ${fmtEur(x.precio)}`).join(' | ')}`);
-  out.push(`   Resumen: ahora ${fmtEur(actual)} | mín ${fmtEur(min)} (${fMin}) | máx ${fmtEur(max)} (${fMax}) | media ${fmtEur(avg)} | desde ${primera.fecha.slice(0,5)} ${delta >= 0 ? '+' : ''}${fmtEur(delta)} (${pct >= 0 ? '+' : ''}${pct.toFixed(1).replace('.', ',')}%) | ${serie.length} días con precio`);
+  if (FUEL_GROUPS[fuelName]) out.push(`   (grupo de combustibles: cada día se usa el primero con precio de ${FUEL_GROUPS[fuelName].join(', ')})`);
+  out.push(`   Serie ${fuelName} (€/L): ${serie.slice(-10).map(x => `${x.date.slice(0,5)}: ${fmtEur(x.price)}`).join(' | ')}${serie.length > 10 ? ` (últimos 10 de ${serie.length})` : ''}`);
+  out.push(`   Resumen: ahora ${fmtEur(ahora)}${desc && ahora !== null ? ` (con tu descuento del ${desc}% son ${fmtEur(getDiscountedPrice(ahora, station))})` : ''} | mín ${fmtEur(min)} (${fMin}) | máx ${fmtEur(max)} (${fMax}) | media ${fmtEur(avg)} | desde ${primera.date.slice(0,5)} ${delta >= 0 ? '+' : ''}${fmtEur(delta)} (${pct >= 0 ? '+' : ''}${pct.toFixed(1).replace('.', ',')}%) | ${serie.length} días con precio`);
   return out.join('\n');
 }
 
-async function buildAiHistoryLines(userText, stations, fuelName) {
+async function buildAiHistoryLines(userText, stations) {
   const lines = ['\n=== HISTÓRICO DE PRECIOS (Ministerio: instantánea diaria por gasolinera) ==='];
-  const days = Math.max(STATE.historyDays || 14, 14);
-  let historyData = {};
+  const days = resolveAiHistoryDays(userText);
+  const pedido = /\d/.test(userText || '') || /a[nñ]o|semestre/i.test(userText || '');
+  lines.push(`Rango: ${days} días${pedido ? ' (los que has pedido)' : ' (el que tienes seleccionado en el histórico de la app)'}; la app permite ${HISTORY_DAYS_OPTIONS.join(', ')} días.`);
+  let cache = { data: {}, dias: days, reutilizado: false };
   try {
-    historyData = (STATE.selectedProv ? await fetchProvinceHistory(STATE.selectedProv, days) : {}) || {};
+    if (STATE.selectedProv) cache = await getAiHistoryData(days);
   } catch (e) {
     lines.push('  Error al recuperar histórico: ' + e.message);
     return lines;
   }
-  const dates = Object.keys(historyData).sort();
+  const historyData = cache.data || {};
+  // Si la caché traía más días de los pedidos, se recorta al rango solicitado.
+  const dates = sortHistoryDates(Object.keys(historyData)).slice(-days);
   if (!dates.length) {
     lines.push('  No hay datos históricos disponibles en caché para esta provincia.');
     return lines;
   }
-  lines.push(`Periodo: ${dates[0]} → ${dates[dates.length - 1]} (${dates.length} días con datos). Fechas en dd-mm-aaaa. Importante: una fecha ausente significa que esa gasolinera no reportaba precio ese día, NO que mantuviera el precio.`);
+  const fuelName = aiHistoryFuelName(stations[0] || {});
+  lines.push(`Periodo con datos: ${dates[0]} → ${dates[dates.length - 1]} (${dates.length} jornadas)${cache.reutilizado ? `, reutilizando la caché de la app (${cache.dias} días cargados)` : ''}. Fechas en dd-mm-aaaa. Importante: una fecha ausente significa que esa gasolinera no reportaba precio ese día, NO que mantuviera el precio.`);
+  lines.push(`Combustible analizado: ${fuelName} (el mismo que el filtro de la app / el combo del modal de histórico).`);
+
+  const priceOf = st => {
+    const key = FUEL_KEYS[fuelName];
+    if (key) return getFuelPrice(st, key);
+    for (const name of (FUEL_GROUPS[fuelName] || [fuelName])) {
+      const p = getFuelPrice(st, FUEL_KEYS[name] || '');
+      if (p !== null) return p;
+    }
+    return null;
+  };
 
   // --- Evolución de la provincia ---
   const daily = [];
   for (const d of dates) {
-    const precios = (historyData[d] || []).map(s => getSelectedFuelPrice(s)).filter(p => p !== null);
-    if (!precios.length) continue;
-    const sorted = (historyData[d] || [])
-      .map(s => ({ s, p: getSelectedFuelPrice(s) }))
-      .filter(x => x.p !== null)
-      .sort((a, b) => a.p - b.p);
+    const conPrecio = (historyData[d] || []).map(s => ({ s, p: priceOf(s) })).filter(x => x.p !== null);
+    if (!conPrecio.length) continue;
+    const precios = conPrecio.map(x => x.p);
+    conPrecio.sort((a, b) => a.p - b.p);
     daily.push({
       fecha: d,
       media: precios.reduce((a, b) => a + b, 0) / precios.length,
       min: precios.reduce((a, b) => Math.min(a, b), Infinity),
       max: precios.reduce((a, b) => Math.max(a, b), -Infinity),
       n: precios.length,
-      cheapest: sorted[0]
+      cheapest: conPrecio[0]
     });
   }
-  lines.push('\n--- Provincia (mediana de mercado por día, últimas 10 jornadas) ---');
+  lines.push(`\n--- Provincia: media de mercado por día (${fuelName}) ---`);
   for (const d of daily.slice(-10)) {
     lines.push(`  ${d.fecha}: media ${fmtEur(d.media)} | mín ${fmtEur(d.min)} | máx ${fmtEur(d.max)} | ${d.n} gasolineras | más barata: ${d.cheapest.s['Rótulo'] || '?'} (${d.cheapest.s.Localidad || '?'}) ${fmtEur(d.cheapest.p)}`);
   }
@@ -947,8 +1038,9 @@ async function buildAiHistoryLines(userText, stations, fuelName) {
     const dAvg = last.media - first.media;
     const pct = first.media ? (dAvg / first.media) * 100 : 0;
     const lowest = daily.reduce((a, b) => (b.min < a.min ? b : a));
-    lines.push(`  Tendencia provincial (${fuelName}): ${first.fecha} → ${last.fecha}, media ${fmtEur(first.media)} → ${fmtEur(last.media)} (${dAvg >= 0 ? '+' : ''}${fmtEur(dAvg)} €/L, ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%). El precio más bajo visto en toda la provincia fue ${fmtEur(lowest.min)} el ${lowest.fecha}.`);
+    lines.push(`  Tendencia provincial: ${first.fecha} → ${last.fecha}, media ${fmtEur(first.media)} → ${fmtEur(last.media)} (${dAvg >= 0 ? '+' : ''}${fmtEur(dAvg)} €/L, ${pct >= 0 ? '+' : ''}${pct.toFixed(1).replace('.', ',')}%). El precio más bajo visto en toda la provincia fue ${fmtEur(lowest.min)} el ${lowest.fecha}.`);
   }
+  if (daily.length > 10) lines.push(`  (se muestran las últimas 10 de ${daily.length} jornadas; la media del rango completo está en las tendencia)`);
 
   // --- Historial por gasolinera ---
   // Prioridad: las nombradas en la pregunta, los favoritos y las más baratas.
@@ -958,7 +1050,7 @@ async function buildAiHistoryLines(userText, stations, fuelName) {
     return n.length >= 4 && t.includes(n);
   });
   const conPrecio = stations
-    .map(s => ({ s, p: getSelectedFuelPrice(s) }))
+    .map(s => ({ s, p: priceOf(s) }))
     .filter(x => x.p !== null)
     .sort((a, b) => a.p - b.p)
     .map(x => x.s);
@@ -969,13 +1061,13 @@ async function buildAiHistoryLines(userText, stations, fuelName) {
   favoritos.forEach(push);
   conPrecio.slice(0, 8).forEach(push);
 
-  lines.push(`\n--- Historial por gasolinera (máx. 12; las nombradas en tu pregunta van primero) ---`);
+  lines.push('\n--- Historial por gasolinera (máx. 12; las nombradas en tu pregunta van primero) ---');
   if (!elegidas.length) {
     lines.push('  No hay estaciones con las que cruzar el histórico.');
   } else {
     let impresas = 0;
     for (const s of elegidas) {
-      const bloque = stationHistoryBlock(historyData, dates, s, fuelName);
+      const bloque = stationHistoryBlock(historyData, dates, s);
       if (bloque) { lines.push('  ' + bloque); impresas++; }
     }
     if (!impresas) lines.push('  Ninguna de esas estaciones tiene precios en el histórico cargado.');
@@ -984,20 +1076,19 @@ async function buildAiHistoryLines(userText, stations, fuelName) {
   // --- Quién se movió más en el periodo ---
   const variaciones = [];
   for (const s of conPrecio.slice(0, 60)) {
-    const serie = stationSeries(historyData, dates, s);
+    const serie = stationSeries(historyData, dates, s, fuelName);
     if (serie.length < 2) continue;
-    const d = serie[serie.length - 1].precio - serie[0].precio;
-    variaciones.push({ s, d, desde: serie[0].fecha, hasta: serie[serie.length - 1].fecha });
+    variaciones.push({ s, d: serie[serie.length - 1].price - serie[0].price, desde: serie[0].date });
   }
   variaciones.sort((a, b) => a.d - b.d);
   const fmtVar = v => `${v.s['Rótulo'] || '?'} (${v.s.Localidad || '?'}) ${v.d >= 0 ? '+' : ''}${fmtEur(v.d)} desde ${v.desde.slice(0,5)}`;
   if (variaciones.length >= 3) {
-    lines.push('\n---|Mayores subidas y bajadas del periodo (muestra de las 60 más baratas) ---');
-    variaciones.slice(0, 3).forEach(v => lines.push('  📈 ' + fmtVar(v)));
-    variaciones.slice(-3).reverse().forEach(v => lines.push('  📉 ' + fmtVar(v)));
+    lines.push('\n--- Mayor bajada y mayor subida del periodo (muestra de las 60 más baratas) ---');
+    variaciones.slice(0, 3).forEach(v => lines.push('  📉 ' + fmtVar(v)));
+    variaciones.slice(-3).reverse().forEach(v => lines.push('  📈 ' + fmtVar(v)));
   }
 
-  lines.push('\nInstrucciones: cita siempre la fecha (dd-mm-aaaa) y el precio en €/L con 3 decimales. Si la pregunta es sobre una gasolinera que no aparece arriba, dilo y ofrece consultarla indicando su marca y localidad.');
+  lines.push('\nInstrucciones: cita siempre la fecha (dd-mm-aaaa) y el precio en €/L con 3 decimales. Si la pregunta es sobre una gasolinera que no aparece arriba, dilo y ofrece consultarla indicando su marca y localidad. Si el usuario pide otro rango, tienes hasta 180 días.');
   return lines;
 }
 
@@ -1124,9 +1215,9 @@ function updateAiStatus(provider, override) {
     return;
   }
   if (config.viaProxy) {
-    el.textContent = getAiProxyUrl(provider)
-      ? '✅ Proxy configurado'
-      : '⚠️ Sin proxy — ve a Config → IA';
+    el.textContent = isDefaultProxyUrl(provider)
+      ? '✅ Proxy por defecto (cámbialo en Config → IA)'
+      : '✅ Proxy configurado';
     return;
   }
   if (config.keyOptional) {

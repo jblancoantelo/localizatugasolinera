@@ -106,7 +106,7 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 | Notificaciones | Web Push API + Periodic Background Sync |
 | Service Worker | Cache-first + Network-first híbrido |
 | Chat IA | 7 proveedores (Groq, Mistral, OpenRouter, LLM7.io, NVIDIA vía Worker, Google Gemini, Chrome Built-in AI) |
-| Tests | Playwright (139 tests, servidor HTTP inline) |
+| Tests | Playwright (147 tests, servidor HTTP inline) |
 | Desarrollo | [OpenCode](https://opencode.ai) con modelos DeepSeek (libres) |
 
 ---
