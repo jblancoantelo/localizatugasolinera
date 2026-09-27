@@ -131,7 +131,7 @@ node docs/test/full_test.mjs
 
 ## Resultados actuales
 
-**147 tests — 147 ✅ 0 ❌**
+**152 tests — 152 ✅ 0 ❌**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
@@ -155,8 +155,8 @@ node docs/test/full_test.mjs
 | Persistencia | 4 ✅ | — |
 | Push Notifications | 10 ✅ | — |
 | Helpers (norm/parsePrice/comparePrices) | 15 ✅ | — |
-| Chat IA (sección 15) | 81 ✅ | — |
-| **Total** | **140 ✅** | **7 ✅** |
+| Chat IA (sección 15) | 86 ✅ | — |
+| **Total** | **145 ✅** | **7 ✅** |
 
 ## 15. Chat IA (automatizado)
 
@@ -192,6 +192,14 @@ nombrada (10 puntos), el resumen con actual/mín/máx/media/variación y nº de
 días, favoritos y más baratas incluidos, la tendencia provincial y las mayores
 subidas/bajadas, y **no** se descarga nada si la pregunta no usa palabras clave
 ni nombra una marca (`AI_HISTORY_WORDS`).
+
+**Diagnóstico del proxy de NVIDIA** (5 tests nuevos): `aiProxyDiagnostics()`
+clasifica el `GET /v1/models` sin coste de tokens en `dns` (host inexistente,
+con la forma de URL que hay que pegar), `notfound` (host que responde sin
+Worker), `nokey` (Worker sin `NVIDIA_API_KEY`), `badauth` (401/403), `quota`
+(429) y `ok` con el nº de modelos; existen `iaProxyTestBtn` e
+`iaProxyTestStatus`; y tanto el `send()` del chat como `fetchAiModels()`
+devuelven un error descriptivo en vez de `Failed to fetch`.
 
 **Rango de días del histórico** (4 tests nuevos): `resolveAiHistoryDays()`
 entiende "60 días", "21 jornadas", "6 semanas", "3 meses" y "1 año"; acota al

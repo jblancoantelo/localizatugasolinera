@@ -326,8 +326,10 @@
           <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.3rem">
             <input type="url" id="iaProxyNvidia" value="https://petrol-nvidia-proxy.workers.dev" placeholder="https://petrol-nvidia-proxy.workers.dev" style="flex:1;min-width:220px;padding:0.2rem;border:1px solid #ddd;border-radius:4px;font-size:0.65rem">
             <button id="iaProxyResetBtn" title="Volver a la URL predefinida del Worker" style="background:#eee;border:1px solid #ccc;padding:0.2rem 0.4rem;border-radius:4px;cursor:pointer;font-size:0.65rem">↺ Usar la predefinida</button>
+            <button id="iaProxyTestBtn" title="Comprobar si esa URL es la buena (no gasta tokens)" style="background:#eee;border:1px solid #ccc;padding:0.2rem 0.4rem;border-radius:4px;cursor:pointer;font-size:0.65rem">🔎 Probar</button>
           </div>
-          <p class="config-desc" style="margin-top:0.2rem">Para desplegarlo: <code>cd workers</code> → <code>wrangler secret put NVIDIA_API_KEY</code> → <code>wrangler deploy</code>. El comando imprime la URL; si no coincide con la de arriba, pégala aquí. La clave nunca se guarda en el navegador y, al cambiar la URL, el catálogo de modelos se vuelve a consultar.</p>
+          <p class="config-desc" id="iaProxyTestStatus" style="margin:0 0 0.3rem;min-height:0.9rem"></p>
+          <p class="config-desc" style="margin-top:0.2rem">Para desplegarlo: <code>cd workers</code> → <code>wrangler secret put NVIDIA_API_KEY</code> → <code>wrangler deploy</code>. El comando imprime la URL; si no coincide con la de arriba, pégala aquí y pulsa <b>🔎 Probar</b>, que te dice si el Worker existe, si le falta la clave o si NVIDIA la rechaza. La clave nunca se guarda en el navegador y, al cambiar la URL, el catálogo de modelos se vuelve a consultar.</p>
         </div>
         <div class="config-card">
           <h3>🔄 Actualización de la app</h3>

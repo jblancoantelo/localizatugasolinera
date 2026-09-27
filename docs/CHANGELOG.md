@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## [2026-09-27] — La app dice si la URL del proxy de NVIDIA es la buena
+
+### 🔎 Comprobación del proxy desde Config → IA
+
+| Cambio | Detalle |
+|--------|---------|
+| `js/ai-chat.js` | **Nuevo** `aiProxyDiagnostics(provider, urlOverride)`: un `GET /v1/models` **sin coste de tokens** que clasifica el resultado en `dns` (el host no existe), `notfound` (el host responde pero no hay Worker), `nokey` (Worker sin `NVIDIA_API_KEY`), `badauth` (401/403), `quota` (429), `http<status>` y `ok` con el nº de modelos, con una explicación en castellano de qué revisar en cada caso |
+| `index.html` | Botón **🔎 Probar** (`iaProxyTestBtn`) y su cuadro de estado (`iaProxyTestStatus`) junto a `iaProxyNvidia`. Si la comprobación va bien, guarda la URL, refresca el estado del panel e invalida el catálogo |
+| `js/ai-chat.js` | **Nuevo** `aiFetchError(provider, err)`: en los proveedores `viaProxy` un host inexistente solo produce "Failed to fetch", así que el `send()` de NVIDIA lo reescribe con la URL usada, la forma que debe tener y dónde cambiarla |
+| `js/ai-chat.js` | `fetchAiModels()` con `viaProxy` ahora diagnostica antes de lanzar: el fallo del catálogo nombra el motivo en vez de mostrar un error de red |
+| `js/ai-chat.js` | El mensaje de `dns` recuerda que `tu-subdominio` en la documentación es un literal: la URL real la imprime `wrangler deploy` |
+
+Motivo: Cloudflare asigna a cada cuenta un subdominio propio de `workers.dev`, así que `https://petrol-nvidia-proxy.workers.dev` (el valor por defecto) casi nunca es el host real y respondía "Servidor no encontrado" sin explicar nada.
+
+### 🧪 Verificación
+
+- Suite completa: **152 tests** (0 fallos), 5 nuevos sobre el diagnóstico (host inexistente, 404 sin Worker, Worker sin clave, 401/403, 429, OK con nº de modelos) y el error descriptivo en el chat y en el catálogo.
+
+---
+
 ## [2026-09-27] — Histórico de la IA con los rangos del modal + URL NVIDIA por defecto
 
 ### 📈 El histórico del chat ya usa los mismos datos y rangos que el modal

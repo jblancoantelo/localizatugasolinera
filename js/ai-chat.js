@@ -143,10 +143,16 @@ const AI_PROVIDERS = {
       // max_tokens alto a proposito: varios de estos modelos razonan antes de
       // responder y con 1024 se quedaban sin tokens (glm-5.3-flash consumia
       // ~1000 caracteres solo en razonamiento y devolvia content vacio).
-      const res = await fetch(aiProviderUrl('nvidia', '/v1/chat/completions'), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, messages, max_tokens: 2048 }), signal
-      });
+      let res;
+      try {
+        res = await fetch(aiProviderUrl('nvidia', '/v1/chat/completions'), {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model, messages, max_tokens: 2048 }), signal
+        });
+      } catch (e) {
+        if (e && e.name === 'AbortError') throw e;
+        throw aiFetchError('nvidia', e);
+      }
       if (!res.ok) throw await aiHttpError(res);
       const data = await res.json();
       return aiModelReply(model, data, 'Nemotron 3 Ultra o Kimi K3');
@@ -280,6 +286,79 @@ function aiProviderUrl(provider, path) {
   return path;
 }
 
+// Un fetch a un host inexistente falla con "Failed to fetch" / "Load failed",
+// que no dice nada útil. Con la URL del proxyNVIDIA estos casos son los mas
+// frecuentes (nombre de Worker equivocado, subdominio de la cuenta distinto,
+// Worker sin desplegar, ALLOWED_ORIGIN cerrando el acceso), asi que se
+// convierte en un mensaje que dice qué mirar.
+function aiFetchError(provider, err) {
+  const config = AI_PROVIDERS[provider] || {};
+  if (!config.viaProxy) return err;
+  const url = getAiProxyUrl(provider);
+  const raw = (err && (err.message || String(err))) || 'error de red';
+  if (/failed to fetch|load failed|networkerror|network request failed|dns|err_name_not_resolved|err_connection/i.test(raw)) {
+    return new Error('No se pudo conectar con el proxy de NVIDIA en ' + url
+      + ' (' + raw + '): ese host no existe o no responde. La URL que imprime "wrangler deploy"'
+      + ' tiene esta forma: https://petrol-nvidia-proxy.<tu-subdominio>.workers.dev');
+  }
+  return new Error(raw + ' — proxy: ' + url);
+}
+
+// Diagnóstico del proxy: un GET a /v1_models_ (sin coste de tokens) y una
+// explicación por cada resultado posible, para no tener que adivinar.
+async function aiProxyDiagnostics(provider, urlOverride) {
+  const config = AI_PROVIDERS[provider];
+  if (!config || !config.viaProxy) return { ok: false, reason: 'unsupported' };
+  const base = normalizeAiProxyUrl(urlOverride) || getAiProxyUrl(provider);
+  if (!base) return { ok: false, reason: 'nourl' };
+  const res = { url: base };
+  let r;
+  try {
+    r = await fetch(base + '/v1/models', { headers: { Accept: 'application/json' } });
+  } catch (e) {
+    return Object.assign(res, {
+      ok: false, kind: 'dns',
+      message: 'No se pudo ni conectar con ' + base + ' (' + ((e && e.message) || 'error de red')
+        + '). Ese host no existe: revisa la URL. La que imprime "wrangler deploy" tiene esta forma: '
+        + 'https://petrol-nvidia-proxy.<tu-subdominio>.workers.dev'
+    });
+  }
+  const body = await r.text();
+  let json = null;
+  try { json = JSON.parse(body); } catch {}
+  const msg = (json && json.error && json.error.message) || body.slice(0, 160).trim();
+  if (r.ok && json) {
+    const n = Array.isArray(json.data) ? json.data.length : 0;
+    return Object.assign(res, {
+      ok: true, kind: 'ok', models: n,
+      message: 'El proxy responde en ' + base + ' con ' + n + ' modelos. Ya puedes usar NVIDIA.'
+    });
+  }
+  if (r.status === 500 && /no tiene la clave/i.test(msg)) {
+    return Object.assign(res, {
+      ok: false, kind: 'nokey', message: 'El Worker existe pero no tiene clave: ejecuta "wrangler secret put NVIDIA_API_KEY" y vuelve a desplegar.'
+    });
+  }
+  if (r.status === 401 || r.status === 403) {
+    return Object.assign(res, {
+      ok: false, kind: 'badauth',
+      message: 'NVIDIA rechazó la clave del Worker (401/403). Revísala: si la rotaste, vuelve a hacer "wrangler secret put NVIDIA_API_KEY".'
+    });
+  }
+  if (r.status === 429) {
+    return Object.assign(res, {
+      ok: false, kind: 'quota', message: 'NVIDIA devolvió 429 (cuota o rate limit). El proxy está bien; espera unos minutos.'
+    });
+  }
+  if (r.status === 404) {
+    return Object.assign(res, {
+      ok: false, kind: 'notfound',
+      message: 'Ese host responde, pero no tiene un Worker en esa ruta ("' + (msg || '404') + '"). Suele ser el subdominio equivocado: usa el que imprime "wrangler deploy".'
+    });
+  }
+  return Object.assign(res, { ok: false, kind: 'http' + r.status, message: 'HTTP ' + r.status + ': ' + (msg || '(sin detalle)') });
+}
+
 // Un proveedor viaProxy esta listo en cuanto tenga la URL del proxy; uno con
 // clave opcional siempre (accede en anonimo); el resto, en cuanto tenga clave.
 function isAiProviderReady(provider) {
@@ -399,7 +478,19 @@ async function fetchAiModels(provider, apiKey, signal) {
     : base;
   const headers = { 'Accept': 'application/json' };
   if (provider !== 'google' && !config.viaProxy && !config.listModelsNoAuth) headers['Authorization'] = 'Bearer ' + apiKey;
-  const res = await fetch(url, { headers, signal });
+  let res;
+  try {
+    res = await fetch(url, { headers, signal });
+  } catch (e) {
+    if (e && e.name === 'AbortError') throw e;
+    // Con viaProxy un fallo de red casi siempre es la URL equivocada: se
+    //iagnostica antes de devolver el error para poder explicar la causa.
+    if (config.viaProxy) {
+      const diag = await aiProxyDiagnostics(provider);
+      throw new Error(diag.message);
+    }
+    throw e;
+  }
   if (!res.ok) throw await aiHttpError(res);
   const data = await res.json();
   // .call(config) para que parseModels pueda leer sus propias opciones (p.ej. la
@@ -715,6 +806,31 @@ function initAiProxyConfig(provider) {
       invalidateAiModelsCache(provider);
       markAiModelsStatus(provider, '⏳ Consultando el proxy…');
       autoRefreshAiModels(provider);
+    });
+  }
+  // "Probar" no cuesta tokens: hace un GET a /v1/models y explica el resultado
+  // (host inexistente, Worker sin clave, clave rechazada, cuota, OK). Es la
+  // forma de saber si la URL es la buena sin salir de la app.
+  const test = document.getElementById('iaProxyTestBtn');
+  if (test && !test.dataset.listener) {
+    test.dataset.listener = '1';
+    const out = document.getElementById('iaProxyTestStatus');
+    test.addEventListener('click', async () => {
+      const url = normalizeAiProxyUrl(input.value);
+      test.disabled = true;
+      test.textContent = '⏳';
+      if (out) { out.textContent = 'Comprobando ' + (url || '(sin URL)') + '…'; out.style.color = '#888'; }
+      const diag = await aiProxyDiagnostics(provider, url);
+      test.disabled = false;
+      test.textContent = '🔎';
+      if (out) { out.textContent = (diag.ok ? '✅ ' : '❌ ') + diag.message; out.style.color = diag.ok ? '#2a7' : '#c33'; }
+      if (diag.ok) {
+        setAiProxyUrl(provider, url);
+        input.value = getAiProxyUrl(provider);
+        updateAiStatus(provider);
+        invalidateAiModelsCache(provider);
+        autoRefreshAiModels(provider);
+      }
     });
   }
 }

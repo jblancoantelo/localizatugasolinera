@@ -286,6 +286,8 @@ export function getStationHistory(historyByDate, stationId, fuelName) {
 
 **Problema**: Variable global compartida entre `table.js` y `map.js` sin control.
 
+**Actualización 2026-09-27**: el chat de IA (`getAiHistoryData()` en `js/ai-chat.js`) ya no usa solo `window._historyCache`: además mantiene `window._aiHistoryCache` para poder ampliar el rango sin repetir las descargas del modal. T-07 debe migrar **las dos** variables a la caché formal de `db.js` (con el rango como parte de la clave, porque ahora conviven peticiones de 7 a 180 días) o, mejor, a un único caché que guarde el rango máximo cargado y recorte en memoria, que es lo que ya hace `buildAiHistoryLines()`.
+
 **Solución** en `db.js`:
 
 ```js

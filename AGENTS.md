@@ -116,6 +116,12 @@ En `controls.js`, `setActiveTab()` cierra automáticamente:
 - Cambiar la URL en Config invalida el catálogo cacheado (`invalidateAiModelsCache`).
 - Despliegue: `wrangler secret put NVIDIA_API_KEY` + `wrangler deploy`; la clave nunca se escribe en el repo. `ALLOWED_ORIGIN` en `wrangler.toml` es opcional (sin él responde `*`).
 
+⚠️ **La URL del Worker casi nunca es `https://<name>.workers.dev`**: Cloudflare da a cada cuenta su propio subdominio, así que lo que imprime `wrangler deploy` es `https://petrol-nvidia-proxy.<tu-subdominio>.workers.dev`. `AI_PROXY_NVIDIA_DEFAULT` es solo un valor por defecto y **`tu-subdominio` en la documentación es un literal, no se debe copiar tal cual** (responde "Servidor no encontrado"). Por eso Config → IA trae dos botones junto a `iaProxyNvidia`:
+- **↺ Usar la predefinida** (`iaProxyResetBtn`): borra la URL guardada y vuelve a `AI_PROXY_NVIDIA_DEFAULT`
+- **🔎 Probar** (`iaProxyTestBtn` + `iaProxyTestStatus`): un `GET /v1/models` **sin coste de tokens** y una explicación por cada caso. `aiProxyDiagnostics(provider, urlOverride)` clasifica: `dns` (host inexistente, con la forma de URL que hay que pegar), `notfound` (el host responde pero no hay Worker → subdominio equivocado), `nokey` (Worker sin `NVIDIA_API_KEY`), `badauth` (401/403: clave rechazada), `quota` (429), `http<status>` y `ok` con el nº de modelos. Si responde bien, guarda la URL e invalida el catálogo
+
+**Errores descriptivos**: un `fetch` a un host inexistente solo da "Failed to fetch", así que los dos caminos con `viaProxy` reescriben el error — `aiFetchError()` en el `send()` de NVIDIA y `aiProxyDiagnostics()` en `fetchAiModels()` — con un mensaje que nombra la URL usada, la que debería ser y qué revisar.
+
 **API Keys**: cifradas en código fuente con XOR + base64 (contraseña de 6 chars, misma para las 4). Se descargan al introducir la passphrase correcta en Config y pulsar "Cargar claves". Si ya hay claves cargadas aparece enlace "Volver a cargar".
 
 **LLM7.io (`llm7`) — el único con clave opcional**:
@@ -222,7 +228,7 @@ Orden actual de grupos:
 ### Tests
 - Ubicación: `docs/test/full_test.mjs`
 - Plan: `docs/test/TEST_PLAN.md`
-- 147 tests totales (140 HTTP + 7 file://)
+- 152 tests totales (145 HTTP + 7 file://)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)
 - Push notifications tests (14.1-14.10) integrados en full_test.mjs

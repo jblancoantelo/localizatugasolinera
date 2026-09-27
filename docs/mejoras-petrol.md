@@ -1,5 +1,30 @@
 # Mejoras realizadas — Precios Gasolina España
 
+## 2026-09-27 — La app te dice si la URL del proxy de NVIDIA es la buena
+
+### Por qué hacía falta
+La URL por defecto (`https://petrol-nvidia-proxy.workers.dev`) casi nunca es la buena: Cloudflare da a cada cuenta su propio subdominio de `workers.dev`, así que lo que imprime `wrangler deploy` es `https://petrol-nvidia-proxy.<tu-subdominio>.workers.dev`. Con la URL equivocada el chat moría con un seco "Failed to fetch" y el catálogo no cargaba, sin decir qué mirar.
+
+### 🔎 Botón "Probar" en Config → IA
+- `aiProxyDiagnostics(provider, urlOverride)`: un `GET /v1/models` que **no gasta tokens** y devuelve una explicación por cada resultado posible:
+  - `dns` — no se pudo ni conectar: ese host no existe, con la forma de URL que hay que pegar
+  - `notfound` — el host responde pero no hay Worker detrás (subdominio equivocado)
+  - `nokey` — el Worker existe pero sin `NVIDIA_API_KEY`
+  - `badauth` — NVIDIA rechazó la clave (401/403), típico tras rotarla sin volver a publicarla
+  - `quota` — 429: el proxy está bien, es cuota
+  - `ok` — "el proxy responde con N modelos"
+- Botón `iaProxyTestBtn` + estado `iaProxyTestStatus`. Si responde bien, guarda la URL, actualiza el estado del panel e invalida el catálogo de modelos.
+
+### Errores descriptivos en los dos caminos
+- `aiFetchError()` en el `send()` de NVIDIA: si el host no responde, el mensaje pasa de "Failed to fetch" a "No se pudo conectar con el proxy de NVIDIA en <url> … la URL que imprime wrangler deploy tiene esta forma: …".
+- `fetchAiModels()` con `viaProxy` diagnostica antes de propagar, así que el fallo del catálogo también explica la causa.
+- El botón ↺ Usar la predefinida y el valor por defecto se mantienen: solo se añadieron la comprobación y los mensajes.
+
+### Tests
+- 152 tests (145 HTTP + 7 file://) en verde. Nuevos: las 5 clasificaciones del diagnóstico, que exista el botón y su cuadro de estado, y que tanto el chat como el catálogo devuelvan un error descriptivo en vez de "Failed to fetch".
+
+---
+
 ## 2026-09-27 — El histórico de la IA usa los mismos rangos y datos que el modal
 
 ### Rango de días dinámico (7 a 180)

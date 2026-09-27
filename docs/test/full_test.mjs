@@ -648,6 +648,48 @@ async function testAiChat(page) {
     resetProxy.guardado === '' && resetProxy.enElInput === resetProxy.def
     && /por defecto/i.test(resetProxy.estado), resetProxy.enElInput);
 
+  // --- Diagnóstico de la URL del proxy: el error tiene que ser descriptivo ---
+  const diag = await page.evaluate(async () => {
+    const real = window.fetch.bind(window);
+    const cuerpo = (status, texto, json) => new Response(json ? JSON.stringify(json) : texto,
+      { status, headers: { 'Content-Type': json ? 'application/json' : 'text/html' } });
+    const conProxy = async (handler) => { window.fetch = handler; const r = await aiProxyDiagnostics('nvidia'); window.fetch = real; return r; };
+    const r404 = await conProxy(() => cuerpo(404, 'Servidor no encontrado'));
+    const r500 = await conProxy(() => cuerpo(500, 'x', { error: { message: 'El Worker no tiene la clave: ejecuta "wrangler secret put NVIDIA_API_KEY"' } }));
+    const r401 = await conProxy(() => cuerpo(401, 'x', { error: { message: 'Invalid API key' } }));
+    const r429 = await conProxy(() => cuerpo(429, 'x', { error: { message: 'rate limit' } }));
+    const rOk = await conProxy(() => cuerpo(200, 'x', { data: [{ id: 'a' }, { id: 'b' }] }));
+    const rDns = await conProxy(() => { throw new TypeError('Failed to fetch'); });
+    // El mismo diagnóstico cuando el fallo ocurre al pedir el catálogo.
+    window.fetch = () => { throw new TypeError('Failed to fetch'); };
+    let errCatalogo = '';
+    try { await fetchAiModels('nvidia', null, {}); } catch (e) { errCatalogo = e.message; }
+    // Y cuando falla el chat.
+    let errChat = '';
+    try { await AI_PROVIDERS.nvidia.send(null, 'x', [{ role: 'user', content: 'hola' }]); } catch (e) { errChat = e.message; }
+    window.fetch = real;
+    const ids = ['iaProxyTestBtn', 'iaProxyTestStatus'].filter(id => !!document.getElementById(id));
+    return { r404, r500, r401, r429, rOk, rDns, errCatalogo, errChat, ids, url: getAiProxyUrl('nvidia') };
+  });
+  log('IA', '🔎 Probar detecta que el host no existe y da la URL a pegar',
+    diag.rDns.kind === 'dns' && /no existe/i.test(diag.rDns.message) && /wrangler deploy/.test(diag.rDns.message),
+    diag.rDns.message);
+  log('IA', '🔎 Probar distingue 404 sin Worker, Worker sin clave, 401/403 y 429',
+    diag.r404.kind === 'notfound' && /subdominio equivocado/.test(diag.r404.message)
+    && diag.r500.kind === 'nokey' && /secret put NVIDIA_API_KEY/.test(diag.r500.message)
+    && diag.r401.kind === 'badauth' && diag.r429.kind === 'quota',
+    [diag.r404.kind, diag.r500.kind, diag.r401.kind, diag.r429.kind].join(', '));
+  log('IA', '🔎 Probar confirma el proxy OK con el número de modelos',
+    diag.rOk.ok === true && diag.rOk.models === 2 && /2 modelos/.test(diag.rOk.message), diag.rOk.message);
+  log('IA', 'Un host inexistente da un error descriptivo, no "Failed to fetch"',
+    /no se pudo (ni )?conectar/i.test(diag.errCatalogo) && /no se pudo conectar con el proxy de NVIDIA/i.test(diag.errChat)
+    && /wrangler deploy/.test(diag.errCatalogo) && /wrangler deploy/.test(diag.errChat)
+    && !/^Failed to fetch$/.test(diag.errCatalogo) && !/^Failed to fetch$/.test(diag.errChat),
+    diag.errCatalogo.slice(0, 90));
+  log('IA', 'Config → IA tiene el botón y el cuadro de estado de la comprobación',
+    diag.ids.length === 2, diag.ids.join(', '));
+
+
 
   // --- aiApiKey(): cae al literal anónimo si el campo está vacío ---
   const keyAnon = await page.evaluate(() => {
