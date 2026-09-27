@@ -103,9 +103,18 @@ En `controls.js`, `setActiveTab()` cierra automáticamente:
 2. Mistral (`mistral`)
 3. OpenRouter (`openrouter`)
 4. Google Gemini (`google`)
-5. Chrome Built-in AI (`chrome-nano`)
+5. LLM7.io (`llm7`)
+6. Chrome Built-in AI (`chrome-nano`)
+
+⚠️ **La app es una PWA estática sin backend, así que un proveedor solo sirve si el navegador acepta su preflight.** Antes de añadir uno, medir el CORS en Chromium real (preflight `OPTIONS` + petición con `Origin`), no con `curl`: NVIDIA NIM, Cerebras, Chutes, Z.ai, SambaNova y Cloudflare Workers AI quedan descartados. El Service Worker **no** es la causa de un fallo de CORS: comprobado registrando y desregistrando el SW, el resultado es idéntico.
 
 **API Keys**: cifradas en código fuente con XOR + base64 (contraseña de 6 chars, misma para las 4). Se descargan al introducir la passphrase correcta en Config y pulsar "Cargar claves". Si ya hay claves cargadas aparece enlace "Volver a cargar".
+
+**LLM7.io (`llm7`) — el único con clave opcional**:
+- `keyOptional: true` + `anonymousKey: 'unused'`: sin clave se manda `Bearer unused` y se accede anónimo (500k tokens/24 h, 1 req/s, 10/min, 60/h). Con token gratuito de `dash.llm7.io` son 1M/día. Por eso **no** tiene entrada en `AI_KEY_PREFIXES` ni clave cifrada.
+- `listModelsNoAuth: true` → su `GET /v1/models` solo admite `If-None-Match` y `Content-Type` en el preflight; mandar `Authorization` hace fallar la petición con `ERR_FAILED`. El catálogo es público, así que se pide sin cabecera. Su `POST /chat/completions` sí admite `authorization`.
+- `parseModels()` filtra por `tier === 'turbo'` (los `pro` devuelven 403 sin suscripción) y quita `DeepSeek-V4-Flash-0731`, que figura como turbo pero devuelve 401 incluso con clave válida (`unavailable`).
+- `max_tokens: 1024`: `GLM-5.3-Flash` y `minimax-m2.7` son *reasoning* y con pocos tokens devuelven `content` vacío.
 
 **Validación de formato por proveedor** (`AI_KEY_PREFIXES` + `isAiKeyFormatValid()`):
 - Prefijos obligatorios: `google`→`AIza`, `groq`→`gsk_`, `mistral`→`cMHt`, `openrouter`→`sk-or-v1-`
@@ -136,6 +145,7 @@ En `controls.js`, `setActiveTab()` cierra automáticamente:
 - Mistral: `open-mistral-nemo` (default), `ministral-8b-latest`, `codestral-latest`, `mistral-small-latest`, `mistral-medium-latest`
 - OpenRouter: `nvidia/nemotron-3-ultra-550b-a55b:free` (default), `nvidia/nemotron-3-super-120b-a12b:free`
 - Google Gemini: `gemini-3.8-flash` (default), `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.7-flash`
+- LLM7.io: `codestral-latest` (default), `GLM-5.3-Flash`, `minimax-m2.7`, `mistral-Nemo-Instruct-2407`
 - Chrome Built-in AI: session de IA nativa del navegador
 
 ⚠️ `defaultModel` **debe coincidir con el primer `<option>`** de `#iaModel<Provider>` en `index.html` (si no, el modelo por defecto no existe en el desplegable).
@@ -143,6 +153,13 @@ En `controls.js`, `setActiveTab()` cierra automáticamente:
 ⚠️ `mistral-large-latest` responde *"not available in your subscription tier"*. El tier free da 429 (`Rate limit exceeded`) de forma intermitente.
 
 **UI**: cada proveedor tiene su propio panel (`.ia-provider-panel`) dentro de `.ia-providers-container`. Los tabs de proveedor están en `.ia-tabs` con botones `.ia-tab`.
+
+**Auto-refresh del catálogo de modelos** (`AI_MODELS_CACHE_KEY`, TTL 24 h):
+- `refreshAiModels(provider, {force})` en `ai-chat.js`; `autoRefreshAiModels()` se dispara al abrir la pestaña de un proveedor (`main.js`) y respeta la caché
+- `populateAiModelSelect()` une catálogo remoto + lista fija sin duplicar y **conserva la selección**; si el modelo desaparece, lo marca con "⚠️ no disponible" y devuelve `missing`
+- `AI_MODEL_ERROR_RE` distingue "el modelo ya no existe" de red/401/429/500: un 429 no debe borrar la selección ni ofrecer refrescar
+- Si `/models` falla, se avisa **sin tocar el desplegable**
+- Botón 🔄 en cada desplegable (`initAiModelRefreshButtons()`) + botón dentro del aviso `warnAiModelUnavailable()`
 
 ### Caché — tabs IndexedDB / localStorage
 - `initCacheTabs()` en `storage.js` maneja cambio entre tabs.

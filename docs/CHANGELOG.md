@@ -1,5 +1,39 @@
 # CHANGELOG
 
+## [2026-09-27] — Chat IA: LLM7.io (sin clave) + catálogo de modelos automático
+
+### 🆕 Proveedor LLM7.io
+
+| Cambio | Detalle |
+|--------|---------|
+| `js/ai-chat.js` | Nuevo `AI_PROVIDERS.llm7`: `api.llm7.io/v1`, **clave opcional** (`keyOptional` + `anonymousKey: 'unused'`), sin entrada en `AI_KEY_PREFIXES` ni clave cifrada |
+| `js/ai-chat.js` | `listModelsNoAuth: true`: su `GET /v1/models` solo admite `If-None-Match` y `Content-Type` en el preflight, así que se pide sin `Authorization` (con ella devolvía `ERR_FAILED`) |
+| `js/ai-chat.js` | `parseModels()` filtra `tier === 'turbo'` (los `pro` dan 403 sin suscripción) y excluye `DeepSeek-V4-Flash-0731` (turbo pero 401) |
+| `index.html` | Pestaña y panel `.ia-provider-panel[data-iapanel="llm7"]`, con `#iaKeyLlm7` opcional |
+| — | `fetchAiModels()` hace `await parse.call(config, data)`: sin el `await` fallaba con `.filter is not a function` en todo proveedor con `parseModels` propio, y sin `.call` se perdía `this.unavailable` |
+
+### 🔄 Catálogo de modelos automático
+
+| Cambio | Detalle |
+|--------|---------|
+| `js/ai-chat.js` | `refreshAiModels(provider, {force})` con caché en `localStorage` (`gasolineras_ai_models`, TTL 24 h) |
+| `js/ai-chat.js` | `populateAiModelSelect()` une catálogo remoto + lista fija sin duplicar y conserva la selección; si el modelo desaparece lo marca "⚠️ no disponible" y `warnAiModelUnavailable()` ofrece refrescar |
+| `js/ai-chat.js` | `AI_MODEL_ERROR_RE` distingue "el modelo ya no existe" de red/401/429/500 (un 429 no debe borrar la selección) |
+| `js/main.js` | `initAiModelRefreshButtons()` + `autoRefreshAiModels()` al cargar y al abrir la pestaña de un proveedor |
+| `css/styles.css` | Estilos de `.ia-msg.info`, `.ia-msg.warn`, `.ia-warn-btn`, `.ia-refresh-btn`, `.ia-models-count` |
+
+### 🐞 Correcciones
+
+- `AI_NON_CHAT_RE`: se quitó `nemo-` del filtro, que colgaba también de `mistral-Nemo-Instruct-2407` (un modelo de chat válido de LLM7). Los NeMo de NVIDIA siguen fuera por `embed`/`parse`.
+- `AI_MODEL_ERROR_RE` reconoce el mensaje real de LLM7 (`Model 'x' is currently unavailable.`), que antes caía en error genérico en vez de ofrecer el botón de refresco.
+
+### 🧪 Verificación
+
+- Suite completa: **114 tests** (0 fallos), nueva sección 15 de Chat IA.
+- E2E real contra `api.llm7.io` sin clave: catálogo de 4 modelos, caché reutilizada sin peticiones y respuesta correcta con datos de la provincia.
+
+---
+
 ## [2026-09-26] — Chat IA: claves cifradas por proveedor + modelos resucitados
 
 ### 🔑 Claves de API

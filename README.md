@@ -74,8 +74,10 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 - Botón "Comprobar actualizaciones" que detecta cambios en `sw.js`
 
 ### 🤖 Chat IA integrado
-- **5 proveedores** seleccionables con pestañas: Groq, Mistral, OpenRouter, Google Gemini, Chrome Built-in AI
+- **6 proveedores** seleccionables con pestañas: Groq, Mistral, OpenRouter, Google Gemini, LLM7.io y Chrome Built-in AI
 - Las API Keys se guardan cifradas (XOR + base64) en el código fuente y se descargan en Config con una contraseña
+- **LLM7.io funciona sin clave**: sin API Key accede en modo anónimo (500k tokens/24 h); con una clave gratuita de `dash.llm7.io` el límite sube a 1M/día
+- **Catálogo de modelos automático**: los modelos gratuitos rotan con frecuencia, así que el desplegable se descarga de la API de cada proveedor (caché 24 h, botón 🔄 para refrescar) y avisa si el modelo elegido ya no está disponible
 - **Contexto automático**: cada mensaje incluye los datos actuales de la app (provincia, gasolineras, precios, favoritos)
 - Precarga de históricos si la pregunta menciona evolución de precios
 - Botón **Cancelar** para abortar mensaje en curso (AbortController)
@@ -102,8 +104,8 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 | Persistencia | IndexedDB + localStorage |
 | Notificaciones | Web Push API + Periodic Background Sync |
 | Service Worker | Cache-first + Network-first híbrido |
-| Chat IA | 5 proveedores (Groq, Mistral, OpenRouter, Google Gemini, Chrome Built-in AI) |
-| Tests | Playwright (66 tests, servidor HTTP inline) |
+| Chat IA | 6 proveedores (Groq, Mistral, OpenRouter, Google Gemini, LLM7.io, Chrome Built-in AI) |
+| Tests | Playwright (114 tests, servidor HTTP inline) |
 | Desarrollo | [OpenCode](https://opencode.ai) con modelos DeepSeek (libres) |
 
 ---

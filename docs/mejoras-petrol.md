@@ -1,5 +1,64 @@
 # Mejoras realizadas — Precios Gasolina España
 
+## 2026-09-27 — Chat IA: LLM7.io integrado + auto-refresh del catálogo de modelos
+
+### Criterio: CORS medido en navegador real, no con `curl`
+La app es una PWA estática sin backend, así que un proveedor solo sirve si el
+navegador acepta su preflight. Se comprobó con Chromium (preflight `OPTIONS` +
+petición real con `Origin`) y **el Service Worker se descartó como causa**:
+registrando y desregistrando el SW el resultado fue idéntico.
+
+### Descartados por CORS (el navegador rechaza el preflight)
+| Proveedor | Endpoint | Preflight |
+|-----------|----------|-----------|
+| NVIDIA NIM | `integrate.api.nvidia.com/v1` | sin `access-control-allow-origin` |
+| Cerebras | `api.cerebras.ai/v1` | sin CORS |
+| Chutes | `llm.chutes.ai/v1` | sin CORS |
+| Z.ai (Zhipu) | `api.z.ai/api/paas/v4` | sin CORS |
+| SambaNova | `api.sambanova.ai/v1` | `allow-origin: null` |
+| Cloudflare Workers AI | `api.cloudflare.com/client/v4/.../ai/run` | sin CORS |
+| Pollinations | `text.pollinations.ai/openai` | responde, pero Turnstile en el navegador |
+
+### Viable sin backend
+| Proveedor | Endpoint | Clave | Notas |
+|-----------|----------|-------|-------|
+| **LLM7.io** (integrado) | `api.llm7.io/v1` | **opcional** | 64 modelos, sin signup |
+| HuggingFace | `router.huggingface.co/v1` (`hf_`) | sí | $0.10/mes de crédito, 100k+ modelos OSS |
+| SiliconFlow | `api.siliconflow.cn/v1` (`sk-`) | sí (requiere SMS) | Qwen / DeepSeek / GLM a $0 |
+
+### LLM7.io: quirks descubiertos contra la API real
+1. **La clave es opcional.** Sin ella se manda el literal `Bearer unused` y se
+   accede en modo anónimo (500k tokens/24 h, 1 req/s, 10/min, 60/h). Con un
+   token gratuito de `dash.llm7.io` el límite sube a 1M/día. Por eso es el
+   único proveedor sin prefijo obligatorio en `AI_KEY_PREFIXES`.
+2. **`GET /v1/models` solo admite `If-None-Match` y `Content-Type` en el
+   preflight.** Si se manda `Authorization` el navegador responde `ERR_FAILED`.
+   El catálogo es público, así que se pide sin cabecera (`listModelsNoAuth`) y la
+   clave se reserva para el chat, cuyo `POST` sí admite `authorization`.
+3. **Solo los modelos `tier: "turbo"`** son accesibles sin pagar: los `pro`
+   (claude, gpt-5.5, kimi-k3...) devuelven 403. `/models` marca el tier, así que
+   `parseModels()` filtra por él y el desplegable no se llena de 59 modelos
+   rotos.
+4. **`DeepSeek-V4-Flash-0731` figura como `turbo` pero devuelve 401** aunque la
+   clave sea válida, así que está en la lista de ids excluidos.
+5. **`GLM-5.3-Flash` y `minimax-m2.7` son *reasoning*:** con pocos tokens
+   devuelven contenido vacío. Se piden `max_tokens: 1024` y, si aun así llega
+   `reasoning_content` sin contenido, se avisa en vez de dejar el chat en blanco.
+
+### Auto-refresh del catálogo
+Los modelos gratuitos rotan con mucha frecuencia, así que el catálogo se
+descarga en vez de depender solo de la lista fija:
+- Caché en `localStorage` (`gasolineras_ai_models`) con TTL de 24 h. Con caché
+  válida no se vuelve a pedir, y el botón 🔄 fuerza la descarga.
+- El desplegable une catálogo remoto + lista fija, sin duplicar, y **conserva la
+  selección**. Si el modelo elegido desaparece, se marca con "⚠️ no disponible"
+  sin cambiar lo seleccionado.
+- Si `/models` falla (500 o red caída) se avisa **sin romper el desplegable**:
+  los errores de red, 401 y 429 no se confunden con "el modelo ya no existe"
+  (ver `AI_MODEL_ERROR_RE`), porque un 429 no debe borrar la selección.
+
+---
+
 ## 2026-09-26 — Chat IA: claves por proveedor + modelos resucitados
 
 ### Diagnóstico: por qué fallaban los chats

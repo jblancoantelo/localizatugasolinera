@@ -2,6 +2,7 @@ const AI_PROVIDERS = {
   'groq': {
     key: null,
     endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+    listModelsUrl: 'https://api.groq.com/openai/v1/models',
     defaultModel: 'qwen/qwen3.8-27b',
     models: ['qwen/qwen3.8-27b', 'openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'allam-2-7b'],
     async send(apiKey, model, messages, signal) {
@@ -9,7 +10,7 @@ const AI_PROVIDERS = {
         method: 'POST', headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
         body: JSON.stringify({ model, messages, max_tokens: 1024 }), signal
       });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || `HTTP ${res.status}`); }
+      if (!res.ok) throw await aiHttpError(res);
       const data = await res.json();
       return data.choices?.[0]?.message?.content || '(sin respuesta)';
     }
@@ -17,6 +18,7 @@ const AI_PROVIDERS = {
   'mistral': {
     key: null,
     endpoint: 'https://api.mistral.ai/v1/chat/completions',
+    listModelsUrl: 'https://api.mistral.ai/v1/models',
     defaultModel: 'open-mistral-nemo',
     models: ['open-mistral-nemo', 'ministral-8b-latest', 'codestral-latest', 'mistral-small-latest', 'mistral-medium-latest'],
     async send(apiKey, model, messages, signal) {
@@ -24,7 +26,7 @@ const AI_PROVIDERS = {
         method: 'POST', headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
         body: JSON.stringify({ model, messages, max_tokens: 1024 }), signal
       });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || `HTTP ${res.status}`); }
+      if (!res.ok) throw await aiHttpError(res);
       const data = await res.json();
       return data.choices?.[0]?.message?.content || '(sin respuesta)';
     }
@@ -32,30 +34,103 @@ const AI_PROVIDERS = {
   'openrouter': {
     key: null,
     endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+    listModelsUrl: 'https://openrouter.ai/api/v1/models',
     defaultModel: 'nvidia/nemotron-3-ultra-550b-a55b:free',
     models: ['nvidia/nemotron-3-ultra-550b-a55b:free', 'nvidia/nemotron-3-super-120b-a12b:free'],
+    // OpenRouter lista TODOS los modelos (miles, casi todos de pago): quedarnos
+    // solo con los :free evita volcar el desplegable con 3000 entradas
+    async parseModels(data) {
+      return (data.data || []).filter(m => String(m.id).endsWith(':free')).map(m => m.id);
+    },
     async send(apiKey, model, messages, signal) {
       const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST', headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json', 'HTTP-Referer': location.origin, 'X-Title': 'Precios Gasolina España' },
         body: JSON.stringify({ model, messages, max_tokens: 1024 }), signal
       });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || `HTTP ${res.status}`); }
+      if (!res.ok) throw await aiHttpError(res);
       const data = await res.json();
       return data.choices?.[0]?.message?.content || '(sin respuesta)';
+    }
+  },
+  // LLM7.io (https://llm7.io). Se eligio como sustituto de NVIDIA porque SI
+  // devuelve Access-Control-Allow-Origin y se puede llamar desde el navegador
+  // sin proxy ni backend. Comprobado en Chromium: NVIDIA, Cerebras, Chutes,
+  // Z.ai, SambaNova y Cloudflare AI bloquean el preflight; LLM7 responde 401
+  // (la peticion llega de verdad) cuando la clave no vale.
+  //
+  // La API Key es OPCIONAL: sin ella se envia el literal "unused" y se accede
+  // en modo anonimo (500k tokens/24 h, 1 peticion/s, 10/min, 60/h). Con un
+  // token gratuito de dash.llm7.io el limite sube a 1M tokens/24 h.
+  'llm7': {
+    key: null,
+    endpoint: 'https://api.llm7.io/v1/chat/completions',
+    listModelsUrl: 'https://api.llm7.io/v1/models',
+    keyOptional: true,
+    anonymousKey: 'unused',
+    // El GET de /v1/models solo admite las cabeceras "If-None-Match" y
+    // "Content-Type" en su preflight: si se manda Authorization el navegador
+    // lo rechaza y el catalogo falla con ERR_FAILED. El endpoint es publico,
+    // asi que se pide sin cabecera (da los 64 modelos) y la clave solo se usa
+    // para el chat, cuyo POST si admite "authorization".
+    listModelsNoAuth: true,
+    defaultModel: 'codestral-latest',
+    // Verificados uno a uno contra la API el 2026-09-27 (con "unused").
+    // codestral-latest es el default porque no es "reasoning" y responde en
+    // el acto; GLM-5.3-Flash y minimax-m2.7 razonan antes y se quedan sin
+    // tokens si la pregunta es larga.
+    models: ['codestral-latest', 'GLM-5.3-Flash', 'minimax-m2.7', 'mistral-Nemo-Instruct-2407'],
+    // DeepSeek-V4-Flash-0731 aparece como "turbo" pero devuelve 401
+    // "invalid_api_key" aunque la clave sea valida, asi que se filtra.
+    unavailable: ['DeepSeek-V4-Flash-0731'],
+    // /models marca cada modelo con `tier`. Solo los "turbo" son accesibles
+    // sin pagar: los "pro" (claude, gpt-5.5, gemini-3.8-flash-high, kimi-k3...)
+    // responden 403 sin la suscripcion de $12 o saldo. Sin este filtro el
+    // desplegable se llena de 59 modelos que no funcionan. El descarte de audio
+    // e imagen lo hace despues isAiModelChatCandidate(), commun a todos.
+    async parseModels(data) {
+      return (data.data || [])
+        .filter(m => String(m.tier || '').toLowerCase() === 'turbo')
+        .filter(m => !this.unavailable.includes(m.id))
+        .map(m => m.id);
+    },
+    async send(apiKey, model, messages, signal) {
+      const res = await fetch('https://api.llm7.io/v1/chat/completions', {
+        method: 'POST', headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, messages, max_tokens: 1024 }), signal
+      });
+      if (!res.ok) throw await aiHttpError(res);
+      const data = await res.json();
+      const msg = data.choices?.[0]?.message;
+      const content = (msg?.content || '').trim();
+      if (content) return content;
+      // Los modelos "reasoning" (GLM-5.3-Flash, minimax-m2.7) pueden gastar
+      // todo el presupuesto pensando y devolver content vacio.
+      if (msg?.reasoning_content) {
+        return '<b>' + model + ' se pasó el tiempo pensando y no llegó a responder.</b>'
+          + '<br><span class="ia-warn-detail">Es un modelo de razonamiento: consume el máximo de tokens para pensar antes de contestar. Prueba con Codestral Latest o formula una pregunta más corta.</span>';
+      }
+      return '(sin respuesta)';
     }
   },
   'google': {
     key: null,
     endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
+    listModelsUrl: 'https://generativelanguage.googleapis.com/v1beta/models',
     defaultModel: 'gemini-3.8-flash',
     models: ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.7-flash'],
     async send(apiKey, model, messages, signal) {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const contents = messages.map(m => ({ parts: [{ text: m.content }] }));
       const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents }), signal });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || `HTTP ${res.status}`); }
+      if (!res.ok) throw await aiHttpError(res);
       const data = await res.json();
       return data.candidates?.[0]?.content?.parts?.[0]?.text || '(sin respuesta)';
+    },
+    // Google no usa el esquema OpenAI: /models devuelve { models: [{ name: "models/x", supportedGenerationMethods: [] }] }
+    async parseModels(data) {
+      return (data.models || [])
+        .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+        .map(m => m.name.replace(/^models\//, ''));
     }
   },
   'chrome-nano': {
@@ -89,7 +164,8 @@ const AI_ENCRYPTED_KEYS = {
 };
 
 // Prefijo obligatorio de la API key segun proveedor (evita guardar una clave
-// del proveedor equivocado, que solo fallaria al enviar la peticion)
+// del proveedor equivocado, que solo fallaria al enviar la peticion).
+// llm7 NO aparece: su clave es opcional y no tiene prefijo reconocible.
 const AI_KEY_PREFIXES = {
   'google': ['AIza'],
   'groq': ['gsk_'],
@@ -102,6 +178,288 @@ function isAiKeyFormatValid(provider, key) {
   if (!prefixes) return true;
   if (!key) return false;
   return prefixes.some(p => key.startsWith(p));
+}
+
+// Clave con la que se llama a un proveedor ahora mismo: la del input de Config,
+// la guardada al cargar las claves por defecto o, si el proveedor no la
+// necesita, su literal de acceso anonimo (llm7 usa "unused").
+function aiApiKey(provider) {
+  const config = AI_PROVIDERS[provider];
+  const cfgInput = document.getElementById(getProviderInputId(provider, 'iaKey'));
+  const key = (cfgInput && cfgInput.value) || (config && config.key) || '';
+  if (!key && config && config.anonymousKey) return config.anonymousKey;
+  return key;
+}
+
+// Un proveedor con clave opcional esta listo siempre (accede en anonimo); el
+// resto, en cuanto tenga una clave.
+function isAiProviderReady(provider) {
+  const config = AI_PROVIDERS[provider];
+  if (!config) return false;
+  if (config.keyOptional) return true;
+  const cfgInput = document.getElementById(getProviderInputId(provider, 'iaKey'));
+  return !!(cfgInput && cfgInput.value ? cfgInput.value : config.key);
+}
+
+function aiProviderNotReadyMessage(provider) {
+  return 'Por favor, introduce una API Key válida en Config → IA.';
+}
+
+// Convierte una respuesta de error de la API en un Error con mensaje util.
+// Muchas APIs devuelven texto plano o HTML en error (p.ej. "404 page not
+// found"), y llamar a res.json() ahi lanzaria un error generico que oculta la
+// causa real.
+async function aiHttpError(res) {
+  let detail = '';
+  try {
+    const body = await res.text();
+    try {
+      const j = JSON.parse(body);
+      detail = j.error?.message || j.message || j.detail || j.title || '';
+    } catch { detail = body.slice(0, 200); }
+  } catch { detail = ''; }
+  return new Error(detail.trim() || `HTTP ${res.status}`);
+}
+
+/* ==========================================================================
+   Auto-refresh de modelos por proveedor
+   Los catálogos de modelos gratuitos rotan constantemente y además dependen de
+   la cuenta (en LLM7 solo 4 de los 64 ids son "turbo" y uno de ellos esta
+   roto). Una lista fija en el código se queda obsoleta y rompe la app. Por eso:
+     1. Se consulta /models del proveedor y se cachea en localStorage (24 h).
+     2. Se mezcla con la lista fija (esa gana: son los defaults que funcionan).
+     3. Si el modelo elegido ya no está, se avisa y se ofrece la lista nueva.
+   ========================================================================== */
+
+const AI_MODELS_CACHE_KEY = 'gasolineras_ai_models';
+const AI_MODELS_TTL = 24 * 60 * 60 * 1000;
+
+// Patrones de error que significan "el modelo ya no existe / no disponible".
+// Especificos del proveedor cuando se puede, genericos como red de seguridad.
+const AI_MODEL_ERROR_RE = /model_not_found|model not found|model .*not found|no such model|unknown model|invalid model|model .*(does not exist|no longer|not supported|deprecat|retired|is gone|end of life|end-of-life|eol|unavailable|currently unavailable|not available)|unsupported model|function .*not found|^404\b|\b404\b.*model|\b410\b.*model/i;
+
+// Modelos que los catalogos remotos devuelven pero que NO sirven para chat
+// (embeddings, vision-only, guardas de seguridad, audio, imagen, video...):
+// "nemo-" se quito del filtro: tambien colgaba de "mistral-Nemo-Instruct-2407",
+// que si sirve para chat. Los NeMo de NVIDIA quedan fuera por embed/parse/etc.
+const AI_NON_CHAT_RE = /embed|guard|safety|nemoretriev|nvclip|clip-|deplot|recontext|retriev|rerank|whisper|tts|stt|vision-instruct|guardrail|parse|reward|classifier|tokeniz|arctic|palmyra|codebe|\bbge\b|bge-|gte-|stella|nomic|jina|\bnsfw\b|voxtral|seedance|seedream|kling|gpt-image|chroma|krea|inkling/i;
+
+function isAiModelChatCandidate(id) {
+  if (!id) return false;
+  return !AI_NON_CHAT_RE.test(id);
+}
+
+function aiModelLabel(id) {
+  const bare = id.replace(/:free$/, '');
+  const parts = bare.split('/');
+  const name = parts[parts.length - 1];
+  return (id.endsWith(':free') ? name + ' (gratis)' : name);
+}
+
+function loadAiModelsCache() {
+  try {
+    const raw = localStorage.getItem(AI_MODELS_CACHE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return (parsed && typeof parsed === 'object') ? parsed : {};
+  } catch { return {}; }
+}
+
+function saveAiModelsCache(provider, models) {
+  try {
+    const cache = loadAiModelsCache();
+    cache[provider] = { at: Date.now(), models };
+    localStorage.setItem(AI_MODELS_CACHE_KEY, JSON.stringify(cache));
+  } catch {}
+}
+
+function invalidateAiModelsCache(provider) {
+  try {
+    const cache = loadAiModelsCache();
+    if (!cache[provider]) return;
+    delete cache[provider];
+    localStorage.setItem(AI_MODELS_CACHE_KEY, JSON.stringify(cache));
+  } catch {}
+}
+
+function getAiCachedModels(provider) {
+  const entry = loadAiModelsCache()[provider];
+  if (!entry || !Array.isArray(entry.models) || !entry.models.length) return null;
+  return entry;
+}
+
+function isAiModelsCacheStale(provider) {
+  const entry = getAiCachedModels(provider);
+  if (!entry) return true;
+  return Date.now() - (entry.at || 0) > AI_MODELS_TTL;
+}
+
+// Descarga el catalogo real del proveedor. Devuelve el array de ids.
+async function fetchAiModels(provider, apiKey, signal) {
+  const config = AI_PROVIDERS[provider];
+  if (!config || !config.listModelsUrl) return null;
+  const base = config.listModelsUrl;
+  const url = provider === 'google'
+    ? `${base}?key=${encodeURIComponent(apiKey)}&pageSize=200`
+    : base;
+  const headers = { 'Accept': 'application/json' };
+  if (provider !== 'google' && !config.listModelsNoAuth) headers['Authorization'] = 'Bearer ' + apiKey;
+  const res = await fetch(url, { headers, signal });
+  if (!res.ok) throw await aiHttpError(res);
+  const data = await res.json();
+  // .call(config) para que parseModels pueda leer sus propias opciones (p.ej. la
+  // lista de ids rotos de LLM7). El await es obligatorio: los parseModels
+  // personalizados son async y sin el se intentaria hacer .filter a una Promise.
+  const parse = config.parseModels || (d => (d.data || []).map(m => m.id));
+  return ((await parse.call(config, data)) || []).filter(isAiModelChatCandidate);
+}
+
+// Rellena el <select> de modelos: primero la lista fija del proveedor (los
+// defaults verificados), despues los del catalogo remoto sin duplicar.
+function populateAiModelSelect(provider, remoteModels) {
+  const select = document.getElementById(getProviderInputId(provider, 'iaModel'));
+  if (!select) return { missing: null, previous: null };
+  const config = AI_PROVIDERS[provider];
+  const previous = select.value;
+  const base = (config.models || []).slice();
+  const all = base.slice();
+  for (const m of remoteModels || []) {
+    if (!all.includes(m)) all.push(m);
+  }
+  select.innerHTML = '';
+  for (const id of all) {
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = aiModelLabel(id);
+    select.appendChild(opt);
+  }
+  // Si el modelo que se estaba usando ya no existe en el catalogo, se avisa
+  // con el_flag pero NO se cambia solo: puede seguir siendo valido (p.ej. un
+  // modelo de pago que no aparece en /models) y el usuario decide.
+  const remote = remoteModels || null;
+  const missing = (previous && remote && !remote.includes(previous)) ? previous : null;
+  if (missing) {
+    const opt = [...select.options].find(o => o.value === missing);
+    if (opt) opt.textContent += ' ⚠️ no disponible';
+    select.value = missing;
+  } else if (previous && all.includes(previous)) {
+    select.value = previous;
+  } else {
+    select.value = config.defaultModel;
+  }
+  return { missing, previous };
+}
+
+// Refresca el catalogo de un proveedor y repinta el desplegable.
+// force=true ignora la cache. Devuelve { ok, models, missing, error }.
+async function refreshAiModels(provider, opts = {}) {
+  const config = AI_PROVIDERS[provider];
+  if (!config || !config.listModelsUrl) return { ok: false, models: null, reason: 'unsupported' };
+  const apiKey = aiApiKey(provider);
+  if (!apiKey) return { ok: false, models: null, reason: 'nokey' };
+
+  if (!opts.force) {
+    const cached = getAiCachedModels(provider);
+    if (cached && !isAiModelsCacheStale(provider)) {
+      const res = populateAiModelSelect(provider, cached.models);
+      markAiModelsStatus(provider, '📋 ' + cached.models.length + ' modelos (caché)');
+      return { ok: true, models: cached.models, missing: res.missing, fromCache: true };
+    }
+  }
+
+  setAiRefreshButton(provider, true);
+  try {
+    const models = await fetchAiModels(provider, apiKey, opts.signal);
+    if (!models || !models.length) {
+      markAiModelsStatus(provider, '⚠️ Catálogo vacío');
+      return { ok: false, models: null, reason: 'empty' };
+    }
+    saveAiModelsCache(provider, models);
+    const res = populateAiModelSelect(provider, models);
+    markAiModelsStatus(provider, '📋 ' + models.length + ' modelos');
+    return { ok: true, models, missing: res.missing };
+  } catch (e) {
+    markAiModelsStatus(provider, '⚠️ ' + e.message.slice(0, 40));
+    return { ok: false, models: null, error: e };
+  } finally {
+    setAiRefreshButton(provider, false);
+  }
+}
+
+function setAiRefreshButton(provider, busy) {
+  const btn = document.getElementById(getProviderInputId(provider, 'iaRefreshModels'));
+  if (!btn) return;
+  btn.disabled = !!busy;
+  btn.textContent = busy ? '⏳' : '🔄';
+}
+
+function markAiModelsStatus(provider, text) {
+  const el = document.getElementById(getProviderInputId(provider, 'iaModelsStatus'));
+  if (el) el.textContent = text;
+}
+
+// Refresco silencioso al abrir la pestaña del proveedor: si el proveedor no
+// esta listo (sin clave) se deja el desplegable con la lista fija; si lo esta,
+// se sincroniza con el catalogo real (usando la cache).
+function autoRefreshAiModels(provider) {
+  if (!AI_PROVIDERS[provider] || !AI_PROVIDERS[provider].listModelsUrl) return;
+  if (!isAiProviderReady(provider)) return;
+  refreshAiModels(provider).then(res => {
+    if (res.ok && res.missing) {
+      warnAiModelUnavailable(provider, res.missing, 'El catálogo de ' + provider + ' ya no lo incluye.');
+    }
+  });
+}
+
+function initAiModelRefreshButtons() {
+  for (const provider of Object.keys(AI_PROVIDERS)) {
+    if (!AI_PROVIDERS[provider].listModelsUrl) continue;
+    const btn = document.getElementById(getProviderInputId(provider, 'iaRefreshModels'));
+    if (!btn || btn.dataset.listener) continue;
+    btn.dataset.listener = '1';
+    btn.title = 'Actualizar la lista de modelos desde ' + provider;
+    btn.addEventListener('click', async () => {
+      const res = await refreshAiModels(provider, { force: true });
+      const messagesEl = document.getElementById(getProviderInputId(provider, 'iaMessages'));
+      if (!messagesEl) return;
+      if (res.ok) {
+        addAiMessage(messagesEl, '✅ Catálogo actualizado: <b>' + res.models.length + '</b> modelos disponibles en ' + provider + '.', 'info');
+      } else if (res.reason === 'nokey') {
+        addAiMessage(messagesEl, '⚠️ ' + aiProviderNotReadyMessage(provider), 'warn');
+      } else {
+        addAiMessage(messagesEl, '❌ No se pudo actualizar el catálogo: ' + ((res.error && res.error.message) || res.reason), 'error');
+      }
+    });
+  }
+}
+
+// Aviso en el chat: el modelo fallo o ya no existe, y se ofrece la lista nueva.
+function warnAiModelUnavailable(provider, model, detail, onRefreshed) {
+  const messagesEl = document.getElementById(getProviderInputId(provider, 'iaMessages'));
+  if (!messagesEl) return;
+  const div = document.createElement('div');
+  div.className = 'ia-msg warn';
+  const label = provider.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  div.innerHTML = '⚠️ <b>El modelo <code>' + model + '</code> ya no está disponible en ' + label + '.</b>'
+    + (detail ? '<br><span class="ia-warn-detail">' + detail + '</span>' : '')
+    + '<br><button class="ia-warn-btn">🔄 Ver los modelos disponibles ahora</button>';
+  const btn = div.querySelector('.ia-warn-btn');
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = '⏳ Consultando…';
+    const res = await refreshAiModels(provider, { force: true });
+    if (res.ok) {
+      // El aviso ya cumplio su funcion: se sustituye por la confirmacion
+      div.remove();
+      addAiMessage(messagesEl, '📋 Hay <b>' + res.models.length + '</b> modelos disponibles en ' + label + '. El desplegable de arriba ya está actualizado — elige uno y vuelve a enviar tu mensaje.', 'info');
+      if (typeof onRefreshed === 'function') onRefreshed(res);
+    } else {
+      addAiMessage(messagesEl, '❌ No se pudo consultar el catálogo: ' + ((res.error && res.error.message) || res.reason || 'sin conexión'), 'error');
+      btn.remove();
+    }
+  });
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
 function xorDecryptBase64(enc, passphrase) {
@@ -168,6 +526,7 @@ function initAiProviderTabs() {
       const panel = document.querySelector('.ia-provider-panel[data-iapanel="' + id + '"]');
       if (panel) panel.classList.add('active');
       updateAiStatus(id);
+      autoRefreshAiModels(id);
     });
   });
 }
@@ -221,6 +580,10 @@ function renderAiKeysConfig() {
       AI_PROVIDERS[provider].key = cfgInput.value;
       saveAiApiKeys(allKeys);
       updateAiStatus(provider);
+      // El catalogo de modelos depende de la cuenta (una clave puede dar acceso
+      // a modelos que otra no), asi que se invalida al cambiarla.
+      invalidateAiModelsCache(provider);
+      autoRefreshAiModels(provider);
     });
   }
 }
@@ -449,12 +812,11 @@ async function handleAiSend(provider, modelSelect, input, messagesEl, sendBtn) {
   if (!text) return;
 
   const config = AI_PROVIDERS[provider];
-  const cfgInput = document.getElementById(getProviderInputId(provider, 'iaKey'));
-  const apiKey = (cfgInput && cfgInput.value) || config.key;
+  const apiKey = aiApiKey(provider);
   const model = modelSelect ? modelSelect.value : config.defaultModel;
 
-  if (provider !== 'chrome-nano' && !apiKey) {
-    addAiMessage(messagesEl, 'Por favor, introduce una API Key válida en Config → IA.', 'error');
+  if (provider !== 'chrome-nano' && !isAiProviderReady(provider)) {
+    addAiMessage(messagesEl, aiProviderNotReadyMessage(provider), 'error');
     return;
   }
 
@@ -486,7 +848,14 @@ async function handleAiSend(provider, modelSelect, input, messagesEl, sendBtn) {
   } catch (err) {
     if (err.name === 'AbortError') return;
     if (loading.parentNode) loading.remove();
-    addAiMessage(messagesEl, '❌ Error: ' + err.message, 'error');
+    // Si el fallo es por el modelo (retirado, no disponible para esta cuenta o
+    // inexistente) no basta con mostrar el error: se ofrece el catalogo nuevo.
+    if (AI_MODEL_ERROR_RE.test(err.message || '')) {
+      addAiMessage(messagesEl, '❌ Error: ' + err.message, 'error');
+      warnAiModelUnavailable(provider, model, err.message);
+    } else {
+      addAiMessage(messagesEl, '❌ Error: ' + err.message, 'error');
+    }
     updateAiStatus(provider, '❌ Error');
   } finally {
     delete AI_ABORT[provider];
@@ -522,6 +891,13 @@ function updateAiStatus(provider, override) {
   const config = AI_PROVIDERS[provider];
   if (provider === 'chrome-nano') {
     el.textContent = window.ai ? '✅ Gemini Nano disponible' : '❌ No disponible (Chrome Canary/Dev)';
+    return;
+  }
+  if (config.keyOptional) {
+    const cfgInput = document.getElementById(getProviderInputId(provider, 'iaKey'));
+    el.textContent = (cfgInput && cfgInput.value)
+      ? '✅ API Key configurada'
+      : 'ℹ️ Sin clave: acceso anónimo (500k tokens/día)';
     return;
   }
   const cfgInput = document.getElementById(getProviderInputId(provider, 'iaKey'));

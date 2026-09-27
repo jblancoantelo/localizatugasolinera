@@ -131,7 +131,7 @@ node docs/test/full_test.mjs
 
 ## Resultados actuales
 
-**66 tests — 66 ✅ 0 ❌**
+**114 tests — 114 ✅ 0 ❌**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
@@ -155,7 +155,30 @@ node docs/test/full_test.mjs
 | Persistencia | 4 ✅ | — |
 | Push Notifications | 10 ✅ | — |
 | Helpers (norm/parsePrice/comparePrices) | 15 ✅ | — |
-| **Total** | **59 ✅** | **7 ✅** |
+| Chat IA (sección 15) | 48 ✅ | — |
+| **Total** | **107 ✅** | **7 ✅** |
+
+## 15. Chat IA (automatizado)
+
+Requiere la página real, pero **no** la API: `window.fetch` se sustituye en
+`page.evaluate` (no con `page.route`, porque la página tiene Service Worker y
+las peticiones que este intercepte nunca pasan por el interception de
+Playwright). Solo se deja pasar lo que no sea `api.llm7.io`.
+
+Cubierto: proveedor LLM7 sin clave (`Bearer unused`), `listModelsNoAuth` (su
+`GET /models` rechaza `Authorization` en el preflight), `aiApiKey()`,
+`isAiProviderReady()`, `updateAiStatus()`, `parseModels()` (filtro de `tier` y
+exclusión del 401), `defaultModel` vs primer `<option>`, prefijos de clave,
+`xorDecryptBase64()` roundtrip, `AI_NON_CHAT_RE`, `AI_MODEL_ERROR_RE`,
+`aiHttpError()`, `refreshAiModels()` (con y sin caché), persistencia y borrado
+de la caché, `invalidateAiModelsCache()`, exclusión de `chrome-nano`,
+`warnAiModelUnavailable()` con su botón, botón 🔄, degradación cuando `/models`
+falla (500 y red caída), invalidación al cambiar la clave, y `send()` con
+`max_tokens` y respuesta vacía por *reasoning*.
+
+Verificado además fuera de la suite, contra la API real sin clave: catálogo de 4
+modelos, caché reutilizada sin peticiones y respuesta correcta con datos de la
+provincia.
 
 ## 13. Validación de claves IA (verificación manual asistida)
 

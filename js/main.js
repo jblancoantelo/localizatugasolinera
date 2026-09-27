@@ -535,6 +535,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initAiProviderTabs();
   renderAiKeysConfig();
   initAiChat();
+  initAiModelRefreshButtons();
+  autoRefreshAiModels(document.querySelector('.ia-provider-tab.active')?.dataset.iaprovider);
 
   // Show current app version in config
   showAppVersion();
