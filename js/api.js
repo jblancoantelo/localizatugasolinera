@@ -1,21 +1,22 @@
 const API_BASE = 'https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/';
-const API_LOG = [];
+const API_LOG_RING = (typeof createRingLog === 'function') ? createRingLog(30) : (() => {
+  const arr = [];
+  return { push(v){ arr.push(v); if (arr.length>30) arr.shift(); return arr.slice(); }, clear(){ arr.length=0; }, all(){ return arr.slice(); } };
+})();
 
 async function apiFetch(url) {
   const start = performance.now();
   try {
     const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
     const ms = (performance.now() - start).toFixed(0);
-    API_LOG.unshift({ url, ms: ms + 'ms', time: (() => { const d = new Date(); return d.getDate().toString().padStart(2,'0') + '/' + (d.getMonth()+1).toString().padStart(2,'0') + '/' + d.getFullYear().toString().slice(-2) + ' ' + d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0') + ':' + d.getSeconds().toString().padStart(2,'0'); })(), ok: res.ok });
-    if (API_LOG.length > 30) API_LOG.length = 30;
-    try { localStorage.setItem('gasolineras_api_log', JSON.stringify(API_LOG)); } catch(e) {}
+    API_LOG_RING.push({ url, ms: ms + 'ms', time: (() => { const d = new Date(); return d.getDate().toString().padStart(2,'0') + '/' + (d.getMonth()+1).toString().padStart(2,'0') + '/' + d.getFullYear().toString().slice(-2) + ' ' + d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0') + ':' + d.getSeconds().toString().padStart(2,'0'); })(), ok: res.ok });
+    try { localStorage.setItem('gasolineras_api_log', JSON.stringify(API_LOG_RING.all())); } catch(e) {}
     renderApiLog();
     return res;
   } catch (e) {
     const ms = (performance.now() - start).toFixed(0);
-    API_LOG.unshift({ url, ms: ms + 'ms', time: (() => { const d = new Date(); return d.getDate().toString().padStart(2,'0') + '/' + (d.getMonth()+1).toString().padStart(2,'0') + '/' + d.getFullYear().toString().slice(-2) + ' ' + d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0') + ':' + d.getSeconds().toString().padStart(2,'0'); })(), ok: false });
-    if (API_LOG.length > 30) API_LOG.length = 30;
-    try { localStorage.setItem('gasolineras_api_log', JSON.stringify(API_LOG)); } catch(e) {}
+    API_LOG_RING.push({ url, ms: ms + 'ms', time: (() => { const d = new Date(); return d.getDate().toString().padStart(2,'0') + '/' + (d.getMonth()+1).toString().padStart(2,'0') + '/' + d.getFullYear().toString().slice(-2) + ' ' + d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0') + ':' + d.getSeconds().toString().padStart(2,'0'); })(), ok: false, error: e.message });
+    try { localStorage.setItem('gasolineras_api_log', JSON.stringify(API_LOG_RING.all())); } catch(e2) {}
     renderApiLog();
     throw e;
   }
@@ -24,17 +25,17 @@ async function apiFetch(url) {
 function renderApiLog() {
   const el = document.getElementById('apiLogEntries');
   if (!el) return;
-  if (!API_LOG.length) {
+    if (!API_LOG_RING.all().length) {
     el.innerHTML = '<span style="color:#999">Sin llamadas registradas</span>';
     return;
   }
-  el.innerHTML = API_LOG.map(l =>
+    el.innerHTML = API_LOG_RING.all().slice().reverse().map(l =>
     `<div style="margin-bottom:0.1rem">${l.time} <span style="color:${l.ok ? '#2e7d32' : '#c62828'}">${l.ms}</span> ${l.url}</div>`
   ).join('');
 }
 
 function clearApiLog() {
-  API_LOG.length = 0;
+  API_LOG_RING.clear();
   try { localStorage.removeItem('gasolineras_api_log'); } catch(e) {}
   renderApiLog();
 }
@@ -101,7 +102,7 @@ async function fetchProvinces() {
     tryAutoRestoreProvince();
     return;
   }
-  if (provinces) await dbDelete('provinces_list');
+  if (provinces) await dbDelete('cache', 'provinces_list');
 
   try {
     const r = await apiFetch(API_BASE + 'Listados/Provincias/');
@@ -118,7 +119,7 @@ async function fetchProvinces() {
     document.getElementById('infoText').textContent = 'Error al cargar provincias: ' + e.message;
     STATE.booting = false;
   }
-  try { await dbDelete('main_cache'); } catch(e) {}
+  try { await dbDelete('cache', 'main_cache'); } catch(e) {}
 }
 
 function tryAutoRestoreProvince() {
@@ -216,10 +217,10 @@ async function fetchProvinceData(provinceName) {
 
 async function clearCache() {
   try {
-    const keys = await dbGetAllKeys();
+    const keys = await dbGetAllKeys('cache');
     for (const key of keys) {
       if (typeof key === 'string' && (key.startsWith('prov_') || key === 'main_cache' || key === 'provinces_list' || key.startsWith('hist_'))) {
-        await dbDelete(key);
+        await dbDelete('cache', key);
       }
     }
   } catch (e) {}
@@ -227,6 +228,7 @@ async function clearCache() {
   STATE.data = [];
   STATE.filtered = [];
   window._historyCache = null;
+  window._aiHistoryCache = null;
   showProvinceScreen();
   document.getElementById('infoText').textContent = 'Caché limpiada. Selecciona una provincia.';
   document.getElementById('cacheInfo').innerHTML = '<span style="color:#999">Sin datos en caché</span>';
@@ -259,96 +261,8 @@ function locateUser() {
   );
 }
 
-function formatDateDDMMYYYY(date) {
-  const d = date.getDate().toString().padStart(2, '0');
-  const m = (date.getMonth() + 1).toString().padStart(2, '0');
-  const y = date.getFullYear();
-  return d + '-' + m + '-' + y;
-}
-
-async function fetchProvinceHistory(provinceName, days) {
-  const provId = STATE.provinceIdMap[provinceName];
-  if (!provId) return {};
-  const dates = [];
-  if (!days) days = STATE.historyDays || 14;
-  for (let i = days; i >= 1; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    d.setHours(0, 0, 0, 0);
-    dates.push(d);
-  }
-  const results = {};
-  const CHUNK = 3;
-  for (let i = 0; i < dates.length; i += CHUNK) {
-    const chunk = dates.slice(i, i + CHUNK);
-    const promises = chunk.map(async (date) => {
-      const dateStr = formatDateDDMMYYYY(date);
-      const cacheKey = 'hist_' + provId + '_' + dateStr;
-      let cached = await dbGet(cacheKey);
-      if (cached && cached.data) {
-        results[dateStr] = cached.data;
-        return;
-      }
-      try {
-        const r = await apiFetch(API_BASE + 'EstacionesTerrestresHist/FiltroProvincia/' + dateStr + '/' + provId);
-        if (r.ok) {
-          const json = await r.json();
-          const list = json.ListaEESSPrecio || [];
-          results[dateStr] = list;
-          await dbPut(cacheKey, { data: list, timestamp: Date.now() });
-        }
-      } catch (e) { console.warn('Histórico: error en', dateStr, provId, e.message); }
-    });
-    await Promise.all(promises);
-  }
-  return results;
-}
-
-// Las fechas del Ministerio vienen como dd-mm-aaaa, asi que un sort() normal
-// las ordenaria mal ("29-08" > "01-09"). Este es el comparador correcto y lo
-// reutiliza tambien el chat de IA.
-function sortHistoryDates(keys) {
-  return keys.slice().sort((a, b) => {
-    const [da, ma, ya] = a.split('-');
-    const [db, mb, yb] = b.split('-');
-    return new Date(+ya, +ma - 1, +da) - new Date(+yb, +mb - 1, +db);
-  });
-}
-
-function getStationHistory(historyByDate, stationId, fuelName) {
-  const isGroup = FUEL_GROUPS[fuelName] ? true : false;
-  const groupMembers = isGroup ? FUEL_GROUPS[fuelName] : [fuelName];
-  const results = [];
-  const dates = sortHistoryDates(Object.keys(historyByDate));
-  for (const dateStr of dates) {
-    const list = historyByDate[dateStr];
-    if (!list || !list.length) continue;
-    const st = list.find(x => x.IDEESS === stationId);
-    if (!st) continue;
-    const key = FUEL_KEYS[fuelName];
-    if (key) {
-      const price = getFuelPrice(st, key);
-      if (price !== null) results.push({ date: dateStr, price });
-    } else {
-      let found = false;
-      for (const name of groupMembers) {
-        const k = FUEL_KEYS[name];
-        if (k) {
-          const p = getFuelPrice(st, k);
-          if (p !== null) {
-            results.push({ date: dateStr, price: p, fuel: name });
-            found = true;
-            break;
-          }
-        }
-      }
-      if (!found) {
-        for (const [, k] of FUEL_NAMES) {
-          const p = getFuelPrice(st, k);
-          if (p !== null) { results.push({ date: dateStr, price: p }); break; }
-        }
-      }
-    }
-  }
-  return results;
+// El histórico vive en js/history.js (compartido con el Service Worker).
+// Aquí solo se resuelve el nombre de la provincia a su id.
+function fetchProvinceHistory(provinceName, days) {
+  return fetchHistoryByProvinceId(STATE.provinceIdMap[provinceName], days);
 }

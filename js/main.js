@@ -14,11 +14,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Restore logs BEFORE any API call (fetchProvinces overwrites localStorage)
   try {
     const savedApi = localStorage.getItem('gasolineras_api_log');
-    if (savedApi) { const p = JSON.parse(savedApi); if (Array.isArray(p)) { API_LOG.length = 0; p.forEach(l => API_LOG.push(l)); } }
+    if (savedApi) { const p = JSON.parse(savedApi); if (Array.isArray(p)) { if (window.API_LOG_RING && window.API_LOG_RING.load) window.API_LOG_RING.load(p); else if (window.API_LOG_RING) { /* backward */ } } }
   } catch(e) {}
   try {
     const savedPush = localStorage.getItem('gasolineras_push_log');
-    if (savedPush) { const p = JSON.parse(savedPush); if (Array.isArray(p)) { PUSH_LOG.length = 0; p.forEach(l => PUSH_LOG.push(l)); } }
+    if (savedPush) { const p = JSON.parse(savedPush); if (Array.isArray(p)) { if (window.PUSH_LOG_RING && window.PUSH_LOG_RING.load) window.PUSH_LOG_RING.load(p); } }
   } catch(e) {}
   renderApiLog();
   renderPushLog();

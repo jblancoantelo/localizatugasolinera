@@ -104,33 +104,36 @@ function isPushSubscribed() {
   return getPushSubscription() !== null;
 }
 
-const PUSH_LOG = [];
+const PUSH_LOG_RING = (typeof createRingLog === 'function') ? createRingLog(30) : (() => {
+  const arr = [];
+  return { push(v){ arr.push(v); if (arr.length>30) arr.shift(); return arr.slice(); }, clear(){ arr.length=0; }, all(){ return arr.slice(); } };
+})();
 
 function logPushEvent(event, detail) {
-  PUSH_LOG.unshift({
+  PUSH_LOG_RING.push({
     time: formatLogTime(),
     event,
     detail
   });
   if (PUSH_LOG.length > 30) PUSH_LOG.length = 30;
-  try { localStorage.setItem('gasolineras_push_log', JSON.stringify(PUSH_LOG)); } catch(e) {}
+  try { localStorage.setItem('gasolineras_push_log', JSON.stringify(PUSH_LOG_RING.all())); } catch(e) {}
   renderPushLog();
 }
 
 function renderPushLog() {
   const el = document.getElementById('pushLogEntries');
   if (!el) return;
-  if (!PUSH_LOG.length) {
+  if (!PUSH_LOG_RING.all().length) {
     el.innerHTML = '<span style="color:#999">Sin eventos registrados</span>';
     return;
   }
-  el.innerHTML = PUSH_LOG.map(l =>
+  el.innerHTML = PUSH_LOG_RING.all().slice().reverse().map(l =>
     `<div style="margin-bottom:0.1rem">${l.time} <b>${l.event}</b> ${l.detail}</div>`
   ).join('');
 }
 
 function clearPushLog() {
-  PUSH_LOG.length = 0;
+  PUSH_LOG_RING.clear();
   try { localStorage.removeItem('gasolineras_push_log'); } catch(e) {}
   renderPushLog();
 }

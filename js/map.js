@@ -126,16 +126,7 @@ function updateMarkers(fitBounds, onMarkerClick) {
 }
 
 function drawPopupPriceChart(canvas, data) {
-  const ctx = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  const W = rect.width;
-  const H = rect.height;
-  canvas.width = W * dpr;
-  canvas.height = H * dpr;
-  ctx.scale(dpr, dpr);
-
-  ctx.clearRect(0, 0, W, H);
+  const { ctx, W, H } = chartSetupCanvas(canvas);
 
   const PAD = { top: 14, right: 14, bottom: 18, left: 38 };
   const plotW = Math.max(1, W - PAD.left - PAD.right);
@@ -151,6 +142,7 @@ function drawPopupPriceChart(canvas, data) {
   const xPos = i => PAD.left + (i / Math.max(1, data.length - 1)) * plotW;
   const yPos = p => PAD.top + plotH - ((p - minP) / (maxP - minP)) * plotH;
 
+  const indices = chartIndices(data, 6);
   ctx.strokeStyle = '#e8e8e8';
   ctx.lineWidth = 1;
   const gridCount = 3;
@@ -167,17 +159,19 @@ function drawPopupPriceChart(canvas, data) {
     ctx.textBaseline = 'middle';
     ctx.fillText(price.toFixed(3).replace('.', ','), PAD.left - 8, y);
   }
-
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.font = '8px system-ui, sans-serif';
-  data.forEach((d, i) => {
-    ctx.fillStyle = '#999';
-    const parts = d.date.split('-');
+  for (let i = 0; i < indices.length; i++) {
+    const idx = indices[i];
+    const d = data[idx];
+    if (!d) continue;
+    const parts = String(d.date).split('-');
     const dd = parseInt(parts[0], 10);
     const mm = parseInt(parts[1], 10);
-    ctx.fillText(dd + '-' + mm, xPos(i), H - PAD.bottom + 3);
-  });
+    ctx.fillStyle = '#999';
+    ctx.fillText(dd + '-' + mm, xPos(idx), H - PAD.bottom + 3);
+  }
 
   ctx.strokeStyle = '#1a73e8';
   ctx.lineWidth = 2;
@@ -192,8 +186,7 @@ function drawPopupPriceChart(canvas, data) {
   });
   ctx.stroke();
 
-  const minD = data.reduce((a, b) => a.price < b.price ? a : b);
-  const maxD = data.reduce((a, b) => a.price > b.price ? a : b);
+  const { minD, maxD } = chartMinMax(data);
 
   const points = data.map((d, i) => ({
     x: xPos(i), y: yPos(d.price), price: d.price, date: d.date
@@ -268,7 +261,7 @@ function onPopupChartHover(e) {
 
   if (nearest) {
     drawPopupPriceChart(canvas, canvas._chartData);
-    drawPopupTooltip(canvas, nearest);
+    drawTooltip(canvas, nearest);
   }
 }
 
@@ -280,42 +273,7 @@ function onPopupChartLeave(e) {
 }
 
 function drawPopupTooltip(canvas, point) {
-  const ctx = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  ctx.scale(dpr, dpr);
-
-  const parts = String(point.date).split('-');
-  const dateLabel = parts.length === 3 ? parts[2] + '-' + parts[1] + '-' + parts[0] : point.date;
-  const priceLabel = point.price.toFixed(3).replace('.', ',') + ' €';
-  ctx.font = 'bold 11px system-ui, sans-serif';
-  const pm = ctx.measureText(priceLabel);
-  ctx.font = '10px system-ui, sans-serif';
-  const dm = ctx.measureText(dateLabel);
-  const pw = pm.width, dw = dm.width;
-  const tw = Math.max(pw, dw);
-  const lh = 16;
-  const pad = 6;
-  const bw = tw + pad * 2;
-  const bh = lh * 2 + pad * 2;
-  let bx = point.x - bw / 2;
-  let by = point.y - bh - 10;
-  if (bx < 2) bx = 2;
-  if (bx + bw > rect.width - 2) bx = rect.width - bw - 2;
-  if (by < 2) by = point.y + 10;
-
-  ctx.fillStyle = 'rgba(0,0,0,0.8)';
-  ctx.beginPath();
-  ctx.roundRect(bx, by, bw, bh, 4);
-  ctx.fill();
-
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 11px system-ui, sans-serif';
-  ctx.fillText(priceLabel, bx + bw / 2, by + pad + lh / 2);
-  ctx.font = '10px system-ui, sans-serif';
-  ctx.fillText(dateLabel, bx + bw / 2, by + pad + lh + lh / 2);
+  drawTooltip(canvas, point);
 }
 
 async function loadPopupChartForFuel(container, station, fuelName) {

@@ -7,7 +7,10 @@
     "test": "test"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node docs/test/full_test.mjs",
+    "bump": "node scripts/bump-version.mjs",
+    "sync-assets": "node scripts/sync-sw-assets.mjs",
+    "check-assets": "node scripts/sync-sw-assets.mjs --check"
   },
   "repository": {
     "type": "git",

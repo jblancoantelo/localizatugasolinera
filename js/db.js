@@ -22,6 +22,12 @@ function openDB() {
   });
 }
 
+// ---- Operaciones genéricas ----
+// OJO: storeName es obligatorio en todas. Pasar solo la clave (como
+// dbGet('prov_Madrid')) abre una transaction() sobre un store inexistente y
+// falla en silencio (el catch resuelve null), que es como "Limpiar caché"
+// llevaba tiempo sin borrar nada.
+
 function dbGet(storeName, key) {
   return new Promise(async (resolve) => {
     try {
@@ -61,18 +67,7 @@ function dbDelete(storeName, key) {
   });
 }
 
-function dbClear(storeName) {
-  return new Promise(async (resolve) => {
-    try {
-      const db = await openDB();
-      const tx = db.transaction(storeName, 'readwrite');
-      const store = tx.objectStore(storeName);
-      const req = store.clear();
-      req.onsuccess = () => { db.close(); resolve(); };
-      req.onerror = () => { db.close(); resolve(); };
-    } catch(e) { resolve(); }
-  });
-}
+
 
 function dbGetAllKeys(storeName) {
   return new Promise(async (resolve) => {

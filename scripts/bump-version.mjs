@@ -1,4 +1,13 @@
 import { readFileSync, writeFileSync } from 'fs';
+import { syncAssets } from './sync-sw-assets.mjs';
+
+// La lista de assets del SW se regenera antes de subir la versión: si se ha
+// añadido un script, se ha añadido también al precaché (y al revés).
+const assets = syncAssets();
+console.log(assets.changed
+  ? 'ASSETS de sw.js sincronizados con index.html (' + assets.count + ' ficheros)'
+  : 'ASSETS de sw.js ya sincronizados (' + assets.count + ' ficheros)');
+
 const sw = readFileSync('sw.js', 'utf8');
 const match = sw.match(/const APP_VERSION\s*=\s*(\d+);/);
 if (!match) { console.error('ERROR: APP_VERSION not found in sw.js'); process.exit(1); }

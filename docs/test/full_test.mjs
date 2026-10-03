@@ -529,6 +529,31 @@ async function testHTTP(browser, server) {
   });
   log('comparePrices()', 'números exactos → ' + compareNumOk, compareNumOk === 'ok');
 
+  // --- Caché: "Limpiar caché" tiene que borrar de verdad ---
+  // Va al final porque clearCache() vacía STATE.data y deja la app en la
+  // pantalla de provincia: los tests de datos ya han pasado. Se siembran claves
+  // de provincia e histórico y se comprueba que se eliminan de IndexedDB. Antes
+  // no borraba nada: pasaba la clave donde IndexedDB espera el nombre del store
+  // y el error se comía en un catch. La red se simula para no depender del
+  // Ministerio.
+  const cacheClear = await page.evaluate(async () => {
+    await dbPut('cache', 'prov_TEST', { data: [{ IDEESS: 'x' }], timestamp: Date.now(), ttl: 12 });
+    await dbPut('cache', 'hist_TEST_01-01-2026', { data: [{ IDEESS: 'x' }], timestamp: Date.now() });
+    const sembradas = (await dbGetAllKeys('cache')).filter(k => String(k).startsWith('prov_') || String(k).startsWith('hist_')).length;
+    const real = window.fetch;
+    window.fetch = async () => new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+    try {
+      await clearCache();
+    } finally {
+      window.fetch = real;
+    }
+    const restan = (await dbGetAllKeys('cache')).filter(k => String(k).startsWith('prov_') || String(k).startsWith('hist_'));
+    return { sembradas, restan: restan.join(','), lectura: await dbGet('cache', 'prov_TEST') };
+  });
+  log('Caché', '«Limpiar caché» borra las claves de provincia e histórico de IndexedDB',
+    cacheClear.sembradas >= 2 && cacheClear.restan === '' && !cacheClear.lectura,
+    'sembradas=' + cacheClear.sembradas + ' restan=' + (cacheClear.restan || 'ninguna'));
+
   await testAiChat(page);
 
   await ctx.close();
@@ -1209,11 +1234,17 @@ async function testAiChat(page) {
     // El histórico se pide para las fechas reales de los últimos días: aquí se
     // genera una serie por fecha, con Repsol bajando 0,005 €/L por día y Cepsa
     // subiendo 0,010 (para que haya subidas y bajadas en el mismo periodo).
+    // El índice se calcula como "días respecto a hoy" sobre la fecha completa
+    // (dd-mm-aaaa), NO con el día del mes: con el día del mes la serie se
+    // rompía al cruzar un cambio de mes (del 30 al 1 el precio "subía" y el
+    // test del mínimo dejaba de cumplirse).
+    const HOY = Math.floor(Date.now() / 86400000);
     const precio = (fecha, ideess) => {
-      const dia = Number(fecha.slice(0, 2));
+      const [d, m, y] = fecha.split('-').map(Number);
+      const offset = Math.floor(Date.UTC(y, m - 1, d) / 86400000) - HOY;
       const base = { 1001: 1.512, 1002: 1.650, 1003: 1.530 }[ideess];
       const paso = { 1001: -0.005, 1002: 0.010, 1003: -0.002 }[ideess];
-      return (base + paso * (dia - 13)).toFixed(3).replace('.', ',');
+      return (base + paso * (offset + 13)).toFixed(3).replace('.', ',');
     };
     const snap = fecha => stations.map(s => ({ ...s, 'Precio Gasolina 95 E5': precio(fecha, s.IDEESS) }));
 
@@ -1345,6 +1376,15 @@ async function testAiChat(page) {
     STATE.provinceIdMap = { Madrid: '01' };
     window._historyCache = null;
     window._aiHistoryCache = null;
+    // El histórico se cachea en IndexedDB (js/history.js), así que para poder
+    // contar las peticiones de red se vacían antes las claves de la provincia:
+    // si no, reutiliza lo que dejaron los tests anteriores.
+    for (let i = 1; i <= 60; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      d.setHours(0, 0, 0, 0);
+      await dbDelete('cache', 'hist_01_' + formatDateDDMMYYYY(d));
+    }
 
     const ctx60 = await getAiContext('¿cómo ha evolucionado en 60 días?');
     const llamadas60 = window.__histCalls;

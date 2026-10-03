@@ -127,21 +127,7 @@ async function loadHistory(station) {
   await loadChartForFuel(station, fuelName);
 }
 
-function updateDetail() {
-  const s = STATE, el = document.getElementById('detailPanel');
-  if (!s.selectedId || !s.data.length) {
-    el.classList.remove('show');
-    s.selectedId = null;
-    return;
-  }
-  const d = s.data.find(x => x.IDEESS === s.selectedId);
-  if (!d) {
-    el.classList.remove('show');
-    s.selectedId = null;
-    return;
-  }
-  showDetail(s.selectedId);
-}
+
 
 function updatePageNav(total) {
   const s = STATE;

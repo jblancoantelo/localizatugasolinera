@@ -1,3 +1,13 @@
+function createRingLog(max) {
+  const arr = [];
+  return {
+    push(val) { arr.push(val); if (arr.length > max) arr.shift(); return arr.slice(); },
+    clear() { arr.length = 0; },
+    all() { return arr.slice(); },
+    load(list) { arr.length = 0; if (Array.isArray(list)) { for (let i = 0; i < list.length; i++) arr.push(list[i]); if (arr.length > max) arr.splice(0, arr.length - max); } },
+    _arr() { return arr; }
+  };
+}
 let _cacheExpiryLabel = '';
 let _savePending = false;
 
@@ -9,10 +19,7 @@ function getCacheTtl() {
   return (isNaN(v) || v < 0) ? 12 : v;
 }
 
-function isLocalStorageAvailable() {
-  try { const k = '_test_'; localStorage.setItem(k, '1'); localStorage.removeItem(k); return true; }
-  catch(e) { return false; }
-}
+
 
 async function renderCacheInfo() {
   const el = document.getElementById('cacheInfo');
@@ -21,7 +28,7 @@ async function renderCacheInfo() {
   const prov = STATE.selectedProv;
   if (!prov) {
     try {
-      const keys = await dbGetAllKeys();
+      const keys = await dbGetAllKeys('cache');
       const provKeys = keys.filter(k => typeof k === 'string' && k.startsWith('prov_'));
       if (!provKeys.length) {
         el.innerHTML = '<span style="color:#999">Sin provincias en caché</span>';
@@ -29,7 +36,7 @@ async function renderCacheInfo() {
       }
       const items = [];
       for (const key of provKeys) {
-        const entry = await dbGet(key);
+        const entry = await dbGet('cache', key);
         if (entry && Array.isArray(entry.data)) {
           const provName = key.slice(5);
           const ttl = (entry.ttl || 12) * 60 * 60 * 1000;

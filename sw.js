@@ -2,34 +2,37 @@ const CACHE = 'gasolineras-v3';
 const CDN_CACHE = 'gasolineras-cdn-v1';
 const API_HOST = 'sedeaplicaciones.minetur.gob.es';
 const API_BASE = 'https://' + API_HOST + '/ServiciosRESTCarburantes/PreciosCarburantes/';
-const APP_VERSION = 18;
-const BUILD_TIME = '20260927-213009';
+const APP_VERSION = 19;
+const BUILD_TIME = '20261003-123953';
 
-importScripts('js/state.js', 'js/helpers.js', 'js/db.js');
+importScripts('js/state.js', 'js/helpers.js', 'js/db.js', 'js/history.js');
 
 const BASE = new URL('.', self.location).pathname;
 
+// assets:start (generado por scripts/sync-sw-assets.mjs — no editar a mano)
 const ASSETS = [
   BASE + 'index.html',
   BASE + 'offline.html',
-  BASE + 'css/styles.css',
   BASE + 'manifest.json',
-  BASE + 'icons/icon-192.png',
-  BASE + 'icons/icon-512.png',
-  BASE + 'icons/icon-192.svg',
-  BASE + 'icons/icon-512.svg',
-  BASE + 'js/state.js',
-  BASE + 'js/helpers.js',
-  BASE + 'js/db.js',
-  BASE + 'js/storage.js',
-  BASE + 'js/map.js',
-  BASE + 'js/table.js',
-  BASE + 'js/controls.js',
+  BASE + 'css/styles.css',
+  BASE + 'js/ai-chat.js',
   BASE + 'js/api.js',
-  BASE + 'js/chart-engine.js',
+  BASE + 'js/chart-core.js',
+  BASE + 'js/controls.js',
+  BASE + 'js/db.js',
+  BASE + 'js/helpers.js',
+  BASE + 'js/history.js',
+  BASE + 'js/main.js',
+  BASE + 'js/map.js',
   BASE + 'js/push-notifications.js',
-  BASE + 'js/main.js'
+  BASE + 'js/state.js',
+  BASE + 'js/storage.js',
+  BASE + 'js/table.js',
+  BASE + 'icons/icon-192.png',
+  BASE + 'icons/icon-192.svg',
+  BASE + 'icons/icon-512.png'
 ];
+// assets:end
 
 const CDN_URLS = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
@@ -68,92 +71,9 @@ function sendPushLog(event, detail) {
 
 // ---- Price check logic ----
 
-function formatDateDDMMYYYY(date) {
-  const d = date.getDate().toString().padStart(2, '0');
-  const m = (date.getMonth() + 1).toString().padStart(2, '0');
-  const y = date.getFullYear();
-  return d + '-' + m + '-' + y;
-}
-
-async function fetchProvinceHistorySW(provinceId, days) {
-  const dates = [];
-  if (!days) days = 14;
-  for (let i = days; i >= 1; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    d.setHours(0, 0, 0, 0);
-    dates.push(d);
-  }
-  const results = {};
-  const CHUNK = 3;
-  for (let i = 0; i < dates.length; i += CHUNK) {
-    const chunk = dates.slice(i, i + CHUNK);
-    const promises = chunk.map(async (date) => {
-      const dateStr = formatDateDDMMYYYY(date);
-      const cacheKey = 'hist_' + provinceId + '_' + dateStr;
-      let cached = await dbGet('cache', cacheKey);
-      if (cached && cached.data) {
-        results[dateStr] = cached.data;
-        return;
-      }
-      try {
-        const r = await fetch(API_BASE + 'EstacionesTerrestresHist/FiltroProvincia/' + dateStr + '/' + provinceId, {
-          headers: { 'Accept': 'application/json' }
-        });
-        if (r.ok) {
-          const json = await r.json();
-          const list = json.ListaEESSPrecio || [];
-          results[dateStr] = list;
-          await dbPut('cache', cacheKey, { data: list, timestamp: Date.now() });
-        }
-      } catch (e) { console.warn('[SW] Hist error:', dateStr, provinceId, e.message); }
-    });
-    await Promise.all(promises);
-  }
-  return results;
-}
-
-function getStationHistorySW(historyByDate, stationId, fuelName) {
-  const isGroup = FUEL_GROUPS[fuelName] ? true : false;
-  const groupMembers = isGroup ? FUEL_GROUPS[fuelName] : [fuelName];
-  const results = [];
-  const dates = Object.keys(historyByDate).sort((a, b) => {
-    const [da, ma, ya] = a.split('-');
-    const [db, mb, yb] = b.split('-');
-    return new Date(ya, ma - 1, da) - new Date(yb, mb - 1, db);
-  });
-  for (const dateStr of dates) {
-    const list = historyByDate[dateStr];
-    if (!list || !list.length) continue;
-    const st = list.find(x => x.IDEESS === stationId);
-    if (!st) continue;
-    const key = FUEL_KEYS[fuelName];
-    if (key) {
-      const price = getFuelPrice(st, key);
-      if (price !== null) results.push({ date: dateStr, price });
-    } else {
-      let found = false;
-      for (const name of groupMembers) {
-        const k = FUEL_KEYS[name];
-        if (k) {
-          const p = getFuelPrice(st, k);
-          if (p !== null) {
-            results.push({ date: dateStr, price: p, fuel: name });
-            found = true;
-            break;
-          }
-        }
-      }
-      if (!found) {
-        for (const [, k] of FUEL_NAMES) {
-          const p = getFuelPrice(st, k);
-          if (p !== null) { results.push({ date: dateStr, price: p }); break; }
-        }
-      }
-    }
-  }
-  return results;
-}
+// El histórico (descarga, caché y serie por estación) y las utilidades de
+// fecha vienen de js/history.js, el mismo módulo que usa la página: así el SW
+// y el cliente no pueden dejar de hablar el mismo formato de fecha.
 
 async function checkPrices(reason) {
   try {
@@ -228,7 +148,7 @@ async function checkPrices(reason) {
 
         const fetchDays = Math.max(days, 14);
         sendPushLog('checkPrices', provName + ': fetch histórico ' + fetchDays + ' días (ventana=' + days + ')');
-        const historyData = await fetchProvinceHistorySW(provId, fetchDays);
+        const historyData = await fetchHistoryByProvinceId(provId, fetchDays);
         const histDates = Object.keys(historyData).length;
         sendPushLog('checkPrices', provName + ': histórico ' + histDates + ' fechas');
 
@@ -251,7 +171,7 @@ async function checkPrices(reason) {
             continue;
           }
 
-          const stationHistory = getStationHistorySW(historyData, fav.id, fuelName);
+          const stationHistory = getStationHistory(historyData, fav.id, fuelName);
           if (stationHistory.length < 2) {
             sendPushLog('checkPrices', '  ' + station.Rótulo + ': histórico insuficiente (' + stationHistory.length + ' puntos) — skip');
             continue;
