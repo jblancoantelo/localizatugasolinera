@@ -2,8 +2,8 @@ const CACHE = 'gasolineras-v3';
 const CDN_CACHE = 'gasolineras-cdn-v1';
 const API_HOST = 'sedeaplicaciones.minetur.gob.es';
 const API_BASE = 'https://' + API_HOST + '/ServiciosRESTCarburantes/PreciosCarburantes/';
-const APP_VERSION = 19;
-const BUILD_TIME = '20261003-123953';
+const APP_VERSION = 20;
+const BUILD_TIME = '20261004-102231';
 
 importScripts('js/state.js', 'js/helpers.js', 'js/db.js', 'js/history.js');
 
@@ -30,7 +30,8 @@ const ASSETS = [
   BASE + 'js/table.js',
   BASE + 'icons/icon-192.png',
   BASE + 'icons/icon-192.svg',
-  BASE + 'icons/icon-512.png'
+  BASE + 'icons/icon-512.png',
+  BASE + 'icons/icon-512.svg'
 ];
 // assets:end
 

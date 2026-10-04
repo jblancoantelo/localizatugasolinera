@@ -1,4 +1,4 @@
-# Plan de Pruebas
+﻿# Plan de Pruebas
 
 ## Objetivo
 Validar que la aplicación funciona correctamente tanto desde `file://` como desde servidor HTTP, y que todas las interacciones de usuario navegan sin errores.
@@ -19,7 +19,8 @@ node docs/test/full_test.mjs
 ### Qué hace el script:
 - Inicia servidor HTTP en :8080 sirviendo desde la raíz del proyecto
 - Lanza Chromium headless
-- Ejecuta 59 tests contra HTTP + 7 contra file://
+- Ejecuta 163 tests: 156 contra HTTP + 7 contra `file://`
+- Empieza por la sección 17 (build), que lee ficheros del disco sin abrir el navegador
 - Cierra servidor y navegador automáticamente
 - Exit code 0 = todo OK, 1 = algún fallo
 
@@ -131,7 +132,7 @@ node docs/test/full_test.mjs
 
 ## Resultados actuales
 
-**152 tests — 152 ✅ 0 ❌**
+**163 tests — 163 ✅ 0 ❌**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
@@ -153,10 +154,13 @@ node docs/test/full_test.mjs
 | Búsqueda | 1 ✅ | 1 ✅ |
 | Popup | 7 ✅ | — |
 | Persistencia | 4 ✅ | — |
+| Caché (limpiar caché borra de verdad) | 1 ✅ | — |
 | Push Notifications | 10 ✅ | — |
 | Helpers (norm/parsePrice/comparePrices) | 15 ✅ | — |
 | Chat IA (sección 15) | 86 ✅ | — |
-| **Total** | **145 ✅** | **7 ✅** |
+| Ring logs (sección 16) | 7 ✅ | — |
+| Build (sección 17) | 3 ✅ | — |
+| **Total** | **156 ✅** | **7 ✅** |
 
 ## 15. Chat IA (automatizado)
 
@@ -213,6 +217,35 @@ Verificado además fuera de la suite, contra la API real sin clave: catálogo de
 modelos, caché reutilizada sin peticiones y respuesta correcta con datos de la
 provincia.
 
+## 16. Ring logs (automatizado)
+
+Los dos logs de actividad comparten `createRingLog(max)` de `js/storage.js`
+(7 tests nuevos). Cubierto:
+
+- `createRingLog(3)` conserva las **últimas N** entradas y descarta la más antigua,
+  `all()` devuelve una **copia** (mutarla no toca el ring), `load()` recorta a N y
+  `clear()` vacía
+- `logPushEvent()` **no lanza**: antes, tras migrarlo al ring, quedaba una línea
+  que usaba el array viejo y petaba con `ReferenceError` en cada evento
+- El render del log de push muestra **del más reciente al más antiguo** y
+  `clearPushLog()` vacía la UI
+- La restauración desde `localStorage` funciona: se siembran 45 entradas de API,
+  `load()` las recorta a 30 empezando por la correcta y el render muestra la más
+  reciente. Ojo: `API_LOG_RING`/`PUSH_LOG_RING` son `const` de nivel superior, así
+  que **no** existen en `window` y hay que referenciarlas por su identificador
+
+## 17. Build (automatizado, sin navegador)
+
+Lee los ficheros del disco antes de lanzar Chromium (3 tests nuevos):
+
+- La lista `ASSETS` de `sw.js` cubre **todo** lo que referencian `index.html` y
+  `manifest.json` (los `src`/`href` del HTML y el `"src"` de los iconos del JSON).
+  Se comprueba con el mismo criterio que `scripts/sync-sw-assets.mjs`, así que el
+  precaché no puede quedarse desfasado en silencio
+- Todo lo que el SW importa con `importScripts` está precacheado (si no, el SW
+  arranca sin esas funciones)
+- `APP_VERSION` y `BUILD_TIME` existen y `BUILD_TIME` tiene formato `aaaammdd-hhmmss`
+
 ## 13. Validación de claves IA (verificación manual asistida)
 
 No automatizado en `full_test.mjs` (requiere el módulo real de IA). Verificado con Playwright evaluando `js/ai-chat.js` en la página.
@@ -263,3 +296,8 @@ No automatizado en `full_test.mjs` (requiere el módulo real de IA). Verificado 
 | `navigator.serviceWorker.controller` null | TypeError si SW no ha activado al suscribirse | Añadido null check en `push-notifications.js` |
 | Validación global de prefijos de clave IA | `tryDecryptDefaultKeys()` usaba una lista global (`['AIza','AQ.','gsk_','cMHt','sk-or-']`): una clave del proveedor equivocado pasaba como "contraseña correcta" y solo fallaba al enviar | `AI_KEY_PREFIXES` por proveedor + `isAiKeyFormatValid()`; devuelve `{ keys, invalid }` y no persiste las inválidas |
 | Modelos de IA obsoletos | 11 de 15 modelos devolvían 404 / no existían / eran de pago; los 4 chats fallaban | Listas resucitadas y verificadas contra las APIs reales (ver `docs/CHANGELOG.md` 2026-09-26) |
+| "Limpiar caché" no borraba nada | `dbGetAllKeys()`/`dbDelete()` sin el nombre del store → `NotFoundError` que el `catch` resolvía en silencio | `storeName` siempre primero; test que siembra claves `prov_*`/`hist_*` y comprueba que desaparecen |
+| Log de push muerto | Quedó `if (PUSH_LOG.length > 30)` al migrar al ring: `ReferenceError` en cada `logPushEvent()` | Línea eliminada; test que registra dos eventos y comprueba la UI |
+| Logs vacíos tras F5 | La restauración usaba `window.API_LOG_RING` y las `const` de nivel superior no existen en `window` | Se referencian por identificador; test con 45 entradas sembradas y recorte a 30 |
+| `icons/icon-512.svg` fuera del precaché | El sync de assets solo leía `index.html`, y ese icono solo está en `manifest.json` | El sync lee también `manifest.json`; test que compara `ASSETS` con ambas fuentes |
+| Histórico del SW con fechas desordenadas | Su `sort()` de `dd-mm-aaaa` como texto y sin el unary `+` del año | `sortHistoryDates()` compartido en `js/history.js`, importado por el SW |

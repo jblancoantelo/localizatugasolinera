@@ -115,7 +115,6 @@ function logPushEvent(event, detail) {
     event,
     detail
   });
-  if (PUSH_LOG.length > 30) PUSH_LOG.length = 30;
   try { localStorage.setItem('gasolineras_push_log', JSON.stringify(PUSH_LOG_RING.all())); } catch(e) {}
   renderPushLog();
 }

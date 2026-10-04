@@ -554,6 +554,8 @@ async function testHTTP(browser, server) {
     cacheClear.sembradas >= 2 && cacheClear.restan === '' && !cacheClear.lectura,
     'sembradas=' + cacheClear.sembradas + ' restan=' + (cacheClear.restan || 'ninguna'));
 
+  await testRingLogs(page);
+
   await testAiChat(page);
 
   await ctx.close();
@@ -1443,6 +1445,84 @@ async function testAiChat(page) {
 
 
 
+// ============================================================================
+// 16. Ring logs — createRingLog() + logs de API y push
+// ============================================================================
+// Los dos logs (API y push) comparten createRingLog() de storage.js. Antes eran
+// arrays a mano con un unshift + un recorte, y el push log se rompió entero al
+// migrarlo: quedó una línea que usaba el array viejo (ReferenceError) y la
+// restauración tras F5 buscaba window.API_LOG_RING, que no existe porque las
+// `const` de un script clásico no cuelgan de window.
+async function testRingLogs(page) {
+  console.log('\n## 🔁 Ring logs');
+
+  const ring = await page.evaluate(() => {
+    const r = createRingLog(3);
+    const push = [];
+    for (let i = 1; i <= 5; i++) { r.push({ n: i }); push.push(r.all().map(x => x.n).join(',')); }
+    const copia = r.all();
+    copia.push({ n: 99 });
+    const trasMutar = r.all().length;
+    r.load([{ n: 1 }, { n: 2 }, { n: 3 }, { n: 4 }, { n: 5 }]);
+    const cargado = r.all().map(x => x.n).join(',');
+    const final = push[push.length - 1];
+    r.clear();
+    return { push: push.join(' | '), final, queda: r.all().length, aislado: trasMutar === 3, cargado };
+  });
+  log('Ring log', 'createRingLog() conserva las últimas N y descarta las más antiguas',
+    ring.final === '3,4,5', 'tras push 1..5 con max=3 → ' + ring.push);
+  log('Ring log', 'all() devuelve una copia (mutarla no toca el ring)', ring.aislado);
+  log('Ring log', 'load() recorta a N y clear() vacía',
+    ring.cargado === '3,4,5' && ring.queda === 0, 'load(5) → ' + ring.cargado);
+
+  // logPushEvent() no debe lanzar: si el ring no existe en ese scope, la función
+  // moría y el log de push se quedaba siempre vacío.
+  const pushLog = await page.evaluate(() => {
+    clearPushLog();
+    logPushEvent('Test A', 'primero');
+    logPushEvent('Test B', 'segundo');
+    const el = document.getElementById('pushLogEntries');
+    const html = el ? el.innerHTML : '';
+    const guardado = JSON.parse(localStorage.getItem('gasolineras_push_log') || '[]');
+    const orden = guardado.map(x => x.event).join(',');
+    clearPushLog();
+    return {
+      pintadas: (html.match(/Test [AB]/g) || []).length,
+      masRecientePrimero: html.indexOf('Test B') !== -1 && html.indexOf('Test B') < html.indexOf('Test A'),
+      orden, vacio: document.getElementById('pushLogEntries').innerHTML.includes('Sin eventos')
+    };
+  });
+  log('Ring log', 'logPushEvent() registra, persiste en localStorage y no lanza',
+    pushLog.pintadas === 2 && pushLog.orden === 'Test A,Test B', 'localStorage: ' + pushLog.orden);
+  log('Ring log', 'El log de push se pinta del más reciente al más antiguo',
+    pushLog.masRecientePrimero, pushLog.pintadas + ' entradas pintadas');
+  log('Ring log', 'clearPushLog() vacía el log y la UI avisa', pushLog.vacio);
+
+  // La restauración tras F5 usa el identificador global, no window.algo.
+  const restore = await page.evaluate(() => {
+    clearApiLog(); clearPushLog();
+    localStorage.setItem('gasolineras_api_log', JSON.stringify(
+      Array.from({ length: 45 }, (_, i) => ({ url: 'u' + i, ms: '1ms', time: 't', ok: true }))));
+    localStorage.setItem('gasolineras_push_log', JSON.stringify([{ time: 't', event: 'Restaurado', detail: 'd' }]));
+    API_LOG_RING.load(JSON.parse(localStorage.getItem('gasolineras_api_log')));
+    PUSH_LOG_RING.load(JSON.parse(localStorage.getItem('gasolineras_push_log')));
+    renderApiLog(); renderPushLog();
+    const api = document.getElementById('apiLogEntries').innerHTML;
+    const push = document.getElementById('pushLogEntries').innerHTML;
+    const out = {
+      api: API_LOG_RING.all().length,
+      primero: API_LOG_RING.all()[0].url,
+      apiPintado: api.includes('u44') && !api.includes('>u14<'),
+      pushPintado: push.includes('Restaurado')
+    };
+    clearApiLog(); clearPushLog();
+    return out;
+  });
+  log('Ring log', 'La restauración desde localStorage existe (no depende de window)',
+    restore.api === 30 && restore.primero === 'u15' && restore.apiPintado && restore.pushPintado,
+    `api=${restore.api} primero=${restore.primero} apiPintado=${restore.apiPintado} pushPintado=${restore.pushPintado}`);
+}
+
 async function testFILE(browser) {
   console.log('\n## 📁 file://');
 
@@ -1487,6 +1567,37 @@ async function testFILE(browser) {
   await ctx.close();
 }
 
+// ============================================================================
+// 17. Build — ASSETS del SW sincronizados con index.html/manifest.json
+// ============================================================================
+function testBuild() {
+  console.log('\n## 🧱 Build');
+  const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
+  const refs = [...html.matchAll(/(?:src|href)\s*=\s*"([^"]+)"/g)].map(m => m[1])
+    .concat(manifest.icons.map(i => i.src))
+    .filter(r => /^(css|js|icons)\//.test(r));
+  const block = /const ASSETS = \[([\s\S]*?)\];/.exec(sw);
+  const assets = block ? [...block[1].matchAll(/'([^']+)'/g)].map(m => m[1]) : [];
+  const faltan = [...new Set(refs)].filter(r => !assets.includes(r));
+  log('Build', 'ASSETS de sw.js cubre todos los ficheros que carga index.html/manifest.json',
+    faltan.length === 0 && assets.length > 0, faltan.length ? 'faltan: ' + faltan.join(', ') : assets.length + ' ficheros');
+
+  // Lo que el SW importa con importScripts tiene que estar precacheado: si no, el
+  // SW arranca sin esas funciones en un arranque limpio.
+  const imports = [...sw.matchAll(/importScripts\(([^)]*)\)/g)]
+    .flatMap(x => (x[1].match(/'([^']+)'/g) || []).map(s => s.slice(1, -1)));
+  const sinPrecachear = imports.filter(f => !assets.includes(f));
+  log('Build', 'Todo lo que el SW importa con importScripts está precacheado',
+    sinPrecachear.length === 0, sinPrecachear.length ? 'falta: ' + sinPrecachear.join(', ') : imports.join(', '));
+
+  const version = Number(/const APP_VERSION\s*=\s*(\d+);/.exec(sw)?.[1] || 0);
+  const buildTime = /const BUILD_TIME\s*=\s*'([^']+)'/.exec(sw)?.[1] || '';
+  log('Build', 'APP_VERSION y BUILD_TIME están actualizados en sw.js',
+    version > 0 && /^\d{8}-\d{6}$/.test(buildTime), `v${version} (${buildTime})`);
+}
+
 async function main() {
   console.log('========================================');
   console.log('  Pasando Tests');
@@ -1501,6 +1612,8 @@ async function main() {
   }
 
   const browser = await chromium.launch({ headless: true });
+
+  testBuild();
 
   if (server) {
     try { await testHTTP(browser, server); }

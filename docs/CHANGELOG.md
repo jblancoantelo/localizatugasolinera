@@ -1,5 +1,75 @@
 # CHANGELOG
 
+## [2026-10-04] — Motor gráfico unificado, histórico compartido con el SW y precaché generado
+
+### 🧩 Un solo motor de gráficas y un solo histórico
+
+Había dos gráficas (panel de detalle y popup del mapa) con el mismo código de canvas
+duplicado, y **tres** copias de la descarga del histórico: una en `api.js` para la
+página, otra en `sw.js` para el chequeo de push y una tercera (comparador de fechas
+distinto) en el chat de IA. El SW tenía su propio `sort()` de fechas `dd-mm-aaaa` que
+se olvidaba del unary `+` en el año.
+
+| Cambio | Detalle |
+|--------|---------|
+| `js/chart-core.js` | **Nuevo**: primitivas de canvas compartidas por las dos gráficas — `chartSetupCanvas()` (devicePixelRatio + fallback a los atributos si la pestaña oculta no da layout), `chartScale()`, `chartAxes()`, `chartMinMax()`, `chartIndices()` y `drawTooltip()` |
+| `js/chart-engine.js` | `drawPriceChart()` pasa de ~90 líneas a las primitivas de `chart-core.js`. El tooltip se dibuja una sola vez (antes `drawPopupTooltip()` era una copia) |
+| `js/map.js` | `drawPopupPriceChart()` usa `chartSetupCanvas()`, `chartIndices()` y `chartMinMax()`; el hover llama al `drawTooltip()` compartido |
+| `js/history.js` | **Nuevo**: fuente única del histórico (página + chat IA + SW): `formatDateDDMMYYYY()`, `sortHistoryDates()`, `historyDateList()`, `fetchHistoryByProvinceId()` (caché IndexedDB + lotes de 3) y `getStationHistory()` |
+| `js/api.js` | Se quedan solo `fetchProvinceHistory()` (nombre → id de provincia) y `apiFetch()`. `formatDateDDMMYYYY`, `sortHistoryDates` y `getStationHistory` salen de aquí |
+| `sw.js` | `importScripts` añade `js/history.js` y borra `fetchProvinceHistorySW()` / `getStationHistorySW()` (≈90 líneas duplicadas con el comparador de fechas arreglado) |
+| `index.html` | `js/history.js` se carga tras `js/db.js` y `js/chart-core.js` antes de `js/chart-engine.js` |
+
+Motivo: la duplication de fechas era una bomba de relojería — el `sort()` del SW
+ordenaba `dd-mm-aaaa` como texto y el unary `+` del año desaparecía.
+
+### 🔁 Logs de actividad con buffer circular
+
+| Cambio | Detalle |
+|--------|---------|
+| `js/storage.js` | **Nuevo** `createRingLog(max)`: `push()` (descarta la más antigua al llegar a `max`), `all()` (devuelve copia), `clear()` y `load()` (recorta a `max`) |
+| `js/api.js` | `API_LOG[]` → `API_LOG_RING` (30). Los errores de red guardan además `error: e.message` |
+| `js/push-notifications.js` | `PUSH_LOG[]` → `PUSH_LOG_RING` (30) |
+
+El ring guarda de más antiguo a más reciente, así que el render hace `.slice().reverse()`
+y lo que se persiste en `localStorage` va en ese orden (igual que antes, que ya usaba
+`unshift` + reverse al pintar).
+
+### 🐞 Correcciones
+
+| Bug | Síntoma | Fix |
+|-----|---------|-----|
+| **"Limpiar caché" no borraba nada** | `dbGetAllKeys()` y `dbDelete()` se llamaban sin el nombre del store, así que IndexedDB lanzaba `NotFoundError` y el `catch` lo resolvía en silencio | `storeName` siempre como primer argumento (`dbGetAllKeys('cache')`, `dbDelete('cache', key)`) en `clearCache()` y `renderCacheInfo()` |
+| **Log de push muerto** | Al migrarlo al ring quedó `if (PUSH_LOG.length > 30)` referencing el array ya borrado → `ReferenceError` en cada `logPushEvent()` | Línea eliminada; `PUSH_LOG_RING` es el único estado |
+| **Logs no se restauraban tras F5** | `main.js` hacía `window.API_LOG_RING.load(...)`, pero las `const` de nivel superior de un script clásico viven en el entorno léxico global, **no** en `window` | Se referencian por su identificador con `typeof … !== 'undefined'` |
+| **`icons/icon-512.svg` fuera del precaché** | El script de sync solo leía `index.html`, y ese icono solo se declara en `manifest.json` | El sync lee también `manifest.json` (con el patrón `"src":`) y el precaché queda con los 4 iconos |
+| Check de assets que no comprobaba nada nuevo | La validación de `importScripts` solo se ejecutaba si la lista había cambiado | Se comprueba siempre, y `--check` no escribe pero sí valida |
+| `updateDetail()` y `isLocalStorageAvailable()` | Código muerto | Eliminados (junto con `dbClear()`) |
+
+### 🧱 Precaché y versión generados por script
+
+| Cambio | Detalle |
+|--------|---------|
+| `scripts/sync-sw-assets.mjs` | **Nuevo**: reconstruye el bloque `// assets:start … // assets:end` de `sw.js` desde `index.html` + `manifest.json`, con orden estable (html → manifest → css → js → iconos) y **error si algún `importScripts` no queda precacheado** |
+| `scripts/bump-version.mjs` | Llama a `syncAssets()` antes de subir `APP_VERSION`, así que un script nuevo entra en el precaché por el mismo comando |
+| `package.json` | Scripts `test`, `bump`, `sync-assets` y `check-assets` (antes `npm test` fallaba con "no test specified") |
+| `check-syntax.mjs` | Ampliado: valida los `scripts/*.mjs` con `node --check` sobre una copia temporal y los `<script>` **inline** de `index.html` (donde se registra el SW), que ningún test alcanzaba |
+| `sw.js` | `ASSETS` regenerado (21 ficheros, ya sin editar a mano) y `APP_VERSION` 18 → 19 |
+
+Motivo: el precaché estaba escrito a mano y se desincronizó dos veces (se colaron
+ficheros ausentes y se cayó `icon-512.svg`). Con el test "Build > ASSETS de sw.js
+cubre…" ya no puede volver a pasar en silencio.
+
+### 🧪 Verificación
+
+- Suite completa: **163 tests** (156 HTTP + 7 file://), 10 nuevos:
+  - 7 de ring logs: `createRingLog()` conserva las últimas N y `all()` devuelve copia, `load()` recorta y `clear()` vacía, `logPushEvent()` registra + persiste + pinta, orden inverso en la UI, y la restauración desde `localStorage` (30 entradas, la más reciente arriba)
+  - 3 de build: `ASSETS` cubre `index.html`/`manifest.json`, todo lo que el SW importa está precacheado y `APP_VERSION`/`BUILD_TIME` tienen formato válido
+- `node check-syntax.mjs`: 19/19 ficheros OK
+- `node docs/test/full_test.mjs`: 163 ✅ 0 ❌
+
+---
+
 ## [2026-09-27] — La app dice si la URL del proxy de NVIDIA es la buena
 
 ### 🔎 Comprobación del proxy desde Config → IA

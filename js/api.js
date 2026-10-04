@@ -25,11 +25,13 @@ async function apiFetch(url) {
 function renderApiLog() {
   const el = document.getElementById('apiLogEntries');
   if (!el) return;
-    if (!API_LOG_RING.all().length) {
+  const entries = API_LOG_RING.all();
+  if (!entries.length) {
     el.innerHTML = '<span style="color:#999">Sin llamadas registradas</span>';
     return;
   }
-    el.innerHTML = API_LOG_RING.all().slice().reverse().map(l =>
+  // El ring guarda de más antiguo a más reciente; la UI muestra al revés.
+  el.innerHTML = entries.slice().reverse().map(l =>
     `<div style="margin-bottom:0.1rem">${l.time} <span style="color:${l.ok ? '#2e7d32' : '#c62828'}">${l.ms}</span> ${l.url}</div>`
   ).join('');
 }

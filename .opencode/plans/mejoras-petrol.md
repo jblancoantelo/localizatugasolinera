@@ -1,7 +1,9 @@
 # Plan de Mejoras — Precios Gasolina España
 
-> Estado: **Planificado** · Priorización: **MoSCoW** (Must/Should/Could/Won't)
+> Estado: **Parcialmente ejecutado** · Priorización: **MoSCoW** (Must/Should/Could/Won't)
 > Generado: 19/07/2026 tras revisión de 19 archivos (~3700 líneas)
+> Actualizado: 04/10/2026 — `T-05` y `T-06` ejecutados (ver las notas de cada uno).
+> El detalle de lo hecho está en [`docs/CHANGELOG.md`](../../docs/CHANGELOG.md).
 
 ## Priorización de paquetes de trabajo
 
@@ -12,17 +14,23 @@
 | T-01 | APP_VERSION automática (hash de assets) | `sw.js`, + script build | 1h | — |
 | T-02 | tests unitarios para `comparePrices()`, `parsePrice()`, `getDiscountedPrice()` | `tests/unit/helpers.test.mjs` | 3h | T-10 (ESM) |
 | T-03 | log de errores IndexedDB no silencioso | `js/db.js`, `js/logger.js` | 1h | — |
-| T-04 | estado offline real (cache API en SW → mostrar datos cacheados, no offline.html) | `sw.js` | 2h | — |
+| T-04 | estado offline real (cache API em SW → mostrar datos cacheados, no offline.html) | `sw.js` | 2h | — |
+
+> **T-01 a medias (04/10/2026)**: `scripts/sync-sw-assets.mjs` genera el precaché
+> desde `index.html` + `manifest.json` y `scripts/bump-version.mjs` sube
+> `APP_VERSION` + `BUILD_TIME`, con `npm run bump` y un test que falla si la
+> lista se desincroniza. Lo que **no** se hizo es derivar la versión de un hash de
+> los assets: sigue siendo un entero que incrementa el script.
 
 ### P2 — Should (Mejora significativa de mantenibilidad)
 
-| ID | Mejora | Archivos afectados | Esfuerzo | Dependencias |
-|----|--------|--------------------|----------|-------------|
-| T-05 | unificar drawPriceChart + drawPopupPriceChart en chart-renderer.js | `js/chart-engine.js`, `js/map.js`, `js/chart-renderer.js` (nuevo) | 4h | T-10 (ESM) |
-| T-06 | unificar fetchProvinceHistory (api.js + sw.js → db.js) | `js/api.js`, `sw.js`, `js/db.js` | 2h | T-10 (ESM) |
-| T-07 | reemplazar window._historyCache por caché formal en db.js | `js/table.js`, `js/map.js`, `js/db.js` | 2h | T-06 |
-| T-08 | mover constantes duplicadas a js/constants.js | `js/state.js`, `sw.js`, `js/api.js`, `js/constants.js` (nuevo) | 1h | T-10 |
-| T-09 | gestión de errores centralizada (logger.js) | `js/logger.js` (nuevo), todos los archivos | 3h | — |
+| ID | Mejora | Archivos afectados | Esfuerzo | Dependencias | Estado |
+|----|--------|--------------------|----------|-------------|--------|
+| T-05 | unificar drawPriceChart + drawPopupPriceChart | `js/chart-core.js` (nuevo), `js/chart-engine.js`, `js/map.js` | 4h | — | ✅ 04/10/2026 |
+| T-06 | unificar el fetch de histórico (api.js + sw.js) | `js/history.js` (nuevo), `js/api.js`, `sw.js` | 2h | — | ✅ 04/10/2026 |
+| T-07 | reemplazar window._historyCache por caché formal en db.js | `js/table.js`, `js/map.js`, `js/db.js` | 2h | T-06 | Pendiente |
+| T-08 | mover constantes duplicadas a js/constants.js | `js/state.js`, `sw.js`, `js/api.js`, `js/constants.js` (nuevo) | 1h | T-10 | Pendiente |
+| T-09 | gestión de errores centralizada (logger.js) | `js/logger.js` (nuevo), todos los archivos | 3h | — | Pendiente |
 
 ### P3 — Could (Features de UX con alta visibilidad)
 
@@ -183,10 +191,20 @@ if (url.hostname === API_HOST) {
 
 ### T-05 — Unificar chart engine
 
+> ✅ **Hecho el 2026-10-04**, con otro enfoque: en vez de un `drawLineChart()` con
+> `opts` (que exigía unificar además los dos toasted de hover), se extrajeron
+> **primitivas** a `js/chart-core.js` — `chartSetupCanvas()`, `chartScale()`,
+> `chartAxes()`, `chartMinMax()`, `chartIndices()` y `drawTooltip()` — y las dos
+> gráficas (`chart-engine.js` y `map.js`) las componen con sus pads y su rejilla.
+> Motivo: el proyecto no usa módulos ES, así que las primitivas son funciones
+> globales (scripts clásicos) y no un módulo exportado. Además
+> `chartSetupCanvas()` cae a los atributos `width`/`height` cuando el canvas aún
+> no tiene layout, que era un fallo real en pestañas ocultas.
+
 **Problema**: `chart-engine.js` y `map.js` tienen implementaciones casi
 idénticas de dibujo de gráfica + tooltip hover. ~180 líneas duplicadas (~80%).
 
-**Solución**: Crear `js/chart-renderer.js` con una función `drawLineChart()`
+**Solución originally planteada**: Crear `js/chart-renderer.js` con una función `drawLineChart()`
 parametrizada:
 
 ```js
@@ -223,18 +241,25 @@ Luego eliminar `drawPriceChart`, `drawPopupPriceChart`, `drawTooltip`,
 `drawPopupTooltip`, `onChartHover`, `onChartLeave`, `onPopupChartHover`,
 `onPopupChartLeave` de los archivos originales.
 
-**Archivos**: `js/chart-renderer.js` (nuevo), `js/chart-engine.js` (refactor),
+**Archivos**: `js/chart-core.js` (nuevo), `js/chart-engine.js` (refactor),
 `js/map.js` (refactor)
 
 ---
 
 ### T-06 — Unificar fetch de histórico
 
+> ✅ **Hecho el 2026-10-04** en un `js/history.js` propio en vez de dentro de
+> `db.js`: el módulo no habla de la base de datos, y así queda claro qué es
+> "caché" (`db.js`) y qué es "descargar y ordenar el histórico" (`history.js`).
+> Lo usan cuatro consumidores — modal de detalle, popup del mapa, chat de IA y
+> `sw.js` con `importScripts` — y se corrigió de paso el comparador de fechas del
+> SW, que ordenaba `dd-mm-aaaa` como texto y perdía el unary `+` del año.
+
 **Problema**: `fetchProvinceHistory()` en `api.js` y `fetchProvinceHistorySW()`
 en `sw.js` son casi idénticas. `getStationHistory()` y `getStationHistorySW()`
 también.
 
-**Solución**: Mover ambas funciones a `db.js` (ya compartido entre cliente y SW
+**Solución original (descartada)**: Mover ambas funciones a `db.js` (ya compartido entre cliente y SW
 via `importScripts`):
 
 ```js
@@ -278,7 +303,13 @@ export function getStationHistory(historyByDate, stationId, fuelName) {
 
 **api.js** y **sw.js** importan y llaman a las mismas funciones.
 
-**Archivos**: `js/db.js`, `js/api.js`, `sw.js`
+**Resultado**: `js/history.js` con `formatDateDDMMYYYY()`, `historyDateList()`,
+`sortHistoryDates()`, `historyRequest()` (delega en `apiFetch()` si existe),
+`fetchHistoryByProvinceId(provinceId, days)` y `getStationHistory()`. En `api.js`
+solo queda `fetchProvinceHistory()`, que traduce nombre de provincia → id.
+≈190 líneas duplicadas eliminadas.
+
+**Archivos**: `js/history.js` (nuevo), `js/api.js`, `sw.js`, `index.html`
 
 ---
 
@@ -645,10 +676,11 @@ graph TD
 
 | KPI | Valor actual | Target F1 | Target F2 | Target F3 | Target F4 |
 |-----|-------------|-----------|-----------|-----------|-----------|
-| Código duplicado (líneas) | ~260 (7%) | 260 (7%) | ~30 (1%) | ~30 (1%) | 0 |
+| Código duplicado (líneas) | ~120 (5%) — bajó de ~260 con `js/chart-core.js` y `js/history.js` | ~30 (1%) | ~30 (1%) | 0 | 0 |
 | Archivos >400 líneas | 2 (main.js, sw.js) | 2 | 2 | 2 | 0 |
-| Tests unitarios | 0 | 0 | 30+ | 30+ | 80+ |
+| Tests (suite completa) | 163 E2E, 0 unitarios | 163 | 163 + unitarios | 163 + 30 unitarios | 200+ |
 | Offline real | No | No | Sí | Sí | Sí |
-| Errores silenciosos | Todos | Todos | Logeados | Logeados | Logeados |
+| Errores silenciosos | IndexedDB sigue resolviendo en `catch` (T-03) | Logeados | Logeados | Logeados | Logeados |
+| Precaché del SW | Generado por script y verificado por test | Sí | Sí | Sí | Sí |
 | Features competidores | ~60% | ~70% | ~70% | ~85% | ~90% |
-| Estado arquitectura | Legacy | Legacy | Legacy | Mejorado | Moderno |
+| Estado arquitectura | Legacy → Legacy+ | Legacy+ | Legacy+ | Mejorado | Moderno |

@@ -1,3 +1,15 @@
+/**
+ * LEGADO — no forma parte de la suite oficial.
+ *
+ * La suite que se ejecuta y que hay que mantener es `docs/test/full_test.mjs`
+ * (163 tests, arranca su propio servidor HTTP en :8080). Este script queda aquí
+ * solo como referencia histórica y **no se ejecuta**: además de no levantar el
+ * servidor, usa los selectores antiguos en camelCase (`data-tab="tabMap"`) que
+ * ahora son kebab-case (`data-tab="tab-map"`), así que daría falsos fallos.
+ *
+ * Para añadir o modificar tests, editar `docs/test/full_test.mjs` y el plan
+ * `docs/test/TEST_PLAN.md`.
+ */
 import { chromium } from 'playwright';
 
 const HTTP_URL = 'http://localhost:8080';

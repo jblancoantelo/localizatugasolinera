@@ -10,9 +10,17 @@ Ver [`README.md`](./README.md) para visión general del proyecto, funcionalidade
    ```powershell
    node scripts/bump-version.mjs
    ```
-   (Incrementa `APP_VERSION` en `sw.js` para que el SW detecte cambios)
+   El script **hace dos cosas**: regenera la lista `ASSETS` de `sw.js` a partir de `index.html`/`manifest.json` (así un script o icono nuevo entra en el precaché) e incrementa `APP_VERSION` + `BUILD_TIME`. Si no se ejecuta, el SW no detecta el cambio y los usuarios se quedan con los assets viejos.
+   - Solo sincronizar assets: `node scripts/sync-sw-assets.mjs` (`--check` verifica sin escribir y sale con 1 si no cuadra)
+   - Un test de la suite ("Build > ASSETS de sw.js cubre…") falla si la lista se desincroniza
 
-2. **Siempre ejecutar tests completos** tras cualquier cambio:
+2. **Comprobar sintaxis** de todo el JS (rápido, sin navegador):
+   ```powershell
+   node check-syntax.mjs
+   ```
+   Compila cada fichero de `js/`, `sw.js`, el Worker y los scripts; los que usan sintaxis de módulo se validan con `node --check` sobre una copia temporal. También valida los `<script>` **inline** de `index.html` (donde se registra el SW), que ningún test alcanza.
+
+3. **Siempre ejecutar tests completos** tras cualquier cambio:
    ```powershell
    Get-Process -Name "node" -ErrorAction SilentlyContinue | Stop-Process -Force
    node docs/test/full_test.mjs
@@ -25,6 +33,26 @@ Ver [`README.md`](./README.md) para visión general del proyecto, funcionalidade
    git commit -m "mensaje descriptivo"
    git push
    ```
+
+## Módulos compartidos cliente ↔ Service Worker
+
+`sw.js` corre en su propio contexto y solo tiene lo que importa con
+`importScripts('js/state.js', 'js/helpers.js', 'js/db.js', 'js/history.js')`.
+Cualquier función que necesiten los dos tiene que vivir en uno de esos ficheros
+(los gráficos no, porque el SW no dibuja).
+
+| Módulo | Qué comparte | Consumidores |
+|--------|--------------|-------------|
+| `js/state.js` | `STATE`, `FUEL_KEYS`, `FUEL_GROUPS`, `FUEL_NAMES`, `HISTORY_DAYS_*` | página, SW |
+| `js/helpers.js` | `parsePrice()`, `getFuelPrice()`, `comparePrices()`, `formatLogTime()` | página, SW |
+| `js/db.js` | IndexedDB (`cache`, `favorites`, `config`) | página, SW |
+| `js/history.js` | Fechas `dd-mm-aaaa`, descarga con caché, serie por estación | modal, popup, chat IA, SW |
+
+**Reglas aprendidas a la fuerza** (incumplirlas costó un commit):
+- Si añades un `<script>` a `index.html`, `npm run bump` lo mete en `ASSETS`. Si además lo importa el SW, el script de sync **falla con error** si no está precacheado.
+- `js/history.js` usa `historyRequest()`, que delega en `apiFetch()` si existe (para que la descarga quede en el log de la API) y hace un `fetch` simple en el SW. **No llames a `fetch` directamente para el histórico.**
+- Las fechas del Ministerio son `dd-mm-aaaa`: ordena con `sortHistoryDates()`, nunca con `sort()`.
+- Todo lo que el SW importa con `importScripts` tiene que estar en `ASSETS` o el SW arranca sin esas funciones (pasó con `js/ai-chat.js`).
 
 ## Convenios del proyecto
 
@@ -77,16 +105,32 @@ En `controls.js`, `setActiveTab()` cierra automáticamente:
 - `#detailPanel` al salir de `tab-table` o `tab-both`
 - Popup del mapa (`map.closePopup()`) al salir de `tab-map` o `tab-both`
 
-### Chart tooltip (canvas)
-- **chart-engine.js**: `drawPriceChart()` dibuja gráfica + tooltip al hover. Mouse events (`mousemove`/`mouseleave`) buscan el punto más cercano (12px radio) y muestran recuadro oscuro con precio (bold) + fecha debajo.
-- **map.js**: `drawPopupPriceChart()` tiene el mismo sistema con `onPopupChartHover`/`drawPopupTooltip`.
+### Gráficas (canvas) — `js/chart-core.js` compartido
+Hay **dos** gráficas (panel de detalle y popup del mapa) y las dos usan las mismas primitivas de `js/chart-core.js`, cargado **antes** que `chart-engine.js` en `index.html`:
+- `chartSetupCanvas(canvas)`: mide, aplica `devicePixelRatio` y devuelve `{ ctx, W, H }`. Si el canvas aún no tiene layout (pestaña oculta), cae a los atributos `width`/`height`.
+- `chartScale(data, padFrac)`: mín/máx con margen (mínimo 0.005).
+- `chartAxes(ctx, …, gridCount, labelStep)`: rejilla + ejes de precio y etiquetas `dd-mm`.
+- `chartMinMax(data)` y `chartIndices(data, count)`: extremos y los índices de las etiquetas para que no se solapen.
+- **Tooltip** (`drawTooltip`): recuadro oscuro con precio (bold) arriba y fecha debajo.
+- **chart-engine.js**: `drawPriceChart()` (panel de detalle). Mouse events (`mousemove`/`mouseleave`) buscan el punto más cercano (12px radio) y llaman a `drawTooltip()`.
+- **map.js**: `drawPopupPriceChart()` + `onPopupChartHover()` / `onPopupChartLeave()`, que reutilizan el tooltip.
+
+`canvas._chartPoints` guarda los puntos en coordenadas de pantalla y `canvas._chartData` la serie; el hover los necesita para detectar el punto cercano.
 
 ### Log de actividad (tabs API / Push)
 - Tarjeta "Registro de actividad" en config con tabs `.config-log-tab` (API/Push) igual que los de caché.
 - `initLogTabs()` en `storage.js` maneja el cambio entre tabs.
-- **API**: array `API_LOG[]` en `api.js`, render en `#apiLogEntries`, 30 entradas máximo, botón `#clearApiLogBtn`.
-- **Push**: array `PUSH_LOG[]` en `push-notifications.js`, render en `#pushLogEntries`, 30 entradas máximo, botón `#clearPushLogBtn`.
+- **Buffer circular** `createRingLog(max)` en `storage.js`: `push()` (descarta la más antigua al llegar a `max`), `all()` (**devuelve una copia**), `clear()`, `load(lista)` (recorta a `max`).
+- **API**: `API_LOG_RING` en `api.js` (max 30), render en `#apiLogEntries`, botón `#clearApiLogBtn`.
+- **Push**: `PUSH_LOG_RING` en `push-notifications.js` (max 30), render en `#pushLogEntries`, botón `#clearPushLogBtn`.
+- El ring guarda **de más antiguo a más reciente**, así que el render hace `.slice().reverse()`; lo que se persiste en `localStorage` (`gasolineras_api_log`, `gasolineras_push_log`) va en ese mismo orden y `load()` lo restaura recortando.
+- ⚠️ **`API_LOG_RING` y `PUSH_LOG_RING` son `const` de nivel superior en scripts clásicos**: viven en el entorno léxico global, **no en `window`**. `main.js` los referencia por su identificador; escribir `window.API_LOG_RING` da `undefined` y el log no se restaura tras F5 (pasó).
 - Timestamps con formato `dd/mm/yy hh:mm:ss` usando `formatLogTime()` en `helpers.js`.
+
+### IndexedDB (`js/db.js`)
+- `dbGet`, `dbPut`, `dbDelete`, `dbGetAll`, `dbGetAllKeys` exigen **siempre `storeName` como primer argumento**: `dbGet('cache', 'prov_Madrid')`, nunca `dbGet('prov_Madrid')`.
+- Motivo: `db.transaction(storeName, …)` con una clave donde va el nombre del store lanza `NotFoundError`, y como las funciones resuelven en el `catch` el fallo era silencioso. Pasó con `clearCache()` y con `renderCacheInfo()`: "Limpiar caché" no borraba nada.
+- No existe `dbClear()` (se eliminó por estar sin usar).
 
 ### Config — tarjetas
 1. Descuentos por marca
@@ -163,7 +207,7 @@ En `controls.js`, `setActiveTab()` cierra automáticamente:
 - **Mayor bajada (`📉`) y mayor subida (`📈`)** del periodo (muestra de las 60 más baratas)
 - Instrucciones de formato (fecha `dd-mm-aaaa`, precio con 3 decimales)
 
-`stationSeries()` llama a `getStationHistory()` (`js/api.js`), o sea la misma serie que dibuja la gráfica del modal, con soporte de grupos de combustibles; `sortHistoryDates()` ordena las fechas `dd-mm-aaaa` correctamente (un `sort()` normal las desordena) y `fmtEur()` formatea a 3 decimales con coma.
+`stationSeries()` llama a `getStationHistory()` (`js/history.js`), o sea la misma serie que dibuja la gráfica del modal, con soporte de grupos de combustibles; `sortHistoryDates()` ordena las fechas `dd-mm-aaaa` correctamente (un `sort()` normal las desordena) y `fmtEur()` formatea a 3 decimales con coma.
 
 **Cancelar**: AbortController aborta el fetch. Botón "Cancelar" aparece en el mensaje de loading y desaparece al completar/fallar.
 
@@ -228,33 +272,47 @@ Orden actual de grupos:
 ### Tests
 - Ubicación: `docs/test/full_test.mjs`
 - Plan: `docs/test/TEST_PLAN.md`
-- 152 tests totales (145 HTTP + 7 file://)
+- 163 tests totales (156 HTTP + 7 file://)
+- Secciones: 1-12 UI, 13 claves IA (manual), 14 push, 15 chat IA, 16 ring logs, 17 build (`ASSETS`/`APP_VERSION`)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)
+- `docs/test/validate.mjs` está **marcado como legado y no se ejecuta**: usa los `data-tab` en camelCase (`tabMap`) de antes del kebab-case y daría falsos fallos. `docs/test/server.js` es solo el servidor para depuración manual, la suite levanta el suyo.
 - Push notifications tests (14.1-14.10) integrados en full_test.mjs
+- Los tests de IA mockean `window.fetch` con `page.evaluate` (**no** con `page.route`): la página tiene Service Worker y las peticiones que este intercepte nunca pasan por el interception de Playwright
 
 ### Actualización de assets y `APP_VERSION`
-- `sw.js` tiene una constante `APP_VERSION` (entero), incrementada automáticamente por `scripts/bump-version.mjs`
-- El script se ejecuta **manualmente** antes de cada commit (ver workflow obligatorio)
+- `sw.js` tiene una constante `APP_VERSION` (entero) y `BUILD_TIME` (`aaaammdd-hhmmss`), incremented por `scripts/bump-version.mjs`
+- El bloque `// assets:start … // assets:end` con `ASSETS` **está generado**: no editarlo a mano. `scripts/sync-sw-assets.mjs` lo reconstruye con lo que referencian `index.html` y `manifest.json` (los `src`/`href` del HTML y el `"src"` del JSON de los iconos) y falla si algún `importScripts` del SW no queda precacheado
+- El script se ejecuta **manualmente** antes de cada commit (ver workflow obligatorio) y `npm run bump` lo hace antes de subir la versión
 - Motivo: `navigator.serviceWorker.ready.then(r => r.update())` solo detecta cambios en `sw.js`; si no se incrementa la versión, los nuevos assets no se descargan
 - El botón "Comprobar actualizaciones" en la UI usa `reg.update()` + `updatefound` para detectar el cambio y ofrecer recarga
 - En config se muestra la versión actual (`#appCurrentVersion`) al cargar la aplicación
+
+### Comandos
+```powershell
+npm test                # suite completa
+node check-syntax.mjs   # sintaxis de todo el JS + <script> inline del HTML
+npm run bump            # sync de ASSETS + APP_VERSION + BUILD_TIME
+npm run sync-assets     # solo ASSETS
+npm run check-assets    # verifica ASSETS sin escribir
+```
 
 ### Decisiones técnicas clave
 - **Dropdown marcas**: `position: fixed` en lugar de `position: absolute` relativo al toolbar para evitar problemas de stacking context del flex layout
 - **Persistencia filtros**: `localStorage` clave `gasolineras_prov_filters_{provName}` — simple, síncrono, <1KB
 - **Favoritos**: IndexedDB `gasolineras-db` / `favorites` store — persistente entre sesiones
 - **Caché datos provincia**: IndexedDB + TTL configurable desde UI
-- **Histórico**: Fetch por cada fecha, almacenado en IndexedDB con clave `hist_{provId}_{dateStr}`. Días configurables por vista (14 tabla, 7 popup mapa)
-- **Gráfica histórica**: Canvas 2D con dibujo manual (sin librería de charts). Tooltip al hover con precio + fecha en dos líneas
+- **Histórico**: una sola implementación en `js/history.js` (página, chat IA y SW), fetch por cada fecha en `js/history.js` con clave `hist_{provId}_{dd-mm-aaaa}` y peticiones agrupadas de 3 en 3. Días configurables por vista (14 tabla, 7 popup mapa)
+- **Gráfica histórica**: Canvas 2D con dibujo manual (sin librería de charts), primitivas en `js/chart-core.js` para las dos gráficas. Tooltip al hover con precio + fecha en dos líneas
+- **Precaché del SW**: generado por script desde `index.html` + `manifest.json`, con los 4 iconos (192/512, PNG y SVG)
 - **Mapa único**: Una instancia Leaflet reutilizada entre tabs vía CSS `display: none` / `block`
 - **Tabla "Ambos"**: Sin paginación — muestra todas las estaciones filtradas
 - **Tabla "Tabla"**: Paginada (default 30) con sort dual (asc/desc)
 - **Reset filtros**: Sin re-fetch cuando ya hay datos cargados
 - **Reset filtros**: También oculta `.search-row` y desactiva el botón 🔍
 - **Log de actividad**: Tabs API/Push en config (`.config-log-tab`/`.config-log-panel`, mismo estilo que cache tabs). `initLogTabs()` en storage.js
-- **API Log**: Array `API_LOG[]` con últimas 30 llamadas, timestamp, duración y estado. Visible en config
-- **Push Log**: Array `PUSH_LOG[]` con últimas 30 eventos push. `logPushEvent()` en push-notifications.js. El SW envía eventos al cliente via `postMessage({type:'push-log',...})` y la función `sendPushLog()` en sw.js
+- **API Log**: `API_LOG_RING` (buffer circular de 30) con timestamp, duración y estado. Visible en config
+- **Push Log**: `PUSH_LOG_RING` (buffer circular de 30). `logPushEvent()` en push-notifications.js. El SW envía eventos al cliente via `postMessage({type:'push-log',...})` y la función `sendPushLog()` en sw.js
 - **Timestamp logs**: formato `dd/mm/yy hh:mm:ss` mediante `formatLogTime()` en helpers.js
 - **Caché config**: Tabs IndexedDB (provincias/histórico) + localStorage (solo claves `gasolineras_`)
 - **Tests**: Servidor HTTP inline en Node.js, Playwright headless, no requiere procesos externos
@@ -274,7 +332,7 @@ Orden actual de grupos:
    - Lee favoritos de IndexedDB store `favorites`
    - Agrupa por provincia
    - Para cada provincia: fetch FRESCO de API (ignora caché) + actualiza caché
-   - Fetch histórico + compara precios (`comparePrices()`)
+   - Fetch histórico + compara precios (`comparePrices()`), con `fetchHistoryByProvinceId()` y `getStationHistory()` de `js/history.js` (importado con `importScripts`)
    - Si cayó: `self.registration.showNotification()`
 
 **Flujo Notificación**:
@@ -331,14 +389,19 @@ node -e "const h=require('http'),fs=require('fs');h.createServer((q,r)=>{let p=q
 | `js/state.js` | STATE global + definiciones combustibles |
 | `js/helpers.js` | Funciones auxiliares (precios, distancia, descuentos, `comparePrices()`, `formatLogTime()`) |
 | `js/db.js` | IndexedDB compartido (cliente + SW): cache, favoritos, config |
-| `js/storage.js` | localStorage (estado/filtros) + tabs caché + API log render + initLogTabs |
-| `js/api.js` | Fetch datos, histórico, `apiFetch()` wrapper con log, `tryAutoRestoreProvince()` |
+| `js/storage.js` | localStorage (estado/filtros) + `createRingLog()` + tabs caché + logs + initLogTabs |
+| `js/history.js` | Histórico compartido (página + chat IA + SW): `formatDateDDMMYYYY()`, `sortHistoryDates()`, `historyDateList()`, `fetchHistoryByProvinceId()`, `getStationHistory()` |
+| `js/api.js` | Fetch datos, `apiFetch()` con log (`API_LOG_RING`), `clearCache()`, `tryAutoRestoreProvince()` |
 | `js/map.js` | Inicialización mapa Leaflet, marcadores, popups, chart popup con tooltip |
 | `js/controls.js` | `render()`, `setActiveTab()`, filtros, `toggleFavorite()` |
 | `js/table.js` | `doSort()`, `showDetail()`, `loadHistory()`, helpers combustibles |
-| `js/chart-engine.js` | Dibujar gráfica histórica (canvas) en detail panel + tooltip hover |
+| `js/chart-core.js` | Primitivas de gráfica compartidas por las dos vistas (canvas, escala, ejes, tooltip) |
+| `js/chart-engine.js` | Gráfica histórica del detail panel con las primitivas de `chart-core.js` |
 | `js/main.js` | Event listeners, restauración de estado, push notifications |
-| `js/push-notifications.js` | Gestión suscripción Web Push (subscribe/unsubscribe) + PUSH_LOG + logPushEvent |
-| `sw.js` | Service Worker (caché, periodicsync, checkPrices, notificationclick) + sendPushLog() |
+| `js/push-notifications.js` | Gestión suscripción Web Push (subscribe/unsubscribe) + `PUSH_LOG_RING` + logPushEvent |
+| `sw.js` | Service Worker (caché, periodicsync, checkPrices, notificationclick) + sendPushLog() + `APP_VERSION`/`ASSETS` |
+| `scripts/bump-version.mjs` | Regenera `ASSETS` e incrementa `APP_VERSION` + `BUILD_TIME` |
+| `scripts/sync-sw-assets.mjs` | Genera el bloque `ASSETS` de `sw.js` desde `index.html` + `manifest.json` |
+| `check-syntax.mjs` | Comprueba la sintaxis de todo el JS del repo y del `<script>` inline del HTML |
 | `workers/nvidia-proxy.js` | Cloudflare Worker del proxy de NVIDIA (CORS + secreto `NVIDIA_API_KEY`) |
 | `workers/wrangler.toml` | Nombre del Worker, entrypoint y `ALLOWED_ORIGIN` opcional |

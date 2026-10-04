@@ -2,7 +2,7 @@
 
 **Estado**: ✅ Reimplementado (v2 - SW-based)
 **Fecha**: 2026-07-17
-**Última actualización**: Refactor: toda la lógica de chequeo ahora corre en el Service Worker
+**Última actualización**: 2026-10-04 — el histórico y los logs se comparten con el cliente (`js/history.js`, `createRingLog()`)
 
 Sin backend ni servidor push externo. El chequeo de precios lo ejecuta el Service Worker directamente contra la API del Geoportal de Hidrocarburos.
 
@@ -26,9 +26,13 @@ Sin backend ni servidor push externo. El chequeo de precios lo ejecuta el Servic
 ### Arquitectura del log
 
 ```
-SW (checkPrices, events) → sendPushLog() → postMessage({type:'push-log'}) → main.js message handler → logPushEvent() → PUSH_LOG[] → renderPushLog()
-Cliente (toggles, config, subscribe) → logPushEvent() → PUSH_LOG[] → renderPushLog()
+SW (checkPrices, events) → sendPushLog() → postMessage({type:'push-log'}) → main.js message handler → logPushEvent() → PUSH_LOG_RING → renderPushLog()
+Cliente (toggles, config, subscribe) → logPushEvent() → PUSH_LOG_RING → renderPushLog()
 ```
+
+`PUSH_LOG_RING` es el buffer circular de 30 entradas creado con `createRingLog()`
+(`js/storage.js`), el mismo que usa el log de la API. Guarda de más antiguo a más
+reciente, así que `renderPushLog()` lo pinta invertido.
 
 ## Componentes
 
@@ -36,21 +40,27 @@ Cliente (toggles, config, subscribe) → logPushEvent() → PUSH_LOG[] → rende
 Funciones IndexedDB compartidas entre cliente y Service Worker:
 - `openDB()` — conexión a IndexedDB (v2: stores: `cache`, `favorites`, `config`)
 - `dbGet(store, key)`, `dbPut(store, key, value)`, `dbDelete(store, key)`
-- `dbGetAll(store)`, `dbGetAllKeys(store)`, `dbClear(store)`
+- `dbGetAll(store)`, `dbGetAllKeys(store)` — **`store` es obligatorio**: sin él la transacción se abre sobre un store inexistente y el error se resuelve en silencio
 - `getCachedProvinceData(province)`, `cacheProvinceData(province, data, ttl)`
 - `dbGetAllFavorites()`, `dbAddFavorite(fav)`, `dbRemoveFavorite(id)`
 - `getPushConfig()`, `setPushConfig(config)`
 
+### `js/history.js` (COMPARTIDO)
+El histórico ya **no** está duplicado en el SW. `sw.js` lo importa con `importScripts`
+y usa las mismas funciones que la página y el chat de IA:
+- `fetchHistoryByProvinceId(provinceId, days)` — descarga por fecha (lotes de 3) y cachea en IndexedDB con clave `hist_<idProvincia>_<dd-mm-aaaa>`
+- `getStationHistory(historyByDate, stationId, fuelName)` — serie de precios de una estación
+- `historyRequest(url)` — delega en `apiFetch()` si existe (en el cliente, para que la descarga quede en el log de la API) y hace un `fetch` simple en el SW
+- `sortHistoryDates(keys)` — las fechas son `dd-mm-aaaa`, un `sort()` normal las desordena
+
 ### `sw.js`
-El SW ahora contiene toda la lógica de chequeo de precios:
+El SW contiene la lógica de chequeo de precios:
 - `checkPrices()` — función principal, lee favoritos de IndexedDB, fetchea API, compara, notifica
-- `fetchProvinceHistorySW(provinceId, days)` — obtiene histórico desde la API
-- `getStationHistorySW(historyByDate, stationId, fuelName)` — extrae histórico de una estación
 - `periodicsync` event — dispara `checkPrices()`
 - `message` event — recibe `trigger-price-check` desde el cliente (fallback escritorio)
 - `push` event — handler para mensajes push del servidor (si se implementara)
 - `notificationclick` — URL matching corregido (`new URL(client.url).pathname`)
-- `importScripts('js/state.js', 'js/helpers.js', 'js/db.js')`
+- `importScripts('js/state.js', 'js/helpers.js', 'js/db.js', 'js/history.js')` — todo lo que importa tiene que estar en `ASSETS`, si no el SW arranca sin esas funciones
 - `sendPushLog(event, detail)` — envía eventos de log push al cliente vía postMessage
 
 ### `js/helpers.js`
@@ -65,15 +75,16 @@ El SW ahora contiene toda la lógica de chequeo de precios:
 - `setInterval` fallback ahora envía `postMessage({ type: 'trigger-price-check' })` al SW
 - Sincroniza configuración push con IndexedDB (`setPushConfig`)
 - Botón test → envía mensaje al SW en vez de ejecutar `checkFavoritePrices()`
+- Restaura los dos logs desde `localStorage` **antes** de cualquier llamada a la API, referenciando `API_LOG_RING`/`PUSH_LOG_RING` por su identificador (son `const` de nivel superior y **no** cuelgan de `window`)
 - Log de eventos push: estado inicial, toolbar, toggles bajada/subida, checkInterval, priceFallDays, PeriodicSync, setInterval, test, mensajes SW (`push-log`)
 
 ### `js/push-notifications.js`
 - `subscribeUserToPush()` — timeout eliminado, loguea endpoint + claves p256dh + auth
 - `unsubscribeUserFromPush()` — también desregistra `periodicSync`
-- `PUSH_LOG[]` — array con últimas 30 entradas de eventos push
-- `logPushEvent(event, detail)` — añade entrada con timestamp `formatLogTime()` y renderiza
-- `renderPushLog()` — renderiza en `#pushLogEntries` (panel Push del config)
-- `clearPushLog()` — vacía el log
+- `PUSH_LOG_RING` — buffer circular de 30 eventos (`createRingLog(30)`, con respaldo si `storage.js` aún no estuviera cargado)
+- `logPushEvent(event, detail)` — añade entrada con timestamp `formatLogTime()`, persiste en `localStorage` y renderiza
+- `renderPushLog()` — renderiza en `#pushLogEntries` (panel Push del config) del más reciente al más antiguo
+- `clearPushLog()` — vacía el log y borra la clave guardada
 
 ## VAPID Keys
 
@@ -93,7 +104,7 @@ Hardcodeada en `push-notifications.js`. Clave privada no necesaria (no hay backe
 
 ## Push Log — Registro de actividad
 
-Cada evento push se registra en el array `PUSH_LOG[]` (cliente) o se envía al cliente via `postMessage` (Service Worker).
+Cada evento push se registra en `PUSH_LOG_RING` (cliente) o se envía al cliente vía `postMessage` (Service Worker). Es un buffer circular de 30: cuando se llega al máximo se descarta **la más antigua**, que es justo lo que se quiere en un log de actividad.
 
 ### Eventos registrados
 
@@ -124,9 +135,11 @@ Cada evento push se registra en el array `PUSH_LOG[]` (cliente) o se envía al c
 |-------|-------|-----------|
 | `gasolineras_db` / `favorites` | IndexedDB | Favoritos con `{ id, provinceName, provinceId, brand }` |
 | `gasolineras_db` / `config` | IndexedDB | Configuración push (accesible por SW) |
-| `gasolineras_db` / `cache` | IndexedDB | Caché de datos de provincias e histórico |
+| `gasolineras_db` / `cache` | IndexedDB | Caché de datos de provincias (`prov_<nombre>`) e histórico (`hist_<idProvincia>_<dd-mm-aaaa>`) |
 | `gasolineras_push_subscription` | localStorage | PushSubscription JSON |
 | `gasolineras_state` | localStorage | Estado global de la app (UI) |
+| `gasolineras_push_log` | localStorage | Últimos 30 eventos push (del más antiguo al más reciente) |
+| `gasolineras_api_log` | localStorage | Últimas 30 llamadas a la API, mismo formato |
 
 ## Testing rápido (sin esperar X horas)
 
@@ -192,3 +205,5 @@ navigator.serviceWorker.ready.then(r => r.periodicSync.getTags()).then(t => cons
 | No llegan notificaciones | API del gobierno caída | Reintentar más tarde |
 | SW no se activa | HTTPS requerido (excepto localhost) | Usar `https://` o localhost para testing |
 | periodicSync no registra | Solo Android Chrome con PWA instalada | Usar `setInterval` fallback en escritorio |
+| El SW no encuentra `fetchHistoryByProvinceId` o `getStationHistory` | `js/history.js` no está en el precaché y el SW se instaló sin él | `npm run bump` y volver a cargar; el script de sync falla si algún `importScripts` no queda en `ASSETS` |
+| El log de push aparece vacío | `localStorage` sin `gasolineras_push_log` o `PUSH_LOG_RING` sin restaurar | Comprobar en DevTools que la clave existe; se restaura por identificador global, no por `window` |

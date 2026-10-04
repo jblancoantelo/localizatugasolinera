@@ -406,32 +406,34 @@ curl -s "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/Precio
 
 ## 3. Estaciones Terrestres — Histórico
 
-Añaden `{Fecha}` (formato `dd/mm/aaaa`) como primer parámetro de la ruta.
+Añaden `{Fecha}` como primer parámetro de la ruta. **El formato es `dd-mm-aaaa` con guiones, no `dd/mm/aaaa`**: comprobado contra la API real el 2026-10-04, `.../FiltroProvincia/28-09-2026/28` responde 200 y `.../FiltroProvincia/28/09/2026/28` responde 404.
 Los precios reflejados son los vigentes a las 23:59 de esa fecha.
+
+> En la app el histórico se pide con `fetchHistoryByProvinceId()` (`js/history.js`), en lotes de 3 peticiones, y se cachea en IndexedDB con la clave `hist_<idProvincia>_<dd-mm-aaaa>`. Ordenar esas fechas exige `sortHistoryDates()`: un `sort()` normal las desordena ("29-08" > "01-09").
 
 ### 3.1 Histórico completo por fecha
 
 ```bash
-curl -s "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestresHist/19/06/2026"
+curl -s "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestresHist/19-06-2026"
 ```
 
 ### 3.2 Histórico por provincia + fecha
 
 ```bash
-curl -s "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestresHist/FiltroProvincia/19/06/2026/28"
+curl -s "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestresHist/FiltroProvincia/19-06-2026/28"
 ```
 
 ### 3.3 Histórico por municipio + producto + fecha
 
 ```bash
-curl -s "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestresHist/FiltroMunicipioProducto/19/06/2026/4495/1"
+curl -s "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestresHist/FiltroMunicipioProducto/19-06-2026/4495/1"
 ```
 
 Variantes disponibles:
 
 | Endpoint | Parámetros |
 |---|---|
-| `EstacionesTerrestresHist/{Fecha}` | fecha |
+| `EstacionesTerrestresHist/{Fecha}` | fecha `dd-mm-aaaa` |
 | `EstacionesTerrestresHist/FiltroProvincia/{Fecha}/{IDProvincia}` | fecha, provincia |
 | `EstacionesTerrestresHist/FiltroCCAA/{Fecha}/{IDCCAA}` | fecha, ccaa |
 | `EstacionesTerrestresHist/FiltroMunicipio/{Fecha}/{IDMunicipio}` | fecha, municipio |
@@ -624,3 +626,4 @@ Mismas variantes de filtro que estaciones terrestres:
 - Campos vacíos se devuelven como string vacío `""`.
 - Los `Listados/Municipios/` (todos los municipios) es un endpoint muy pesado (~3 MB).
 - No hay paginación ni filtros por nombre/marca.
+- La fecha de los endpoints de histórico va en la ruta con guiones (`dd-mm-aaaa`). Es el único punto donde el formato se separa del resto de la API, que usa `dd/mm/aaaa hh:mm:ss` en el campo `Fecha` de la respuesta.

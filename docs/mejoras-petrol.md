@@ -1,5 +1,46 @@
 # Mejoras realizadas — Precios Gasolina España
 
+## 2026-10-04 — Un solo motor de gráficas, un solo histórico y precaché que se autogenera
+
+### Por qué hacía falta
+El histórico de precios estaba implementado **tres veces**: en `api.js` para la página, en `sw.js` para el chequeo de push y con otro comparador de fechas dentro del chat de IA. Las dos gráficas (detalle y popup del mapa) tenían el mismo código de canvas duplicado, incluido el tooltip. Y el precaché del Service Worker estaba escrito a mano, así que se desincronizó por dos veces.
+
+### `js/history.js` — fuente única del histórico
+- Descarga, caché y serie por estación en un solo fichero, importado por el SW con `importScripts`, lo que **prohíbe** que el cliente y el SW vuelvan a divergir.
+- `sortHistoryDates()` sustituye a los dos comparadores que había: el del SW usaba `new Date(ya, …)` sin el unary `+`, así que ordenaba mal los años de dos cifras y el histórico de push comparaba precios de fechas desordenadas.
+- `historyRequest()` delega en `apiFetch()` cuando existe (la descarga queda en el log de la API) y cae a un `fetch` simple en el SW, que no tiene esa función.
+- Se borran ≈90 líneas del SW y ≈100 de `api.js`. `fetchProvinceHistory()` se queda en `api.js` porque solo sabe resolver el nombre de la provincia a su id.
+
+### `js/chart-core.js` — un solo motor de gráficas
+- Primitivas compartidas por `chart-engine.js` (detalle) y `map.js` (popup): `chartSetupCanvas()`, `chartScale()`, `chartAxes()`, `chartMinMax()`, `chartIndices()` y `drawTooltip()`.
+- `chartSetupCanvas()` además **cae a los atributos `width`/`height`** cuando el canvas todavía no tiene layout (pestaña oculta): antes la gráfica medía 0 y no se veía hasta cambiar de tab.
+- `chartIndices()` decide qué fechas llevan etiqueta, así las etiquetas no se solapan ni en 60 días ni en el popup de 7.
+- El tooltip era una copia literal de 40 líneas en `map.js`: ahora es `drawTooltip()`.
+
+### `createRingLog()` — los dos logs con la misma estructura
+- Un buffer circular con `push()`/`all()`/`clear()`/`load()` sustituye a los arrays con `unshift` + recorte manual de `API_LOG[]` y `PUSH_LOG[]`.
+- `all()` devuelve copia, que es lo que evita que el render o la persistencia muten el log por accidente.
+- `load()` recorta a `max` al restaurar, que es justo lo que pasa con los 45 registros sembrados en el test.
+
+### Precaché autogenerado
+- `scripts/sync-sw-assets.mjs` reconstruye `ASSETS` desde `index.html` + `manifest.json` y **falla con error** si algún `importScripts` del SW no queda precacheado (pasó con `js/ai-chat.js`: el SW arrancaba sin sus funciones).
+- `npm run bump` regenera la lista y sube `APP_VERSION` en el mismo paso, así que añadir un script no obliga a recordar dos cosas.
+- `npm run check-assets` verifica sin escribir, y un test de la suite falla si la lista queda desfasada.
+- El sync ahora lee también `manifest.json`, que es donde se declara `icons/icon-512.svg`: `index.html` no lo referencia y el icono se había caído del precaché.
+
+### Bugs que salieron por el camino
+- **"Limpiar caché" no borraba nada**: `dbGetAllKeys()`/`dbDelete()` se llamaban sin el nombre del store, IndexedDB lanzaba `NotFoundError` y el `catch` lo comía. Ahora el nombre del store es obligatorio en la firma documentada y hay un test que siembra claves y comprueba que desaparecen.
+- **El log de push estaba muerto**: al migrarlo al ring quedó una línea que tocaba el array viejo → `ReferenceError` en cada evento.
+- **Los logs no volvían tras F5**: la restauración buscaba `window.API_LOG_RING`, pero las `const` de nivel superior de un script clásico no cuelgan de `window`.
+
+### Tests
+- 163 tests (156 HTTP + 7 file://) en verde, 10 nuevos: 7 de ring logs (recorte, copia, `load()`, orden de render, persistencia y restauración) y 3 de build (cobertura de `ASSETS`, precaché de lo que importa el SW y formato de `APP_VERSION`/`BUILD_TIME`).
+- `node check-syntax.mjs` valida 19 ficheros, incluidos los dos scripts y los `<script>` inline del HTML.
+- `docs/test/TEST_PLAN.md` actualizado a 163 tests y con las secciones 16 (ring logs) y 17 (build). `docs/test/validate.mjs` queda **marcado como legado**: usaba los `data-tab` en camelCase (`tabMap`) y habría dado falsos fallos; la suite que se mantiene es `docs/test/full_test.mjs`.
+- `docs/API.md` corregido: el histórico va en la ruta con **`dd-mm-aaaa`**, no con barras (comprobado contra la API real: `FiltroProvincia/28-09-2026/28` responde 200 y `FiltroProvincia/28/09/2026/28` responde 404).
+
+---
+
 ## 2026-09-27 — La app te dice si la URL del proxy de NVIDIA es la buena
 
 ### Por qué hacía falta

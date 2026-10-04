@@ -1,3 +1,6 @@
+// Servidor estático mínimo para depuración manual (fichero auxiliar de docs).
+// La suite oficial NO lo usa: `docs/test/full_test.mjs` levanta su propio servidor.
+//   node docs/test/server.js   ->  http://localhost:8080
 const http=require('http'),fs=require('fs'),path=require('path');
 const r=path.join(__dirname,'..');
 const t={'.html':'text/html','.css':'text/css','.js':'application/javascript','.png':'image/png','.svg':'image/svg+xml','.json':'application/json','.ico':'image/x-icon'};

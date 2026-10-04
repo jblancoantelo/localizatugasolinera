@@ -12,13 +12,16 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Restore logs BEFORE any API call (fetchProvinces overwrites localStorage)
+  // OJO: API_LOG_RING y PUSH_LOG_RING son `const` de nivel superior en scripts
+  // clásicos, así que viven en el entorno léxico global pero NO en `window`:
+  // hay que referenciarlos por su identificador, no por window.algo.
   try {
     const savedApi = localStorage.getItem('gasolineras_api_log');
-    if (savedApi) { const p = JSON.parse(savedApi); if (Array.isArray(p)) { if (window.API_LOG_RING && window.API_LOG_RING.load) window.API_LOG_RING.load(p); else if (window.API_LOG_RING) { /* backward */ } } }
+    if (savedApi) { const p = JSON.parse(savedApi); if (Array.isArray(p) && typeof API_LOG_RING !== 'undefined') API_LOG_RING.load(p); }
   } catch(e) {}
   try {
     const savedPush = localStorage.getItem('gasolineras_push_log');
-    if (savedPush) { const p = JSON.parse(savedPush); if (Array.isArray(p)) { if (window.PUSH_LOG_RING && window.PUSH_LOG_RING.load) window.PUSH_LOG_RING.load(p); } }
+    if (savedPush) { const p = JSON.parse(savedPush); if (Array.isArray(p) && typeof PUSH_LOG_RING !== 'undefined') PUSH_LOG_RING.load(p); }
   } catch(e) {}
   renderApiLog();
   renderPushLog();
