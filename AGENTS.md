@@ -27,12 +27,25 @@ Ver [`README.md`](./README.md) para visión general del proyecto, funcionalidade
    ```
    Si los tests no existen o fallan, no continuar hasta que pasen todos.
 
-3. **Commit**: preguntar al usuario antes de hacer commit. Si confirma, escribir **siempre un mensaje descriptivo** que resuma los cambios (nunca "fix", "update" o similar genérico). Ejemplo: `"Añade lupa para toggle del filtro de búsqueda y mejora responsive mobile"`.
+3. **Dónde commitear** (regla del usuario, 04/10/2026):
+   - **Fixes y cambios pequeños**: se trabaja y se commitea **directo en `main`**, sin rama. Es el caso por defecto.
+   - **Cambios grandes** (refactors, varios ficheros de los que dependen otros, features): se trabaja en una rama corta (`chatIA`, `cache-fix`, …), se sube y se entregan **con una PR contra `main`** para que se revisen antes de integrar.
+   - **Nunca integrar una rama en `main` por la vía rápida** (`git merge --ff-only` + `git push origin main`) sin que el usuario haya revisado antes la PR. Ese atajo solo con petición expresa suya.
+   - En este entorno **no hay `gh` instalado**, así que la PR la abre el usuario desde la web de GitHub: hay que dejar la rama subida y darle el enlace `compare`.
    ```powershell
+   # fix pequeño → en main
    git add -A
    git commit -m "mensaje descriptivo"
-   git push
+   git push origin main
+
+   # cambio grande → rama + PR
+   git checkout -b nombre-rama     # si no existe
+   git add -A
+   git commit -m "mensaje descriptivo"
+   git push -u origin nombre-rama
    ```
+   - Preguntar al usuario antes de hacer commit. El mensaje debe ser **descriptivo** (nunca "fix", "update" o similar genérico). Ejemplo: `"Añade lupa para toggle del filtro de búsqueda y mejora responsive mobile"`.
+   - Si duda de si el cambio es grande o pequeño, preguntar antes de elegir una u otra vía.
 
 ## Módulos compartidos cliente ↔ Service Worker
 
