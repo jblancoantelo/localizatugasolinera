@@ -143,9 +143,12 @@ const AI_PROVIDERS = {
       // max_tokens alto a proposito: varios de estos modelos razonan antes de
       // responder y con 1024 se quedaban sin tokens (glm-5.3-flash consumia
       // ~1000 caracteres solo en razonamiento y devolvia content vacio).
+      // aiProviderUrl() valida la URL y lanza con el motivo si no puede servir:
+      // fuera del try para que aiFetchError() no le añada el sufijo "— proxy: …".
+      const url = aiProviderUrl('nvidia', '/v1/chat/completions');
       let res;
       try {
-        res = await fetch(aiProviderUrl('nvidia', '/v1/chat/completions'), {
+        res = await fetch(url, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ model, messages, max_tokens: 2048 }), signal
         });
@@ -244,11 +247,26 @@ function aiApiKey(provider) {
 }
 
 // --- Proxy de NVIDIA ------------------------------------------------------
-// URL predefinida: el Worker tal como lo despliega `wrangler deploy` con el
-// name de workers/wrangler.toml. Sirve para no tener que escribirla la primera
-// vez; si al desplegar tu Worker salio con otro subdominio (las cuentas nuevas
-// reciben https://<name>.<tu-subdominio>.workers.dev), cambiala en Config → IA.
+// URL predefinida: la FORMA que devuelve `wrangler deploy` con el name de
+// workers/wrangler.toml, pero sin el subdominio de la cuenta (que es lo unico
+// que Cloudflare no deja elegir: uno por cuenta). Se deja como ejemplo para que
+// el campo de Config venga relleno, NO como destino: ese host no resuelve y
+// aiProxyUrlIssue() lo marca como inválido para no gastarse un fetch y no
+// esconder la causa detrás de un "NetworkError when attempting to fetch".
 const AI_PROXY_NVIDIA_DEFAULT = 'https://petrol-nvidia-proxy.workers.dev';
+
+// Cómo es de verdad una URL de workers.dev. 'mi-cuenta' es un ejemplo: lo
+// sustituye el subdominio que Cloudflare asigna a la cuenta del usuario.
+const AI_PROXY_NVIDIA_SHAPE = 'https://petrol-nvidia-proxy.mi-cuenta.workers.dev';
+
+// Motivos por los que una URL de proxy no sirve, con su versión corta para los
+// rótulos de estado. 'nourl' no es un error de formato sino "no configurada".
+const AI_PROXY_URL_ISSUES = {
+  nourl: 'Falta la URL del proxy',
+  placeholder: 'URL con un placeholder sin sustituir',
+  invalid: 'URL no válida',
+  nosubdomain: 'URL sin el subdominio de tu cuenta'
+};
 
 // Normaliza lo que el usuario pega: sin esquema, con barra final o con spaces.
 function normalizeAiProxyUrl(raw) {
@@ -256,6 +274,62 @@ function normalizeAiProxyUrl(raw) {
   if (!url) return '';
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
   return url.replace(/\/+$/, '');
+}
+
+// Motivo por el que una URL de proxy no puede funcionar, o '' si tiene buena
+// pinta. Se comprueba ANTES de fetchear porque los dos fallos mas comunes
+// (el valor de ejemplo y el placeholder de la documentación) no son errores de
+// red: son direcciones que nunca van a resolver.
+function aiProxyUrlIssue(url) {
+  const base = normalizeAiProxyUrl(url);
+  if (!base) return 'nourl';
+  let host;
+  try {
+    host = new URL(base).hostname;
+  } catch {
+    // El host con <> (https://worker.<tu-cuenta>.workers.dev) lo rechaza el
+    // parser de URL: es el placeholder de la documentación, no una URL mala.
+    return /[<>{}]/.test(base) ? 'placeholder' : 'invalid';
+  }
+  // workers.dev publica siempre como <worker>.<subdominio-cuenta>.workers.dev:
+  // con solo tres etiquetas falta el subdominio y el host no existe.
+  if (host.endsWith('.workers.dev') && host.split('.').length === 3) return 'nosubdomain';
+  // Chromium no lanza si el host lleva espacios: los percent-codifica
+  // ("mi%20proxy"), que tampoco resuelve. Solo se admiten letras, dígitos, punto
+  // y guion, más los corchetes de un IPv6 literal.
+  if (!host.startsWith('[') && !/^[a-z0-9.-]+$/i.test(host)) return 'invalid';
+  return '';
+}
+
+// Explicación de cada motivo, en castellano y diciendo qué pegar.
+function aiProxyUrlIssueMessage(issue, url) {
+  const base = normalizeAiProxyUrl(url);
+  switch (issue) {
+    case 'nourl':
+      return 'Falta la URL del proxy de NVIDIA: ponla en Config → IA. Es la que imprime "wrangler deploy".';
+    case 'placeholder':
+      return 'La URL "' + base + '" tiene un placeholder sin sustituir (lo de <…> es un ejemplo, no se copia tal cual).'
+        + ' La real tiene esta forma: ' + AI_PROXY_NVIDIA_SHAPE + ', tal como la imprime "wrangler deploy".';
+    case 'invalid':
+      return 'La URL "' + base + '" no es válida. Debe ser la del Worker, con esta forma: ' + AI_PROXY_NVIDIA_SHAPE;
+    case 'nosubdomain':
+      return 'La URL "' + base + '" no puede existir: Cloudflare publica cada Worker como <worker>.<subdominio de tu cuenta>.workers.dev,'
+        + ' o sea ' + AI_PROXY_NVIDIA_SHAPE + '. Pega en Config → IA la URL exacta que imprime "wrangler deploy"'
+        + ' (hace falta una cuenta de Cloudflare, gratuita; sin ella este proveedor no se puede usar).';
+    default:
+      return '';
+  }
+}
+
+// Pinta el campo de Config según la URL: rojo si no puede funcionar, verde si
+// tiene la forma correcta. El verde no garantiza que el Worker exista: para eso
+// está el botón 🔎 Probar.
+function markAiProxyUrlInput(provider, url) {
+  const input = document.getElementById(getProviderInputId(provider, 'iaProxy'));
+  if (!input) return;
+  const issue = aiProxyUrlIssue(url);
+  input.style.borderColor = issue ? '#c33' : '#2a7';
+  input.title = issue ? aiProxyUrlIssueMessage(issue, url) : 'La URL tiene la forma correcta; pulsa 🔎 Probar para comprobar que el Worker responde.';
 }
 
 function getAiProxyUrl(provider) {
@@ -280,17 +354,20 @@ function aiProviderUrl(provider, path) {
   if (!config) return path;
   if (config.viaProxy) {
     const base = getAiProxyUrl(provider);
-    if (!base) throw new Error('Falta la URL del proxy de NVIDIA (Config → IA).');
+    // Validar aquí evita el fetch imposible y, sobre todo, que el error que ve
+    // el usuario sea un "NetworkError" sin explicar de dónde sale.
+    const issue = aiProxyUrlIssue(base);
+    if (issue) throw new Error(aiProxyUrlIssueMessage(issue, base));
     return base + path;
   }
   return path;
 }
 
-// Un fetch a un host inexistente falla con "Failed to fetch" / "Load failed",
-// que no dice nada útil. Con la URL del proxyNVIDIA estos casos son los mas
-// frecuentes (nombre de Worker equivocado, subdominio de la cuenta distinto,
-// Worker sin desplegar, ALLOWED_ORIGIN cerrando el acceso), asi que se
-// convierte en un mensaje que dice qué mirar.
+// Un fetch a un host que no responde falla con "Failed to fetch" / "Load failed",
+// que no dice nada útil. Con el proxy de NVIDIA estos casos son los mas
+// frecuentes (Worker borrado, subdominio de la cuenta cambiado, red que lo
+// bloquea), asi que se convierte en un mensaje que dice qué mirar. Las URLs que
+// no pueden existir las descarta antes aiProxyUrlIssue().
 function aiFetchError(provider, err) {
   const config = AI_PROVIDERS[provider] || {};
   if (!config.viaProxy) return err;
@@ -298,8 +375,8 @@ function aiFetchError(provider, err) {
   const raw = (err && (err.message || String(err))) || 'error de red';
   if (/failed to fetch|load failed|networkerror|network request failed|dns|err_name_not_resolved|err_connection/i.test(raw)) {
     return new Error('No se pudo conectar con el proxy de NVIDIA en ' + url
-      + ' (' + raw + '): ese host no existe o no responde. La URL que imprime "wrangler deploy"'
-      + ' tiene esta forma: https://petrol-nvidia-proxy.<tu-subdominio>.workers.dev');
+      + ' (' + raw + '): ese host no responde. Comprueba que el Worker siga desplegado y que la URL sea'
+      + ' la que imprime "wrangler deploy" (' + AI_PROXY_NVIDIA_SHAPE + ').');
   }
   return new Error(raw + ' — proxy: ' + url);
 }
@@ -312,6 +389,12 @@ async function aiProxyDiagnostics(provider, urlOverride) {
   const base = normalizeAiProxyUrl(urlOverride) || getAiProxyUrl(provider);
   if (!base) return { ok: false, reason: 'nourl' };
   const res = { url: base };
+  // Si la URL no puede funcionar no se llega a hacer el fetch: se explica qué
+  // pegar, que es justo para lo que se usa este botón.
+  const issue = aiProxyUrlIssue(base);
+  if (issue) {
+    return Object.assign(res, { ok: false, kind: 'invalidurl', issue, message: aiProxyUrlIssueMessage(issue, base) });
+  }
   let r;
   try {
     r = await fetch(base + '/v1/models', { headers: { Accept: 'application/json' } });
@@ -319,8 +402,8 @@ async function aiProxyDiagnostics(provider, urlOverride) {
     return Object.assign(res, {
       ok: false, kind: 'dns',
       message: 'No se pudo ni conectar con ' + base + ' (' + ((e && e.message) || 'error de red')
-        + '). Ese host no existe: revisa la URL. La que imprime "wrangler deploy" tiene esta forma: '
-        + 'https://petrol-nvidia-proxy.<tu-subdominio>.workers.dev'
+        + '). Ese host no responde: revisa la URL. La que imprime "wrangler deploy" tiene esta forma: '
+        + AI_PROXY_NVIDIA_SHAPE
     });
   }
   const body = await r.text();
@@ -359,20 +442,26 @@ async function aiProxyDiagnostics(provider, urlOverride) {
   return Object.assign(res, { ok: false, kind: 'http' + r.status, message: 'HTTP ' + r.status + ': ' + (msg || '(sin detalle)') });
 }
 
-// Un proveedor viaProxy esta listo en cuanto tenga la URL del proxy; uno con
-// clave opcional siempre (accede en anonimo); el resto, en cuanto tenga clave.
+// Un proveedor viaProxy esta listo en cuanto tenga una URL de proxy utilizable
+// (con forma de workers.dev, no solo con el valor de ejemplo); uno con clave
+// opcional siempre (accede en anonimo); el resto, en cuanto tenga clave.
 function isAiProviderReady(provider) {
   const config = AI_PROVIDERS[provider];
   if (!config) return false;
-  if (config.viaProxy) return !!getAiProxyUrl(provider);
+  if (config.viaProxy) return !aiProxyUrlIssue(getAiProxyUrl(provider));
   if (config.keyOptional) return true;
   const cfgInput = document.getElementById(getProviderInputId(provider, 'iaKey'));
   return !!(cfgInput && cfgInput.value ? cfgInput.value : config.key);
 }
 
 function aiProviderNotReadyMessage(provider) {
-  if (AI_PROVIDERS[provider] && AI_PROVIDERS[provider].viaProxy) {
-    return 'El proxy de NVIDIA no responde. Revisa su URL en Config → IA y que el Worker esté desplegado.';
+  const config = AI_PROVIDERS[provider];
+  if (config && config.viaProxy) {
+    const base = getAiProxyUrl(provider);
+    const issue = aiProxyUrlIssue(base);
+    return issue
+      ? aiProxyUrlIssueMessage(issue, base)
+      : 'El proxy de NVIDIA no responde. Revisa su URL en Config → IA y que el Worker esté desplegado.';
   }
   return 'Por favor, introduce una API Key válida en Config → IA.';
 }
@@ -588,7 +677,14 @@ function markAiModelsStatus(provider, text) {
 // esta listo (sin clave, o sin URL de proxy) se deja el desplegable con la
 // lista fija; si lo esta, se sincroniza con el catalogo real (usando la cache).
 function autoRefreshAiModels(provider) {
-  if (!AI_PROVIDERS[provider] || !AI_PROVIDERS[provider].listModelsUrl) return;
+  const config = AI_PROVIDERS[provider];
+  if (!config || !config.listModelsUrl) return;
+  // Un proxy con la URL de ejemplo no se consulta: se explica el motivo en el
+  // desplegable en vez de dejar un error de red sin contexto.
+  if (config.viaProxy) {
+    const issue = aiProxyUrlIssue(getAiProxyUrl(provider));
+    if (issue) { markAiModelsStatus(provider, '⚠️ ' + AI_PROXY_URL_ISSUES[issue]); return; }
+  }
   if (!isAiProviderReady(provider)) return;
   refreshAiModels(provider).then(res => {
     if (res.ok && res.missing) {
@@ -783,6 +879,7 @@ function initAiProxyConfig(provider) {
   if (!input || input.dataset.listener) return;
   input.dataset.listener = '1';
   input.value = getAiProxyUrl(provider);
+  markAiProxyUrlInput(provider, input.value);
   input.addEventListener('change', () => {
     setAiProxyUrl(provider, input.value);
     input.value = getAiProxyUrl(provider);
@@ -792,20 +889,21 @@ function initAiProxyConfig(provider) {
       markAiModelsStatus(provider, '⏳ Consultando el proxy…');
       autoRefreshAiModels(provider);
     } else {
-      markAiModelsStatus(provider, '');
+      markAiModelsStatus(provider, '⚠️ ' + AI_PROXY_URL_ISSUES[aiProxyUrlIssue(input.value)]);
     }
   });
   const reset = document.getElementById('iaProxyResetBtn');
   if (reset && !reset.dataset.listener) {
     reset.dataset.listener = '1';
     reset.addEventListener('click', () => {
-      // Vuelve a la URL predefinida del wrangler.toml y borra la guardada.
+      // Vuelve a la URL de ejemplo del wrangler.toml y borra la guardada. Ojo:
+      // sin el subdominio de la cuenta ese host no existe, asi que el estado
+      // pasa a "URL sin el subdominio de tu cuenta" hasta que se pegue la real.
       setAiProxyUrl(provider, '');
       input.value = getAiProxyUrl(provider);
       updateAiStatus(provider);
       invalidateAiModelsCache(provider);
-      markAiModelsStatus(provider, '⏳ Consultando el proxy…');
-      autoRefreshAiModels(provider);
+      markAiModelsStatus(provider, '⚠️ ' + AI_PROXY_URL_ISSUES[aiProxyUrlIssue(input.value)]);
     });
   }
   // "Probar" no cuesta tokens: hace un GET a /v1/models y explica el resultado
@@ -1331,6 +1429,13 @@ function updateAiStatus(provider, override) {
     return;
   }
   if (config.viaProxy) {
+    const base = getAiProxyUrl(provider);
+    const issue = aiProxyUrlIssue(base);
+    markAiProxyUrlInput(provider, base);
+    if (issue) {
+      el.textContent = '⚠️ ' + AI_PROXY_URL_ISSUES[issue] + ' — ve a Config → IA';
+      return;
+    }
     el.textContent = isDefaultProxyUrl(provider)
       ? '✅ Proxy por defecto (cámbialo en Config → IA)'
       : '✅ Proxy configurado';

@@ -173,11 +173,23 @@ Hay **dos** gráficas (panel de detalle y popup del mapa) y las dos usan las mis
 - Cambiar la URL en Config invalida el catálogo cacheado (`invalidateAiModelsCache`).
 - Despliegue: `wrangler secret put NVIDIA_API_KEY` + `wrangler deploy`; la clave nunca se escribe en el repo. `ALLOWED_ORIGIN` en `wrangler.toml` es opcional (sin él responde `*`).
 
-⚠️ **La URL del Worker casi nunca es `https://<name>.workers.dev`**: Cloudflare da a cada cuenta su propio subdominio, así que lo que imprime `wrangler deploy` es `https://petrol-nvidia-proxy.<tu-subdominio>.workers.dev`. `AI_PROXY_NVIDIA_DEFAULT` es solo un valor por defecto y **`tu-subdominio` en la documentación es un literal, no se debe copiar tal cual** (responde "Servidor no encontrado"). Por eso Config → IA trae dos botones junto a `iaProxyNvidia`:
-- **↺ Usar la predefinida** (`iaProxyResetBtn`): borra la URL guardada y vuelve a `AI_PROXY_NVIDIA_DEFAULT`
-- **🔎 Probar** (`iaProxyTestBtn` + `iaProxyTestStatus`): un `GET /v1/models` **sin coste de tokens** y una explicación por cada caso. `aiProxyDiagnostics(provider, urlOverride)` clasifica: `dns` (host inexistente, con la forma de URL que hay que pegar), `notfound` (el host responde pero no hay Worker → subdominio equivocado), `nokey` (Worker sin `NVIDIA_API_KEY`), `badauth` (401/403: clave rechazada), `quota` (429), `http<status>` y `ok` con el nº de modelos. Si responde bien, guarda la URL e invalida el catálogo
+⚠️ **`AI_PROXY_NVIDIA_DEFAULT` es un valor de EJEMPLO que no puede resolver** (pasa por `aiProxyUrlIssue()` → `nosubdomain`). Cloudflare da a cada cuenta su propio subdominio, así que lo que imprime `wrangler deploy` es `https://petrol-nvidia-proxy.<subdominio-cuenta>.workers.dev`: tres etiquetas son `worker.workers.dev` (no existe) y cuatro son `worker.cuenta.workers.dev` (sí). La app lo detecta **antes de hacer fetch**, no lo intenta:
 
-**Errores descriptivos**: un `fetch` a un host inexistente solo da "Failed to fetch", así que los dos caminos con `viaProxy` reescriben el error — `aiFetchError()` en el `send()` de NVIDIA y `aiProxyDiagnostics()` en `fetchAiModels()` — con un mensaje que nombra la URL usada, la que debería ser y qué revisar.
+| Función | Qué hace con una URL inválida |
+|---------|-------------------------------|
+| `aiProxyUrlIssue(url)` | Devuelve `'nourl'`, `'placeholder'` (lo de `<…>` de la documentación), `'invalid'` (URL que no parsea; ojo: **Chromium percent-codifica los espacios en vez de fallar**, `mi%20proxy`) o `'nosubdomain'` (`*.workers.dev` con 3 etiquetas). `''` si la URL tiene buena pinta |
+| `aiProviderUrl()` | Lanza `Error` con el motivo. Está **fuera** del `try` del `send()` de NVIDIA para que `aiFetchError()` no le añada `— proxy: …` |
+| `aiProxyDiagnostics()` | `kind: 'invalidurl'` + `issue`, **sin tocar la red** (el botón 🔎 Probar es justo para esto) |
+| `isAiProviderReady()` | `false` → el chat avisa antes de enviar y `refreshAiModels()` responde `nokey` con **0 fetch** |
+| `updateAiStatus()` / `markAiProxyUrlInput()` | `⚠️ URL sin el subdominio de tu cuenta — ve a Config → IA` y campo en rojo (verde si la forma es correcta; el verde no garantiza que el Worker exista) |
+
+Motivos en `AI_PROXY_URL_ISSUES` (rótulo corto) y textos largos en `aiProxyUrlIssueMessage()`. `AI_PROXY_NVIDIA_SHAPE = 'https://petrol-nvidia-proxy.mi-cuenta.workers.dev'` sustituye al antiguo placeholder `<tu-subdominio>`, que en pantalla salía como `https://petrol-nvidia-proxy..workers.dev`.
+
+Sin cuenta de Cloudflare **este proveedor no se puede usar** (su CORS solo permite `build.nvidia.com`); Config → IA lo dice y los otros seis no dependen del proxy. Por eso Config → IA trae dos botones junto a `iaProxyNvidia`:
+- **↺ Usar la predefinida** (`iaProxyResetBtn`): borra la URL guardada y vuelve al valor de ejemplo
+- **🔎 Probar** (`iaProxyTestBtn` + `iaProxyTestStatus`): un `GET /v1/models` **sin coste de tokens** y una explicación por cada caso. `aiProxyDiagnostics(provider, urlOverride)` clasifica: `invalidurl` (`issue` con el motivo, sin fetch), `dns` (host que no responde, con la forma de URL que hay que pegar), `notfound` (el host responde pero no hay Worker → subdominio equivocado), `nokey` (Worker sin `NVIDIA_API_KEY`), `badauth` (401/403: clave rechazada), `quota` (429), `http<status>` y `ok` con el nº de modelos. Si responde bien, guarda la URL e invalida el catálogo
+
+**Errores descriptivos**: un `fetch` a un host que no responde solo da "Failed to fetch", así que los dos caminos con `viaProxy` reescriben el error — `aiFetchError()` en el `send()` de NVIDIA y `aiProxyDiagnostics()` en `fetchAiModels()` — con un mensaje que nombra la URL usada, la que debería ser y qué revisar.
 
 **API Keys**: cifradas en código fuente con XOR + base64 (contraseña de 6 chars, misma para las 4). Se descargan al introducir la passphrase correcta en Config y pulsar "Cargar claves". Si ya hay claves cargadas aparece enlace "Volver a cargar".
 
@@ -285,7 +297,7 @@ Orden actual de grupos:
 ### Tests
 - Ubicación: `docs/test/full_test.mjs`
 - Plan: `docs/test/TEST_PLAN.md`
-- 163 tests totales (156 HTTP + 7 file://)
+- 174 tests totales (167 HTTP + 7 file://)
 - Secciones: 1-12 UI, 13 claves IA (manual), 14 push, 15 chat IA, 16 ring logs, 17 build (`ASSETS`/`APP_VERSION`)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)

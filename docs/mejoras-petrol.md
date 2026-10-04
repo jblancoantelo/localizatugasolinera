@@ -1,5 +1,28 @@
 # Mejoras realizadas — Precios Gasolina España
 
+## 2026-10-04 — NVIDIA deja de fallar con un NetworkError y te dice qué URL poner
+
+### Por qué hacía falta
+`AI_PROXY_NVIDIA_DEFAULT = 'https://petrol-nvidia-proxy.workers.dev'` **no puede existir**: Cloudflare publica cada Worker como `<worker>.<subdominio-de-la-cuenta>.workers.dev`, así que el valor de ejemplo solo tiene tres etiquetas y su host nunca resuelve. El chat de NVIDIA moría siempre con *"NetworkError when attempting to fetch resource"* y el mensaje de ayuda devolvía un placeholder literal (`https://petrol-nvidia-proxy..workers.dev`, el `<tu-subdominio>` vacío), que no sirve de nada si no tienes cuenta de Cloudflare — y sin cuenta no hay despliegue posible.
+
+### `aiProxyUrlIssue()` — validar antes de hacer fetch
+- Motivos: `nourl`, `placeholder` (lo de `<…>` de la documentación), `invalid` (URL que ni el parser acepta; Chromium percent-codifica los espacios en vez de fallar, `mi%20proxy`, y eso tampoco resuelve) y `nosubdomain` (`*.workers.dev` con tres etiquetas).
+- Se comprueba **antes** de cualquier petición, así que no se gasta un fetch a un host imposible:
+  - `aiProviderUrl()` lanza con el motivo (fuera del `try` del `send()` de NVIDIA, para que `aiFetchError()` no le añada el sufijo `— proxy: …`)
+  - `aiProxyDiagnostics()` devuelve `kind: 'invalidurl'` + `issue` sin llegar a la red → el botón 🔎 Probar explica qué pegar
+  - `isAiProviderReady('nvidia')` devuelve `false`, así que el chat avisa en vez de enviar y `refreshAiModels()` responde `nokey` con **0 fetch**
+  - `updateAiStatus()` muestra `⚠️ URL sin el subdominio de tu cuenta — ve a Config → IA` en vez de `✅ Proxy por defecto`
+  - `autoRefreshAiModels()` rotula el desplegable con el motivo en vez de dejarlo mudo
+- `markAiProxyUrlInput()` pinta el campo de Config en rojo/verde según la URL, con el motivo en el `title`.
+- `AI_PROXY_NVIDIA_SHAPE = 'https://petrol-nvidia-proxy.mi-cuenta.workers.dev'` sustituye al placeholder en todos los mensajes: `mi-cuenta` se lee como ejemplo, no como algo que copiar.
+- El botón ↺ y el valor de ejemplo se mantienen; lo que cambia es que ya no se envían peticiones ni se muestran estados verdes falsos.
+- Config → IA explica que la URL por defecto es un ejemplo, que hace falta una cuenta de Cloudflare (gratuita) y que el resto de proveedores no dependen de nada de esto.
+
+### Tests
+- 174 tests (167 HTTP + 7 file://) en verde, 11 nuevos: detección de cada motivo de URL inválida (incluido el caso de Chromium que percent-codifica espacios), NVIDIA no listo + 0 fetch con el valor de ejemplo, errores del chat y del catálogo con el motivo en vez de `NetworkError`, `🔎 Probar` sin red para ejemplo/placeholder, estado y color del campo de Config.
+
+---
+
 ## 2026-10-04 — Un solo motor de gráficas, un solo histórico y precaché que se autogenera
 
 ### Por qué hacía falta

@@ -1,5 +1,40 @@
 # CHANGELOG
 
+## [2026-10-04] — NVIDIA: la URL del proxy se valida antes de hacer fetch
+
+### 🐞 El proveedor NVIDIA fallaba siempre
+
+`AI_PROXY_NVIDIA_DEFAULT = 'https://petrol-nvidia-proxy.workers.dev'` **no puede
+existir**: Cloudflare publica cada Worker como `<worker>.<subdominio-de-la-cuenta>.workers.dev`,
+así que el valor de ejemplo se queda sin ese subdominio. Resultado: cada consulta al
+catálogo y cada mensaje morían con `NetworkError when attempting to fetch resource`, y el
+mensaje de ayuda devolvía un placeholder literal (`https://petrol-nvidia-proxy..workers.dev`)
+que no permite descubrir nada.
+
+| Cambio | Detalle |
+|--------|---------|
+| `js/ai-chat.js` | **Nuevo** `aiProxyUrlIssue(url)` → `'nourl'` / `'placeholder'` / `'invalid'` / `'nosubdomain'` / `''`, y `aiProxyUrlIssueMessage()` con la explicación de cada motivo |
+| `js/ai-chat.js` | `aiProxyUrlIssue()` detecta el caso de Chromium, que **no** lanza con espacios en el host sino que los percent-codifica (`mi%20proxy`, que tampoco resuelve) |
+| `js/ai-chat.js` | Se valida **antes** de cualquier fetch: `aiProviderUrl()` lanza con el motivo (fuera del `try` del `send()` de NVIDIA), `aiProxyDiagnostics()` responde `kind: 'invalidurl'` sin tocar la red, `isAiProviderReady()` devuelve `false`, `updateAiStatus()` avisa y `autoRefreshAiModels()` rotula el desplegable |
+| `js/ai-chat.js` | **Nuevo** `markAiProxyUrlInput()`: el campo de Config se pinta rojo/verde con el motivo en el `title`. `AI_PROXY_URL_ISSUES` da la versión corta para los rótulos |
+| `js/ai-chat.js` | **Nuevo** `AI_PROXY_NVIDIA_SHAPE = 'https://petrol-nvidia-proxy.mi-cuenta.workers.dev'` sustituye al placeholder `<tu-subdominio>` en todos los mensajes |
+| `index.html` | Config → IA explica que la URL por defecto es **un ejemplo**, que hace falta una cuenta de Cloudflare (gratuita) y que el resto de proveedores no dependen del proxy. Placeholder del campo con la forma real |
+| `workers/wrangler.toml` | Comentario corregido: la URL que imprime `wrangler deploy` es `https://<name>.<subdominio>.workers.dev`, no `https://<name>.workers.dev` |
+
+Motivo: sin una URL con subdominio no hay nada que consultar, así que es mejor decirlo
+antes de fetchear que dejar un error de red sin contexto.
+
+### 🧪 Verificación
+
+- Suite completa: **174 tests** (167 HTTP + 7 file://), 11 nuevos:
+  - 2 de `aiProxyUrlIssue()`: motivo de la URL de ejemplo y distinción de `placeholder` / `nourl` / `invalid` / sin esquema
+  - 6 de integración: NVIDIA no listo con el valor de ejemplo, estado del panel, rótulo del desplegable, color del campo, errores del chat y del catálogo con el motivo en vez de `NetworkError`, 0 peticiones
+  - 1 de `🔎 Probar`: con la URL de ejemplo o un placeholder no llega a la red y explica qué pegar
+  - 2 de reescritura: los que usaban `petrol-nv.workers.dev` (3 etiquetas) pasan a `petrol-nv.mi-cuenta.workers.dev`, que es la única forma que puede funcionar
+- `node docs/test/full_test.mjs`: 174 ✅ 0 ❌
+
+---
+
 ## [2026-10-04] — Motor gráfico unificado, histórico compartido con el SW y precaché generado
 
 ### 🧩 Un solo motor de gráficas y un solo histórico

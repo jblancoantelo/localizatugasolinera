@@ -635,58 +635,117 @@ async function testAiChat(page) {
     viaProxy.sinCampoClave && viaProxy.niEnPrefijos && viaProxy.niCifrada, JSON.stringify(viaProxy));
 
   const normalizeOk = await page.evaluate(() => {
-    setAiProxyUrl('nvidia', '  petrol-nv.workers.dev/  ');
+    setAiProxyUrl('nvidia', '  petrol-nv.mi-cuenta.workers.dev/  ');
     const a = getAiProxyUrl('nvidia');
     const b = aiProviderUrl('nvidia', '/v1/models');
     const esPropia = isDefaultProxyUrl('nvidia');
     setAiProxyUrl('nvidia', '');
-    // Sin nada guardado se cae a la URL predefinida del wrangler.toml.
+    // Sin nada guardado se cae a la URL de ejemplo del wrangler.toml.
     const predef = getAiProxyUrl('nvidia');
     return {
       a, b, esPropia, predef, def: AI_PROXY_NVIDIA_DEFAULT,
       esPredef: isDefaultProxyUrl('nvidia'),
-      resuelta: aiProviderUrl('nvidia', '/v1/models'),
+      motivo: aiProxyUrlIssue(predef),
       listo: isAiProviderReady('nvidia'),
       enElInput: document.getElementById('iaProxyNvidia').value,
       aviso: aiProviderNotReadyMessage('nvidia')
     };
   });
   log('IA', 'normalizeAiProxyUrl() añade https:// y quita la barra final',
-    normalizeOk.a === 'https://petrol-nv.workers.dev' && normalizeOk.b === 'https://petrol-nv.workers.dev/v1/models'
+    normalizeOk.a === 'https://petrol-nv.mi-cuenta.workers.dev' && normalizeOk.b === 'https://petrol-nv.mi-cuenta.workers.dev/v1/models'
     && normalizeOk.esPropia === false, normalizeOk.a + ' -> ' + normalizeOk.b);
-  log('IA', 'NVIDIA tiene URL predefinida: sin configurar ya usa el proxy del wrangler.toml',
-    normalizeOk.predef === normalizeOk.def && normalizeOk.esPredef && normalizeOk.listo
-    && normalizeOk.resuelta === normalizeOk.def + '/v1/models', normalizeOk.predef);
-  log('IA', 'El input de Config trae la URL predefinida puesta (editable)',
+  log('IA', 'El input de Config trae la URL de ejemplo puesta (editable)',
     normalizeOk.enElInput === normalizeOk.def, normalizeOk.enElInput);
+
+  // --- La URL de ejemplo no puede existir: workers.dev siempre lleva subdominio ---
+  // Cloudflare publica como <worker>.<subdominio-cuenta>.workers.dev, así que el
+  // predefinido (3 etiquetas) nunca resuelve. Antes el chat moría con un
+  // "NetworkError when attempting to fetch resource" que no explicaba nada.
+  const urlInvalida = await page.evaluate(async () => {
+    setAiProxyUrl('nvidia', '');
+    // aiProviderUrl() lanza con el motivo, sin llegar a la red.
+    let errUrl = '';
+    try { aiProviderUrl('nvidia', '/v1/chat/completions'); } catch (e) { errUrl = e.message; }
+    // Y ni el chat ni el catálogo salen a la red con una URL imposible.
+    let errChat = '';
+    try { await AI_PROVIDERS.nvidia.send(null, 'x', [{ role: 'user', content: 'hola' }]); } catch (e) { errChat = e.message; }
+    let errCatalogo = '';
+    try { await fetchAiModels('nvidia', null, {}); } catch (e) { errCatalogo = e.message; }
+    return {
+      motivos: {
+        ejemplo: aiProxyUrlIssue(AI_PROXY_NVIDIA_DEFAULT),
+        placeholder: aiProxyUrlIssue('https://petrol-nvidia-proxy.<tu-cuenta>.workers.dev'),
+        vacia: aiProxyUrlIssue(''),
+        rota: aiProxyUrlIssue('mi proxy workers.dev'),
+        sinEsquema: aiProxyUrlIssue('petrol-nv.mi-cuenta.workers.dev'),
+        real: aiProxyUrlIssue('https://petrol-nv.mi-cuenta.workers.dev'),
+        conPuerto: aiProxyUrlIssue('http://localhost:8787')
+      },
+      listo: isAiProviderReady('nvidia'),
+      motivoGuardado: aiProxyUrlIssue(getAiProxyUrl('nvidia')),
+      // El chat no se lanza: se dice qué URL poner.
+      aviso: aiProviderNotReadyMessage('nvidia'),
+      estado: (updateAiStatus('nvidia'), document.getElementById('iaStatusNvidia').textContent),
+      rotuloModelos: (autoRefreshAiModels('nvidia'), document.getElementById('iaModelsStatusNvidia').textContent),
+      bordeInput: document.getElementById('iaProxyNvidia').style.borderColor,
+      errUrl, errChat, errCatalogo
+    };
+  });
+  log('IA', 'aiProxyUrlIssue() detecta la URL de ejemplo sin subdominio de cuenta',
+    urlInvalida.motivos.ejemplo === 'nosubdomain' && urlInvalida.motivos.real === '' && urlInvalida.motivos.conPuerto === '',
+    JSON.stringify(urlInvalida.motivos));
+  log('IA', 'aiProxyUrlIssue() distingue placeholder sin sustituir, URL vacía y URL rota',
+    urlInvalida.motivos.placeholder === 'placeholder' && urlInvalida.motivos.vacia === 'nourl'
+    && urlInvalida.motivos.rota === 'invalid' && urlInvalida.motivos.sinEsquema === '',
+    [urlInvalida.motivos.placeholder, urlInvalida.motivos.vacia, urlInvalida.motivos.rota, urlInvalida.motivos.sinEsquema].join(', '));
+  log('IA', 'Con la URL de ejemplo NVIDIA no está listo y el chat no hace fetch',
+    urlInvalida.listo === false && /no puede existir/.test(urlInvalida.aviso) && /wrangler deploy/.test(urlInvalida.aviso),
+    urlInvalida.aviso.slice(0, 90));
+  log('IA', 'El estado del panel avisa de la URL inválida en vez de decir "proxy por defecto"',
+    /URL sin el subdominio de tu cuenta/.test(urlInvalida.estado) && !/por defecto/i.test(urlInvalida.estado),
+    urlInvalida.estado);
+  log('IA', 'El desplegable de modelos explica la URL inválida sin lanzar peticiones',
+    /placeholder|sin el subdominio/.test(urlInvalida.rotuloModelos), urlInvalida.rotuloModelos);
+  log('IA', 'El campo de Config se marca en rojo cuando la URL no puede funcionar',
+    urlInvalida.bordeInput === 'rgb(204, 51, 51)', urlInvalida.bordeInput);
+  log('IA', 'Enviar al chat y pedir el catálogo con la URL de ejemplo da el motivo, no un NetworkError',
+    /no puede existir/.test(urlInvalida.errUrl) && /no puede existir/.test(urlInvalida.errChat)
+    && /no puede existir/.test(urlInvalida.errCatalogo)
+    && !/NetworkError/.test(urlInvalida.errChat) && !/NetworkError/.test(urlInvalida.errCatalogo)
+    && !/— proxy:/.test(urlInvalida.errCatalogo), urlInvalida.errCatalogo.slice(0, 90));
 
   const statusProxy = await page.evaluate(() => {
     const el = document.getElementById('iaStatusNvidia');
-    setAiProxyUrl('nvidia', '');
-    updateAiStatus('nvidia');
-    const predef = el.textContent;
-    setAiProxyUrl('nvidia', 'https://otro.workers.dev');
+    setAiProxyUrl('nvidia', 'https://petrol-nv.mi-cuenta.workers.dev');
     updateAiStatus('nvidia');
     const propia = el.textContent;
+    const bordeOk = document.getElementById('iaProxyNvidia').style.borderColor;
+    const listo = isAiProviderReady('nvidia');
     setAiProxyUrl('nvidia', '');
-    return { predef, propia };
+    return { propia, bordeOk, listo };
   });
   log('IA', 'El estado del panel distingue la URL por defecto de la que puso el usuario',
-    /por defecto/i.test(statusProxy.predef) && /Proxy configurado/.test(statusProxy.propia) && !/por defecto/.test(statusProxy.propia),
-    statusProxy.predef + ' | ' + statusProxy.propia);
+    /Proxy configurado/.test(statusProxy.propia) && !/por defecto/.test(statusProxy.propia),
+    statusProxy.propia);
+  log('IA', 'Con una URL con subdominio el campo se marca en verde y el proveedor queda listo',
+    statusProxy.bordeOk === 'rgb(34, 170, 119)' && statusProxy.listo === true,
+    statusProxy.bordeOk + ' | listo=' + statusProxy.listo);
 
   const resetProxy = await page.evaluate(() => {
-    setAiProxyUrl('nvidia', 'https://otro.workers.dev');
+    setAiProxyUrl('nvidia', 'https://petrol-nv.mi-cuenta.workers.dev');
     document.getElementById('iaProxyResetBtn').click();
     return { guardado: localStorage.getItem(AI_PROXY_KEY), enElInput: document.getElementById('iaProxyNvidia').value,
       def: AI_PROXY_NVIDIA_DEFAULT, estado: document.getElementById('iaStatusNvidia').textContent };
   });
-  log('IA', '"Usar la predefinida" borra la URL guardada y vuelve a la del wrangler.toml',
+  log('IA', '"Usar la predefinida" borra la URL guardada y vuelve al ejemplo del wrangler.toml',
     resetProxy.guardado === '' && resetProxy.enElInput === resetProxy.def
-    && /por defecto/i.test(resetProxy.estado), resetProxy.enElInput);
+    && /URL sin el subdominio de tu cuenta/.test(resetProxy.estado), resetProxy.enElInput);
 
   // --- Diagnóstico de la URL del proxy: el error tiene que ser descriptivo ---
+  // Con una URL con subdominio (la única forma que puede funcionar) para que el
+  // diagnóstico llegue al fetch y clasifique la respuesta del Worker.
   const diag = await page.evaluate(async () => {
+    setAiProxyUrl('nvidia', 'https://petrol-nv.mi-cuenta.workers.dev');
     const real = window.fetch.bind(window);
     const cuerpo = (status, texto, json) => new Response(json ? JSON.stringify(json) : texto,
       { status, headers: { 'Content-Type': json ? 'application/json' : 'text/html' } });
@@ -697,6 +756,13 @@ async function testAiChat(page) {
     const r429 = await conProxy(() => cuerpo(429, 'x', { error: { message: 'rate limit' } }));
     const rOk = await conProxy(() => cuerpo(200, 'x', { data: [{ id: 'a' }, { id: 'b' }] }));
     const rDns = await conProxy(() => { throw new TypeError('Failed to fetch'); });
+    // El placeholder de la documentación y la URL de ejemplo se rechazan sin
+    // llegar a la red: es el caso que se leía como NetworkError.
+    let llanos = 0;
+    window.fetch = () => { llanos++; throw new TypeError('Failed to fetch'); };
+    const rEjemplo = await aiProxyDiagnostics('nvidia', AI_PROXY_NVIDIA_DEFAULT);
+    const rPlaceholder = await aiProxyDiagnostics('nvidia', 'https://petrol-nvidia-proxy.<tu-cuenta>.workers.dev');
+    window.fetch = real;
     // El mismo diagnóstico cuando el fallo ocurre al pedir el catálogo.
     window.fetch = () => { throw new TypeError('Failed to fetch'); };
     let errCatalogo = '';
@@ -706,11 +772,17 @@ async function testAiChat(page) {
     try { await AI_PROVIDERS.nvidia.send(null, 'x', [{ role: 'user', content: 'hola' }]); } catch (e) { errChat = e.message; }
     window.fetch = real;
     const ids = ['iaProxyTestBtn', 'iaProxyTestStatus'].filter(id => !!document.getElementById(id));
-    return { r404, r500, r401, r429, rOk, rDns, errCatalogo, errChat, ids, url: getAiProxyUrl('nvidia') };
+    return { r404, r500, r401, r429, rOk, rDns, rEjemplo, rPlaceholder, llanos, errCatalogo, errChat, ids, url: getAiProxyUrl('nvidia') };
   });
-  log('IA', '🔎 Probar detecta que el host no existe y da la URL a pegar',
-    diag.rDns.kind === 'dns' && /no existe/i.test(diag.rDns.message) && /wrangler deploy/.test(diag.rDns.message),
+  log('IA', '🔎 Probar detecta que el host no responde y da la URL a pegar',
+    diag.rDns.kind === 'dns' && /no responde/i.test(diag.rDns.message) && /wrangler deploy/.test(diag.rDns.message),
     diag.rDns.message);
+  log('IA', '🔎 Probar con la URL de ejemplo o un placeholder no llega a la red y explica qué pegar',
+    diag.rEjemplo.kind === 'invalidurl' && diag.rEjemplo.issue === 'nosubdomain'
+    && diag.rPlaceholder.issue === 'placeholder' && diag.llanos === 0
+    && /no puede existir/.test(diag.rEjemplo.message) && /wrangler deploy/.test(diag.rEjemplo.message)
+    && /placeholder sin sustituir/.test(diag.rPlaceholder.message),
+    diag.rEjemplo.kind + '/' + diag.rPlaceholder.issue + ' | ' + diag.llanos + ' fetch');
   log('IA', '🔎 Probar distingue 404 sin Worker, Worker sin clave, 401/403 y 429',
     diag.r404.kind === 'notfound' && /subdominio equivocado/.test(diag.r404.message)
     && diag.r500.kind === 'nokey' && /secret put NVIDIA_API_KEY/.test(diag.r500.message)
@@ -718,7 +790,7 @@ async function testAiChat(page) {
     [diag.r404.kind, diag.r500.kind, diag.r401.kind, diag.r429.kind].join(', '));
   log('IA', '🔎 Probar confirma el proxy OK con el número de modelos',
     diag.rOk.ok === true && diag.rOk.models === 2 && /2 modelos/.test(diag.rOk.message), diag.rOk.message);
-  log('IA', 'Un host inexistente da un error descriptivo, no "Failed to fetch"',
+  log('IA', 'Un host que no responde da un error descriptivo, no "Failed to fetch"',
     /no se pudo (ni )?conectar/i.test(diag.errCatalogo) && /no se pudo conectar con el proxy de NVIDIA/i.test(diag.errChat)
     && /wrangler deploy/.test(diag.errCatalogo) && /wrangler deploy/.test(diag.errChat)
     && !/^Failed to fetch$/.test(diag.errCatalogo) && !/^Failed to fetch$/.test(diag.errChat),
@@ -1142,7 +1214,7 @@ async function testAiChat(page) {
   // Directo moriría con "No 'Access-Control-Allow-Origin' header": el gateway de
   // NVIDIA solo da CORS al origen build.nvidia.com.
   await page.evaluate(() => {
-    setAiProxyUrl('nvidia', 'https://petrol-nv.workers.dev');
+    setAiProxyUrl('nvidia', 'https://petrol-nv.mi-cuenta.workers.dev');
     window.__proxyCalls = [];
     window.__proxyMock = { status: 200, body: { choices: [{ message: { content: 'Madrid' } }] } };
     const real = window.__realFetch;
@@ -1163,7 +1235,7 @@ async function testAiChat(page) {
     };
   });
   log('IA', 'NVIDIA envía al proxy configurado, no a integrate.api.nvidia.com',
-    sendProxy.url === 'https://petrol-nv.workers.dev/v1/chat/completions', sendProxy.url);
+    sendProxy.url === 'https://petrol-nv.mi-cuenta.workers.dev/v1/chat/completions', sendProxy.url);
   log('IA', 'La petición al proxy no lleva API Key (la añade el Worker con su secreto)',
     !sendProxy.cabeceras.includes('Authorization'), sendProxy.cabeceras.join(','));
   log('IA', 'NVIDIA sube max_tokens a 2048 (sus modelos razonan antes de contestar)',
@@ -1205,34 +1277,38 @@ async function testAiChat(page) {
   log('IA', 'Al proxy no se le manda Authorization ni al listar ni al chatear',
     !catalogo.cabeceras.includes('Authorization'), catalogo.cabeceras.join(','));
   log('IA', 'El desplegable de NVIDIA une proxy + lista fija (7 → 8)',
-    catalogo.url === 'https://petrol-nv.workers.dev/v1/models' && catalogo.opciones === 8,
+    catalogo.url === 'https://petrol-nv.mi-cuenta.workers.dev/v1/models' && catalogo.opciones === 8,
     catalogo.url + ' | ' + catalogo.opciones + ' opciones');
 
   // --- Cambiar la URL del proxy invalida el catálogo (detrás hay otra cuenta) ---
   const cambioProxy = await page.evaluate(async () => {
     const antes = { cacheado: !!loadAiModelsCache().nvidia, url: getAiProxyUrl('nvidia') };
     const input = document.getElementById('iaProxyNvidia');
-    input.value = 'otro-worker.workers.dev/';
+    input.value = 'otro-worker.mi-cuenta.workers.dev/';
     input.dispatchEvent(new Event('change'));
     return { antes, justoDespues: !!loadAiModelsCache().nvidia, guardado: localStorage.getItem(AI_PROXY_KEY), enElInput: input.value };
   });
   log('IA', 'Al cambiar la URL del proxy se borra el catálogo anterior',
     cambioProxy.antes.cacheado && cambioProxy.justoDespues === false, JSON.stringify(cambioProxy.antes));
   log('IA', 'La URL del proxy se persiste normalizada en localStorage y en el input',
-    cambioProxy.guardado === 'https://otro-worker.workers.dev' && cambioProxy.enElInput === 'https://otro-worker.workers.dev',
+    cambioProxy.guardado === 'https://otro-worker.mi-cuenta.workers.dev' && cambioProxy.enElInput === 'https://otro-worker.mi-cuenta.workers.dev',
     cambioProxy.guardado);
 
-  // --- Sin URL guardada se usa la predefinida (no hay estado "sin proxy") ---
+  // --- Sin URL guardada se cae al valor de ejemplo, que no puede funcionar ---
   const sinProxy = await page.evaluate(async () => {
     setAiProxyUrl('nvidia', '');
     window.__proxyCalls = [];
     const r = await refreshAiModels('nvidia', { force: true });
     const c = window.__proxyCalls[0] || {};
-    return { ok: r.ok, url: c.url, def: AI_PROXY_NVIDIA_DEFAULT, esPredef: isDefaultProxyUrl('nvidia'), listo: isAiProviderReady('nvidia') };
+    return { ok: r.ok, reason: r.reason, aviso: aiProviderNotReadyMessage('nvidia'), llamadas: window.__proxyCalls.length,
+      url: getAiProxyUrl('nvidia'), def: AI_PROXY_NVIDIA_DEFAULT, esPredef: isDefaultProxyUrl('nvidia'), listo: isAiProviderReady('nvidia') };
   });
-  log('IA', 'Sin URL guardada se consulta la predefinida (el proveedor funciona de salida)',
-    sinProxy.ok && sinProxy.url === sinProxy.def + '/v1/models' && sinProxy.esPredef && sinProxy.listo,
-    sinProxy.url);
+  log('IA', 'Sin URL guardada se usa el valor de ejemplo pero NVIDIA no queda listo (no hay subdominio de cuenta)',
+    sinProxy.url === sinProxy.def && sinProxy.esPredef && sinProxy.listo === false,
+    sinProxy.url + ' | listo=' + sinProxy.listo);
+  log('IA', 'Con el valor de ejemplo no se hace ni una petición al proxy',
+    sinProxy.ok === false && sinProxy.reason === 'nokey' && sinProxy.llamadas === 0
+    && /no puede existir/.test(sinProxy.aviso), sinProxy.reason + ' | ' + sinProxy.llamadas + ' fetch');
 
   // --- Contexto histórico que recibe el modelo ---
   // Objetivo: que la IA pueda responder "¿cómo evolucionó el precio en X?" con

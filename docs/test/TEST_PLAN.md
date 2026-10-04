@@ -19,7 +19,7 @@ node docs/test/full_test.mjs
 ### Qué hace el script:
 - Inicia servidor HTTP en :8080 sirviendo desde la raíz del proyecto
 - Lanza Chromium headless
-- Ejecuta 163 tests: 156 contra HTTP + 7 contra `file://`
+- Ejecuta 174 tests: 167 contra HTTP + 7 contra `file://`
 - Empieza por la sección 17 (build), que lee ficheros del disco sin abrir el navegador
 - Cierra servidor y navegador automáticamente
 - Exit code 0 = todo OK, 1 = algún fallo
@@ -132,7 +132,7 @@ node docs/test/full_test.mjs
 
 ## Resultados actuales
 
-**163 tests — 163 ✅ 0 ❌**
+**174 tests — 174 ✅ 0 ❌**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
@@ -198,12 +198,27 @@ subidas/bajadas, y **no** se descarga nada si la pregunta no usa palabras clave
 ni nombra una marca (`AI_HISTORY_WORDS`).
 
 **Diagnóstico del proxy de NVIDIA** (5 tests nuevos): `aiProxyDiagnostics()`
-clasifica el `GET /v1/models` sin coste de tokens en `dns` (host inexistente,
-con la forma de URL que hay que pegar), `notfound` (host que responde sin
-Worker), `nokey` (Worker sin `NVIDIA_API_KEY`), `badauth` (401/403), `quota`
+clasifica el `GET /v1/models` sin coste de tokens en `dns` (host que no
+responde, con la forma de URL que hay que pegar), `notfound` (host que responde
+sin Worker), `nokey` (Worker sin `NVIDIA_API_KEY`), `badauth` (401/403), `quota`
 (429) y `ok` con el nº de modelos; existen `iaProxyTestBtn` e
 `iaProxyTestStatus`; y tanto el `send()` del chat como `fetchAiModels()`
 devuelven un error descriptivo en vez de `Failed to fetch`.
+
+**URL del proxy inválida** (11 tests nuevos): `aiProxyUrlIssue()` devuelve
+`nosubdomain` para el valor de ejemplo (`petrol-nvidia-proxy.workers.dev` no
+puede existir: Cloudflare publica `<worker>.<subdominio-cuenta>.workers.dev`),
+`placeholder` para lo de `<…>` de la documentación, `invalid` para una URL que
+ni parsea —incluido el caso en que Chromium **no** lanza y percent-codifica los
+espacios (`mi%20proxy`)—, `nourl` para la vacía y `''` para una URL real o sin
+esquema (que `normalizeAiProxyUrl()` arregla). Con el valor de ejemplo NVIDIA
+queda **no listo**, no se hace **ni una petición**, el estado del panel avisa, el
+campo de Config se marca en rojo, el desplegable de modelos rotula el motivo y
+los errores del chat y del catálogo llevan la explicación en vez de
+`NetworkError`. El botón 🔎 Probar responde `invalidurl` sin tocar la red para
+ejemplo y placeholder; con una URL con subdominio el campo se marca en verde.
+Los tests que necesitan un proxy funcional usan `petrol-nv.mi-cuenta.workers.dev`
+(4 etiquetas), porque con 3 el proveedor ya no está listo.
 
 **Rango de días del histórico** (4 tests nuevos): `resolveAiHistoryDays()`
 entiende "60 días", "21 jornadas", "6 semanas", "3 meses" y "1 año"; acota al

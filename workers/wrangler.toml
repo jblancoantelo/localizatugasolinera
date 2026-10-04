@@ -4,8 +4,11 @@
 #   wrangler secret put NVIDIA_API_KEY     # la clave nvapi-... nunca sale del Worker
 #   wrangler deploy
 #
-# name: nombre único del Worker. La URL que imprime (https://<name>.workers.dev)
-# es la que se pega en la app: Config -> IA -> "NVIDIA (vía proxy)".
+# name: nombre único del Worker. La URL que imprime es la que se pega en la app
+# (Config -> IA -> "NVIDIA (vía proxy)"). Ojo: no es https://<name>.workers.dev
+# sino https://<name>.<subdominio-de-tu-cuenta>.workers.dev; Cloudflare añade ese
+# subdominio automáticamente y es lo que impide que el valor de ejemplo de la app
+# funcione tal cual.
 name = "petrol-nvidia-proxy"
 main = "nvidia-proxy.js"
 compatibility_date = "2026-09-27"
