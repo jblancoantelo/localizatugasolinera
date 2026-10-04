@@ -127,9 +127,7 @@ function onChartLeave(e) {
 
 function drawTooltip(canvas, point) {
   const ctx = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
-  ctx.scale(dpr, dpr);
 
   const parts = String(point.date).split('-');
   const dateLabel = parts.length === 3 ? parts[2] + '-' + parts[1] + '-' + parts[0] : point.date;

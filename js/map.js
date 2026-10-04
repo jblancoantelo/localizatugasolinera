@@ -272,10 +272,6 @@ function onPopupChartLeave(e) {
   }
 }
 
-function drawPopupTooltip(canvas, point) {
-  drawTooltip(canvas, point);
-}
-
 async function loadPopupChartForFuel(container, station, fuelName) {
   const wrap = container.querySelector('.popup-chart-wrap');
   const canvas = wrap.querySelector('.popup-price-chart');

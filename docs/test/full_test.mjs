@@ -161,6 +161,10 @@ async function testHTTP(browser, server) {
         return tab && tab.classList.contains('active');
       });
       log('Histórico', 'Tab activo', histTabbed);
+      const chartFns = await page.evaluate(() =>
+        typeof drawPriceChart === 'function' && typeof drawTooltip === 'function' && typeof chartSetupCanvas === 'function'
+      );
+      log('Histórico', 'Motor gráfico cargado (chart-core + chart-engine)', chartFns);
       try {
         await page.waitForFunction(() => {
           const loading = document.getElementById('chartLoading');
@@ -183,6 +187,12 @@ async function testHTTP(browser, server) {
           return false;
         });
         log('Histórico', 'Gráfica o mensaje error', histResolved, histResolved ? 'OK' : 'ni datos ni error');
+        const errText = await page.evaluate(() => {
+          const err = document.getElementById('chartError');
+          return err && err.style.display === 'flex' ? err.textContent : '';
+        });
+        const jsError = /is not defined|TypeError|ReferenceError/.test(errText || '');
+        log('Histórico', 'Sin error de JavaScript al pintar', !jsError, jsError ? errText : 'OK');
       } catch(e) {
         log('Histórico', 'Timeout esperando datos históricos', null, 'API histórica sin respuesta');
       }
