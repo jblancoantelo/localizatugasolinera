@@ -1,41 +1,51 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#1565c0"/>
-      <stop offset="100%" stop-color="#0d47a1"/>
+      <stop offset="0%" stop-color="#d6efff"/>
+      <stop offset="100%" stop-color="#a2d2f8"/>
     </linearGradient>
-    <linearGradient id="disp" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#e8e8e8"/>
-      <stop offset="50%" stop-color="#f5f5f5"/>
-      <stop offset="100%" stop-color="#e0e0e0"/>
+    <linearGradient id="grey" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c3ccd3"/>
+      <stop offset="100%" stop-color="#8d969d"/>
     </linearGradient>
-    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#1a237e"/>
-      <stop offset="100%" stop-color="#283593"/>
+    <linearGradient id="orange" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ff9a2b"/>
+      <stop offset="100%" stop-color="#f26a00"/>
     </linearGradient>
+    <linearGradient id="pinG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5cb8f5"/>
+      <stop offset="100%" stop-color="#1565c0"/>
+    </linearGradient>
+    <clipPath id="bodyClip">
+      <rect x="161" y="92" width="190" height="318" rx="24"/>
+    </clipPath>
   </defs>
-  <rect width="192" height="192" rx="40" fill="url(#bg)"/>
-  <g transform="translate(96,120)">
-    <circle cx="0" cy="-94" r="18" fill="#fff" opacity="0.15"/>
-    <text x="0" y="-89" text-anchor="middle" fill="#fff" font-size="20" font-family="Arial,sans-serif" font-weight="bold" opacity="0.4">€</text>
-    <rect x="-36" y="-72" width="72" height="132" rx="12" fill="url(#disp)" stroke="#bdbdbd" stroke-width="1.5"/>
-    <rect x="-39" y="-77" width="78" height="16" rx="8" fill="#1565c0"/>
-    <rect x="-30" y="-58" width="60" height="36" rx="6" fill="url(#screen)"/>
-    <text x="0" y="-34" text-anchor="middle" fill="#4caf50" font-size="13" font-family="Arial,sans-serif" font-weight="bold">1,599</text>
-    <text x="0" y="-33" text-anchor="middle" fill="#4caf50" font-size="5" font-family="Arial,sans-serif" opacity="0.6">————————</text>
-    <text x="0" y="-24" text-anchor="middle" fill="#4caf50" font-size="7" font-family="Arial,sans-serif">€/L</text>
-    <line x1="-20" y1="-52" x2="-20" y2="-26" stroke="#4caf50" stroke-width="0.8" opacity="0.6"/>
-    <line x1="-14" y1="-49" x2="-14" y2="-29" stroke="#4caf50" stroke-width="0.8" opacity="0.5"/>
-    <line x1="-8" y1="-46" x2="-8" y2="-32" stroke="#4caf50" stroke-width="0.8" opacity="0.4"/>
-    <rect x="-20" y="-16" width="40" height="6" rx="2" fill="#bdbdbd" opacity="0.5"/>
-    <rect x="-20" y="-8" width="40" height="2" rx="1" fill="#bdbdbd" opacity="0.3"/>
-    <rect x="-24" y="10" width="14" height="22" rx="3" fill="#2e7d32"/>
-    <rect x="10" y="10" width="14" height="22" rx="3" fill="#c62828"/>
-    <circle cx="-17" cy="17" r="3.5" fill="#fff" opacity="0.8"/>
-    <circle cx="17" cy="17" r="3.5" fill="#fff" opacity="0.8"/>
-    <path d="M36 -28 Q66 -20 66 14 Q66 34 58 38 L52 38 Q52 32 58 28 Q62 24 62 14 Q62 -12 36 -20 Z" fill="#b71c1c"/>
-    <rect x="36" y="-12" width="20" height="5" rx="2.5" fill="#757575"/>
-    <rect x="54" y="28" width="8" height="12" rx="2" fill="#424242"/>
-    <rect x="-42" y="56" width="84" height="7" rx="3.5" fill="#e65100"/>
+  <g transform="scale(0.375)">
+    <rect width="512" height="512" rx="115" fill="url(#bg)"/>
+    <ellipse cx="256" cy="432" rx="118" ry="13" fill="#0b2a4a" opacity="0.10"/>
+    <rect x="141" y="406" width="74" height="22" rx="7" fill="#46525f" stroke="#2b333c" stroke-width="3"/>
+    <rect x="297" y="406" width="74" height="22" rx="7" fill="#46525f" stroke="#2b333c" stroke-width="3"/>
+    <rect x="161" y="92" width="190" height="318" rx="24" fill="url(#orange)"/>
+    <g clip-path="url(#bodyClip)">
+      <rect x="161" y="92" width="190" height="128" fill="url(#grey)"/>
+      <rect x="161" y="214" width="190" height="7" fill="#2f3e4e" opacity="0.85"/>
+      <ellipse cx="215" cy="240" rx="60" ry="120" fill="#ffffff" opacity="0.12"/>
+    </g>
+    <rect x="161" y="92" width="190" height="318" rx="24" fill="none" stroke="#2f3e4e" stroke-width="7"/>
+    <path d="M 352 198 C 356 260 358 308 376 326 C 394 344 414 322 411 282 C 408 240 402 210 390 194" fill="none" stroke="#34414f" stroke-width="10" stroke-linecap="round"/>
+    <rect x="336" y="158" width="28" height="17" rx="6" fill="#b0b8be" stroke="#5f6b75" stroke-width="3"/>
+    <g transform="translate(372,152) rotate(18)">
+      <rect x="-26" y="-38" width="52" height="80" rx="14" fill="#e53935" stroke="#8e1414" stroke-width="5"/>
+      <rect x="-10" y="-18" width="20" height="30" rx="7" fill="#8e1414"/>
+      <rect x="-26" y="34" width="24" height="14" rx="5" fill="#8e1414"/>
+    </g>
+    <rect x="186" y="112" width="140" height="66" rx="12" fill="#0f2f44" stroke="#081c29" stroke-width="4"/>
+    <text x="256" y="159" text-anchor="middle" fill="#4ade80" font-size="46" font-family="Arial, Helvetica, sans-serif" font-weight="800" letter-spacing="1">1,599</text>
+    <rect x="231" y="188" width="50" height="12" rx="6" fill="#2bd465" stroke="#0c3a22" stroke-width="2.5"/>
+    <ellipse cx="256" cy="462" rx="44" ry="9" fill="#0b2a4a" opacity="0.18"/>
+    <path d="M 256 466 C 252 458 208 406 208 366 C 208 334 230 310 256 310 C 282 310 304 334 304 366 C 304 406 260 458 256 466 Z" fill="url(#pinG)" stroke="#0d47a1" stroke-width="6" stroke-linejoin="round"/>
+    <ellipse cx="232" cy="345" rx="10" ry="16" fill="#ffffff" opacity="0.35" transform="rotate(-18 232 345)"/>
+    <circle cx="256" cy="363" r="27" fill="#ffffff"/>
+    <circle cx="256" cy="363" r="27" fill="none" stroke="#0d47a1" stroke-width="3" opacity="0.25"/>
   </g>
 </svg>
