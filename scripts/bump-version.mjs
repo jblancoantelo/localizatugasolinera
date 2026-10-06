@@ -30,3 +30,21 @@ if (timeMatch) {
 }
 writeFileSync('sw.js', result);
 console.log(`APP_VERSION: ${current} → ${next}, BUILD_TIME: ${buildTime}`);
+
+// Chrome (sobre todo en Android) reutiliza el bitmap del icono cacheado por
+// URL: si el manifest cambia el contenido pero las URLs de los iconos son las
+// mismas, el lanzador se queda con la imagen antigua. Se les añade la versión
+// como query para que cada release sea un recurso distinto y se descargue
+// fresco. sync-sw-assets.mjs y el test de build recortan el `?v=`, así que
+// el precaché del SW sigue apuntando al fichero sin query (el fetch con query
+// salta la caché del SW y va directo a la red, que es justo lo que se quiere).
+const manifestPath = 'manifest.json';
+const manifest = readFileSync(manifestPath, 'utf8');
+const versioned = manifest.replace(/"src":\s*"(icons\/[^"?]+)(?:\?[^"]*)?"/g, `"src": "$1?v=${next}"`);
+if (versioned !== manifest) {
+  writeFileSync(manifestPath, versioned);
+  console.log(`manifest.json: iconos con ?v=${next}`);
+} else {
+  console.log('manifest.json: sin iconos que versionar');
+}
+

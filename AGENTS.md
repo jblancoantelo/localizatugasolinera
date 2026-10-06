@@ -10,7 +10,7 @@ Ver [`README.md`](./README.md) para visión general del proyecto, funcionalidade
    ```powershell
    node scripts/bump-version.mjs
    ```
-   El script **hace dos cosas**: regenera la lista `ASSETS` de `sw.js` a partir de `index.html`/`manifest.json` (así un script o icono nuevo entra en el precaché) e incrementa `APP_VERSION` + `BUILD_TIME`. Si no se ejecuta, el SW no detecta el cambio y los usuarios se quedan con los assets viejos.
+   El script **hace tres cosas**: regenera la lista `ASSETS` de `sw.js` a partir de `index.html`/`manifest.json` (así un script o icono nuevo entra en el precaché), incrementa `APP_VERSION` + `BUILD_TIME` y añade `?v=<APP_VERSION>` a los iconos del `manifest.json`. Si no se ejecuta, el SW no detecta el cambio y los usuarios se quedan con los assets viejos (y Chrome/Android con el icono viejo, porque reutiliza el bitmap cacheado por URL).
    - Solo sincronizar assets: `node scripts/sync-sw-assets.mjs` (`--check` verifica sin escribir y sale con 1 si no cuadra)
    - Un test de la suite ("Build > ASSETS de sw.js cubre…") falla si la lista se desincroniza
 
@@ -297,8 +297,8 @@ Orden actual de grupos:
 ### Tests
 - Ubicación: `docs/test/full_test.mjs`
 - Plan: `docs/test/TEST_PLAN.md`
-- 174 tests totales (167 HTTP + 7 file://)
-- Secciones: 1-12 UI, 13 claves IA (manual), 14 push, 15 chat IA, 16 ring logs, 17 build (`ASSETS`/`APP_VERSION`)
+- 175 tests totales (168 HTTP + 7 file://)
+- Secciones: 1-12 UI, 13 claves IA (manual), 14 push, 15 chat IA, 16 ring logs, 17 build (`ASSETS`/`APP_VERSION`/`?v=` de los iconos)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)
 - `docs/test/validate.mjs` está **marcado como legado y no se ejecuta**: usa los `data-tab` en camelCase (`tabMap`) de antes del kebab-case y daría falsos fallos. `docs/test/server.js` es solo el servidor para depuración manual, la suite levanta el suyo.
@@ -310,6 +310,7 @@ Orden actual de grupos:
 - El bloque `// assets:start … // assets:end` con `ASSETS` **está generado**: no editarlo a mano. `scripts/sync-sw-assets.mjs` lo reconstruye con lo que referencian `index.html` y `manifest.json` (los `src`/`href` del HTML y el `"src"` del JSON de los iconos) y falla si algún `importScripts` del SW no queda precacheado
 - El script se ejecuta **manualmente** antes de cada commit (ver workflow obligatorio) y `npm run bump` lo hace antes de subir la versión
 - Motivo: `navigator.serviceWorker.ready.then(r => r.update())` solo detecta cambios en `sw.js`; si no se incrementa la versión, los nuevos assets no se descargan
+- **`?v=` en los iconos del manifest**: `manifest.json` lleva `icons/…png?v=<APP_VERSION>` para que Chrome (sobre todo Android, que reutiliza el icono cacheado por URL) descargue la imagen fresca en cada release. El query **no** entra en `ASSETS` (el sync lo recorta con `split('?')`): el SW precachea el fichero sin query y el fetch con query salta la caché del SW e irá directo a la red. El test "Build > Los iconos del manifest llevan la `?v=`…" falla si no cuadra con `APP_VERSION`
 - El botón "Comprobar actualizaciones" en la UI usa `reg.update()` + `updatefound` para detectar el cambio y ofrecer recarga
 - En config se muestra la versión actual (`#appCurrentVersion`) al cargar la aplicación
 
