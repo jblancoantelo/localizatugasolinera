@@ -1,49 +1,107 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#d6efff"/>
-      <stop offset="100%" stop-color="#a2d2f8"/>
+      <stop offset="0%" stop-color="#DDF3FE"/>
+      <stop offset="50%" stop-color="#B2DCF5"/>
+      <stop offset="100%" stop-color="#9AD0F2"/>
     </linearGradient>
     <linearGradient id="grey" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#c3ccd3"/>
-      <stop offset="100%" stop-color="#8d969d"/>
+      <stop offset="0%" stop-color="#E2ECF1"/>
+      <stop offset="100%" stop-color="#9AADB7"/>
     </linearGradient>
     <linearGradient id="orange" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#ff9a2b"/>
-      <stop offset="100%" stop-color="#f26a00"/>
+      <stop offset="0%" stop-color="#F9AB50"/>
+      <stop offset="100%" stop-color="#E2713A"/>
     </linearGradient>
     <linearGradient id="pinG" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#5cb8f5"/>
-      <stop offset="100%" stop-color="#1565c0"/>
+      <stop offset="0%" stop-color="#82D4F7"/>
+      <stop offset="45%" stop-color="#45A3DB"/>
+      <stop offset="100%" stop-color="#1C6DB2"/>
+    </linearGradient>
+    <linearGradient id="noz" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F25942"/>
+      <stop offset="100%" stop-color="#D5372A"/>
     </linearGradient>
     <clipPath id="bodyClip">
-      <rect x="161" y="92" width="190" height="318" rx="24"/>
+      <path d="M183,45 H318 A32,32 0 0 1 350,77 V305 A32,32 0 0 1 318,337 H183 A32,32 0 0 1 151,305 V77 A32,32 0 0 1 183,45 Z"/>
     </clipPath>
   </defs>
-  <rect width="512" height="512" rx="115" fill="url(#bg)"/>
-  <ellipse cx="256" cy="432" rx="118" ry="13" fill="#0b2a4a" opacity="0.10"/>
-  <rect x="141" y="406" width="74" height="22" rx="7" fill="#46525f" stroke="#2b333c" stroke-width="3"/>
-  <rect x="297" y="406" width="74" height="22" rx="7" fill="#46525f" stroke="#2b333c" stroke-width="3"/>
-  <rect x="161" y="92" width="190" height="318" rx="24" fill="url(#orange)"/>
-  <g clip-path="url(#bodyClip)">
-    <rect x="161" y="92" width="190" height="128" fill="url(#grey)"/>
-    <rect x="161" y="214" width="190" height="7" fill="#2f3e4e" opacity="0.85"/>
-    <ellipse cx="215" cy="240" rx="60" ry="120" fill="#ffffff" opacity="0.12"/>
+
+  <!-- fondo -->
+  <rect width="512" height="512" rx="117" fill="url(#bg)"/>
+
+  <!-- sombra de la bombona -->
+  <ellipse cx="254" cy="390" rx="128" ry="13" fill="#0B3A5E" opacity="0.18"/>
+
+  <!-- ===== bombona ===== -->
+  <g>
+    <!-- halo claro (sticker) -->
+    <path d="M183,43 H318 A34,34 0 0 1 352,77 V305 A34,34 0 0 1 318,339 H183 A34,34 0 0 1 149,305 V77 A34,34 0 0 1 183,43 Z"
+          fill="none" stroke="#EAF6FF" stroke-width="4" opacity="0.4"/>
+
+    <!-- base / peana -->
+    <rect x="135" y="337" width="234" height="39" rx="8" fill="#5C6D77"/>
+    <rect x="135" y="337" width="234" height="39" rx="8" fill="none" stroke="#3B4853" stroke-width="5"/>
+    <rect x="143" y="343" width="218" height="6" rx="3" fill="#93A2AB" opacity="0.5"/>
+
+    <!-- cuerpo -->
+    <path d="M183,45 H318 A32,32 0 0 1 350,77 V305 A32,32 0 0 1 318,337 H183 A32,32 0 0 1 151,305 V77 A32,32 0 0 1 183,45 Z" fill="url(#grey)"/>
+    <g clip-path="url(#bodyClip)">
+      <rect x="151" y="207" width="199" height="130" fill="url(#orange)"/>
+      <rect x="151" y="204" width="199" height="8" fill="#4A555E"/>
+      <rect x="151" y="212" width="199" height="5" fill="#8A7350" opacity="0.45"/>
+      <rect x="151" y="45" width="199" height="9" fill="#FDFEFF" opacity="0.9"/>
+      <ellipse cx="203" cy="150" rx="32" ry="90" fill="#FFFFFF" opacity="0.13"/>
+      <ellipse cx="332" cy="272" rx="40" ry="82" fill="#000000" opacity="0.07"/>
+    </g>
+    <path d="M183,45 H318 A32,32 0 0 1 350,77 V305 A32,32 0 0 1 318,337 H183 A32,32 0 0 1 151,305 V77 A32,32 0 0 1 183,45 Z"
+          fill="none" stroke="#43545F" stroke-width="6"/>
+
+    <!-- pantalla -->
+    <rect x="177" y="74" width="152" height="72" rx="16" fill="#1B2A33"/>
+    <rect x="181" y="78" width="144" height="64" rx="12" fill="#31485A"/>
+    <text x="253" y="130" text-anchor="middle" fill="#99DFAD" font-size="40" font-family="Arial, Helvetica, sans-serif" font-weight="700" letter-spacing="0.5">1,599</text>
+
+    <!-- LED -->
+    <rect x="230" y="155" width="44" height="14" rx="7" fill="#55BE86" stroke="#2E5D45" stroke-width="3"/>
   </g>
-  <rect x="161" y="92" width="190" height="318" rx="24" fill="none" stroke="#2f3e4e" stroke-width="7"/>
-  <path d="M 352 198 C 356 260 358 308 376 326 C 394 344 414 322 411 282 C 408 240 402 210 390 194" fill="none" stroke="#34414f" stroke-width="10" stroke-linecap="round"/>
-  <rect x="336" y="158" width="28" height="17" rx="6" fill="#b0b8be" stroke="#5f6b75" stroke-width="3"/>
-  <g transform="translate(372,152) rotate(18)">
-    <rect x="-26" y="-38" width="52" height="80" rx="14" fill="#e53935" stroke="#8e1414" stroke-width="5"/>
-    <rect x="-10" y="-18" width="20" height="30" rx="7" fill="#8e1414"/>
-    <rect x="-26" y="34" width="24" height="14" rx="5" fill="#8e1414"/>
+
+  <!-- ===== boquilla metalica (de bombona a nozzle) ===== -->
+  <g transform="rotate(-10 357 133)">
+    <rect x="336" y="126" width="46" height="14" rx="7" fill="#5D707E" stroke="#2C3A45" stroke-width="4"/>
+    <rect x="341" y="129" width="30" height="4" rx="2" fill="#C9D6DE" opacity="0.7"/>
   </g>
-  <rect x="186" y="112" width="140" height="66" rx="12" fill="#0f2f44" stroke="#081c29" stroke-width="4"/>
-  <text x="256" y="159" text-anchor="middle" fill="#4ade80" font-size="46" font-family="Arial, Helvetica, sans-serif" font-weight="800" letter-spacing="1">1,599</text>
-  <rect x="231" y="188" width="50" height="12" rx="6" fill="#2bd465" stroke="#0c3a22" stroke-width="2.5"/>
-  <ellipse cx="256" cy="462" rx="44" ry="9" fill="#0b2a4a" opacity="0.18"/>
-  <path d="M 256 466 C 252 458 208 406 208 366 C 208 334 230 310 256 310 C 282 310 304 334 304 366 C 304 406 260 458 256 466 Z" fill="url(#pinG)" stroke="#0d47a1" stroke-width="6" stroke-linejoin="round"/>
-  <ellipse cx="232" cy="345" rx="10" ry="16" fill="#ffffff" opacity="0.35" transform="rotate(-18 232 345)"/>
-  <circle cx="256" cy="363" r="27" fill="#ffffff"/>
-  <circle cx="256" cy="363" r="27" fill="none" stroke="#0d47a1" stroke-width="3" opacity="0.25"/>
+
+  <!-- ===== manguera ===== -->
+  <g fill="none" stroke-linecap="round">
+    <path d="M359,206 V318 A21,21 0 0 0 401,318 V230" stroke="#2C3A45" stroke-width="23"/>
+    <path d="M359,206 V318 A21,21 0 0 0 401,318 V230" stroke="#5D707E" stroke-width="15"/>
+    <path d="M359,214 V312 Q359,332 380,332" stroke="#93A3AD" stroke-width="4" opacity="0.35"/>
+  </g>
+
+  <!-- ===== nozzle ===== -->
+  <g>
+    <!-- cuello metalico inferior -->
+    <rect x="386" y="198" width="24" height="32" rx="7" fill="#5D707E" stroke="#384854" stroke-width="5"/>
+    <!-- cuerpo rojo -->
+    <path d="M386,123 C373,125 365,135 365,148 V193 C365,203 372,209 382,209 H395 C405,209 411,202 411,192 V144 C411,132 404,123 393,123 Z"
+          fill="url(#noz)" stroke="#8E2A20" stroke-width="5" stroke-linejoin="round"/>
+    <!-- asa / hueco -->
+    <rect x="372" y="155" width="18" height="37" rx="3" fill="#33454F"/>
+    <!-- brillo -->
+    <path d="M372,131 C367,138 365,146 365,153" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.45" fill="none"/>
+  </g>
+
+  <!-- sombra del pin -->
+  <ellipse cx="266" cy="444" rx="44" ry="9" fill="#0B3A5E" opacity="0.16"/>
+
+  <!-- ===== pin ===== -->
+  <g>
+    <path d="M266,435 C257,417 202,356 202,331 C202,297 231,271 266,271 C301,271 330,297 330,331 C330,356 275,417 266,435 Z"
+          fill="none" stroke="#DFEBF0" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M266,435 C257,417 202,356 202,331 C202,297 231,271 266,271 C301,271 330,297 330,331 C330,356 275,417 266,435 Z"
+          fill="url(#pinG)" stroke="#14568F" stroke-width="5" stroke-linejoin="round"/>
+    <ellipse cx="241" cy="306" rx="9" ry="15" fill="#FFFFFF" opacity="0.4" transform="rotate(-20 241 306)"/>
+    <circle cx="266" cy="330" r="14" fill="#FFFFFF"/>
+  </g>
 </svg>
