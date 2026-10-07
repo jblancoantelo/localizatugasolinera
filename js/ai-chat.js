@@ -543,6 +543,43 @@ function invalidateAiModelsCache(provider) {
   } catch {}
 }
 
+// Ultimo modelo enviado por cada proveedor. Se guarda al ENVIAR (no al mover el
+// desplegable) para que "el ultimo usado" sea de verdad el ultimo con el que se
+// respondio, y se recupera al arrancar la app en vez de volver al default.
+const AI_LAST_MODEL_KEY = 'gasolineras_ai_last_models';
+
+function loadAiLastModels() {
+  try {
+    const raw = localStorage.getItem(AI_LAST_MODEL_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return (parsed && typeof parsed === 'object') ? parsed : {};
+  } catch { return {}; }
+}
+
+function saveAiLastModel(provider, model) {
+  if (!provider || !model) return;
+  try {
+    const all = loadAiLastModels();
+    all[provider] = model;
+    localStorage.setItem(AI_LAST_MODEL_KEY, JSON.stringify(all));
+  } catch {}
+}
+
+function lastAiModel(provider) {
+  const m = loadAiLastModels()[provider];
+  return (typeof m === 'string' && m) ? m : null;
+}
+
+// Selecciona el ultimo modelo del proveedor si sigue en el desplegable.
+// Devuelve false si no hay guardado o si ya no existe en la lista.
+function restoreAiLastModel(provider, select) {
+  const saved = lastAiModel(provider);
+  if (!select || !saved) return false;
+  if (![...select.options].some(o => o.value === saved)) return false;
+  select.value = saved;
+  return true;
+}
+
 function getAiCachedModels(provider) {
   const entry = loadAiModelsCache()[provider];
   if (!entry || !Array.isArray(entry.models) || !entry.models.length) return null;
@@ -589,8 +626,17 @@ async function fetchAiModels(provider, apiKey, signal) {
   return ((await parse.call(config, data)) || []).filter(isAiModelChatCandidate);
 }
 
+// Orden alfabetico de lo que ve el usuario: se ordena por la ETIQUETA y no por
+// el id, porque los ids llevan el prefijo del proveedor (moonshotai/, z-ai/,
+// nvidia/...) y asi se agruparian por proveedor en vez de por nombre.
+function sortAiModelEntries(entries) {
+  return entries.sort((a, b) => a.label.toLowerCase().localeCompare(b.label.toLowerCase(), 'es'));
+}
+
 // Rellena el <select> de modelos: primero la lista fija del proveedor (los
 // defaults verificados), despues los del catalogo remoto sin duplicar.
+// Todo sale en orden alfabetico y, sin seleccion previa, se elige el ultimo
+// modelo enviado por el proveedor (o el default si no lo hay).
 function populateAiModelSelect(provider, remoteModels) {
   const select = document.getElementById(getProviderInputId(provider, 'iaModel'));
   if (!select) return { missing: null, previous: null };
@@ -601,11 +647,12 @@ function populateAiModelSelect(provider, remoteModels) {
   for (const m of remoteModels || []) {
     if (!all.includes(m)) all.push(m);
   }
+  const entries = sortAiModelEntries(all.map(id => ({ id, label: aiModelLabel(id) })));
   select.innerHTML = '';
-  for (const id of all) {
+  for (const e of entries) {
     const opt = document.createElement('option');
-    opt.value = id;
-    opt.textContent = aiModelLabel(id);
+    opt.value = e.id;
+    opt.textContent = e.label;
     select.appendChild(opt);
   }
   // Si el modelo que se estaba usando ya no existe en el catalogo, se avisa
@@ -619,7 +666,7 @@ function populateAiModelSelect(provider, remoteModels) {
     select.value = missing;
   } else if (previous && all.includes(previous)) {
     select.value = previous;
-  } else {
+  } else if (!restoreAiLastModel(provider, select)) {
     select.value = config.defaultModel;
   }
   return { missing, previous };
@@ -981,6 +1028,16 @@ function initAiChat() {
     const messagesEl = document.getElementById(getProviderInputId(provider, 'iaMessages'));
 
     if (!input || !sendBtn || !messagesEl) continue;
+
+    // El desplegable se reconstruye aqui (ademas de en index.html) para que
+    // arranque en orden alfabetico y con el ultimo modelo enviado, con el
+    // catalogo cacheado si lo hay. Se vacia la seleccion previa antes de
+    // poblar: asi populate no conserva el primer <option> del HTML y cae en
+    // el ultimo modelo usado (o en el default).
+    if (modelSelect && modelSelect.options.length) {
+      modelSelect.value = '';
+      populateAiModelSelect(provider, getAiCachedModels(provider)?.models || null);
+    }
 
     if (messagesEl.children.length === 0) {
       const empty = document.createElement('div');
@@ -1349,6 +1406,9 @@ async function handleAiSend(provider, modelSelect, input, messagesEl, sendBtn) {
   const config = AI_PROVIDERS[provider];
   const apiKey = aiApiKey(provider);
   const model = modelSelect ? modelSelect.value : config.defaultModel;
+  // En el momento de enviar, no al mover el desplegable: el modelo recordado
+  // tiene que ser el que de verdad se uso por ultima vez en ese proveedor.
+  saveAiLastModel(provider, model);
 
   if (provider !== 'chrome-nano' && !isAiProviderReady(provider)) {
     addAiMessage(messagesEl, aiProviderNotReadyMessage(provider), 'error');

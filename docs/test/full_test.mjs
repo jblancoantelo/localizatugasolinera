@@ -854,20 +854,26 @@ async function testAiChat(page) {
   log('IA', 'parseModels() tolera un catálogo con un solo modelo',
     JSON.stringify(parseLlm7.filtrado) === JSON.stringify(['codestral-latest']), JSON.stringify(parseLlm7.filtrado));
 
-  // --- defaultModel debe coincidir con el primer <option> del desplegable ---
+  // --- defaultModel tiene que seguir en el desplegable y ser el elegido ---
+  // Los modelos van en orden alfabetico, asi que el default ya NO tiene por
+  // que ser el primer <option>: lo que importa es que exista y venga marcado.
   const defaultsOk = await page.evaluate(() => {
     const bad = [];
     for (const p of Object.keys(AI_PROVIDERS)) {
       if (p === 'chrome-nano') continue;
       const sel = document.getElementById(getProviderInputId(p, 'iaModel'));
       if (!sel || !sel.options.length) { bad.push(p + ': sin desplegable'); continue; }
-      if (sel.options[0].value !== AI_PROVIDERS[p].defaultModel) {
-        bad.push(p + ': ' + sel.options[0].value + ' != ' + AI_PROVIDERS[p].defaultModel);
+      const opciones = [...sel.options].map(o => o.value);
+      if (!opciones.includes(AI_PROVIDERS[p].defaultModel)) {
+        bad.push(p + ': falta ' + AI_PROVIDERS[p].defaultModel);
+      } else if (sel.value !== AI_PROVIDERS[p].defaultModel) {
+        bad.push(p + ': elegido ' + sel.value + ' != ' + AI_PROVIDERS[p].defaultModel);
       }
     }
     return bad;
   });
-  log('IA', 'defaultModel == primer <option> en los 6 proveedores', defaultsOk.length === 0, defaultsOk.join(' | '));
+  log('IA', 'defaultModel sigue en el desplegable y viene elegido en los 6 proveedores',
+    defaultsOk.length === 0, defaultsOk.join(' | '));
 
   // --- Todo proveedor con clave obligatoria tiene prefijo declarado ---
   const prefixesOk = await page.evaluate(() => {
@@ -1515,10 +1521,83 @@ async function testAiChat(page) {
     /Combustible analizado: Gasóleo A/.test(rangoCtx.ctxDiesel) && rangoCtx.conModal === 'Gasóleo A'
     && rangoCtx.fueraModal === 'Gasolina 95 E5', rangoCtx.conModal + ' vs ' + rangoCtx.fueraModal);
 
+  // --- Los modelos se pintan en orden alfabetico ---
+  // Se ordena por la etiqueta que ve el usuario (no por el id), para que los
+  // ids con prefijo de proveedor no agrupen la lista por proveedor.
+  const ordenAlf = await page.evaluate(() => {
+    const sel = document.getElementById('iaModelLlm7');
+    const guardado = { html: sel.innerHTML, valor: sel.value };
+    sel.value = '';
+    populateAiModelSelect('llm7', ['llama-4-maverick']);
+    const etiquetas = [...sel.options].map(o => o.textContent);
+    const ordenado = etiquetas.every((t, i) => i === 0
+      || etiquetas[i - 1].toLowerCase().localeCompare(t.toLowerCase(), 'es') < 0);
+    const valor = sel.value;
+    sel.innerHTML = guardado.html;
+    sel.value = guardado.valor;
+    return { ordenado, etiquetas, valor };
+  });
+  log('IA', 'El desplegable sale en orden alfabetico (lista fija + catálogo remoto)',
+    ordenAlf.ordenado, ordenAlf.etiquetas.join(' | '));
+  log('IA', 'Sin selección previa se mantiene el default, no la primera opción alfabética',
+    ordenAlf.valor === 'codestral-latest', ordenAlf.valor);
+
+  // --- Se guarda y se recupera el ultimo modelo enviado por proveedor ---
+  const guardadoModelo = await page.evaluate(async () => {
+    const sel = document.getElementById('iaModelLlm7');
+    const input = document.getElementById('iaInputLlm7');
+    const msgs = document.getElementById('iaMessagesLlm7');
+    const btn = document.getElementById('iaSendLlm7');
+    const antes = localStorage.getItem(AI_LAST_MODEL_KEY);
+    const realSend = AI_PROVIDERS.llm7.send;
+    AI_PROVIDERS.llm7.send = async () => 'respuesta';
+    msgs.innerHTML = '';
+    sel.value = 'minimax-m2.7';
+    input.value = 'hola';
+    await handleAiSend('llm7', sel, input, msgs, btn);
+    const guardado = loadAiLastModels();
+    AI_PROVIDERS.llm7.send = realSend;
+    msgs.innerHTML = '';
+    input.value = '';
+    if (antes === null) localStorage.removeItem(AI_LAST_MODEL_KEY);
+    else localStorage.setItem(AI_LAST_MODEL_KEY, antes);
+    return guardado;
+  });
+  log('IA', 'Al enviar se guarda el modelo elegido como el último de su proveedor',
+    guardadoModelo.llm7 === 'minimax-m2.7', JSON.stringify(guardadoModelo));
+
+  const restauradoModelo = await page.evaluate(() => {
+    const sel = document.getElementById('iaModelLlm7');
+    const guardado = { html: sel.innerHTML, valor: sel.value, raw: localStorage.getItem(AI_LAST_MODEL_KEY) };
+    const poner = () => { sel.value = ''; };
+    saveAiLastModel('llm7', 'minimax-m2.7');
+    poner(); populateAiModelSelect('llm7', null);
+    const conUltimo = sel.value;
+    // Si el ultimo modelo ya no esta en la lista, se vuelve al default
+    saveAiLastModel('llm7', 'modelo-retirado-xyz');
+    poner(); populateAiModelSelect('llm7', null);
+    const sinOpcion = sel.value;
+    // ...aunque venga del catalogo remoto, no de la lista fija
+    saveAiLastModel('llm7', 'llama-4-maverick');
+    poner(); populateAiModelSelect('llm7', ['llama-4-maverick']);
+    const conRemoto = sel.value;
+    if (guardado.raw === null) localStorage.removeItem(AI_LAST_MODEL_KEY);
+    else localStorage.setItem(AI_LAST_MODEL_KEY, guardado.raw);
+    sel.innerHTML = guardado.html;
+    sel.value = guardado.valor;
+    return { conUltimo, sinOpcion, conRemoto };
+  });
+  log('IA', 'Al arrancar se restaura el último modelo usado por cada proveedor',
+    restauradoModelo.conUltimo === 'minimax-m2.7' && restauradoModelo.conRemoto === 'llama-4-maverick',
+    'fija=' + restauradoModelo.conUltimo + ' | remoto=' + restauradoModelo.conRemoto);
+  log('IA', 'Si el último modelo desapareció de la lista se vuelve al default',
+    restauradoModelo.sinOpcion === 'codestral-latest', restauradoModelo.sinOpcion);
+
   // --- Restaurar fetch y limpiar ---
   await page.evaluate(() => {
     if (window.__realFetch) window.fetch = window.__realFetch;
     localStorage.removeItem(AI_MODELS_CACHE_KEY);
+    localStorage.removeItem(AI_LAST_MODEL_KEY);
     localStorage.removeItem(AI_KEYS_KEY);
     localStorage.removeItem(AI_PROXY_KEY);
     const input = document.getElementById('iaKeyLlm7');

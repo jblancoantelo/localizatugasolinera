@@ -81,7 +81,7 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 - Las API Keys se guardan cifradas (XOR + base64) en el código fuente y se descargan en Config con una contraseña
 - **LLM7.io funciona sin clave**: sin API Key accede en modo anónimo (500k tokens/24 h); con una clave gratuita de `dash.llm7.io` el límite sube a 1M/día
 - **NVIDIA NIM vía Cloudflare Worker**: su API solo habilita el origen `build.nvidia.com`, así que la llamada directa desde el navegador es imposible. Se incluye `workers/nvidia-proxy.js`, que reenvía `/v1/chat/completions` y `/v1/models` con la clave guardada como secreto del Worker (`wrangler secret put NVIDIA_API_KEY`); en Config solo se pega la URL, con **🔎 Probar** para comprobar si es la buena (no gasta tokens) y **↺ Usar la predefinida** para volver a la de por defecto
-- **Catálogo de modelos automático**: los modelos gratuitos rotan con frecuencia, así que el desplegable se descarga de la API de cada proveedor (caché 24 h, botón 🔄 para refrescar) y avisa si el modelo elegido ya no está disponible
+- **Catálogo de modelos automático**: los modelos gratuitos rotan con frecuencia, así que el desplegable se descarga de la API de cada proveedor (caché 24 h, botón 🔄 para refrescar) y avisa si el modelo elegido ya no está disponible. Los modelos salen **en orden alfabético** (mezclando catálogo remoto y lista fija) y cada proveedor **recuerda el último modelo con el que se le envió un mensaje**, aunque cambies de pestaña o recargues la app
 - **Contexto automático**: cada mensaje incluye los datos actuales de la app (provincia, gasolineras, precios, favoritos) y el `IDEESS` de cada estación
 - **Histórico para la IA**: si la pregunta pide evolución, tendencia, nombra una marca concreta o trae un rango ("en 60 días", "3 meses"), se cargan esos días del Ministerio —los mismos 7/14/21/30/60/90/180 que el combo del modal, reutilizando su caché— y se le pasan las medias de la provincia, la serie de precios con fecha de hasta 12 gasolineras (con mín/máx/variación) y las mayores subidas y bajadas
 - Botón **Cancelar** para abortar mensaje en curso (AbortController)
@@ -103,7 +103,7 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 ```powershell
 npm install                # playwright + web-push
 
-npm test                   # 175 tests (168 HTTP + 7 file://) — suite completa
+npm test                   # 180 tests (173 HTTP + 7 file://) — suite completa
 node check-syntax.mjs      # sintaxis de todo el JS (incluye el <script> inline del HTML)
 npm run bump               # regenera ASSETS de sw.js + incrementa APP_VERSION y BUILD_TIME
 npm run sync-assets        # solo regenera la lista ASSETS de sw.js
@@ -153,7 +153,7 @@ npm run check-assets       # verifica ASSETS sin escribir (sale con 1 si no cuad
 | Notificaciones | Web Push API + Periodic Background Sync |
 | Service Worker | Cache-first + Network-first híbrido, precaché generado por script |
 | Chat IA | 7 proveedores (Groq, Mistral, OpenRouter, LLM7.io, NVIDIA vía Worker, Google Gemini, Chrome Built-in AI) |
-| Tests | Playwright (175 tests, servidor HTTP inline) |
+| Tests | Playwright (180 tests, servidor HTTP inline) |
 | Desarrollo | [OpenCode](https://opencode.ai) con modelos DeepSeek (libres) |
 
 ---

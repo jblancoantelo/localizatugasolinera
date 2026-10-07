@@ -19,7 +19,7 @@ node docs/test/full_test.mjs
 ### Qué hace el script:
 - Inicia servidor HTTP en :8080 sirviendo desde la raíz del proyecto
 - Lanza Chromium headless
-- Ejecuta 175 tests: 168 contra HTTP + 7 contra `file://`
+- Ejecuta 180 tests: 173 contra HTTP + 7 contra `file://`
 - Empieza por la sección 17 (build), que lee ficheros del disco sin abrir el navegador
 - Cierra servidor y navegador automáticamente
 - Exit code 0 = todo OK, 1 = algún fallo
@@ -132,7 +132,7 @@ node docs/test/full_test.mjs
 
 ## Resultados actuales
 
-**175 tests — 175 ✅ 0 ❌**
+**180 tests — 180 ✅ 0 ❌**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
@@ -152,15 +152,15 @@ node docs/test/full_test.mjs
 | Mapa | 2 ✅ | — |
 | Geo | 1 ✅ | — |
 | Búsqueda | 1 ✅ | 1 ✅ |
-| Popup | 7 ✅ | — |
+| Popup | 8 ✅ | — |
 | Persistencia | 4 ✅ | — |
 | Caché (limpiar caché borra de verdad) | 1 ✅ | — |
-| Push Notifications | 10 ✅ | — |
-| Helpers (norm/parsePrice/comparePrices) | 12 ✅ | — |
-| Chat IA (sección 15) | 106 ✅ | — |
+| Push Notifications | 8 ✅ | — |
+| Helpers (norm/parsePrice/comparePrices) | 14 ✅ | — |
+| Chat IA (sección 15) | 100 ✅ | — |
 | Ring logs (sección 16) | 7 ✅ | — |
 | Build (sección 17) | 4 ✅ | — |
-| **Total** | **168 ✅** | **7 ✅** |
+| **Total** | **173 ✅** | **7 ✅** |
 
 ## 15. Chat IA (automatizado)
 
@@ -173,13 +173,22 @@ Playwright). Solo se deja pasar lo que no sea `api.llm7.io` ni un `workers.dev`
 Cubierto: proveedor LLM7 sin clave (`Bearer unused`), `listModelsNoAuth` (su
 `GET /models` rechaza `Authorization` en el preflight), `aiApiKey()`,
 `isAiProviderReady()`, `updateAiStatus()`, `parseModels()` (filtro de `tier` y
-exclusión del 401), `defaultModel` vs primer `<option>`, prefijos de clave,
-`xorDecryptBase64()` roundtrip, `AI_NON_CHAT_RE`, `AI_MODEL_ERROR_RE`,
-`aiHttpError()`, `refreshAiModels()` (con y sin caché), persistencia y borrado
-de la caché, `invalidateAiModelsCache()`, exclusión de `chrome-nano`,
-`warnAiModelUnavailable()` con su botón, botón 🔄, degradación cuando `/models`
-falla (500 y red caída), invalidación al cambiar la clave, y `send()` con
-`max_tokens` y respuesta vacía por *reasoning*.
+exclusión del 401), `defaultModel` presente y elegido en el desplegable,
+prefijos de clave, `xorDecryptBase64()` roundtrip, `AI_NON_CHAT_RE`,
+`AI_MODEL_ERROR_RE`, `aiHttpError()`, `refreshAiModels()` (con y sin caché),
+persistencia y borrado de la caché, `invalidateAiModelsCache()`, exclusión de
+`chrome-nano`, `warnAiModelUnavailable()` con su botón, botón 🔄, degradación
+cuando `/models` falla (500 y red caída), invalidación al cambiar la clave, y
+`send()` con `max_tokens` y respuesta vacía por *reasoning*.
+
+**Orden alfabético y último modelo** (5 tests nuevos): `populateAiModelSelect()`
+pinta la lista fija + el catálogo remoto en orden alfabético (por la etiqueta,
+con `localeCompare(…, 'es')` insensible a mayúsculas), sin selección previa
+elige el `defaultModel` y no la primera opción alfabética, `handleAiSend()`
+guarda el modelo enviado como el último de su proveedor en
+`gasolineras_ai_last_models`, y al poblar de nuevo se restaura ese último modelo
+—aunque venga del catálogo remoto— o se vuelve al `defaultModel` si ya no existe
+en la lista.
 
 **NVIDIA vía proxy** (25 tests nuevos): tab/panel y los 8 ids presentes, es el
 único `viaProxy` con rutas relativas, sin clave en el navegador (ni campo, ni
@@ -278,7 +287,7 @@ No automatizado en `full_test.mjs` (requiere el módulo real de IA). Verificado 
 | 13.5 | Clave `sk-or-v1-…` en `#iaKeyGroq` | `❌ Formato de clave incorrecto para groq (debe empezar por gsk_)` |
 | 13.6 | Vaciar un campo de clave | No se persiste `""`; `loadAiApiKeys()` no lo contiene |
 | 13.7 | Cargar claves correctas + F5 | `✅ Claves cargadas desde almacenamiento`, botón "Volver a cargar" visible |
-| 13.8 | `defaultModel` vs primer `<option>` | Coinciden en los 4 proveedores |
+| 13.8 | `defaultModel` en el desplegable | Presente entre las opciones y marcado como elegido (el orden es alfabético) |
 
 ## 14. Push Notifications
 

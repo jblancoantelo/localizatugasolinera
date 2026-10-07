@@ -1,5 +1,44 @@
 # CHANGELOG
 
+## [2026-10-07] — Modelos en orden alfabético y último modelo recordado por proveedor
+
+### 🔤 Los desplegables de modelos se ordenan alfabéticamente
+
+Los `<option>` venían en el orden en que se escribieron, así que un modelo nuevo
+o uno que llegaba del catálogo remoto aparecía donde tocaba y no había forma de
+encontrar rápido uno concreto.
+
+| Cambio | Detalle |
+|--------|---------|
+| `js/ai-chat.js` | **Nuevo** `sortAiModelEntries()`: `populateAiModelSelect()` pinta la lista fija + el catálogo remoto **ordenado por la etiqueta visible** con `localeCompare(…, 'es')` insensible a mayúsculas. Ordenar por el id agruparía la lista por prefijo de proveedor (`moonshotai/`, `z-ai/`, `nvidia/…`) |
+| `js/ai-chat.js` | `initAiChat()` repuebla cada desplegable al cargar (vacía antes `select.value` para que no se quede con la primera opción del HTML) mezclando la caché de catálogo, así el orden vale desde el primer pintado |
+| `index.html` | Los `<option>` de los 6 proveedores van ya en orden alfabético y el `defaultModel` viene marcado con `selected` (ya no hace falta que sea el primero) |
+
+### 🧠 Cada proveedor recuerda el último modelo usado
+
+Antes, al reabrir la app todos los proveedores volvían a su `defaultModel`,
+aunque se hubiera estado usando otro.
+
+| Cambio | Detalle |
+|--------|---------|
+| `js/ai-chat.js` | **Nuevo** `AI_LAST_MODEL_KEY = 'gasolineras_ai_last_models'` con `loadAiLastModels()`, `saveAiLastModel()`, `lastAiModel()` y `restoreAiLastModel()` |
+| `js/ai-chat.js` | `saveAiLastModel()` se llama en `handleAiSend()` **al enviar**, no al mover el desplegable: lo recordado es el modelo con el que se respondió por última vez |
+| `js/ai-chat.js` | `populateAiModelSelect()` elige, sin selección previa, el último modelo del proveedor y, si ya no está en la lista, el `defaultModel`. Con selección previa se conserva como antes |
+| `js/ai-chat.js` | La clave es `{ proveedor: modelo }` en `localStorage`, así que aparece en Config → Caché → `localStorage` y se puede borrar desde ahí |
+
+### 🧪 Verificación
+
+- `node check-syntax.mjs`: 19/19 ficheros OK
+- Suite completa: **180 tests** (173 HTTP + 7 file://), 5 nuevos:
+  - orden alfabético de `populateAiModelSelect()` con catálogo remoto
+  - sin selección previa se mantiene el `defaultModel`, no la primera opción alfabética
+  - `handleAiSend()` guarda el modelo enviado como el último de su proveedor
+  - al poblar se restaura el último modelo (uno de lista fija y otro del catálogo remoto)
+  - si el último modelo desapareció de la lista se vuelve al `defaultModel`
+- Test ajustado: `defaultModel` ya no se compara con el primer `<option>` (el orden es alfabético), se comprueba que **existe y viene elegido**
+- `node docs/test/full_test.mjs`: 180 ✅ 0 ❌
+
+---
 ## [2026-10-04] — NVIDIA: la URL del proxy se valida antes de hacer fetch
 
 ### 🐞 El proveedor NVIDIA fallaba siempre

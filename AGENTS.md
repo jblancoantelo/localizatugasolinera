@@ -250,7 +250,7 @@ Sin cuenta de Cloudflare **este proveedor no se puede usar** (su CORS solo permi
 - NVIDIA (vía proxy): `nvidia/nemotron-3-ultra-550b-a55b` (default), `nvidia/nemotron-3-super-120b-a12b`, `nvidia/nemotron-3.5-lightning-30b-a3b`, `moonshotai/kimi-k3`, `z-ai/glm-5.3`, `z-ai/glm-5.3-flash`, `openai/gpt-oss-20b`
 - Chrome Built-in AI: session de IA nativa del navegador
 
-⚠️ `defaultModel` **debe coincidir con el primer `<option>`** de `#iaModel<Provider>` en `index.html` (si no, el modelo por defecto no existe en el desplegable).
+⚠️ Los `<option>` de `#iaModel<Provider>` en `index.html` van **en orden alfabético** (por la etiqueta visible), igual que los que pinta `populateAiModelSelect()`. `defaultModel` **debe existir entre ellos y venir marcado con `selected`** (ya no hace falta que sea el primero: el orden es alfabético).
 ⚠️ Los modelos `openai/gpt-oss-*` de Groq son **reasoning**: pueden devolver `content` vacío porque gastan el `max_tokens` en `reasoning`. No usarlos como default.
 ⚠️ `mistral-large-latest` responde *"not available in your subscription tier"*. El tier free da 429 (`Rate limit exceeded`) de forma intermitente.
 
@@ -258,10 +258,17 @@ Sin cuenta de Cloudflare **este proveedor no se puede usar** (su CORS solo permi
 
 **Auto-refresh del catálogo de modelos** (`AI_MODELS_CACHE_KEY`, TTL 24 h):
 - `refreshAiModels(provider, {force})` en `ai-chat.js`; `autoRefreshAiModels()` se dispara al abrir la pestaña de un proveedor (`main.js`) y respeta la caché
-- `populateAiModelSelect()` une catálogo remoto + lista fija sin duplicar y **conserva la selección**; si el modelo desaparece, lo marca con "⚠️ no disponible" y devuelve `missing`
+- `populateAiModelSelect()` une catálogo remoto + lista fija sin duplicar, **lo pinta en orden alfabético** (por la etiqueta, con `localeCompare(…, 'es')` insensible a mayúsculas: ordenar por el id agruparía por prefijo de proveedor) y **conserva la selección**; si el modelo desaparece, lo marca con "⚠️ no disponible" y devuelve `missing`
+- Sin selección previa (arrancar la app, o `select.value = ''` antes de poblar) elige el **último modelo enviado por ese proveedor** y, si no lo hay o ya no está en la lista, el `defaultModel`
 - `AI_MODEL_ERROR_RE` distingue "el modelo ya no existe" de red/401/429/500: un 429 no debe borrar la selección ni ofrecer refrescar
 - Si `/models` falla, se avisa **sin tocar el desplegable**
 - Botón 🔄 en cada desplegable (`initAiModelRefreshButtons()`) + botón dentro del aviso `warnAiModelUnavailable()`
+- `initAiChat()` repuebla cada desplegable al cargar (vacía antes `select.value` para que no se quede con la primera opción del HTML) mezclando la caché de catálogo si existe, así el orden y el último modelo valen desde el primer pintado
+
+**Último modelo por proveedor** (`AI_LAST_MODEL_KEY = 'gasolineras_ai_last_models'`):
+- `saveAiLastModel(provider, model)` se llama en `handleAiSend()` **al enviar**, no al mover el desplegable: lo recordado tiene que ser el modelo con el que se respondió por última vez
+- `restoreAiLastModel(provider, select)` lo vuelve a elegir si sigue entre las opciones; si ya no existe se cae al `defaultModel`
+- Guardado como `{ proveedor: modelo }` en `localStorage`, junto a las demás claves `gasolineras_` (visible y borrable en Config → Caché → localStorage)
 
 ### Caché — tabs IndexedDB / localStorage
 - `initCacheTabs()` en `storage.js` maneja cambio entre tabs.
@@ -297,7 +304,7 @@ Orden actual de grupos:
 ### Tests
 - Ubicación: `docs/test/full_test.mjs`
 - Plan: `docs/test/TEST_PLAN.md`
-- 175 tests totales (168 HTTP + 7 file://)
+- 180 tests totales (173 HTTP + 7 file://)
 - Secciones: 1-12 UI, 13 claves IA (manual), 14 push, 15 chat IA, 16 ring logs, 17 build (`ASSETS`/`APP_VERSION`/`?v=` de los iconos)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)
