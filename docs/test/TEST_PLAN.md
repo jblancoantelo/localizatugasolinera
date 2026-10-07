@@ -19,7 +19,7 @@ node docs/test/full_test.mjs
 ### Qué hace el script:
 - Inicia servidor HTTP en :8080 sirviendo desde la raíz del proyecto
 - Lanza Chromium headless
-- Ejecuta 174 tests: 167 contra HTTP + 7 contra `file://`
+- Ejecuta 175 tests: 168 contra HTTP + 7 contra `file://`
 - Empieza por la sección 17 (build), que lee ficheros del disco sin abrir el navegador
 - Cierra servidor y navegador automáticamente
 - Exit code 0 = todo OK, 1 = algún fallo
@@ -132,7 +132,7 @@ node docs/test/full_test.mjs
 
 ## Resultados actuales
 
-**174 tests — 174 ✅ 0 ❌**
+**175 tests — 175 ✅ 0 ❌**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
@@ -146,7 +146,7 @@ node docs/test/full_test.mjs
 | Tabs (clase+panel+btn) | 1 ✅ | 1 ✅ |
 | Tabla | 3 ✅ | — |
 | Detail | 3 ✅ | — |
-| Histórico | 2 ✅ | — |
+| Histórico | 4 ✅ | — |
 | Ambos | 2 ✅ | — |
 | Config | 2 ✅ | 1 ✅ |
 | Mapa | 2 ✅ | — |
@@ -156,11 +156,11 @@ node docs/test/full_test.mjs
 | Persistencia | 4 ✅ | — |
 | Caché (limpiar caché borra de verdad) | 1 ✅ | — |
 | Push Notifications | 10 ✅ | — |
-| Helpers (norm/parsePrice/comparePrices) | 15 ✅ | — |
-| Chat IA (sección 15) | 86 ✅ | — |
+| Helpers (norm/parsePrice/comparePrices) | 12 ✅ | — |
+| Chat IA (sección 15) | 106 ✅ | — |
 | Ring logs (sección 16) | 7 ✅ | — |
-| Build (sección 17) | 3 ✅ | — |
-| **Total** | **156 ✅** | **7 ✅** |
+| Build (sección 17) | 4 ✅ | — |
+| **Total** | **168 ✅** | **7 ✅** |
 
 ## 15. Chat IA (automatizado)
 
@@ -251,15 +251,19 @@ Los dos logs de actividad comparten `createRingLog(max)` de `js/storage.js`
 
 ## 17. Build (automatizado, sin navegador)
 
-Lee los ficheros del disco antes de lanzar Chromium (3 tests nuevos):
+Lee los ficheros del disco antes de lanzar Chromium (4 tests):
 
 - La lista `ASSETS` de `sw.js` cubre **todo** lo que referencian `index.html` y
-  `manifest.json` (los `src`/`href` del HTML y el `"src"` de los iconos del JSON).
-  Se comprueba con el mismo criterio que `scripts/sync-sw-assets.mjs`, así que el
-  precaché no puede quedarse desfasado en silencio
+  `manifest.json` (los `src`/`href` del HTML y el `"src"` de los iconos del JSON,
+  recortando el `?v=` de query). Se comprueba con el mismo criterio que
+  `scripts/sync-sw-assets.mjs`, así que el precaché no puede quedarse desfasado
+  en silencio
 - Todo lo que el SW importa con `importScripts` está precacheado (si no, el SW
   arranca sin esas funciones)
 - `APP_VERSION` y `BUILD_TIME` existen y `BUILD_TIME` tiene formato `aaaammdd-hhmmss`
+- Los iconos del `manifest.json` llevan `?v=<APP_VERSION>`: sin la query Chrome
+  (sobre todo Android) reutiliza el bitmap del icono cacheado por URL y el
+  lanzador se queda con la imagen antigua. Lo escribe `bump-version.mjs`
 
 ## 13. Validación de claves IA (verificación manual asistida)
 

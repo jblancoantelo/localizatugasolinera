@@ -1663,7 +1663,10 @@ function testBuild() {
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
   const refs = [...html.matchAll(/(?:src|href)\s*=\s*"([^"]+)"/g)].map(m => m[1])
     .concat(manifest.icons.map(i => i.src))
-    .filter(r => /^(css|js|icons)\//.test(r));
+    .filter(r => /^(css|js|icons)\//.test(r))
+    // Los iconos del manifest llevan `?v=N` para que Chrome no reutilice el
+    // bitmap cacheado; el precaché del SW guarda el fichero sin query.
+    .map(r => r.split('?')[0]);
   const block = /const ASSETS = \[([\s\S]*?)\];/.exec(sw);
   const assets = block ? [...block[1].matchAll(/'([^']+)'/g)].map(m => m[1]) : [];
   const faltan = [...new Set(refs)].filter(r => !assets.includes(r));
@@ -1682,6 +1685,13 @@ function testBuild() {
   const buildTime = /const BUILD_TIME\s*=\s*'([^']+)'/.exec(sw)?.[1] || '';
   log('Build', 'APP_VERSION y BUILD_TIME están actualizados en sw.js',
     version > 0 && /^\d{8}-\d{6}$/.test(buildTime), `v${version} (${buildTime})`);
+
+  // Sin `?v=N` en el manifest Chrome/Android se queda con el icono viejo
+  // (reutiliza el bitmap cacheado por URL). Lo escribe bump-version.mjs.
+  const sinVersion = manifest.icons.filter(i => i.src !== i.src.split('?')[0] + '?v=' + version);
+  log('Build', 'Los iconos del manifest llevan la ?v= de APP_VERSION (fuerza la re-descarga)',
+    manifest.icons.length > 0 && sinVersion.length === 0,
+    sinVersion.length ? 'sin versionar: ' + sinVersion.map(i => i.src).join(', ') : '?v=' + version);
 }
 
 async function main() {
