@@ -2,6 +2,13 @@ const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenS
 const ESR_ATTR = '&copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics';
 const CARTO_ATTR = OSM_ATTR + ', &copy; <a href="https://carto.com/">CARTO</a>';
 
+// Clave gratuita de CARTO Basemaps (carto.com/basemaps/apikey, 5M tiles/mes).
+// Sin `?key=` sus raster devuelven 200 con un tile de marca de agua ("API KEY
+// REQUIRED", ETag "wm-…") y el mapa queda en gris: no dispara `tileerror`,
+// así que el respaldo por errores no llegaría a actuar.
+const CARTO_KEY = 'cb1_4eok_1_be0aa666556b7dfa7d95aea0';
+const CARTO_QS = '?key=' + CARTO_KEY;
+
 // Cada vista admite varios proveedores (`urls`): si el primero no devuelve tiles
 // (host bloqueado, adblock, caída) se pasa al siguiente en vez de dejar el mapa
 // en gris. Una entrada puede ser una URL o { url, attribution, maxNativeZoom }.
@@ -26,7 +33,7 @@ const TILE_CONFIGS = {
   },
   street: {
     urls: [
-      { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', attribution: CARTO_ATTR },
+      { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' + CARTO_QS, attribution: CARTO_ATTR },
       { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', attribution: ESR_ATTR },
       { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: OSM_ATTR }
     ],
@@ -55,7 +62,7 @@ const TILE_CONFIGS = {
   },
   dark: {
     urls: [
-      { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attribution: CARTO_ATTR },
+      { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' + CARTO_QS, attribution: CARTO_ATTR },
       { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', attribution: ESR_ATTR }
     ],
     opts: { maxZoom: 19 }
@@ -70,7 +77,7 @@ const TILE_CONFIGS = {
   },
   natgeo: {
     urls: [
-      { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri, National Geographic, Esri, DeLorme, NAVTEQ', maxNativeZoom: 16 },
+      { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri, National Geographic, Esri, DeLorme, NAVTEQ', maxNativeZoom: 12 },
       { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', attribution: ESR_ATTR }
     ],
     opts: { maxZoom: 19 }

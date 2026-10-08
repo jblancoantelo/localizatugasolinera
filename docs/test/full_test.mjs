@@ -266,6 +266,14 @@ async function testHTTP(browser, server) {
     vistas.total >= 8 && vistas.sinCapa === '');
   log('Mapa', 'Calle tiene proveedor de respaldo', vistas.calle >= 2);
 
+  // CARTO sin `?key=` devuelve un tile de marca de agua con status 200 (no
+  // dispara tileerror), así que la vista Calle/Oscuro saldría en gris.
+  const carto = await page.evaluate(() => {
+    const urls = [TILE_CONFIGS.street.urls[0].url, TILE_CONFIGS.dark.urls[0].url];
+    return { conClave: urls.every(u => /[?&]key=[^&]+/.test(u)), urls: urls.map(u => u.split('?')[0]) };
+  });
+  log('Mapa', 'Las URLs de CARTO llevan la clave (sin ella sale la marca de agua)', carto.conClave);
+
   // Respaldo: sin tiles del proveedor principal debe pasar al siguiente
   const respaldo = await page.evaluate(() => {
     setTileLayer('street', 0);
