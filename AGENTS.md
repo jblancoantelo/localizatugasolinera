@@ -455,7 +455,7 @@ node -e "const h=require('http'),fs=require('fs');h.createServer((q,r)=>{let p=q
 | Archivo | Propósito |
 |---------|-----------|
 | `index.html` | Toolbar + content + tabs + bottom sheet |
-| `css/styles.css` | ~342 líneas responsive |
+| `css/styles.css` | ~430 líneas responsive |
 | `js/state.js` | STATE global + definiciones combustibles |
 | `js/helpers.js` | Funciones auxiliares (precios, distancia, descuentos, `comparePrices()`, `formatLogTime()`) |
 | `js/db.js` | IndexedDB compartido (cliente + SW): cache, favoritos, config |
@@ -467,6 +467,7 @@ node -e "const h=require('http'),fs=require('fs');h.createServer((q,r)=>{let p=q
 | `js/table.js` | `doSort()`, `showDetail()`, `loadHistory()`, helpers combustibles |
 | `js/chart-core.js` | Primitivas de gráfica compartidas por las dos vistas (canvas, escala, ejes, tooltip) |
 | `js/chart-engine.js` | Gráfica histórica del detail panel con las primitivas de `chart-core.js` |
+| `js/ai-chat.js` | Chat IA: proveedores, claves cifradas, catálogo de modelos, contexto, histórico para la IA, `renderAiMarkdown()` e historial de conversaciones por proveedor |
 | `js/main.js` | Event listeners, restauración de estado, push notifications |
 | `js/push-notifications.js` | Gestión suscripción Web Push (subscribe/unsubscribe) + `PUSH_LOG_RING` + logPushEvent |
 | `sw.js` | Service Worker (caché, periodicsync, checkPrices, notificationclick) + sendPushLog() + `APP_VERSION`/`ASSETS` |

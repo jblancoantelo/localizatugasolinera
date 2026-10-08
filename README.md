@@ -43,7 +43,7 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 
 ### 💾 Caché y persistencia
 - **IndexedDB**: datos de provincia, histórico, favoritos y configuración (stores `cache`, `favorites`, `config`)
-- **localStorage**: estado de la UI, filtros por provincia y logs de actividad
+- **localStorage**: estado de la UI, filtros por provincia, logs de actividad y el historial de cada chat de IA (una clave por pestaña)
 - TTL de caché configurable desde la UI
 - El estado se restaura tras recargar la página (F5)
 - Descuentos por marca (¢/litro)
@@ -77,7 +77,7 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 - Botón "Comprobar actualizaciones" que detecta cambios en `sw.js` (`APP_VERSION` + `BUILD_TIME`)
 
 ### 🤖 Chat IA integrado
-- **7 proveedores** seleccionables con pestañas: Groq, Mistral, OpenRouter, LLM7.io, NVIDIA, Google Gemini y Chrome Built-in AI
+- **8 pestañas**: General (misma pregunta a todos los proveedores visibles, en paralelo) + Groq, Mistral, OpenRouter, LLM7.io, NVIDIA, Google Gemini y Chrome Built-in AI
 - Las API Keys se guardan cifradas (XOR + base64) en el código fuente y se descargan en Config con una contraseña
 - **LLM7.io funciona sin clave**: sin API Key accede en modo anónimo (500k tokens/24 h); con una clave gratuita de `dash.llm7.io` el límite sube a 1M/día
 - **NVIDIA NIM vía Cloudflare Worker**: su API solo habilita el origen `build.nvidia.com`, así que la llamada directa desde el navegador es imposible. Se incluye `workers/nvidia-proxy.js`, que reenvía `/v1/chat/completions` y `/v1/models` con la clave guardada como secreto del Worker (`wrangler secret put NVIDIA_API_KEY`); en Config solo se pega la URL, con **🔎 Probar** para comprobar si es la buena (no gasta tokens) y **↺ Usar la predefinida** para volver a la de por defecto
@@ -89,6 +89,7 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 - **Respuesta formateada**: el Markdown que devuelve el modelo (negrita, cursiva, títulos, listas, tablas, código y saltos de línea) se convierte a HTML con `renderAiMarkdown()`, en vez de pintarse tal cual y amontonarse en un bloque. El texto original se guarda en `data-raw` — así el historial que se reenvía al modelo y la edición recuperan el Markdown, no el HTML— y lo que teclea el usuario se escapa para que una etiqueta no se inyecte
 - **Marca de agua en cada respuesta**: bajo el mensaje del asistente se muestra el modelo usado y el tiempo que tardó (`⏱ codestral-latest · 1,2 s`), sin entrar en lo que se reenvía al modelo
 - **Pestañas de IA ocultables**: en Config → "Pestañas de IA" hay un checkbox por proveedor; por defecto están los 7 y los que desmarques dejan de aparecer en la pestaña IA (su chat y sus claves se conservan). Siempre debe quedar al menos una
+- **Historial por pestaña**: cada conversación se guarda en `localStorage` con una clave propia (`gasolineras_ai_chat_<proveedor>`) al enviar, recibir o editar un mensaje, así que al recargar la app se restaura con su Markdown y el botón ✎. El botón 🗑 de cada panel borra **solo** la de ese proveedor (también es borrable desde Config → Caché → `localStorage`); los errores, los avisos y el mensaje de bienvenida no se guardan
 - Modelos gratuitos por proveedor (sin coste de API)
 
 ### ⚙️ Panel de Configuración
@@ -150,7 +151,7 @@ npm run check-assets       # verifica ASSETS sin escribir (sale con 1 si no cuad
 
 | Componente | Tecnología |
 |------------|------------|
-| App shell | HTML5 + CSS3 (responsive, ~342 líneas) |
+| App shell | HTML5 + CSS3 (responsive, ~430 líneas) |
 | Mapas | [Leaflet](https://leafletjs.com/) 1.9.4 con tiles OSM / CartoDB / ESRI / CyclOSM |
 | Gráficas | Canvas 2D nativo — sin librerías de charts (`chart-core.js` compartido por las dos vistas) |
 | Persistencia | IndexedDB + localStorage |
@@ -166,7 +167,6 @@ npm run check-assets       # verifica ASSETS sin escribir (sale con 1 si no cuad
 
 ### Chat IA — Próximas mejoras consideradas
 - **Streaming de respuestas** (SSE) para mostrar el texto en tiempo real
-- **Persistencia del historial** de chat en IndexedDB entre sesiones
 - **Prompt personalizado** por el usuario en la UI de Config
 - **Selección de temperatura / max_tokens** por proveedor
 - **Comparativa entre modelos**: enviar misma pregunta a varios proveedores simultáneamente
