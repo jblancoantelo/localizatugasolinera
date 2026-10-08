@@ -146,7 +146,7 @@ function setActiveTab(tabId) {
   }
 
   if (tabId === 'tab-ia') {
-    for (const provider of Object.keys(AI_PROVIDERS)) {
+    for (const provider of [AI_GENERAL, ...Object.keys(AI_PROVIDERS)]) {
       const id = 'iaStatus' + provider.charAt(0).toUpperCase() + provider.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase());
       const el = document.getElementById(id);
       if (el) updateAiStatus(provider);

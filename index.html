@@ -104,7 +104,8 @@
     <div class="ia-area">
       <div class="ia-container">
         <div class="ia-provider-tabs" id="iaProviderTabs">
-          <button class="ia-provider-tab active" data-iaprovider="groq">Groq</button>
+          <button class="ia-provider-tab active" data-iaprovider="general">General</button>
+          <button class="ia-provider-tab" data-iaprovider="groq">Groq</button>
           <button class="ia-provider-tab" data-iaprovider="mistral">Mistral</button>
           <button class="ia-provider-tab" data-iaprovider="openrouter">OpenRouter</button>
           <button class="ia-provider-tab" data-iaprovider="llm7">LLM7.io</button>
@@ -112,7 +113,20 @@
           <button class="ia-provider-tab" data-iaprovider="google">Google Gemini</button>
           <button class="ia-provider-tab" data-iaprovider="chrome-nano">Chrome Built-in AI</button>
         </div>
-        <div class="ia-provider-panel active" data-iapanel="groq">
+        <div class="ia-provider-panel active" data-iapanel="general">
+          <div class="ia-config">
+            <span style="font-size:0.65rem;color:#888">🚀 Misma pregunta a todos los proveedores visibles, en paralelo</span>
+            <span id="iaStatusGeneral" style="font-size:0.6rem;color:#999"></span>
+          </div>
+          <div class="ia-chat">
+            <div class="ia-messages" id="iaMessagesGeneral"></div>
+            <div class="ia-input-row">
+              <input type="text" id="iaInputGeneral" placeholder="Pregunta a todos los proveedores a la vez...">
+              <button id="iaSendGeneral">Enviar</button>
+            </div>
+          </div>
+        </div>
+        <div class="ia-provider-panel" data-iapanel="groq">
           <div class="ia-config">
             <label><select id="iaModelGroq"><option value="allam-2-7b">ALLaM 2 7B</option><option value="openai/gpt-oss-120b">GPT-OSS 120B</option><option value="openai/gpt-oss-20b">GPT-OSS 20B</option><option value="qwen/qwen3.8-27b" selected>Qwen 3.8 27B</option></select></label>
             <button class="ia-refresh-btn" id="iaRefreshModelsGroq" title="Actualizar lista de modelos de Groq">🔄</button>

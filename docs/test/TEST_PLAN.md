@@ -19,7 +19,7 @@ node docs/test/full_test.mjs
 ### Qué hace el script:
 - Inicia servidor HTTP en :8080 sirviendo desde la raíz del proyecto
 - Lanza Chromium headless
-- Ejecuta 192 tests: 185 contra HTTP + 7 contra `file://`
+- Ejecuta 197 tests: 190 contra HTTP + 7 contra `file://`
 - Empieza por la sección 17 (build), que lee ficheros del disco sin abrir el navegador
 - Cierra servidor y navegador automáticamente
 - Exit code 0 = todo OK, 1 = algún fallo
@@ -132,7 +132,7 @@ node docs/test/full_test.mjs
 
 ## Resultados actuales
 
-**192 tests — 192 ✅ 0 ❌**
+**197 tests — 197 ✅ 0 ❌**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|

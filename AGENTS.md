@@ -274,7 +274,16 @@ Sin cuenta de Cloudflare **este proveedor no se puede usar** (su CORS solo permi
 ⚠️ Los modelos `openai/gpt-oss-*` de Groq son **reasoning**: pueden devolver `content` vacío porque gastan el `max_tokens` en `reasoning`. No usarlos como default.
 ⚠️ `mistral-large-latest` responde *"not available in your subscription tier"*. El tier free da 429 (`Rate limit exceeded`) de forma intermitente.
 
-**UI**: cada proveedor tiene su propio panel (`.ia-provider-panel`) dentro de `.ia-providers-container`. Los tabs de proveedor están en `.ia-tabs` con botones `.ia-tab`.
+**UI**: cada proveedor tiene su propio panel (`.ia-provider-panel`) dentro de `.ia-container`. Los tabs están en `.ia-provider-tabs` con botones `.ia-provider-tab` (`data-iaprovider`); los paneles llevan `data-iapanel`.
+
+**Pestaña General** (`data-iaprovider="general"`, la primera y activa por defecto):
+- **No es un proveedor**: no está en `AI_PROVIDERS`, así que no pide clave, no tiene desplegable de modelo ni casilla en Config → "Pestañas de IA", y `loadAiHiddenProviders()` la descarta → **nunca se puede ocultar** (`applyAiProviderVisibility()` la excluye a propósito)
+- `handleAiGeneralSend()` manda **la misma consulta en paralelo** a `aiVisibleProviders()` (los de `AI_PROVIDERS` menos los ocultos en Config → IA). El snapshot del historial (`readAiMessages()`, el mismo que usa `getMessagesForProvider()`) se hace **una sola vez antes de lanzar**, así que todas reciben lo mismo y ninguna respuesta incluye la de los demás
+- Modelo por proveedor: `lastAiModel(p)` (el último enviado en su pestaña) o, si no, `defaultModel`; después se guarda con `saveAiLastModel()`
+- Cada respuesta lleva marca de agua **`⏱ proveedor · modelo · tiempo`** (`addAiMessageMeta(div, model, ms, label)`; sin `label` se comporta como antes)
+- Un proveedor sin clave no se salta: se pinta `❌ <Proveedor>: …` con su motivo, para que se vea quién contestó y quién no
+- `autoRefreshAiModels('general')` refresca a la vez a todos los visibles (cada uno con su caché de catálogo)
+- `updateAiStatus('general')` informa de `✅ N/M proveedores listos`
 
 **Auto-refresh del catálogo de modelos** (`AI_MODELS_CACHE_KEY`, TTL 24 h):
 - `refreshAiModels(provider, {force})` en `ai-chat.js`; `autoRefreshAiModels()` se dispara al abrir la pestaña de un proveedor (`main.js`) y respeta la caché
@@ -324,7 +333,7 @@ Orden actual de grupos:
 ### Tests
 - Ubicación: `docs/test/full_test.mjs`
 - Plan: `docs/test/TEST_PLAN.md`
-- 192 tests totales (185 HTTP + 7 file://)
+- 197 tests totales (190 HTTP + 7 file://)
 - Secciones: 1-12 UI, 13 claves IA (manual), 14 push, 15 chat IA, 16 ring logs, 17 build (`ASSETS`/`APP_VERSION`/`?v=` de los iconos)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)
