@@ -152,6 +152,8 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 
 .ia-provider-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; background: #fff; border-radius: 0 0 8px 8px; }
 .ia-provider-panel.active { display: flex; }
+/* Proveedor oculto desde Config → "Pestañas de IA" */
+.ia-provider-tab.ia-hidden, .ia-provider-panel.ia-hidden { display: none !important; }
 
 .ia-config { padding: 0.4rem 0.5rem; border-bottom: 1px solid #eee; flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; }
 .ia-config label { font-size: 0.65rem; color: #666; display: flex; align-items: center; gap: 0.2rem; }
@@ -169,6 +171,30 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 .ia-msg.info { background: #e8f5e9; align-self: flex-start; color: #2e7d32; }
 .ia-msg.warn { background: #fff8e1; align-self: flex-start; color: #8d6e00; border-left: 3px solid #ffb300; }
 .ia-msg.warn code { background: rgba(0,0,0,0.06); padding: 0 0.2rem; border-radius: 3px; font-size: 0.9em; }
+
+/* === Markdown del chat IA (renderAiMarkdown) === */
+.ia-msg p { margin: 0 0 0.3rem; }
+.ia-msg p:last-child { margin-bottom: 0; }
+.ia-msg ul, .ia-msg ol { margin: 0.2rem 0 0.3rem; padding-left: 1.15rem; }
+.ia-msg li { margin: 0.05rem 0; }
+.ia-msg li::marker { color: #1a73e8; }
+.ia-md-h1, .ia-md-h2, .ia-md-h3, .ia-md-h4 { font-weight: 700; margin: 0.45rem 0 0.15rem; color: #1f3c5a; }
+.ia-md-h1 { font-size: 1.1em; }
+.ia-md-h2 { font-size: 1.05em; }
+.ia-md-h3 { font-size: 1em; }
+.ia-md-h4 { font-size: 0.95em; }
+.ia-msg code { background: rgba(0,0,0,0.07); padding: 0 0.2rem; border-radius: 3px; font-size: 0.95em; word-break: break-all; }
+.ia-msg .ia-md-pre { background: #eceff1; border: 1px solid #dde3e6; border-radius: 6px; padding: 0.4rem; margin: 0.3rem 0; overflow-x: auto; }
+.ia-msg .ia-md-pre code { background: none; padding: 0; white-space: pre; word-break: normal; font-size: 0.9em; }
+.ia-msg hr { border: none; border-top: 1px solid rgba(0,0,0,0.15); margin: 0.4rem 0; }
+.ia-md-quote { border-left: 3px solid #b9c6d1; padding-left: 0.5rem; color: #5b6b7a; margin: 0.25rem 0; }
+.ia-md-table { border-collapse: collapse; margin: 0.3rem 0; font-size: 0.95em; max-width: 100%; }
+.ia-md-table th, .ia-md-table td { border: 1px solid #d5dde3; padding: 0.15rem 0.35rem; text-align: left; }
+.ia-md-table th { background: #e8eef3; font-weight: 600; }
+.ia-md-table tr:nth-child(even) td { background: #fafbfc; }
+.ia-msg a { color: #1565c0; text-decoration: underline; }
+.ia-msg a:hover { color: #0d47a1; }
+.ia-msg-meta { margin-top: 0.3rem; padding-top: 0.2rem; border-top: 1px dashed rgba(0,0,0,0.12); font-size: 0.58rem; line-height: 1.2; color: #9aa0a6; text-align: right; user-select: none; }
 .ia-warn-detail { font-size: 0.9em; opacity: 0.8; }
 .ia-warn-btn { background: #ffb300; color: #3e2723; border: none; border-radius: 4px; padding: 0.2rem 0.45rem; cursor: pointer; font-size: 0.65rem; margin-top: 0.3rem; font-weight: 600; }
 .ia-warn-btn:hover { background: #ffc107; }
@@ -178,6 +204,10 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 .ia-refresh-btn:hover { background: #e8eaed; }
 .ia-refresh-btn:disabled { opacity: 0.5; cursor: wait; }
 .ia-models-count { font-size: 0.6rem; color: #999; }
+
+/* Borra el historial de ESTA pestaña (una clave de localStorage por proveedor) */
+.ia-clear-btn { background: #fff3e0; border: 1px solid #ffcc80; border-radius: 4px; padding: 0.1rem 0.3rem; cursor: pointer; font-size: 0.7rem; line-height: 1.2; margin-left: auto; }
+.ia-clear-btn:hover { background: #ffe0b2; }
 
 .ia-input-row { display: flex; padding: 0.4rem; border-top: 1px solid #eee; gap: 0.3rem; flex-shrink: 0; }
 .ia-input-row input { flex: 1; padding: 0.3rem 0.5rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.72rem; }

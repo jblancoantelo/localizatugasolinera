@@ -1,5 +1,33 @@
 # CHANGELOG
 
+## [2026-10-08] — Historial de conversación por proveedor en localStorage
+
+### 💬 El chat IA recuerda la conversación entre sesiones
+
+Antes los mensajes vivían solo en el DOM: al recargar (F5) cada pestaña
+volvía a su mensaje de bienvenida y la conversación se perdía.
+
+| Cambio | Detalle |
+|--------|---------|
+| `js/ai-chat.js` | **Nuevo** `AI_CHAT_HISTORY_PREFIX = 'gasolineras_ai_chat_'`: cada pestaña guarda sus mensajes en una **clave propia** (`gasolineras_ai_chat_llm7`, …, `_general`) como `[{role, content}]` con el Markdown original, máx. 100 mensajes |
+| `js/ai-chat.js` | **Nuevo** `persistAiChat()` vuelca solo los mensajes reales (user/assistant, con `data-raw`): errores, loading y el `.empty` no se guardan. Se llama en `handleAiSend()` (tras el usuario y tras la respuesta), `handleAiGeneralSend()`/`generalAsk()` y `editAiMessage()` |
+| `js/ai-chat.js` | **Nuevo** `restoreAiChatHistory()` en `initAiChat()`, antes del chequeo de chat vacío, que reconstruye con `addAiMessage()` (Markdown + botón ✎) |
+| `js/ai-chat.js` | **Nuevo** `clearAiChatHistory()` + delegación del botón 🗑 en `initAiChat()` |
+| `index.html` | Botón 🗑 (`.ia-clear-btn`, `data-iaclear`) en la fila `.ia-config` de los 8 paneles (General y los 7 proveedores) |
+| `css/styles.css` | `.ia-clear-btn` alineado a la derecha de la fila de configuración |
+| `js/storage.js` | Sin cambios: las claves nuevas aparecen solas en Config → Caché → `localStorage` (prefijo `gasolineras_`) con su ✕ |
+
+### 🧪 Verificación
+
+- `node check-syntax.mjs`: 19/19 ficheros OK
+- Suite completa: **201 tests** (194 HTTP + 7 file://), 4 nuevos:
+  - al enviar se guarda la conversación en una clave por proveedor sin tocar la de los demás
+  - los mensajes internos (error) no entran en el historial
+  - al volver a abrir la app el chat se reconstruye (Markdown + botón editar)
+  - hay un botón 🗑 por pestaña y borra solo el historial de su proveedor
+- Limpieza ampliada en `testAiChat()`: se borran todas las claves `gasolineras_ai_chat_`
+- `node docs/test/full_test.mjs`: 201 ✅ 0 ❌
+
 ## [2026-10-07] — Modelos en orden alfabético y último modelo recordado por proveedor
 
 ### 🔤 Los desplegables de modelos se ordenan alfabéticamente

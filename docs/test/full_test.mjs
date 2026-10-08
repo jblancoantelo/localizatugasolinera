@@ -1593,6 +1593,357 @@ async function testAiChat(page) {
   log('IA', 'Si el último modelo desapareció de la lista se vuelve al default',
     restauradoModelo.sinOpcion === 'codestral-latest', restauradoModelo.sinOpcion);
 
+  // --- El Markdown del LLM se formatea en el chat (no se amontona en un bloque) ---
+  // Los modelos devuelven **negrita**, saltos de línea, listas y tablas. Antes
+  // se pintaba con innerHTML directo: el navegador colapsaba los saltos y los
+  // ** se veían literales. renderAiMarkdown() lo convierte a HTML y el texto
+  // original se guarda en data-raw para poder reenviarlo y editarlo.
+  const formato = await page.evaluate(() => {
+    const msgs = document.getElementById('iaMessagesLlm7');
+    const input = document.getElementById('iaInputLlm7');
+    const guardadoHtml = msgs.innerHTML;
+    const guardadoInput = input.value;
+    msgs.innerHTML = '';
+    const md = ['# Resumen', '', '**Repsol** baja a *1,542* €/L.', '',
+      '- Atocha: 1,589', '- Sur: 1,542', '', '1. Primero', '2. Segundo', '',
+      'Linea uno', 'Linea dos', '',
+      'Código `inline` y [web](https://example.com)', '',
+      '| Estación | Precio |', '|---|---|', '| Atocha | 1,589 |', '',
+      '```js', 'const x = 1 < 2;', '```'].join('\n');
+    const usuarioTxt = 'hola <b>mundo</b> & adios';
+    addAiMessage(msgs, usuarioTxt, 'user', 'llm7', input);
+    addAiMessage(msgs, md, 'assistant', 'llm7', input);
+    const asistente = msgs.querySelector('.ia-msg.assistant');
+    const usuario = msgs.querySelector('.ia-msg.user');
+    const r = {
+      titulo: !!asistente.querySelector('.ia-md-h1'),
+      negrita: !!asistente.querySelector('b') && asistente.querySelector('b').textContent === 'Repsol',
+      cursiva: !!asistente.querySelector('i'),
+      parrafos: asistente.querySelectorAll('p').length === 3 && asistente.querySelectorAll('br').length >= 1,
+      listas: asistente.querySelectorAll('li').length === 4 && !!asistente.querySelector('ol'),
+      codigo: asistente.querySelectorAll('code').length === 2 && !!asistente.querySelector('.ia-md-pre'),
+      tabla: !!asistente.querySelector('.ia-md-table'),
+      enlace: !!asistente.querySelector('a[href="https://example.com"]'),
+      sinAsteriscos: !/\*\*/.test(asistente.textContent),
+      rawAsistente: asistente.dataset.raw === md,
+      userEscapado: !usuario.querySelector('b') && /&lt;b&gt;mundo/.test(usuario.innerHTML)
+        && usuario.textContent.replace('✎', '') === usuarioTxt,
+      rawUsuario: usuario.dataset.raw === usuarioTxt
+    };
+    const enviados = getMessagesForProvider('llm7');
+    r.historial = enviados.length === 2
+      && enviados[0].role === 'user' && enviados[0].content === usuarioTxt
+      && enviados[1].role === 'assistant' && enviados[1].content === md;
+    // El texto del modelo se escapa: un <img onerror> no debe llegar a ejecutarse
+    delete window.__pwned;
+    addAiMessage(msgs, 'Cuidado <img src=x onerror="window.__pwned=1">', 'assistant', 'llm7', input);
+    r.sinXss = !msgs.querySelector('img') && !window.__pwned;
+    editAiMessage('llm7', usuario, input);
+    r.editDevuelve = input.value === usuarioTxt;
+    msgs.innerHTML = guardadoHtml;
+    input.value = guardadoInput;
+    return r;
+  });
+  const fmt = formato;
+  log('IA', 'El Markdown del LLM se pinta formateado (títulos, negrita, cursiva, párrafos)',
+    fmt.titulo && fmt.negrita && fmt.cursiva && fmt.parrafos && fmt.sinAsteriscos,
+    `h1:${fmt.titulo} b:${fmt.negrita} i:${fmt.cursiva} p:${fmt.parrafos} sin**:${fmt.sinAsteriscos}`);
+  log('IA', 'Listas, código, enlaces y tablas se convierten a HTML (no texto pegado)',
+    fmt.listas && fmt.codigo && fmt.tabla && fmt.enlace,
+    `li:${fmt.listas} code:${fmt.codigo} table:${fmt.tabla} a:${fmt.enlace}`);
+  log('IA', 'El texto del usuario se escapa: una etiqueta HTML no se inyecta',
+    fmt.userEscapado && fmt.sinXss, `user:${fmt.userEscapado} xss:${fmt.sinXss}`);
+  log('IA', 'El historial reenvía el Markdown original (data-raw), no el HTML renderizado',
+    fmt.historial && fmt.rawAsistente && fmt.rawUsuario, `hist:${fmt.historial} rawA:${fmt.rawAsistente} rawU:${fmt.rawUsuario}`);
+  log('IA', 'Editar un mensaje recupera el texto original en el input', fmt.editDevuelve, String(fmt.editDevuelve));
+
+  // --- Marca de agua: modelo usado y tiempo bajo cada respuesta ---
+  const marca = await page.evaluate(async () => {
+    const msgs = document.getElementById('iaMessagesLlm7');
+    const input = document.getElementById('iaInputLlm7');
+    const sel = document.getElementById('iaModelLlm7');
+    const btn = document.getElementById('iaSendLlm7');
+    const guardado = { html: msgs.innerHTML, input: input.value, sel: sel.value };
+    const realSend = AI_PROVIDERS.llm7.send;
+    AI_PROVIDERS.llm7.send = async () => {
+      await new Promise(r => setTimeout(r, 150));
+      return 'Listo **ok**';
+    };
+    msgs.innerHTML = '';
+    sel.value = 'codestral-latest';
+    input.value = 'hola';
+    await handleAiSend('llm7', sel, input, msgs, btn);
+    const div = msgs.querySelector('.ia-msg.assistant');
+    const meta = div && div.querySelector('.ia-msg-meta');
+    const texto = meta ? meta.textContent : '';
+    const mseg = /([0-9]+)\s*ms/.exec(texto);
+    const seg = /([0-9]+[,.][0-9]+)\s*s/.exec(texto);
+    const r = {
+      existe: !!meta,
+      modelo: /codestral-latest/.test(texto),
+      tiempo: (!!mseg && +mseg[1] >= 100) || (!!seg && parseFloat(seg[1].replace(',', '.')) >= 0.1),
+      medida: texto.split('·')[1] ? texto.split('·')[1].trim() : '',
+      alFinal: !!meta && div.lastElementChild === meta,
+      sinAsteriscos: !!div && !/\*\*/.test(div.textContent),
+      historialLimpio: !getMessagesForProvider('llm7').some(m => /⏱|ia-msg-meta/.test(m.content))
+    };
+    AI_PROVIDERS.llm7.send = realSend;
+    msgs.innerHTML = guardado.html;
+    input.value = guardado.input;
+    sel.value = guardado.sel;
+    return r;
+  });
+  log('IA', 'La respuesta lleva una marca de agua con el modelo y el tiempo empleado',
+    marca.existe && marca.modelo && marca.tiempo && marca.alFinal,
+    `meta:${marca.existe} modelo:${marca.modelo} tiempo:${marca.tiempo} (${marca.medida})`);
+  log('IA', 'La marca de agua no se reenvía al modelo ni estorba el formateo',
+    marca.historialLimpio && marca.sinAsteriscos, `historial:${marca.historialLimpio} md:${marca.sinAsteriscos}`);
+
+  // --- Pestaña General: la MISMA pregunta a todos los visibles, en paralelo ---
+  const general = await page.evaluate(async () => {
+    const msgs = document.getElementById('iaMessagesGeneral');
+    const input = document.getElementById('iaInputGeneral');
+    const btn = document.getElementById('iaSendGeneral');
+    const guardado = { html: msgs.innerHTML, input: input.value, ocultos: localStorage.getItem(AI_HIDDEN_KEY) };
+    const realReady = window.isAiProviderReady;
+    const reales = {};
+    for (const p of Object.keys(AI_PROVIDERS)) reales[p] = AI_PROVIDERS[p].send;
+    window.isAiProviderReady = () => true;
+    saveAiHiddenProviders(['mistral']);        // oculto: no debe recibir la consulta
+    saveAiLastModel('llm7', 'minimax-m2.7');   // se respeta el último modelo de cada proveedor
+
+    const llamadas = [];
+    for (const p of Object.keys(AI_PROVIDERS)) {
+      AI_PROVIDERS[p].send = async (key, model, messages) => {
+        llamadas.push({ p, model, users: messages.filter(m => m.role === 'user').length });
+        await new Promise(r => setTimeout(r, 80));
+        return 'ok de **' + p + '**';
+      };
+    }
+    msgs.innerHTML = '';
+    input.value = '¿cuál es la más barata?';
+    const t0 = Date.now();
+    await handleAiGeneralSend(input, msgs, btn);
+    const ms = Date.now() - t0;
+    for (const p of Object.keys(AI_PROVIDERS)) AI_PROVIDERS[p].send = reales[p];
+    window.isAiProviderReady = realReady;
+
+    const asistentes = [...msgs.querySelectorAll('.ia-msg.assistant')];
+    const metas = asistentes.map(a => {
+      const m = a.querySelector('.ia-msg-meta');
+      return m ? m.textContent : '';
+    });
+    const r = {
+      llamadas: llamadas.length,
+      ocultoFuera: !llamadas.some(l => l.p === 'mistral'),
+      ultimoModelo: (llamadas.find(l => l.p === 'llm7') || {}).model,
+      mismaConsulta: llamadas.length > 0 && llamadas.every(l => l.users === 1),
+      paralelo: ms < 400,   // en serie serían 6 × 80 ms
+      duracion: ms,
+      respuestas: asistentes.length,
+      metas: metas.length,
+      metaGeneral: metas.length > 0 && metas.every(t => t.includes('·') && /([0-9]+) ms|[0-9]+,[0-9] s/.test(t)),
+      metaLlm7: metas.some(t => /LLM7\.io/.test(t) && /minimax-m2\.7/.test(t)),
+      sinLoading: !msgs.querySelector('.ia-msg.loading'),
+      inputLibre: !input.disabled && !btn.disabled && input.value === '',
+      tabVisible: !document.querySelector('.ia-provider-tab[data-iaprovider="general"]').classList.contains('ia-hidden'),
+      casillaConfig: !!document.querySelector('#aiProviderVisibility [data-ia-provider="general"]'),
+      usuarioGuardado: !!msgs.querySelector('.ia-msg.user')
+    };
+    if (guardado.ocultos === null) localStorage.removeItem(AI_HIDDEN_KEY);
+    else localStorage.setItem(AI_HIDDEN_KEY, guardado.ocultos);
+    localStorage.removeItem(AI_LAST_MODEL_KEY);
+    msgs.innerHTML = guardado.html;
+    input.value = guardado.input;
+    applyAiProviderVisibility();
+    return r;
+  });
+  const g = general;
+  log('IA', 'General lanza la consulta en paralelo a todos los proveedores visibles (el oculto no)',
+    g.llamadas === 6 && g.ocultoFuera && g.paralelo && g.mismaConsulta,
+    `llamadas:${g.llamadas} ocultoFuera:${g.ocultoFuera} paralelo:${g.paralelo} (${g.duracion} ms) mismoContexto:${g.mismaConsulta}`);
+  log('IA', 'Cada respuesta lleva proveedor · modelo · tiempo (el último modelo de cada uno)',
+    g.respuestas === 6 && g.metas === 6 && g.metaGeneral && g.metaLlm7 && g.ultimoModelo === 'minimax-m2.7',
+    `respuestas:${g.respuestas} metaLlm7:${g.metaLlm7} modelo:${g.ultimoModelo}`);
+  log('IA', 'General es la primera pestaña, nunca se oculta y no tiene casilla en Config',
+    g.tabVisible && !g.casillaConfig, `visible:${g.tabVisible} casilla:${g.casillaConfig}`);
+  log('IA', 'Al terminar se limpia el loading, se reactiva el input y el usuario queda en el historial',
+    g.sinLoading && g.inputLibre && g.usuarioGuardado,
+    `loading:${g.sinLoading} input:${g.inputLibre} user:${g.usuarioGuardado}`);
+
+  // --- Pestañas de IA ocultables desde Config (por proveedor) ---
+  const visibilidad = await page.evaluate(() => {
+    const tabs = () => [...document.querySelectorAll('.ia-provider-tab')];
+    const visibles = () => tabs().filter(t => !t.classList.contains('ia-hidden'));
+    const proveedoresVisibles = () => visibles().filter(t => t.dataset.iaprovider !== 'general');
+    const panel = p => document.querySelector('.ia-provider-panel[data-iapanel="' + p + '"]');
+    const activa = () => document.querySelector('.ia-provider-tab.active').dataset.iaprovider;
+    const activaInicial = activa();
+    const antes = {
+      casillas: document.querySelectorAll('#aiProviderVisibility input[type="checkbox"]').length,
+      marcadas: document.querySelectorAll('#aiProviderVisibility input:checked').length,
+      tabs: tabs().length,
+      visibles: visibles().length,
+      ocultos: loadAiHiddenProviders().length,
+      generalPrimero: tabs()[0].dataset.iaprovider
+    };
+
+    // 1) Oculta dos proveedores que no son el activo
+    saveAiHiddenProviders(['mistral', 'openrouter']);
+    applyAiProviderVisibility();
+    const ocultaDos = {
+      tabMistral: document.querySelector('.ia-provider-tab[data-iaprovider="mistral"]').classList.contains('ia-hidden'),
+      panelMistral: panel('mistral').classList.contains('ia-hidden'),
+      panelAbierto: !panel('mistral').classList.contains('active'),
+      visibles: visibles().length,
+      activa: activa()
+    };
+
+    // 2) Oculta también la pestaña activa de proveedor: debe saltar a la primera
+    //    visible (que en este caso es General, que nunca se oculta)
+    document.querySelector('.ia-provider-tab[data-iaprovider="groq"]').click();
+    const anterior = activa();
+    saveAiHiddenProviders(['mistral', 'openrouter', 'groq']);
+    applyAiProviderVisibility();
+    const salto = {
+      anterior,
+      nueva: activa(),
+      visible: !document.querySelector('.ia-provider-tab.active').classList.contains('ia-hidden'),
+      panelActivo: !!document.querySelector('.ia-provider-panel.active:not(.ia-hidden)')
+    };
+
+    // 3) General no se puede ocultar ni metiéndolo en la lista guardada
+    saveAiHiddenProviders(Object.keys(AI_PROVIDERS).concat('general'));
+    applyAiProviderVisibility();
+    const generalNunca = {
+      visible: !document.querySelector('.ia-provider-tab[data-iaprovider="general"]').classList.contains('ia-hidden'),
+      ocultos: loadAiHiddenProviders().filter(p => p === 'general').length
+    };
+
+    // 4) No se puede ocultar el último proveedor visible: la casilla se revierte
+    const todas = Object.keys(AI_PROVIDERS);
+    const ultima = tabs().find(t => t.dataset.iaprovider !== 'general').dataset.iaprovider;
+    saveAiHiddenProviders(todas.filter(p => p !== ultima));
+    renderAiProviderVisibilityConfig();
+    const cb = document.getElementById('iaVis' + ultima.replace(/(^|-)([a-z])/g, (_, d, c) => c.toUpperCase()));
+    cb.click();
+    const ultimaCasilla = {
+      sigueMarcada: cb.checked === true,
+      hint: document.getElementById('aiProviderVisibilityHint').textContent,
+      sigueVisible: proveedoresVisibles().length === 1
+    };
+
+    // 5) Restauración: todo visible de nuevo y nada oculto
+    saveAiHiddenProviders([]);
+    renderAiProviderVisibilityConfig();
+    const restaurado = {
+      visibles: visibles().length,
+      ocultos: loadAiHiddenProviders().length,
+      casillas: document.querySelectorAll('#aiProviderVisibility input:checked').length,
+      panelesOcultos: document.querySelectorAll('.ia-provider-panel.ia-hidden').length
+    };
+    return { antes, ocultaDos, salto, generalNunca, ultimaCasilla, restaurado, activaInicial };
+  });
+  const v = visibilidad;
+  log('IA', 'Config trae una casilla por proveedor y por defecto están las 7 visibles',
+    v.antes.casillas === 7 && v.antes.marcadas === 7 && v.antes.tabs === 8
+    && v.antes.visibles === 8 && v.antes.ocultos === 0 && v.antes.generalPrimero === 'general',
+    `casillas:${v.antes.casillas} marcadas:${v.antes.marcadas} tabs:${v.antes.tabs} visibles:${v.antes.visibles}`);
+  log('IA', 'Al desmarcar un proveedor se ocultan su pestaña y su panel (el activo no se toca)',
+    v.ocultaDos.tabMistral && v.ocultaDos.panelMistral && v.ocultaDos.panelAbierto
+    && v.ocultaDos.visibles === 6 && v.ocultaDos.activa === v.activaInicial,
+    `visibles:${v.ocultaDos.visibles} activa:${v.ocultaDos.activa} panelAbierto:${v.ocultaDos.panelAbierto}`);
+  log('IA', 'Si se oculta la pestaña activa se salta a la primera visible con su panel',
+    v.salto.visible && v.salto.panelActivo && v.salto.nueva === 'general' && v.salto.anterior === 'groq',
+    `activa:${v.salto.anterior} → nueva:${v.salto.nueva} visible:${v.salto.visible} panel:${v.salto.panelActivo}`);
+  log('IA', 'La pestaña General no se oculta ni aunque aparezca en la lista guardada',
+    v.generalNunca.visible && v.generalNunca.ocultos === 0,
+    `visible:${v.generalNunca.visible} enLista:${v.generalNunca.ocultos}`);
+  log('IA', 'No se puede ocultar el último proveedor visible (la casilla se revierte)',
+    v.ultimaCasilla.sigueMarcada && v.ultimaCasilla.sigueVisible && /al menos una/.test(v.ultimaCasilla.hint),
+    `marcada:${v.ultimaCasilla.sigueMarcada} visibles:${v.ultimaCasilla.sigueVisible} hint:${v.ultimaCasilla.hint}`);
+  log('IA', 'La elección se guarda en localStorage y al restaurarlas vuelven las 8',
+    v.restaurado.visibles === 8 && v.restaurado.ocultos === 0
+    && v.restaurado.casillas === 7 && v.restaurado.panelesOcultos === 0,
+    JSON.stringify(v.restaurado));
+
+  // --- Historial de conversación por proveedor en localStorage ---
+  // Cada pestaña tiene su propia clave (gasolineras_ai_chat_<proveedor>), así
+  // que se puede borrar una sin tocar las demás. Solo se guardan los mensajes
+  // reales (user/assistant) con su Markdown original: ni errores, ni loading,
+  // ni el mensaje de bienvenida. Al volver a abrir la app el chat se reconstruye.
+  const historial = await page.evaluate(async () => {
+    const clave = aiChatHistoryKey('llm7');
+    const msgs = document.getElementById('iaMessagesLlm7');
+    const input = document.getElementById('iaInputLlm7');
+    const sel = document.getElementById('iaModelLlm7');
+    const btn = document.getElementById('iaSendLlm7');
+    const guardado = {
+      html: msgs.innerHTML, input: input.value,
+      llm7: localStorage.getItem(clave),
+      groq: localStorage.getItem(aiChatHistoryKey('groq')),
+      botones: document.querySelectorAll('.ia-clear-btn').length
+    };
+    localStorage.removeItem(clave);
+    msgs.innerHTML = '';
+    const realSend = AI_PROVIDERS.llm7.send;
+    AI_PROVIDERS.llm7.send = async () => '**respuesta** de prueba';
+    input.value = 'pregunta de prueba';
+    await handleAiSend('llm7', sel, input, msgs, btn);
+
+    const trasEnvio = loadAiChatHistory('llm7');
+    // Un error no debe colarse en el historial
+    addAiMessage(msgs, '❌ Error: fallo', 'error');
+    persistAiChat('llm7');
+    const conError = loadAiChatHistory('llm7');
+    const groqTrasEnvio = localStorage.getItem(aiChatHistoryKey('groq')) === guardado.groq;
+
+    // Simular la recarga: contenedor vacío → se reconstruye desde localStorage
+    msgs.innerHTML = '';
+    const reconstruido = restoreAiChatHistory('llm7', msgs, input);
+    const reconstruidoEls = msgs.querySelectorAll('.ia-msg');
+    const r = {
+      trasEnvio, conError, groqTrasEnvio, reconstruido,
+      botones: guardado.botones,
+      user: reconstruidoEls[0] && reconstruidoEls[0].classList.contains('user'),
+      editar: !!(reconstruidoEls[0] && reconstruidoEls[0].querySelector('.ia-edit-btn')),
+      md: !!(reconstruidoEls[1] && reconstruidoEls[1].querySelector('b')),
+      raw: reconstruidoEls[1] && reconstruidoEls[1].dataset.raw === '**respuesta** de prueba'
+    };
+
+    // 🗑 borra su clave, su chat y deja el mensaje de bienvenida
+    clearAiChatHistory('llm7');
+    r.claveBorrada = localStorage.getItem(clave) === null;
+    r.soloVacio = msgs.querySelectorAll('.ia-msg').length === 1
+      && msgs.querySelector('.ia-msg.empty') !== null;
+    r.groqIntacta = localStorage.getItem(aiChatHistoryKey('groq')) === guardado.groq;
+
+    AI_PROVIDERS.llm7.send = realSend;
+    msgs.innerHTML = guardado.html;
+    input.value = guardado.input;
+    if (guardado.llm7 === null) localStorage.removeItem(clave);
+    else localStorage.setItem(clave, guardado.llm7);
+    if (guardado.groq === null) localStorage.removeItem(aiChatHistoryKey('groq'));
+    else localStorage.setItem(aiChatHistoryKey('groq'), guardado.groq);
+    return r;
+  });
+  const h = historial;
+  const envioOk = h.trasEnvio.length === 2
+    && h.trasEnvio[0].role === 'user' && h.trasEnvio[0].content === 'pregunta de prueba'
+    && h.trasEnvio[1].role === 'assistant' && h.trasEnvio[1].content === '**respuesta** de prueba';
+  log('IA', 'Al enviar se guarda la conversación en localStorage, una clave por proveedor',
+    envioOk && h.groqTrasEnvio,
+    'msgs:' + h.trasEnvio.length + ' groq sin tocar:' + h.groqTrasEnvio);
+  log('IA', 'Los mensajes internos (error) no entran en el historial',
+    h.conError.length === h.trasEnvio.length && !h.conError.some(m => /Error/.test(m.content)),
+    'con error: ' + h.conError.length);
+  log('IA', 'Al volver a abrir la app el chat se reconstruye (Markdown + botón editar)',
+    h.reconstruido && h.user && h.editar && h.md && h.raw,
+    `recon:${h.reconstruido} user:${h.user} ✎:${h.editar} md:${h.md} raw:${h.raw}`);
+  log('IA', 'Hay un botón 🗑 por pestaña y borra solo el historial de su proveedor',
+    h.botones === 8 && h.claveBorrada && h.soloVacio && h.groqIntacta,
+    `botones:${h.botones} clave:${h.claveBorrada} vacio:${h.soloVacio} groq:${h.groqIntacta}`);
+
   // --- Restaurar fetch y limpiar ---
   await page.evaluate(() => {
     if (window.__realFetch) window.fetch = window.__realFetch;
@@ -1600,6 +1951,10 @@ async function testAiChat(page) {
     localStorage.removeItem(AI_LAST_MODEL_KEY);
     localStorage.removeItem(AI_KEYS_KEY);
     localStorage.removeItem(AI_PROXY_KEY);
+    localStorage.removeItem(AI_HIDDEN_KEY);
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('gasolineras_ai_chat_'))
+      .forEach(k => localStorage.removeItem(k));
     const input = document.getElementById('iaKeyLlm7');
     if (input) input.value = '';
     AI_PROVIDERS.llm7.key = null;

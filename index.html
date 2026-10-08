@@ -104,7 +104,8 @@
     <div class="ia-area">
       <div class="ia-container">
         <div class="ia-provider-tabs" id="iaProviderTabs">
-          <button class="ia-provider-tab active" data-iaprovider="groq">Groq</button>
+          <button class="ia-provider-tab active" data-iaprovider="general">General</button>
+          <button class="ia-provider-tab" data-iaprovider="groq">Groq</button>
           <button class="ia-provider-tab" data-iaprovider="mistral">Mistral</button>
           <button class="ia-provider-tab" data-iaprovider="openrouter">OpenRouter</button>
           <button class="ia-provider-tab" data-iaprovider="llm7">LLM7.io</button>
@@ -112,12 +113,27 @@
           <button class="ia-provider-tab" data-iaprovider="google">Google Gemini</button>
           <button class="ia-provider-tab" data-iaprovider="chrome-nano">Chrome Built-in AI</button>
         </div>
-        <div class="ia-provider-panel active" data-iapanel="groq">
+        <div class="ia-provider-panel active" data-iapanel="general">
+          <div class="ia-config">
+            <span style="font-size:0.65rem;color:#888">🚀 Misma pregunta a todos los proveedores visibles, en paralelo</span>
+            <span id="iaStatusGeneral" style="font-size:0.6rem;color:#999"></span>
+            <button class="ia-clear-btn" data-iaclear="general" title="Borrar el historial de este chat">🗑</button>
+          </div>
+          <div class="ia-chat">
+            <div class="ia-messages" id="iaMessagesGeneral"></div>
+            <div class="ia-input-row">
+              <input type="text" id="iaInputGeneral" placeholder="Pregunta a todos los proveedores a la vez...">
+              <button id="iaSendGeneral">Enviar</button>
+            </div>
+          </div>
+        </div>
+        <div class="ia-provider-panel" data-iapanel="groq">
           <div class="ia-config">
             <label><select id="iaModelGroq"><option value="allam-2-7b">ALLaM 2 7B</option><option value="openai/gpt-oss-120b">GPT-OSS 120B</option><option value="openai/gpt-oss-20b">GPT-OSS 20B</option><option value="qwen/qwen3.8-27b" selected>Qwen 3.8 27B</option></select></label>
             <button class="ia-refresh-btn" id="iaRefreshModelsGroq" title="Actualizar lista de modelos de Groq">🔄</button>
             <span class="ia-models-count" id="iaModelsStatusGroq"></span>
             <span id="iaStatusGroq" style="font-size:0.6rem;color:#999">⚠️ Sin API Key</span>
+            <button class="ia-clear-btn" data-iaclear="groq" title="Borrar el historial de este chat">🗑</button>
           </div>
           <div class="ia-chat">
             <div class="ia-messages" id="iaMessagesGroq"></div>
@@ -133,6 +149,7 @@
             <button class="ia-refresh-btn" id="iaRefreshModelsMistral" title="Actualizar lista de modelos de Mistral">🔄</button>
             <span class="ia-models-count" id="iaModelsStatusMistral"></span>
             <span id="iaStatusMistral" style="font-size:0.6rem;color:#999">⚠️ Sin API Key</span>
+            <button class="ia-clear-btn" data-iaclear="mistral" title="Borrar el historial de este chat">🗑</button>
           </div>
           <div class="ia-chat">
             <div class="ia-messages" id="iaMessagesMistral"></div>
@@ -148,6 +165,7 @@
             <button class="ia-refresh-btn" id="iaRefreshModelsOpenrouter" title="Actualizar lista de modelos gratis de OpenRouter">🔄</button>
             <span class="ia-models-count" id="iaModelsStatusOpenrouter"></span>
             <span id="iaStatusOpenrouter" style="font-size:0.6rem;color:#999">⚠️ Sin API Key</span>
+            <button class="ia-clear-btn" data-iaclear="openrouter" title="Borrar el historial de este chat">🗑</button>
           </div>
           <div class="ia-chat">
             <div class="ia-messages" id="iaMessagesOpenrouter"></div>
@@ -163,6 +181,7 @@
             <button class="ia-refresh-btn" id="iaRefreshModelsLlm7" title="Actualizar lista de modelos de LLM7.io">🔄</button>
             <span class="ia-models-count" id="iaModelsStatusLlm7"></span>
             <span id="iaStatusLlm7" style="font-size:0.6rem;color:#999">ℹ️ Sin clave: acceso anónimo (500k tokens/día)</span>
+            <button class="ia-clear-btn" data-iaclear="llm7" title="Borrar el historial de este chat">🗑</button>
           </div>
           <div class="ia-chat">
             <div class="ia-messages" id="iaMessagesLlm7"></div>
@@ -178,6 +197,7 @@
             <button class="ia-refresh-btn" id="iaRefreshModelsNvidia" title="Actualizar lista de modelos de NVIDIA (vía proxy)">🔄</button>
             <span class="ia-models-count" id="iaModelsStatusNvidia"></span>
             <span id="iaStatusNvidia" style="font-size:0.6rem;color:#999">✅ Proxy por defecto (cámbialo en Config → IA)</span>
+            <button class="ia-clear-btn" data-iaclear="nvidia" title="Borrar el historial de este chat">🗑</button>
           </div>
           <div class="ia-chat">
             <div class="ia-messages" id="iaMessagesNvidia"></div>
@@ -193,6 +213,7 @@
             <button class="ia-refresh-btn" id="iaRefreshModelsGoogle" title="Actualizar lista de modelos de Google">🔄</button>
             <span class="ia-models-count" id="iaModelsStatusGoogle"></span>
             <span id="iaStatusGoogle" style="font-size:0.6rem;color:#999">⚠️ Sin API Key</span>
+            <button class="ia-clear-btn" data-iaclear="google" title="Borrar el historial de este chat">🗑</button>
           </div>
           <div class="ia-chat">
             <div class="ia-messages" id="iaMessagesGoogle"></div>
@@ -206,6 +227,7 @@
           <div class="ia-config">
             <span style="font-size:0.65rem;color:#888">🤖 Gemini Nano integrado en Chrome</span>
             <span id="iaStatusChromeNano" style="font-size:0.6rem;color:#999"></span>
+            <button class="ia-clear-btn" data-iaclear="chrome-nano" title="Borrar el historial de este chat">🗑</button>
           </div>
           <div class="ia-chat">
             <div class="ia-messages" id="iaMessagesChromeNano"></div>
@@ -331,6 +353,12 @@
           <p class="config-desc" id="iaProxyTestStatus" style="margin:0 0 0.3rem;min-height:0.9rem"></p>
           <p class="config-desc" style="margin-top:0.2rem"><b>La URL que viene puesta es un ejemplo, no funciona:</b> Cloudflare publica cada Worker como <code>https://petrol-nvidia-proxy.&lt;tu-cuenta&gt;.workers.dev</code> (el subdominio de la cuenta es lo único que no puedes elegir) y el valor por defecto se queda sin él, así que ese host no existe. Mientras no pegues la real, NVIDIA aparece como no disponible en el chat y no se hace ninguna petición; el resto de proveedores no necesitan nada de esto.</p>
           <p class="config-desc" style="margin-top:0.2rem">Para desplegarlo (hace falta una cuenta de Cloudflare, gratuita): <code>cd workers</code> → <code>wrangler secret put NVIDIA_API_KEY</code> → <code>wrangler deploy</code>. El comando imprime la URL <b>con</b> el subdominio: cópiala al campo de arriba y pulsa <b>🔎 Probar</b>, que te dice si el Worker existe, si le falta la clave o si NVIDIA la rechaza. La clave nunca se guarda en el navegador y, al cambiar la URL, el catálogo de modelos se vuelve a consultar.</p>
+        </div>
+        <div class="config-card">
+          <h3>🧩 Pestañas de IA</h3>
+          <p class="config-desc">Elige qué proveedores aparecen en la pestaña IA. Por defecto están todos; desmarca los que no uses y dejan de mostrarse (su chat y sus mensajes se conservan por si los vuelves a activar).</p>
+          <div id="aiProviderVisibility" style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem;font-size:0.72rem"></div>
+          <p class="config-desc" id="aiProviderVisibilityHint" style="margin-top:0.4rem"></p>
         </div>
         <div class="config-card">
           <h3>🔄 Actualización de la app</h3>

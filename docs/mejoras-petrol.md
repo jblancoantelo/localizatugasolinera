@@ -1,5 +1,23 @@
 # Mejoras realizadas — Precios Gasolina España
 
+## 2026-10-08 — El chat IA recuerda la conversación y puedes borrarla por pestaña
+
+### Por qué hacía falta
+Los mensajes vivían **solo en el DOM**: al recargar (F5) cada pestaña volvía a su mensaje de bienvenida y la conversación entera se perdía. Y como las 8 pestañas comparten pantalla, tampoco había ninguna forma de limpiar el chat de un proveedor concreto sin esperar a que se fuera.
+
+### Una clave de localStorage por pestaña
+- `AI_CHAT_HISTORY_PREFIX = 'gasolineras_ai_chat_'` → `gasolineras_ai_chat_llm7`, `gasolineras_ai_chat_general`, … Cada clave guarda `[{ role, content }]` con el **Markdown original** de `data-raw`, hasta `AI_CHAT_HISTORY_MAX = 100` mensajes. Una clave por proveedor = se puede borrar una sin tocar las demás, y las 8 aparecen solas en Config → Caché → `localStorage` con su ✕.
+- `persistAiChat(provider)` vuelca el DOM leyendo **solo** `.ia-msg.user` y `.ia-msg.assistant`: los errores, los avisos, el "Pensando..." y el `.empty` de bienvenida no se guardan, porque se recargarían solos al abrir la app.
+- Se llama donde el historial cambia de verdad: `handleAiSend()` tras el mensaje del usuario (así una pregunta sobrevive a un fallo o a un Cancelar) y tras la respuesta, `handleAiGeneralSend()`/`generalAsk()` con la clave `general`, y `editAiMessage()` (que borra ese mensaje y todos los posteriores).
+- `restoreAiChatHistory()` se llama en `initAiChat()` **antes** del chequeo `children.length === 0`: si no, se crearía el mensaje de bienvenida encima. Reconstruye con `addAiMessage()`, así que repite `data-raw`, el Markdown renderizado y el botón ✎, sin lógica de pintado duplicada.
+- Botón 🗑 (`.ia-clear-btn` + `data-iaclear="<proveedor>"`) en la fila `.ia-config` de **los 8 paneles**, enganchado una sola vez en `initAiChat()`; `clearAiChatHistory()` borra su clave, vacía el contenedor y repone el `.empty`.
+
+### Tests
+- 201 tests (194 HTTP + 7 file://) en verde, 4 nuevos: guardado por clave aislada (no toca la de otro proveedor), que un error no se cuela en el historial, reconstrucción del chat desde `localStorage` (Markdown + ✎) y que el 🗑 borra solo su clave dejando la de los demás.
+- Limpieza en `testAiChat()` por prefijo (`gasolineras_ai_chat_`), igual que ya se hacía con `AI_LAST_MODEL_KEY`, porque los tests maquillan el DOM directamente con `msgs.innerHTML = …`.
+
+---
+
 ## 2026-10-04 — NVIDIA deja de fallar con un NetworkError y te dice qué URL poner
 
 ### Por qué hacía falta

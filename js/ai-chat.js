@@ -7,8 +7,8 @@ function aiModelReply(model, data, alternativeModel) {
   const content = (msg?.content || '').trim();
   if (content) return content;
   if (msg?.reasoning_content) {
-    return '<b>' + model + ' se pasó el tiempo pensando y no llegó a responder.</b>'
-      + '<br><span class="ia-warn-detail">Es un modelo de razonamiento: consume el máximo de tokens para pensar antes de contestar. Prueba con ' + alternativeModel + ' o formula una pregunta más corta.</span>';
+    return '**' + model + ' se pasó el tiempo pensando y no llegó a responder.**\n\n'
+      + 'Es un modelo de razonamiento: consume el máximo de tokens para pensar antes de contestar. Prueba con ' + alternativeModel + ' o formula una pregunta más corta.';
   }
   return '(sin respuesta)';
 }
@@ -189,11 +189,11 @@ const AI_PROVIDERS = {
     models: ['gemini-nano'],
     async send(apiKey, model, messages, signal) {
       if (!window.ai || !window.ai.canCreateTextSession) {
-        return '<b>Chrome Built-in AI no disponible.</b> Necesitas Chrome Canary/Dev con flags: <code>chrome://flags/#prompt-api-for-gemini-nano</code>';
+        return '**Chrome Built-in AI no disponible.** Necesitas Chrome Canary/Dev con flags: `chrome://flags/#prompt-api-for-gemini-nano`';
       }
       const { available } = await window.ai.canCreateTextSession();
       if (available !== 'readily') {
-        return '<b>Gemini Nano no está disponible.</b> Descárgalo desde: chrome://components → "Optimization Guide On Device Model" → "Check for update"';
+        return '**Gemini Nano no está disponible.** Descárgalo desde: chrome://components → "Optimization Guide On Device Model" → "Check for update"';
       }
       const session = await window.ai.createTextSession({ systemPrompt: AI_CONTEXT_INSTRUCTION });
       const result = await session.prompt(messages.map(m => m.content).join('\n'));
@@ -724,6 +724,12 @@ function markAiModelsStatus(provider, text) {
 // esta listo (sin clave, o sin URL de proxy) se deja el desplegable con la
 // lista fija; si lo esta, se sincroniza con el catalogo real (usando la cache).
 function autoRefreshAiModels(provider) {
+  // La pestaña General refresca a la vez a todos los visibles (cada uno con su
+  // propia caché de catálogo, así que solo pide los que llevan >24 h sin ver).
+  if (provider === AI_GENERAL) {
+    aiVisibleProviders().forEach(autoRefreshAiModels);
+    return;
+  }
   const config = AI_PROVIDERS[provider];
   if (!config || !config.listModelsUrl) return;
   // Un proxy con la URL de ejemplo no se consulta: se explica el motivo en el
@@ -842,6 +848,126 @@ function saveAiApiKeys(keys, invalid = []) {
     const cfgInput = document.getElementById(getProviderInputId(provider, 'iaKey'));
     if (cfgInput && cfgInput.value !== k) cfgInput.value = k;
   }
+}
+
+// ==========================================================================
+// Pestañas de IA visibles — Config → "Pestañas de IA"
+// Por defecto se muestran los 7 proveedores; en Config se puede ocultar
+// cualquiera de ellos (solo se pinta la pestaña y su panel, el chat y los
+// mensajes se conservan). Si se oculta la activa se salta a la primera
+// visible, y siempre debe quedar al menos una.
+const AI_HIDDEN_KEY = 'gasolineras_ai_hidden_providers';
+
+// Pestaña "General": no es un proveedor, no está en AI_PROVIDERS y por eso no
+// pide clave ni aparece en Config → "Pestañas de IA". Lanza la misma pregunta
+// en paralelo a todos los proveedores visibles y no se puede ocultar.
+const AI_GENERAL = 'general';
+
+const AI_PROVIDER_LABELS = {
+  'groq': 'Groq',
+  'mistral': 'Mistral',
+  'openrouter': 'OpenRouter',
+  'llm7': 'LLM7.io',
+  'nvidia': 'NVIDIA',
+  'google': 'Google Gemini',
+  'chrome-nano': 'Chrome Built-in AI'
+};
+
+function loadAiHiddenProviders() {
+  try {
+    const raw = localStorage.getItem(AI_HIDDEN_KEY);
+    const lista = raw ? JSON.parse(raw) : [];
+    return Array.isArray(lista) ? lista.filter(p => AI_PROVIDERS[p]) : [];
+  } catch { return []; }
+}
+
+function saveAiHiddenProviders(lista) {
+  const limpia = lista.filter(p => AI_PROVIDERS[p]);
+  if (!limpia.length) localStorage.removeItem(AI_HIDDEN_KEY);
+  else localStorage.setItem(AI_HIDDEN_KEY, JSON.stringify(limpia));
+}
+
+function isAiProviderHidden(provider) {
+  return loadAiHiddenProviders().includes(provider);
+}
+
+// Proveedores que consulta la pestaña General: los de AI_PROVIDERS que el
+// usuario no haya ocultado en Config → IA.
+function aiVisibleProviders() {
+  const ocultos = loadAiHiddenProviders();
+  return Object.keys(AI_PROVIDERS).filter(p => !ocultos.includes(p));
+}
+
+function applyAiProviderVisibility() {
+  const ocultos = loadAiHiddenProviders();
+  let activaVisible = false;
+  document.querySelectorAll('.ia-provider-tab').forEach(tab => {
+    const p = tab.dataset.iaprovider;
+    // General nunca se oculta, aunque alguien lo meta en la lista guardada.
+    const oculto = p !== AI_GENERAL && ocultos.includes(p);
+    tab.classList.toggle('ia-hidden', oculto);
+    const panel = document.querySelector('.ia-provider-panel[data-iapanel="' + p + '"]');
+    if (panel) {
+      panel.classList.toggle('ia-hidden', oculto);
+      if (oculto) panel.classList.remove('active');
+    }
+    if (!oculto && tab.classList.contains('active')) activaVisible = true;
+  });
+  // La pestaña activa quedó oculta: se salta a la primera visible (su click
+  // activa el panel y dispara el auto-refresh de modelos igual que un clic real)
+  if (!activaVisible) {
+    const primera = Array.from(document.querySelectorAll('.ia-provider-tab'))
+      .find(t => !t.classList.contains('ia-hidden'));
+    if (primera) primera.click();
+  }
+}
+
+function updateAiProviderVisibilityHint(texto) {
+  const hint = document.getElementById('aiProviderVisibilityHint');
+  if (hint) hint.textContent = texto || defaultAiProviderVisibilityHint();
+}
+
+function defaultAiProviderVisibilityHint() {
+  const ocultos = loadAiHiddenProviders();
+  const total = Object.keys(AI_PROVIDERS).length;
+  const fin = ' La pestaña General no se oculta: consulta a todos los visibles.';
+  if (!ocultos.length) return 'Los ' + total + ' proveedores están visibles.' + fin;
+  return 'Ocultas ' + ocultos.length + ' de ' + total + ' ('
+    + ocultos.map(p => AI_PROVIDER_LABELS[p] || p).join(', ') + '). Sus conversaciones se conservan.' + fin;
+}
+
+function renderAiProviderVisibilityConfig() {
+  const cont = document.getElementById('aiProviderVisibility');
+  if (!cont) return;
+  const ocultos = loadAiHiddenProviders();
+  cont.innerHTML = Object.keys(AI_PROVIDERS).map(p => {
+    const id = 'iaVis' + p.replace(/(^|-)([a-z])/g, (_, d, c) => c.toUpperCase());
+    return '<label for="' + id + '" style="display:flex;align-items:center;gap:0.3rem;cursor:pointer">'
+      + '<input type="checkbox" id="' + id + '" data-ia-provider="' + p + '"'
+      + (ocultos.includes(p) ? '' : ' checked') + '> ' + (AI_PROVIDER_LABELS[p] || p) + '</label>';
+  }).join('');
+
+  if (!cont.dataset.listener) {
+    cont.dataset.listener = '1';
+    cont.addEventListener('change', e => {
+      const cb = e.target.closest('input[type="checkbox"][data-ia-provider]');
+      if (!cb) return;
+      const p = cb.dataset.iaProvider;
+      const actual = loadAiHiddenProviders();
+      const lista = cb.checked ? actual.filter(x => x !== p)
+        : (actual.includes(p) ? actual : actual.concat(p));
+      if (!Object.keys(AI_PROVIDERS).some(x => !lista.includes(x))) {
+        cb.checked = true;
+        updateAiProviderVisibilityHint('Debe quedar al menos una pestaña de IA visible.');
+        return;
+      }
+      saveAiHiddenProviders(lista);
+      applyAiProviderVisibility();
+      updateAiProviderVisibilityHint();
+    });
+  }
+  updateAiProviderVisibilityHint();
+  applyAiProviderVisibility();
 }
 
 function initAiProviderTabs() {
@@ -1016,6 +1142,13 @@ function handleLoadDefaultKeys() {
 }
 
 function initAiChat() {
+  // Botón 🗑 de cada panel: borra SOLO el historial de su proveedor.
+  document.querySelectorAll('.ia-clear-btn').forEach(btn => {
+    if (btn.dataset.listener) return;
+    btn.dataset.listener = '1';
+    btn.addEventListener('click', () => clearAiChatHistory(btn.dataset.iaclear));
+  });
+
   // First sync keys from config inputs (already populated by renderAiKeysConfig)
   for (const [provider, config] of Object.entries(AI_PROVIDERS)) {
     if (provider !== 'chrome-nano') {
@@ -1039,18 +1172,33 @@ function initAiChat() {
       populateAiModelSelect(provider, getAiCachedModels(provider)?.models || null);
     }
 
-    if (messagesEl.children.length === 0) {
-      const empty = document.createElement('div');
-      empty.className = 'ia-msg empty';
-      empty.textContent = 'Inicia una conversación con ' + provider.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-      messagesEl.appendChild(empty);
-    }
+    // Historial guardado de sesiones anteriores (una clave por proveedor);
+    // solo se pinta si el chat está vacío, y antes del mensaje de bienvenida
+    // para que no lo cree encima.
+    restoreAiChatHistory(provider, messagesEl, input);
+
+    if (messagesEl.children.length === 0) showAiEmptyMessage(messagesEl, provider);
 
     const doSend = () => handleAiSend(provider, modelSelect, input, messagesEl, sendBtn);
     input.addEventListener('keydown', e => { if (e.key === 'Enter') doSend(); });
     sendBtn.addEventListener('click', doSend);
 
     updateAiStatus(provider);
+  }
+
+  // Pestaña General: sin desplegable de modelo (usa el último de cada
+  // proveedor, o su default) y con su propio chat.
+  const genInput = document.getElementById(getProviderInputId(AI_GENERAL, 'iaInput'));
+  const genBtn = document.getElementById(getProviderInputId(AI_GENERAL, 'iaSend'));
+  const genMsgs = document.getElementById(getProviderInputId(AI_GENERAL, 'iaMessages'));
+  if (genInput && genBtn && genMsgs && !genInput.dataset.listener) {
+    genInput.dataset.listener = '1';
+    restoreAiChatHistory(AI_GENERAL, genMsgs, genInput);
+    if (genMsgs.children.length === 0) showAiEmptyMessage(genMsgs, AI_GENERAL);
+    const doSend = () => handleAiGeneralSend(genInput, genMsgs, genBtn);
+    genInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSend(); });
+    genBtn.addEventListener('click', doSend);
+    updateAiStatus(AI_GENERAL);
   }
 }
 
@@ -1363,19 +1511,112 @@ async function buildAiHistoryLines(userText, stations) {
   return lines;
 }
 
-function getMessagesForProvider(provider) {
-  const el = document.getElementById(getProviderInputId(provider, 'iaMessages'));
-  if (!el) return [];
+// Historial de un chat: los mensajes con data-raw van con su Markdown
+// original; los internos (error/info/warn) con el texto visible.
+function readAiMessages(container) {
   const msgs = [];
-  el.querySelectorAll('.ia-msg:not(.empty):not(.loading)').forEach(m => {
+  if (!container) return msgs;
+  container.querySelectorAll('.ia-msg:not(.empty):not(.loading)').forEach(m => {
     const role = m.classList.contains('user') ? 'user' : 'assistant';
-    msgs.push({ role, content: m.textContent });
+    msgs.push({ role, content: m.dataset.raw !== undefined ? m.dataset.raw : m.textContent });
   });
   return msgs;
 }
 
+function getMessagesForProvider(provider) {
+  return readAiMessages(document.getElementById(getProviderInputId(provider, 'iaMessages')));
+}
+
+// ===========================================================================
+// Historial de conversación por proveedor — localStorage
+// Cada pestaña guarda sus mensajes en una CLAVE PROPIA
+// (`gasolineras_ai_chat_<proveedor>`) para poder borrar una sin tocar las
+// demás: desde el botón 🗑 del panel o desde Config → Caché → localStorage.
+// Solo se guardan los mensajes reales (user/assistant) con su Markdown
+// original en data-raw; los internos (error/info/warn/loading/empty) no, para
+// que un error o un "Pensando..." no se recarguen al volver a abrir la app.
+// ===========================================================================
+const AI_CHAT_HISTORY_PREFIX = 'gasolineras_ai_chat_';
+const AI_CHAT_HISTORY_MAX = 100;
+
+function aiChatHistoryKey(provider) {
+  return AI_CHAT_HISTORY_PREFIX + provider;
+}
+
+function loadAiChatHistory(provider) {
+  try {
+    const raw = localStorage.getItem(aiChatHistoryKey(provider));
+    const list = raw ? JSON.parse(raw) : null;
+    return Array.isArray(list)
+      ? list.filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+      : [];
+  } catch { return []; }
+}
+
+function saveAiChatHistory(provider, messages) {
+  if (!provider) return;
+  try {
+    const limpio = (messages || []).slice(-AI_CHAT_HISTORY_MAX);
+    if (!limpio.length) localStorage.removeItem(aiChatHistoryKey(provider));
+    else localStorage.setItem(aiChatHistoryKey(provider), JSON.stringify(limpio));
+  } catch {}
+}
+
+// Vuelca al localStorage lo que haya ahora mismo en el DOM del chat de ese
+// proveedor. Se llama tras cada cambio real (mensaje del usuario, respuesta,
+// edición o borrado), nunca tras pintar un error/loading.
+function persistAiChat(provider) {
+  const container = document.getElementById(getProviderInputId(provider, 'iaMessages'));
+  if (!container) return;
+  const msgs = [];
+  container.querySelectorAll('.ia-msg.user, .ia-msg.assistant').forEach(m => {
+    msgs.push({
+      role: m.classList.contains('user') ? 'user' : 'assistant',
+      content: m.dataset.raw !== undefined ? m.dataset.raw : m.textContent
+    });
+  });
+  saveAiChatHistory(provider, msgs);
+}
+
+function aiChatEmptyText(provider) {
+  if (provider === AI_GENERAL) {
+    return 'Pregunta a todos los proveedores visibles a la vez: cada respuesta lleva su proveedor, modelo y tiempo.';
+  }
+  return 'Inicia una conversación con ' + provider.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function showAiEmptyMessage(container, provider) {
+  const empty = document.createElement('div');
+  empty.className = 'ia-msg empty';
+  empty.textContent = aiChatEmptyText(provider);
+  container.appendChild(empty);
+}
+
+// Reconstruye el chat de una pestaña desde localStorage. Solo pinta si el
+// contenedor está vacío (o solo con el mensaje de bienvenida) y hay algo
+// guardado; addAiMessage repite el data-raw, el Markdown y el botón ✎.
+function restoreAiChatHistory(provider, container, input) {
+  const saved = loadAiChatHistory(provider);
+  if (!saved.length || !container) return false;
+  if (container.querySelector('.ia-msg:not(.empty)')) return false;
+  container.innerHTML = '';
+  saved.forEach(m => addAiMessage(container, m.content, m.role, provider, input));
+  return true;
+}
+
+// Borra la clave del proveedor, vacía su contenedor y vuelve al mensaje de
+// bienvenida. No toca las claves de los demás proveedores.
+function clearAiChatHistory(provider) {
+  try { localStorage.removeItem(aiChatHistoryKey(provider)); } catch {}
+  const container = document.getElementById(getProviderInputId(provider, 'iaMessages'));
+  if (!container) return;
+  container.innerHTML = '';
+  showAiEmptyMessage(container, provider);
+}
+
 function editAiMessage(provider, msgEl, input) {
-  const text = msgEl.textContent.replace('✎', '').trim();
+  const crudo = msgEl.dataset.raw !== undefined ? msgEl.dataset.raw : msgEl.textContent;
+  const text = crudo.replace('✎', '').trim();
   let el = msgEl.nextElementSibling;
   while (el) {
     const next = el.nextElementSibling;
@@ -1385,6 +1626,9 @@ function editAiMessage(provider, msgEl, input) {
   msgEl.remove();
   input.value = text;
   input.focus();
+  // El mensaje y todos los posteriores se han ido del DOM: hay que reflejarlo
+  // en localStorage, o al recargar volverían.
+  persistAiChat(provider);
 }
 
 function cancelAiMessage(provider, loadingEl) {
@@ -1419,6 +1663,9 @@ async function handleAiSend(provider, modelSelect, input, messagesEl, sendBtn) {
   if (empty) empty.remove();
 
   addAiMessage(messagesEl, text, 'user', provider, input);
+  // Se guarda ya el mensaje del usuario: si la petición falla o se cancela,
+  // la pregunta sigue estando en el historial.
+  persistAiChat(provider);
   input.value = '';
   input.disabled = true;
   sendBtn.disabled = true;
@@ -1435,10 +1682,16 @@ async function handleAiSend(provider, modelSelect, input, messagesEl, sendBtn) {
     const context = await getAiContext(text);
     const contextMsg = { role: 'system', content: context };
     const augmentedMessages = [contextMsg, ...allMessages];
+    const t0 = Date.now();
     const result = await config.send(apiKey, model, augmentedMessages, abort.signal);
     if (abort.signal.aborted) return;
     loading.remove();
-    addAiMessage(messagesEl, result, 'assistant', provider, input);
+    const respuesta = addAiMessage(messagesEl, result, 'assistant', provider, input);
+    // Marca de agua: modelo usado y tiempo de la respuesta (solo la llamada al
+    // modelo, sin el contexto). No se reenvía al historial porque lo que se
+    // manda es data-raw, no el texto visible.
+    addAiMessageMeta(respuesta, model, Date.now() - t0);
+    persistAiChat(provider);
     updateAiStatus(provider, '✅ Listo');
   } catch (err) {
     if (err.name === 'AbortError') return;
@@ -1461,10 +1714,212 @@ async function handleAiSend(provider, modelSelect, input, messagesEl, sendBtn) {
   }
 }
 
+// Respuesta de UN proveedor dentro de la pestaña General. El modelo sale del
+// último enviado por ese proveedor (o de su default): en General no hay
+// desplegable propio, se respeta lo que el usuario eligió en su pestaña.
+async function generalAsk(provider, messages, signal, messagesEl, input) {
+  const config = AI_PROVIDERS[provider];
+  const label = AI_PROVIDER_LABELS[provider] || provider;
+  const model = lastAiModel(provider) || config.defaultModel;
+  const t0 = Date.now();
+  try {
+    if (provider !== 'chrome-nano' && !isAiProviderReady(provider)) {
+      throw new Error(aiProviderNotReadyMessage(provider));
+    }
+    const result = await config.send(aiApiKey(provider), model, messages, signal);
+    if (signal.aborted) return;
+    saveAiLastModel(provider, model);
+    const div = addAiMessage(messagesEl, result, 'assistant', AI_GENERAL, input);
+    // Marca de agua: proveedor · modelo · tiempo, para poder comparar quién
+    // contestó y a qué velocidad con la misma pregunta.
+    addAiMessageMeta(div, model, Date.now() - t0, label);
+    persistAiChat(AI_GENERAL);
+    updateAiStatus(provider, '✅ Listo');
+  } catch (err) {
+    if (err.name === 'AbortError' || signal.aborted) return;
+    addAiMessage(messagesEl, '❌ <b>' + label + '</b>: ' + escapeAiHtml(err.message || 'error'), 'error');
+  }
+}
+
+// Pestaña General: la MISMA consulta en paralelo a todos los proveedores
+// visibles (los de Config → IA; General no se puede ocultar). El snapshot del
+// historial se hace una sola vez antes de lanzar, así que todas reciben
+// exactamente lo mismo y ninguna respuesta incluye la de los demás.
+async function handleAiGeneralSend(input, messagesEl, sendBtn) {
+  const text = input.value.trim();
+  if (!text) return;
+  const providers = aiVisibleProviders();
+  if (!providers.length) {
+    addAiMessage(messagesEl, '❌ No hay ningún proveedor visible: revisa Config → IA.', 'error');
+    return;
+  }
+
+  const empty = messagesEl.querySelector('.ia-msg.empty');
+  if (empty) empty.remove();
+  addAiMessage(messagesEl, text, 'user', AI_GENERAL, input);
+  persistAiChat(AI_GENERAL);
+  input.value = '';
+  input.disabled = true;
+  sendBtn.disabled = true;
+
+  const loading = addAiMessage(messagesEl,
+    'Consultando ' + providers.length + ' proveedores… '
+    + '<button class="ia-cancel-btn" data-provider="' + AI_GENERAL + '">Cancelar</button>',
+    'loading', AI_GENERAL, input);
+  const cancelBtn = loading.querySelector('.ia-cancel-btn');
+  if (cancelBtn) cancelBtn.addEventListener('click', () => cancelAiMessage(AI_GENERAL, loading));
+
+  const abort = new AbortController();
+  AI_ABORT[AI_GENERAL] = abort;
+
+  try {
+    const context = await getAiContext(text);
+    const augmented = [{ role: 'system', content: context }, ...readAiMessages(messagesEl)];
+    await Promise.all(providers.map(p => generalAsk(p, augmented, abort.signal, messagesEl, input)));
+  } catch (err) {
+    if (err.name === 'AbortError') return;
+    addAiMessage(messagesEl, '❌ Error: ' + escapeAiHtml(err.message || 'error'), 'error');
+  } finally {
+    delete AI_ABORT[AI_GENERAL];
+    if (loading.parentNode) loading.remove();
+    input.disabled = false;
+    sendBtn.disabled = false;
+    input.focus();
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+}
+
+// ===========================================================================
+// Formateo de la respuesta del LLM
+// Los modelos devuelven Markdown (**negrita**, `código`, listas, saltos de
+// línea...), y el navegador colapsa los saltos de línea en un bloque si se
+// pinta tal cual. Antes todo iba con innerHTML directo: el texto se amontonaba
+// y los ** se veían literales. Aquí se convierte un Markdown mínimo a HTML.
+// Los mensajes internos (error/info/warn) siguen siendo HTML a mano y NO
+// pasan por aquí: solo assistant y user.
+// ===========================================================================
+function escapeAiHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Formato en línea. El contenido ya viene escapado, así que cualquier etiqueta
+// que aparezca aquí es nuestra. El código entre `backticks` se aparta primero
+// para que ** ni * lo toquen dentro.
+function inlineAiMd(t) {
+  const spans = [];
+  let s = t.replace(/`([^`]+)`/g, (m, c) => {
+    spans.push('<code>' + c + '</code>');
+    return '\u0001' + (spans.length - 1) + '\u0001';
+  });
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  s = s.replace(/__([^_]+)__/g, '<b>$1</b>');
+  // Cursiva con * : sin espacios dentro de los asteriscos, o sea un texto
+  // pegado (`*hola*`). Así una operación como "2 * 3 * 4" no se convierte.
+  s = s.replace(/(^|[^*\w])\*([^\s*][^*\n]*[^\s*]|[^\s*])\*/g, '$1<i>$2</i>');
+  // Igual con guion bajos, pero pegado a palabra o puntuación: así nombres
+  // como gasolineras_prov_filters no se convierten en cursiva.
+  s = s.replace(/(^|\s)_([^_\s][^_\n]*[^_\s]|[^_\s])_(?=\s|$|[.,;:!?])/g, '$1<i>$2</i>');
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  return s.replace(/\u0001(\d+)\u0001/g, (m, i) => spans[+i]);
+}
+
+function renderAiMarkdown(md) {
+  let src = String(md == null ? '' : md).replace(/\r\n?/g, '\n');
+  const blocks = [];
+
+  // Bloques cercados por ```: fuera antes que nada, para que ni el escape ni
+  // el formato en línea toquen su contenido (incluido cualquier < literal).
+  const guardar = code => {
+    blocks.push('<pre class="ia-md-pre"><code>'
+      + escapeAiHtml(code.replace(/\n$/, '')) + '</code></pre>');
+    return '\u0000' + (blocks.length - 1) + '\u0000';
+  };
+  src = src.replace(/```[a-zA-Z0-9+#_-]*\n([\s\S]*?)```/g, (m, code) => guardar(code));
+  // ``` sin cerrar (respuesta cortada por max_tokens)
+  const suelto = src.indexOf('```');
+  if (suelto !== -1) {
+    const cabecera = src.indexOf('\n', suelto);
+    src = src.slice(0, suelto)
+      + guardar(cabecera === -1 ? '' : src.slice(cabecera + 1));
+  }
+
+  src = escapeAiHtml(src);
+
+  // Tablas Markdown: se convierten en bloques antes de trocear en líneas (ya
+  // escapadas, así que una celda con < no inyecta nada).
+  src = src.replace(/(?:^[ \t]*\|.*\|[ \t]*\n?)+/gm, bloque => {
+    const filas = bloque.trim().split('\n')
+      .map(f => f.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim()));
+    // La fila separadora (|---|---|) no aporta datos.
+    const cuerpo = filas.filter((f, i) => i === 0 || !f.every(c => /^:?-+:?$/.test(c)));
+    if (cuerpo.length < 2) return bloque;
+    const fila = (f, tag) => '<tr>' + f.map(c => '<' + tag + '>' + inlineAiMd(c) + '</' + tag + '>').join('') + '</tr>';
+    blocks.push('<table class="ia-md-table"><thead>' + fila(cuerpo[0], 'th') + '</thead><tbody>'
+      + cuerpo.slice(1).map(f => fila(f, 'td')).join('') + '</tbody></table>');
+    return '\u0000' + (blocks.length - 1) + '\u0000';
+  });
+
+  const out = [];
+  let para = [];
+  let listTag = null;
+  const cerrarLista = () => { if (listTag) { out.push('</' + listTag + '>'); listTag = null; } };
+  const cerrarParrafo = () => {
+    if (!para.length) return;
+    out.push('<p>' + inlineAiMd(para.join('<br>')) + '</p>');
+    para = [];
+  };
+
+  for (const linea of src.split('\n')) {
+    const t = linea.trim();
+    if (/^\u0000\d+\u0000$/.test(t)) { cerrarParrafo(); cerrarLista(); out.push(t); continue; }
+    if (!t) { cerrarParrafo(); cerrarLista(); continue; }
+    const h = /^(#{1,4})\s+(.*)$/.exec(t);
+    if (h) {
+      cerrarParrafo(); cerrarLista();
+      out.push('<div class="ia-md-h' + h[1].length + '">' + inlineAiMd(h[2]) + '</div>');
+      continue;
+    }
+    if (/^([-*_])\1{2,}$/.test(t)) { cerrarParrafo(); cerrarLista(); out.push('<hr>'); continue; }
+    const li = /^([-*+]|\d+[.)])\s+(.*)$/.exec(t);
+    if (li) {
+      cerrarParrafo();
+      const tag = /^\d/.test(li[1]) ? 'ol' : 'ul';
+      if (listTag !== tag) { cerrarLista(); out.push('<' + tag + '>'); listTag = tag; }
+      out.push('<li>' + inlineAiMd(li[2]) + '</li>');
+      continue;
+    }
+    const q = /^&gt;\s?(.*)$/.exec(t);
+    if (q) {
+      cerrarParrafo(); cerrarLista();
+      out.push('<div class="ia-md-quote">' + inlineAiMd(q[1]) + '</div>');
+      continue;
+    }
+    para.push(t);
+  }
+  cerrarParrafo();
+  cerrarLista();
+
+  return out.join('').replace(/\u0000(\d+)\u0000/g, (m, i) => blocks[+i]);
+}
+
+// El texto original (Markdown del LLM o lo que tecleó el usuario) se guarda en
+// data-raw: es lo que se reenvía al modelo en getMessagesForProvider() y lo que
+// se recarga en el input al editar, porque del HTML ya renderizado no se puede
+// recuperar.
 function addAiMessage(container, text, className, provider, input) {
   const div = document.createElement('div');
   div.className = 'ia-msg ' + className;
-  div.innerHTML = text;
+  if (className === 'assistant') {
+    div.dataset.raw = text;
+    div.innerHTML = renderAiMarkdown(text);
+  } else if (className === 'user') {
+    div.dataset.raw = text;
+    div.innerHTML = escapeAiHtml(text).replace(/\n/g, '<br>');
+  } else {
+    div.innerHTML = text;
+  }
   if (className === 'user' && provider) {
     const editBtn = document.createElement('button');
     editBtn.className = 'ia-edit-btn';
@@ -1478,11 +1933,42 @@ function addAiMessage(container, text, className, provider, input) {
   return div;
 }
 
+// Marca de agua bajo la respuesta: modelo usado y tiempo empleado. Va en un
+// hijo con su propia clase, así que no entra en data-raw (lo que se reenvía al
+// modelo) ni en el texto que se recupera al editar.
+function formatAiElapsed(ms) {
+  if (ms < 1000) return Math.round(ms) + ' ms';
+  return (ms / 1000).toFixed(1).replace('.', ',') + ' s';
+}
+
+function addAiMessageMeta(div, model, ms, providerLabel) {
+  const meta = document.createElement('div');
+  meta.className = 'ia-msg-meta';
+  meta.textContent = '⏱ ' + (providerLabel ? providerLabel + ' · ' : '') + model + ' · ' + formatAiElapsed(ms);
+  meta.title = providerLabel
+    ? providerLabel + ' — proveedor, modelo y tiempo de respuesta'
+    : 'Modelo usado y tiempo de respuesta';
+  div.appendChild(meta);
+  const container = div.parentNode;
+  if (container) container.scrollTop = container.scrollHeight;
+  return meta;
+}
+
 function updateAiStatus(provider, override) {
   const id = getProviderInputId(provider, 'iaStatus');
   const el = document.getElementById(id);
   if (!el) return;
   if (override) { el.textContent = override; return; }
+  // La pestaña General no tiene clave propia: informa de cuántos de los
+  // proveedores visibles están listos para contestar.
+  if (provider === AI_GENERAL) {
+    const visibles = aiVisibleProviders();
+    const listos = visibles.filter(p => (p === 'chrome-nano' ? !!window.ai : isAiProviderReady(p)));
+    el.textContent = listos.length
+      ? '✅ ' + listos.length + '/' + visibles.length + ' proveedores listos'
+      : '⚠️ Ninguno listo — añade claves en Config → IA';
+    return;
+  }
   const config = AI_PROVIDERS[provider];
   if (provider === 'chrome-nano') {
     el.textContent = window.ai ? '✅ Gemini Nano disponible' : '❌ No disponible (Chrome Canary/Dev)';

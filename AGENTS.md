@@ -152,6 +152,8 @@ Hay **dos** gráficas (panel de detalle y popup del mapa) y las dos usan las mis
 4. Registro de actividad (con tabs API / Push)
 5. Notificaciones push
 6. Claves API - IA (contraseña + carga de claves cifradas)
+7. Pestañas de IA (checkbox por proveedor, `#aiProviderVisibility`)
+8. Actualización de la app
 
 ### Chat IA — `ai-chat.js`
 
@@ -241,6 +243,24 @@ Sin cuenta de Cloudflare **este proveedor no se puede usar** (su CORS solo permi
 - Elimina ese mensaje y todos los posteriores del DOM
 - El usuario puede corregir y reenviar
 
+**Formato de la respuesta (Markdown)** — `renderAiMarkdown()` en `ai-chat.js`:
+- El LLM devuelve Markdown y pintarlo tal cual con `innerHTML` amontonaba todo en un bloque (el navegador colapsa los `\n`) y dejaba los `**` a la vista. El renderer escapa primero (`escapeAiHtml`) y convierte: títulos `#`–`####`, `**negrita**`/`__`, `*cursiva*`/`_x_` (solo pegados: así `gasolineras_prov_...` no se vuelve cursiva), `` `código` ``, bloques ```` ``` ```` (también sin cerrar, respuesta cortada por `max_tokens`), listas `-`/`1.`, enlaces `https?`, `> cita`, `---` y tablas `|...|`. Salto de línea simple → `<br>` dentro del párrafo, línea en blanco → `<p>`.
+- **Solo los mensajes `assistant` y `user` pasan por el renderer**: el resto (`error`, `info`, `warn`, `loading`, `empty`) sigue siendo HTML a mano, como `warnAiModelUnavailable()`. Si se añade un mensaje interno nuevo con HTML, que no lleve esas dos clases.
+- Al escapar, un `<script>` o `<img onerror>` que devuelva el modelo no se ejecuta; el texto del usuario también se escapa.
+- **`data-raw`** guarda el texto original: `getMessagesForProvider()` lo reenvía al modelo y `editAiMessage()` lo recupera en el input. Sin él se mandaría el HTML renderizado (y el ✎ del botón de editar, que ya pasaba).
+- `aiModelReply()` (modelo que solo razonó) y `chrome-nano` devuelven **Markdown**, no HTML: son mensajes `assistant`.
+- Estilos en `css/styles.css` bajo el bloque `/* === Markdown del chat IA === */` (`.ia-md-h*`, `.ia-md-pre`, `.ia-md-table`, `.ia-md-quote`).
+
+**Marca de agua de cada respuesta**: `handleAiSend()` cronometra solo la llamada a `config.send()` y llama a `addAiMessageMeta(div, model, ms)` → `<div class="ia-msg-meta">⏱ modelo · 1,2 s</div>` (con `formatAiElapsed()`: ms por debajo de 1 s, coma decimal en los segundos). Va como **hijo** del mensaje `assistant`, así que no entra en `data-raw` (no se reenvía al modelo) ni en el texto que se recupera al editar.
+
+**Pestañas de IA ocultables** — Config → "Pestañas de IA":
+- `AI_HIDDEN_KEY = 'gasolineras_ai_hidden_providers'` (JSON array en `localStorage`, por defecto ausente = las 7 visibles). `loadAiHiddenProviders()` filtra ids que ya no existan en `AI_PROVIDERS`.
+- `renderAiProviderVisibilityConfig()` pinta un checkbox por proveedor en `#aiProviderVisibility` (labels en `AI_PROVIDER_LABELS`) y se llama en **dos sitios**: `main.js` al arrancar y `controls.js` al abrir `tab-config`.
+- `applyAiProviderVisibility()` añade la clase `.ia-hidden` a la pestaña **y** a su panel (y le quita `active`); si la pestaña activa queda oculta, hace `.click()` en la primera visible para que se active su panel y dispare el auto-refresh.
+- **Siempre debe quedar al menos una visible**: si al desmarcar la última no queda ninguna, la casilla se vuelve a marcar y el hint avisa.
+- CSS: `.ia-provider-tab.ia-hidden, .ia-provider-panel.ia-hidden { display: none !important; }`.
+- Ocultar un proveedor **no** borra su chat ni sus claves: solo no se pinta su pestaña.
+
 **Modelos por proveedor** (verificados contra las APIs el 2026-09-26):
 - Groq: `qwen/qwen3.8-27b` (default), `openai/gpt-oss-20b`, `openai/gpt-oss-120b`, `allam-2-7b`
 - Mistral: `open-mistral-nemo` (default), `ministral-8b-latest`, `codestral-latest`, `mistral-small-latest`, `mistral-medium-latest`
@@ -254,7 +274,16 @@ Sin cuenta de Cloudflare **este proveedor no se puede usar** (su CORS solo permi
 ⚠️ Los modelos `openai/gpt-oss-*` de Groq son **reasoning**: pueden devolver `content` vacío porque gastan el `max_tokens` en `reasoning`. No usarlos como default.
 ⚠️ `mistral-large-latest` responde *"not available in your subscription tier"*. El tier free da 429 (`Rate limit exceeded`) de forma intermitente.
 
-**UI**: cada proveedor tiene su propio panel (`.ia-provider-panel`) dentro de `.ia-providers-container`. Los tabs de proveedor están en `.ia-tabs` con botones `.ia-tab`.
+**UI**: cada proveedor tiene su propio panel (`.ia-provider-panel`) dentro de `.ia-container`. Los tabs están en `.ia-provider-tabs` con botones `.ia-provider-tab` (`data-iaprovider`); los paneles llevan `data-iapanel`.
+
+**Pestaña General** (`data-iaprovider="general"`, la primera y activa por defecto):
+- **No es un proveedor**: no está en `AI_PROVIDERS`, así que no pide clave, no tiene desplegable de modelo ni casilla en Config → "Pestañas de IA", y `loadAiHiddenProviders()` la descarta → **nunca se puede ocultar** (`applyAiProviderVisibility()` la excluye a propósito)
+- `handleAiGeneralSend()` manda **la misma consulta en paralelo** a `aiVisibleProviders()` (los de `AI_PROVIDERS` menos los ocultos en Config → IA). El snapshot del historial (`readAiMessages()`, el mismo que usa `getMessagesForProvider()`) se hace **una sola vez antes de lanzar**, así que todas reciben lo mismo y ninguna respuesta incluye la de los demás
+- Modelo por proveedor: `lastAiModel(p)` (el último enviado en su pestaña) o, si no, `defaultModel`; después se guarda con `saveAiLastModel()`
+- Cada respuesta lleva marca de agua **`⏱ proveedor · modelo · tiempo`** (`addAiMessageMeta(div, model, ms, label)`; sin `label` se comporta como antes)
+- Un proveedor sin clave no se salta: se pinta `❌ <Proveedor>: …` con su motivo, para que se vea quién contestó y quién no
+- `autoRefreshAiModels('general')` refresca a la vez a todos los visibles (cada uno con su caché de catálogo)
+- `updateAiStatus('general')` informa de `✅ N/M proveedores listos`
 
 **Auto-refresh del catálogo de modelos** (`AI_MODELS_CACHE_KEY`, TTL 24 h):
 - `refreshAiModels(provider, {force})` en `ai-chat.js`; `autoRefreshAiModels()` se dispara al abrir la pestaña de un proveedor (`main.js`) y respeta la caché
@@ -264,6 +293,14 @@ Sin cuenta de Cloudflare **este proveedor no se puede usar** (su CORS solo permi
 - Si `/models` falla, se avisa **sin tocar el desplegable**
 - Botón 🔄 en cada desplegable (`initAiModelRefreshButtons()`) + botón dentro del aviso `warnAiModelUnavailable()`
 - `initAiChat()` repuebla cada desplegable al cargar (vacía antes `select.value` para que no se quede con la primera opción del HTML) mezclando la caché de catálogo si existe, así el orden y el último modelo valen desde el primer pintado
+
+**Historial de conversación por proveedor** (`AI_CHAT_HISTORY_PREFIX = 'gasolineras_ai_chat_'`):
+- Cada pestaña guarda sus mensajes en una **clave propia de localStorage** (`gasolineras_ai_chat_groq`, …, `gasolineras_ai_chat_general`) como array `[{ role, content }]` con el Markdown original de `data-raw`, máximo `AI_CHAT_HISTORY_MAX = 100` mensajes. Una clave por proveedor = se puede borrar una sin tocar las demás.
+- `persistAiChat(provider)` vuelca el DOM leyendo **solo** `.ia-msg.user` y `.ia-msg.assistant` (errores, loading, info/warn y el `.empty` de bienvenida no se guardan, o se recargarían al abrir la app). Se llama donde el historial cambia de verdad: `handleAiSend()` tras el mensaje del usuario (así sobrevive a un fallo/cancelación) y tras la respuesta, `handleAiGeneralSend()`/`generalAsk()` con la clave `general`, y `editAiMessage()` (borra el mensaje y todos los posteriores).
+- `restoreAiChatHistory()` se llama en `initAiChat()` **antes** del chequeo `messagesEl.children.length === 0` (si no, se pintaría el `.empty` encima) y reconstruye con `addAiMessage()`, así que repite `data-raw`, el Markdown y el botón ✎. Solo pinta si el contenedor está vacío o solo con el `.empty`.
+- Botón 🗑 en la `.ia-config` de **los 8 paneles** (clase `.ia-clear-btn` + `data-iaclear="<proveedor>"`), enganchado con delegación una sola vez en `initAiChat()` (guardado con `dataset.listener`). `clearAiChatHistory()` borra su clave, vacía el contenedor y repone el mensaje de bienvenida.
+- Las claves aparecen solas en Config → Caché → `localStorage` (prefijo `gasolineras_`) con su ✕, para el borrado completo desde ahí.
+- ⚠️ Los tests manipulan el DOM directamente (`msgs.innerHTML = …`), así que en `testAiChat()` hay que **limpiar por prefijo** (`gasolineras_ai_chat_`) en el bloque final, igual que se hace con `AI_LAST_MODEL_KEY`.
 
 **Último modelo por proveedor** (`AI_LAST_MODEL_KEY = 'gasolineras_ai_last_models'`):
 - `saveAiLastModel(provider, model)` se llama en `handleAiSend()` **al enviar**, no al mover el desplegable: lo recordado tiene que ser el modelo con el que se respondió por última vez
@@ -304,7 +341,7 @@ Orden actual de grupos:
 ### Tests
 - Ubicación: `docs/test/full_test.mjs`
 - Plan: `docs/test/TEST_PLAN.md`
-- 180 tests totales (173 HTTP + 7 file://)
+- 201 tests totales (194 HTTP + 7 file://)
 - Secciones: 1-12 UI, 13 claves IA (manual), 14 push, 15 chat IA, 16 ring logs, 17 build (`ASSETS`/`APP_VERSION`/`?v=` de los iconos)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)
@@ -418,7 +455,7 @@ node -e "const h=require('http'),fs=require('fs');h.createServer((q,r)=>{let p=q
 | Archivo | Propósito |
 |---------|-----------|
 | `index.html` | Toolbar + content + tabs + bottom sheet |
-| `css/styles.css` | ~342 líneas responsive |
+| `css/styles.css` | ~430 líneas responsive |
 | `js/state.js` | STATE global + definiciones combustibles |
 | `js/helpers.js` | Funciones auxiliares (precios, distancia, descuentos, `comparePrices()`, `formatLogTime()`) |
 | `js/db.js` | IndexedDB compartido (cliente + SW): cache, favoritos, config |
@@ -430,6 +467,7 @@ node -e "const h=require('http'),fs=require('fs');h.createServer((q,r)=>{let p=q
 | `js/table.js` | `doSort()`, `showDetail()`, `loadHistory()`, helpers combustibles |
 | `js/chart-core.js` | Primitivas de gráfica compartidas por las dos vistas (canvas, escala, ejes, tooltip) |
 | `js/chart-engine.js` | Gráfica histórica del detail panel con las primitivas de `chart-core.js` |
+| `js/ai-chat.js` | Chat IA: proveedores, claves cifradas, catálogo de modelos, contexto, histórico para la IA, `renderAiMarkdown()` e historial de conversaciones por proveedor |
 | `js/main.js` | Event listeners, restauración de estado, push notifications |
 | `js/push-notifications.js` | Gestión suscripción Web Push (subscribe/unsubscribe) + `PUSH_LOG_RING` + logPushEvent |
 | `sw.js` | Service Worker (caché, periodicsync, checkPrices, notificationclick) + sendPushLog() + `APP_VERSION`/`ASSETS` |
