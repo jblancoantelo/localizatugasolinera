@@ -253,15 +253,19 @@ async function testHTTP(browser, server) {
 
   // Vistas del mapa: valor por defecto, catálogo completo y respaldo de proveedor
   const vistas = await page.evaluate(() => {
-    const opts = [...document.getElementById('mapStyle').options].map(o => o.value);
+    const opts = [...document.getElementById('mapStyle').options];
+    const etiquetas = opts.map(o => o.textContent.trim());
     return {
-      primera: opts[0],
+      defecto: (opts.find(o => o.hasAttribute('selected')) || {}).value,
+      alfabetico: etiquetas.every((t, i) => i === 0 || etiquetas[i - 1].localeCompare(t, 'es') <= 0),
+      nombres: etiquetas.join(' | '),
       total: opts.length,
-      sinCapa: opts.filter(v => !TILE_CONFIGS[v]).join(','),
+      sinCapa: opts.map(o => o.value).filter(v => !TILE_CONFIGS[v]).join(','),
       calle: TILE_CONFIGS.street.urls.length
     };
   });
-  log('Mapa', 'Satélite es la primera opción (la que aplica por defecto)', vistas.primera === 'satellite');
+  log('Mapa', 'Satélite es la vista por defecto (aunque no sea la primera)', vistas.defecto === 'satellite');
+  log('Mapa', 'Los nombres van de A a Z', vistas.alfabetico, vistas.nombres);
   log('Mapa', `Catálogo de ${vistas.total} vistas con capa configurada`,
     vistas.total >= 8 && vistas.sinCapa === '');
   log('Mapa', 'Calle tiene proveedor de respaldo', vistas.calle >= 2);

@@ -16,7 +16,7 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 
 ### 🗺️ Vista Mapa
 - Mapa interactivo con **Leaflet** (OpenStreetMap + CartoDB + ESRI + CyclOSM)
-- 10 estilos de mapa: satélite (por defecto), satélite con nombres, calle, estándar, humanitario, ciclismo, oscuro, topográfico, NatGeo y relieve
+- 10 estilos de mapa en el desplegable, ordenados de A a Z: calle, ciclismo, estándar, humanitario, NatGeo, oscuro, relieve, satélite (por defecto), satélite con nombres y topográfico
 - Si el proveedor de una vista no devuelve tiles (host bloqueado o caído) se cambia solo al proveedor de respaldo en vez de dejar el mapa en gris
 - Marcadores coloreados por precio
 - Popup con datos de la estación e histórico de precios
