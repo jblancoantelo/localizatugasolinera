@@ -87,6 +87,8 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 - Botón **Cancelar** para abortar mensaje en curso (AbortController)
 - Botón **✎ Editar** en mensajes enviados para corregir y reenviar
 - **Respuesta formateada**: el Markdown que devuelve el modelo (negrita, cursiva, títulos, listas, tablas, código y saltos de línea) se convierte a HTML con `renderAiMarkdown()`, en vez de pintarse tal cual y amontonarse en un bloque. El texto original se guarda en `data-raw` — así el historial que se reenvía al modelo y la edición recuperan el Markdown, no el HTML— y lo que teclea el usuario se escapa para que una etiqueta no se inyecte
+- **Marca de agua en cada respuesta**: bajo el mensaje del asistente se muestra el modelo usado y el tiempo que tardó (`⏱ codestral-latest · 1,2 s`), sin entrar en lo que se reenvía al modelo
+- **Pestañas de IA ocultables**: en Config → "Pestañas de IA" hay un checkbox por proveedor; por defecto están los 7 y los que desmarques dejan de aparecer en la pestaña IA (su chat y sus claves se conservan). Siempre debe quedar al menos una
 - Modelos gratuitos por proveedor (sin coste de API)
 
 ### ⚙️ Panel de Configuración
@@ -96,6 +98,7 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 - **Registro de actividad**: tabs API / Push
 - **Notificaciones push**: activación, intervalo, días, modo de detección
 - **Claves API - IA**: campo de contraseña para cargar claves cifradas, con opción "Volver a cargar"
+- **Pestañas de IA**: checkbox por proveedor para quitar del chat los que no uses
 
 ---
 
@@ -104,7 +107,7 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 ```powershell
 npm install                # playwright + web-push
 
-npm test                   # 185 tests (178 HTTP + 7 file://) — suite completa
+npm test                   # 192 tests (185 HTTP + 7 file://) — suite completa
 node check-syntax.mjs      # sintaxis de todo el JS (incluye el <script> inline del HTML)
 npm run bump               # regenera ASSETS de sw.js + incrementa APP_VERSION y BUILD_TIME
 npm run sync-assets        # solo regenera la lista ASSETS de sw.js
@@ -154,7 +157,7 @@ npm run check-assets       # verifica ASSETS sin escribir (sale con 1 si no cuad
 | Notificaciones | Web Push API + Periodic Background Sync |
 | Service Worker | Cache-first + Network-first híbrido, precaché generado por script |
 | Chat IA | 7 proveedores (Groq, Mistral, OpenRouter, LLM7.io, NVIDIA vía Worker, Google Gemini, Chrome Built-in AI) |
-| Tests | Playwright (185 tests, servidor HTTP inline) |
+| Tests | Playwright (192 tests, servidor HTTP inline) |
 | Desarrollo | [OpenCode](https://opencode.ai) con modelos DeepSeek (libres) |
 
 ---

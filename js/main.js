@@ -537,6 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize AI chat
   initAiProviderTabs();
   renderAiKeysConfig();
+  renderAiProviderVisibilityConfig();
   initAiChat();
   initAiModelRefreshButtons();
   autoRefreshAiModels(document.querySelector('.ia-provider-tab.active')?.dataset.iaprovider);

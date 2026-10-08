@@ -1657,6 +1657,124 @@ async function testAiChat(page) {
     fmt.historial && fmt.rawAsistente && fmt.rawUsuario, `hist:${fmt.historial} rawA:${fmt.rawAsistente} rawU:${fmt.rawUsuario}`);
   log('IA', 'Editar un mensaje recupera el texto original en el input', fmt.editDevuelve, String(fmt.editDevuelve));
 
+  // --- Marca de agua: modelo usado y tiempo bajo cada respuesta ---
+  const marca = await page.evaluate(async () => {
+    const msgs = document.getElementById('iaMessagesLlm7');
+    const input = document.getElementById('iaInputLlm7');
+    const sel = document.getElementById('iaModelLlm7');
+    const btn = document.getElementById('iaSendLlm7');
+    const guardado = { html: msgs.innerHTML, input: input.value, sel: sel.value };
+    const realSend = AI_PROVIDERS.llm7.send;
+    AI_PROVIDERS.llm7.send = async () => {
+      await new Promise(r => setTimeout(r, 150));
+      return 'Listo **ok**';
+    };
+    msgs.innerHTML = '';
+    sel.value = 'codestral-latest';
+    input.value = 'hola';
+    await handleAiSend('llm7', sel, input, msgs, btn);
+    const div = msgs.querySelector('.ia-msg.assistant');
+    const meta = div && div.querySelector('.ia-msg-meta');
+    const texto = meta ? meta.textContent : '';
+    const mseg = /([0-9]+)\s*ms/.exec(texto);
+    const seg = /([0-9]+[,.][0-9]+)\s*s/.exec(texto);
+    const r = {
+      existe: !!meta,
+      modelo: /codestral-latest/.test(texto),
+      tiempo: (!!mseg && +mseg[1] >= 100) || (!!seg && parseFloat(seg[1].replace(',', '.')) >= 0.1),
+      medida: texto.split('·')[1] ? texto.split('·')[1].trim() : '',
+      alFinal: !!meta && div.lastElementChild === meta,
+      sinAsteriscos: !!div && !/\*\*/.test(div.textContent),
+      historialLimpio: !getMessagesForProvider('llm7').some(m => /⏱|ia-msg-meta/.test(m.content))
+    };
+    AI_PROVIDERS.llm7.send = realSend;
+    msgs.innerHTML = guardado.html;
+    input.value = guardado.input;
+    sel.value = guardado.sel;
+    return r;
+  });
+  log('IA', 'La respuesta lleva una marca de agua con el modelo y el tiempo empleado',
+    marca.existe && marca.modelo && marca.tiempo && marca.alFinal,
+    `meta:${marca.existe} modelo:${marca.modelo} tiempo:${marca.tiempo} (${marca.medida})`);
+  log('IA', 'La marca de agua no se reenvía al modelo ni estorba el formateo',
+    marca.historialLimpio && marca.sinAsteriscos, `historial:${marca.historialLimpio} md:${marca.sinAsteriscos}`);
+
+  // --- Pestañas de IA ocultables desde Config (por proveedor) ---
+  const visibilidad = await page.evaluate(() => {
+    const tabs = () => [...document.querySelectorAll('.ia-provider-tab')];
+    const visibles = () => tabs().filter(t => !t.classList.contains('ia-hidden'));
+    const panel = p => document.querySelector('.ia-provider-panel[data-iapanel="' + p + '"]');
+    const antes = {
+      casillas: document.querySelectorAll('#aiProviderVisibility input[type="checkbox"]').length,
+      marcadas: document.querySelectorAll('#aiProviderVisibility input:checked').length,
+      visibles: visibles().length,
+      ocultos: loadAiHiddenProviders().length
+    };
+
+    // 1) Oculta dos proveedores que no son el activo
+    saveAiHiddenProviders(['mistral', 'openrouter']);
+    applyAiProviderVisibility();
+    const ocultaDos = {
+      tabMistral: document.querySelector('.ia-provider-tab[data-iaprovider="mistral"]').classList.contains('ia-hidden'),
+      panelMistral: panel('mistral').classList.contains('ia-hidden'),
+      panelAbierto: !panel('mistral').classList.contains('active'),
+      visibles: visibles().length,
+      activa: document.querySelector('.ia-provider-tab.active').dataset.iaprovider
+    };
+
+    // 2) Oculta también la pestaña activa: debe saltar a la primera visible
+    const activa = document.querySelector('.ia-provider-tab.active').dataset.iaprovider;
+    saveAiHiddenProviders(['mistral', 'openrouter', activa]);
+    applyAiProviderVisibility();
+    const salto = {
+      nueva: document.querySelector('.ia-provider-tab.active').dataset.iaprovider,
+      visible: !document.querySelector('.ia-provider-tab.active').classList.contains('ia-hidden'),
+      panelActivo: !!document.querySelector('.ia-provider-panel.active:not(.ia-hidden)')
+    };
+
+    // 3) No se puede ocultar la última visible: la casilla se revierte
+    const todas = Object.keys(AI_PROVIDERS);
+    const ultima = visibles()[0].dataset.iaprovider;
+    saveAiHiddenProviders(todas.filter(p => p !== ultima));
+    renderAiProviderVisibilityConfig();
+    const cb = document.getElementById('iaVis' + ultima.replace(/(^|-)([a-z])/g, (_, d, c) => c.toUpperCase()));
+    cb.click();
+    const ultimaCasilla = {
+      sigueMarcada: cb.checked === true,
+      hint: document.getElementById('aiProviderVisibilityHint').textContent,
+      sigueVisible: visibles().length === 1
+    };
+
+    // 4) Restauración: todo visible de nuevo y nada oculto
+    saveAiHiddenProviders([]);
+    renderAiProviderVisibilityConfig();
+    const restaurado = {
+      visibles: visibles().length,
+      ocultos: loadAiHiddenProviders().length,
+      casillas: document.querySelectorAll('#aiProviderVisibility input:checked').length,
+      panelesOcultos: document.querySelectorAll('.ia-provider-panel.ia-hidden').length
+    };
+    return { antes, ocultaDos, salto, ultimaCasilla, restaurado, activa };
+  });
+  const v = visibilidad;
+  log('IA', 'Config trae una casilla por proveedor y por defecto están las 7 visibles',
+    v.antes.casillas === 7 && v.antes.marcadas === 7 && v.antes.visibles === 7 && v.antes.ocultos === 0,
+    `casillas:${v.antes.casillas} marcadas:${v.antes.marcadas} visibles:${v.antes.visibles}`);
+  log('IA', 'Al desmarcar un proveedor se ocultan su pestaña y su panel (el activo no se toca)',
+    v.ocultaDos.tabMistral && v.ocultaDos.panelMistral && v.ocultaDos.panelAbierto
+    && v.ocultaDos.visibles === 5 && v.ocultaDos.activa === v.activa,
+    `visibles:${v.ocultaDos.visibles} activa:${v.ocultaDos.activa} panelAbierto:${v.ocultaDos.panelAbierto}`);
+  log('IA', 'Si se oculta la pestaña activa se salta a la primera visible con su panel',
+    v.salto.visible && v.salto.panelActivo && v.salto.nueva !== v.activa,
+    `activa:${v.activa} → nueva:${v.salto.nueva} visible:${v.salto.visible} panel:${v.salto.panelActivo}`);
+  log('IA', 'No se puede ocultar la última pestaña visible (la casilla se revierte)',
+    v.ultimaCasilla.sigueMarcada && v.ultimaCasilla.sigueVisible && /al menos una/.test(v.ultimaCasilla.hint),
+    `marcada:${v.ultimaCasilla.sigueMarcada} visibles:${v.ultimaCasilla.sigueVisible} hint:${v.ultimaCasilla.hint}`);
+  log('IA', 'La elección se guarda en localStorage y al restaurarlas vuelven las 7',
+    v.restaurado.visibles === 7 && v.restaurado.ocultos === 0
+    && v.restaurado.casillas === 7 && v.restaurado.panelesOcultos === 0,
+    JSON.stringify(v.restaurado));
+
   // --- Restaurar fetch y limpiar ---
   await page.evaluate(() => {
     if (window.__realFetch) window.fetch = window.__realFetch;
@@ -1664,6 +1782,7 @@ async function testAiChat(page) {
     localStorage.removeItem(AI_LAST_MODEL_KEY);
     localStorage.removeItem(AI_KEYS_KEY);
     localStorage.removeItem(AI_PROXY_KEY);
+    localStorage.removeItem(AI_HIDDEN_KEY);
     const input = document.getElementById('iaKeyLlm7');
     if (input) input.value = '';
     AI_PROVIDERS.llm7.key = null;

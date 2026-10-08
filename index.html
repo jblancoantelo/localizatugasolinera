@@ -333,6 +333,12 @@
           <p class="config-desc" style="margin-top:0.2rem">Para desplegarlo (hace falta una cuenta de Cloudflare, gratuita): <code>cd workers</code> → <code>wrangler secret put NVIDIA_API_KEY</code> → <code>wrangler deploy</code>. El comando imprime la URL <b>con</b> el subdominio: cópiala al campo de arriba y pulsa <b>🔎 Probar</b>, que te dice si el Worker existe, si le falta la clave o si NVIDIA la rechaza. La clave nunca se guarda en el navegador y, al cambiar la URL, el catálogo de modelos se vuelve a consultar.</p>
         </div>
         <div class="config-card">
+          <h3>🧩 Pestañas de IA</h3>
+          <p class="config-desc">Elige qué proveedores aparecen en la pestaña IA. Por defecto están todos; desmarca los que no uses y dejan de mostrarse (su chat y sus mensajes se conservan por si los vuelves a activar).</p>
+          <div id="aiProviderVisibility" style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem;font-size:0.72rem"></div>
+          <p class="config-desc" id="aiProviderVisibilityHint" style="margin-top:0.4rem"></p>
+        </div>
+        <div class="config-card">
           <h3>🔄 Actualización de la app</h3>
           <p class="config-desc">Versión <span id="appCurrentVersion">—</span></p>
           <div id="updateStatus" class="update-status">No verificado</div>

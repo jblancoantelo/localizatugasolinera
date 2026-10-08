@@ -152,6 +152,8 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 
 .ia-provider-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; background: #fff; border-radius: 0 0 8px 8px; }
 .ia-provider-panel.active { display: flex; }
+/* Proveedor oculto desde Config → "Pestañas de IA" */
+.ia-provider-tab.ia-hidden, .ia-provider-panel.ia-hidden { display: none !important; }
 
 .ia-config { padding: 0.4rem 0.5rem; border-bottom: 1px solid #eee; flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; }
 .ia-config label { font-size: 0.65rem; color: #666; display: flex; align-items: center; gap: 0.2rem; }
@@ -192,6 +194,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 .ia-md-table tr:nth-child(even) td { background: #fafbfc; }
 .ia-msg a { color: #1565c0; text-decoration: underline; }
 .ia-msg a:hover { color: #0d47a1; }
+.ia-msg-meta { margin-top: 0.3rem; padding-top: 0.2rem; border-top: 1px dashed rgba(0,0,0,0.12); font-size: 0.58rem; line-height: 1.2; color: #9aa0a6; text-align: right; user-select: none; }
 .ia-warn-detail { font-size: 0.9em; opacity: 0.8; }
 .ia-warn-btn { background: #ffb300; color: #3e2723; border: none; border-radius: 4px; padding: 0.2rem 0.45rem; cursor: pointer; font-size: 0.65rem; margin-top: 0.3rem; font-weight: 600; }
 .ia-warn-btn:hover { background: #ffc107; }

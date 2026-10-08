@@ -152,6 +152,8 @@ Hay **dos** gráficas (panel de detalle y popup del mapa) y las dos usan las mis
 4. Registro de actividad (con tabs API / Push)
 5. Notificaciones push
 6. Claves API - IA (contraseña + carga de claves cifradas)
+7. Pestañas de IA (checkbox por proveedor, `#aiProviderVisibility`)
+8. Actualización de la app
 
 ### Chat IA — `ai-chat.js`
 
@@ -249,6 +251,16 @@ Sin cuenta de Cloudflare **este proveedor no se puede usar** (su CORS solo permi
 - `aiModelReply()` (modelo que solo razonó) y `chrome-nano` devuelven **Markdown**, no HTML: son mensajes `assistant`.
 - Estilos en `css/styles.css` bajo el bloque `/* === Markdown del chat IA === */` (`.ia-md-h*`, `.ia-md-pre`, `.ia-md-table`, `.ia-md-quote`).
 
+**Marca de agua de cada respuesta**: `handleAiSend()` cronometra solo la llamada a `config.send()` y llama a `addAiMessageMeta(div, model, ms)` → `<div class="ia-msg-meta">⏱ modelo · 1,2 s</div>` (con `formatAiElapsed()`: ms por debajo de 1 s, coma decimal en los segundos). Va como **hijo** del mensaje `assistant`, así que no entra en `data-raw` (no se reenvía al modelo) ni en el texto que se recupera al editar.
+
+**Pestañas de IA ocultables** — Config → "Pestañas de IA":
+- `AI_HIDDEN_KEY = 'gasolineras_ai_hidden_providers'` (JSON array en `localStorage`, por defecto ausente = las 7 visibles). `loadAiHiddenProviders()` filtra ids que ya no existan en `AI_PROVIDERS`.
+- `renderAiProviderVisibilityConfig()` pinta un checkbox por proveedor en `#aiProviderVisibility` (labels en `AI_PROVIDER_LABELS`) y se llama en **dos sitios**: `main.js` al arrancar y `controls.js` al abrir `tab-config`.
+- `applyAiProviderVisibility()` añade la clase `.ia-hidden` a la pestaña **y** a su panel (y le quita `active`); si la pestaña activa queda oculta, hace `.click()` en la primera visible para que se active su panel y dispare el auto-refresh.
+- **Siempre debe quedar al menos una visible**: si al desmarcar la última no queda ninguna, la casilla se vuelve a marcar y el hint avisa.
+- CSS: `.ia-provider-tab.ia-hidden, .ia-provider-panel.ia-hidden { display: none !important; }`.
+- Ocultar un proveedor **no** borra su chat ni sus claves: solo no se pinta su pestaña.
+
 **Modelos por proveedor** (verificados contra las APIs el 2026-09-26):
 - Groq: `qwen/qwen3.8-27b` (default), `openai/gpt-oss-20b`, `openai/gpt-oss-120b`, `allam-2-7b`
 - Mistral: `open-mistral-nemo` (default), `ministral-8b-latest`, `codestral-latest`, `mistral-small-latest`, `mistral-medium-latest`
@@ -312,7 +324,7 @@ Orden actual de grupos:
 ### Tests
 - Ubicación: `docs/test/full_test.mjs`
 - Plan: `docs/test/TEST_PLAN.md`
-- 185 tests totales (178 HTTP + 7 file://)
+- 192 tests totales (185 HTTP + 7 file://)
 - Secciones: 1-12 UI, 13 claves IA (manual), 14 push, 15 chat IA, 16 ring logs, 17 build (`ASSETS`/`APP_VERSION`/`?v=` de los iconos)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)

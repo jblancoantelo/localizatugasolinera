@@ -19,7 +19,7 @@ node docs/test/full_test.mjs
 ### Qué hace el script:
 - Inicia servidor HTTP en :8080 sirviendo desde la raíz del proyecto
 - Lanza Chromium headless
-- Ejecuta 185 tests: 178 contra HTTP + 7 contra `file://`
+- Ejecuta 192 tests: 185 contra HTTP + 7 contra `file://`
 - Empieza por la sección 17 (build), que lee ficheros del disco sin abrir el navegador
 - Cierra servidor y navegador automáticamente
 - Exit code 0 = todo OK, 1 = algún fallo
@@ -89,7 +89,7 @@ node docs/test/full_test.mjs
 
 | # | Acción | HTTP | file:// | Resultado esperado |
 |---|--------|------|---------|-------------------|
-| 7.1 | Tarjetas de configuración | ✅ | ✅ | 5 `.config-card` (Descuentos, Caché, Paginación, Registro actividad, Push) |
+| 7.1 | Tarjetas de configuración | ✅ | ✅ | ≥3 `.config-card` (hay 8: Descuentos, Caché, Paginación, Registro actividad, Push, Claves IA, Pestañas IA, Actualización) |
 | 7.2 | Input TTL visible | ✅ | ✅ | `#cacheTtl` visible e interactivo |
 
 ### 8. Mapa
@@ -132,7 +132,7 @@ node docs/test/full_test.mjs
 
 ## Resultados actuales
 
-**185 tests — 185 ✅ 0 ❌**
+**192 tests — 192 ✅ 0 ❌**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
@@ -157,10 +157,10 @@ node docs/test/full_test.mjs
 | Caché (limpiar caché borra de verdad) | 1 ✅ | — |
 | Push Notifications | 8 ✅ | — |
 | Helpers (norm/parsePrice/comparePrices) | 14 ✅ | — |
-| Chat IA (sección 15) | 105 ✅ | — |
+| Chat IA (sección 15) | 112 ✅ | — |
 | Ring logs (sección 16) | 7 ✅ | — |
 | Build (sección 17) | 4 ✅ | — |
-| **Total** | **178 ✅** | **7 ✅** |
+| **Total** | **185 ✅** | **7 ✅** |
 
 ## 15. Chat IA (automatizado)
 
@@ -198,6 +198,18 @@ HTML. El texto del usuario y el del modelo se escapan (`<img onerror>` no llega
 a ejecutarse), `data-raw` conserva el Markdown original para que
 `getMessagesForProvider()` lo reenvíe y `editAiMessage()` lo recupere en el
 input (antes mandaba el HTML renderizado y el ✎ del botón de editar).
+
+**Marca de agua (2 tests nuevos)**: `handleAiSend()` cronometra la llamada al
+modelo y `addAiMessageMeta()` añade `<div class="ia-msg-meta">⏱ modelo · tiempo</div>`
+como último hijo del mensaje; el test manda un `send()` que tarda 150 ms y
+comprueba que aparece el modelo, el tiempo, que no se cuela en
+`getMessagesForProvider()` y que el Markdown de la respuesta sigue pintándose.
+
+**Pestañas de IA ocultables (5 tests nuevos)**: Config trae 7 casillas (por
+defecto todas marcadas), al desmarcar un proveedor se ocultan su pestaña y su
+panel sin tocar el activo, si se oculta el activo se salta a la primera visible
+con su panel, no se puede ocultar la última visible (la casilla se revierte y el
+hint avisa) y al restaurarlas vuelven las 7 sin paneles ocultos.
 
 **NVIDIA vía proxy** (25 tests nuevos): tab/panel y los 8 ids presentes, es el
 único `viaProxy` con rutas relativas, sin clave en el navegador (ni campo, ni

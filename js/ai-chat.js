@@ -844,6 +844,112 @@ function saveAiApiKeys(keys, invalid = []) {
   }
 }
 
+// ==========================================================================
+// Pestañas de IA visibles — Config → "Pestañas de IA"
+// Por defecto se muestran los 7 proveedores; en Config se puede ocultar
+// cualquiera de ellos (solo se pinta la pestaña y su panel, el chat y los
+// mensajes se conservan). Si se oculta la activa se salta a la primera
+// visible, y siempre debe quedar al menos una.
+const AI_HIDDEN_KEY = 'gasolineras_ai_hidden_providers';
+
+const AI_PROVIDER_LABELS = {
+  'groq': 'Groq',
+  'mistral': 'Mistral',
+  'openrouter': 'OpenRouter',
+  'llm7': 'LLM7.io',
+  'nvidia': 'NVIDIA',
+  'google': 'Google Gemini',
+  'chrome-nano': 'Chrome Built-in AI'
+};
+
+function loadAiHiddenProviders() {
+  try {
+    const raw = localStorage.getItem(AI_HIDDEN_KEY);
+    const lista = raw ? JSON.parse(raw) : [];
+    return Array.isArray(lista) ? lista.filter(p => AI_PROVIDERS[p]) : [];
+  } catch { return []; }
+}
+
+function saveAiHiddenProviders(lista) {
+  const limpia = lista.filter(p => AI_PROVIDERS[p]);
+  if (!limpia.length) localStorage.removeItem(AI_HIDDEN_KEY);
+  else localStorage.setItem(AI_HIDDEN_KEY, JSON.stringify(limpia));
+}
+
+function isAiProviderHidden(provider) {
+  return loadAiHiddenProviders().includes(provider);
+}
+
+function applyAiProviderVisibility() {
+  const ocultos = loadAiHiddenProviders();
+  let activaVisible = false;
+  document.querySelectorAll('.ia-provider-tab').forEach(tab => {
+    const p = tab.dataset.iaprovider;
+    const oculto = ocultos.includes(p);
+    tab.classList.toggle('ia-hidden', oculto);
+    const panel = document.querySelector('.ia-provider-panel[data-iapanel="' + p + '"]');
+    if (panel) {
+      panel.classList.toggle('ia-hidden', oculto);
+      if (oculto) panel.classList.remove('active');
+    }
+    if (!oculto && tab.classList.contains('active')) activaVisible = true;
+  });
+  // La pestaña activa quedó oculta: se salta a la primera visible (su click
+  // activa el panel y dispara el auto-refresh de modelos igual que un clic real)
+  if (!activaVisible) {
+    const primera = Array.from(document.querySelectorAll('.ia-provider-tab'))
+      .find(t => !t.classList.contains('ia-hidden'));
+    if (primera) primera.click();
+  }
+}
+
+function updateAiProviderVisibilityHint(texto) {
+  const hint = document.getElementById('aiProviderVisibilityHint');
+  if (hint) hint.textContent = texto || defaultAiProviderVisibilityHint();
+}
+
+function defaultAiProviderVisibilityHint() {
+  const ocultos = loadAiHiddenProviders();
+  const total = Object.keys(AI_PROVIDERS).length;
+  if (!ocultos.length) return 'Los ' + total + ' proveedores están visibles.';
+  return 'Ocultas ' + ocultos.length + ' de ' + total + ' ('
+    + ocultos.map(p => AI_PROVIDER_LABELS[p] || p).join(', ') + '). Sus conversaciones se conservan.';
+}
+
+function renderAiProviderVisibilityConfig() {
+  const cont = document.getElementById('aiProviderVisibility');
+  if (!cont) return;
+  const ocultos = loadAiHiddenProviders();
+  cont.innerHTML = Object.keys(AI_PROVIDERS).map(p => {
+    const id = 'iaVis' + p.replace(/(^|-)([a-z])/g, (_, d, c) => c.toUpperCase());
+    return '<label for="' + id + '" style="display:flex;align-items:center;gap:0.3rem;cursor:pointer">'
+      + '<input type="checkbox" id="' + id + '" data-ia-provider="' + p + '"'
+      + (ocultos.includes(p) ? '' : ' checked') + '> ' + (AI_PROVIDER_LABELS[p] || p) + '</label>';
+  }).join('');
+
+  if (!cont.dataset.listener) {
+    cont.dataset.listener = '1';
+    cont.addEventListener('change', e => {
+      const cb = e.target.closest('input[type="checkbox"][data-ia-provider]');
+      if (!cb) return;
+      const p = cb.dataset.iaProvider;
+      const actual = loadAiHiddenProviders();
+      const lista = cb.checked ? actual.filter(x => x !== p)
+        : (actual.includes(p) ? actual : actual.concat(p));
+      if (!Object.keys(AI_PROVIDERS).some(x => !lista.includes(x))) {
+        cb.checked = true;
+        updateAiProviderVisibilityHint('Debe quedar al menos una pestaña de IA visible.');
+        return;
+      }
+      saveAiHiddenProviders(lista);
+      applyAiProviderVisibility();
+      updateAiProviderVisibilityHint();
+    });
+  }
+  updateAiProviderVisibilityHint();
+  applyAiProviderVisibility();
+}
+
 function initAiProviderTabs() {
   const tabs = document.querySelectorAll('.ia-provider-tab');
   tabs.forEach(tab => {
@@ -1438,10 +1544,15 @@ async function handleAiSend(provider, modelSelect, input, messagesEl, sendBtn) {
     const context = await getAiContext(text);
     const contextMsg = { role: 'system', content: context };
     const augmentedMessages = [contextMsg, ...allMessages];
+    const t0 = Date.now();
     const result = await config.send(apiKey, model, augmentedMessages, abort.signal);
     if (abort.signal.aborted) return;
     loading.remove();
-    addAiMessage(messagesEl, result, 'assistant', provider, input);
+    const respuesta = addAiMessage(messagesEl, result, 'assistant', provider, input);
+    // Marca de agua: modelo usado y tiempo de la respuesta (solo la llamada al
+    // modelo, sin el contexto). No se reenvía al historial porque lo que se
+    // manda es data-raw, no el texto visible.
+    addAiMessageMeta(respuesta, model, Date.now() - t0);
     updateAiStatus(provider, '✅ Listo');
   } catch (err) {
     if (err.name === 'AbortError') return;
@@ -1606,6 +1717,25 @@ function addAiMessage(container, text, className, provider, input) {
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
   return div;
+}
+
+// Marca de agua bajo la respuesta: modelo usado y tiempo empleado. Va en un
+// hijo con su propia clase, así que no entra en data-raw (lo que se reenvía al
+// modelo) ni en el texto que se recupera al editar.
+function formatAiElapsed(ms) {
+  if (ms < 1000) return Math.round(ms) + ' ms';
+  return (ms / 1000).toFixed(1).replace('.', ',') + ' s';
+}
+
+function addAiMessageMeta(div, model, ms) {
+  const meta = document.createElement('div');
+  meta.className = 'ia-msg-meta';
+  meta.textContent = '⏱ ' + model + ' · ' + formatAiElapsed(ms);
+  meta.title = 'Modelo usado y tiempo de respuesta';
+  div.appendChild(meta);
+  const container = div.parentNode;
+  if (container) container.scrollTop = container.scrollHeight;
+  return meta;
 }
 
 function updateAiStatus(provider, override) {

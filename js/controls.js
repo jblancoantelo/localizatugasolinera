@@ -162,6 +162,7 @@ function setActiveTab(tabId) {
     renderCacheInfo();
     renderProvinceCacheInfo();
     renderAiKeysConfig();
+    renderAiProviderVisibilityConfig();
   }
 
   if (tabId === 'tab-map' || tabId === 'tab-both') {
