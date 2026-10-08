@@ -241,6 +241,14 @@ Sin cuenta de Cloudflare **este proveedor no se puede usar** (su CORS solo permi
 - Elimina ese mensaje y todos los posteriores del DOM
 - El usuario puede corregir y reenviar
 
+**Formato de la respuesta (Markdown)** — `renderAiMarkdown()` en `ai-chat.js`:
+- El LLM devuelve Markdown y pintarlo tal cual con `innerHTML` amontonaba todo en un bloque (el navegador colapsa los `\n`) y dejaba los `**` a la vista. El renderer escapa primero (`escapeAiHtml`) y convierte: títulos `#`–`####`, `**negrita**`/`__`, `*cursiva*`/`_x_` (solo pegados: así `gasolineras_prov_...` no se vuelve cursiva), `` `código` ``, bloques ```` ``` ```` (también sin cerrar, respuesta cortada por `max_tokens`), listas `-`/`1.`, enlaces `https?`, `> cita`, `---` y tablas `|...|`. Salto de línea simple → `<br>` dentro del párrafo, línea en blanco → `<p>`.
+- **Solo los mensajes `assistant` y `user` pasan por el renderer**: el resto (`error`, `info`, `warn`, `loading`, `empty`) sigue siendo HTML a mano, como `warnAiModelUnavailable()`. Si se añade un mensaje interno nuevo con HTML, que no lleve esas dos clases.
+- Al escapar, un `<script>` o `<img onerror>` que devuelva el modelo no se ejecuta; el texto del usuario también se escapa.
+- **`data-raw`** guarda el texto original: `getMessagesForProvider()` lo reenvía al modelo y `editAiMessage()` lo recupera en el input. Sin él se mandaría el HTML renderizado (y el ✎ del botón de editar, que ya pasaba).
+- `aiModelReply()` (modelo que solo razonó) y `chrome-nano` devuelven **Markdown**, no HTML: son mensajes `assistant`.
+- Estilos en `css/styles.css` bajo el bloque `/* === Markdown del chat IA === */` (`.ia-md-h*`, `.ia-md-pre`, `.ia-md-table`, `.ia-md-quote`).
+
 **Modelos por proveedor** (verificados contra las APIs el 2026-09-26):
 - Groq: `qwen/qwen3.8-27b` (default), `openai/gpt-oss-20b`, `openai/gpt-oss-120b`, `allam-2-7b`
 - Mistral: `open-mistral-nemo` (default), `ministral-8b-latest`, `codestral-latest`, `mistral-small-latest`, `mistral-medium-latest`
@@ -304,7 +312,7 @@ Orden actual de grupos:
 ### Tests
 - Ubicación: `docs/test/full_test.mjs`
 - Plan: `docs/test/TEST_PLAN.md`
-- 180 tests totales (173 HTTP + 7 file://)
+- 185 tests totales (178 HTTP + 7 file://)
 - Secciones: 1-12 UI, 13 claves IA (manual), 14 push, 15 chat IA, 16 ring logs, 17 build (`ASSETS`/`APP_VERSION`/`?v=` de los iconos)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)

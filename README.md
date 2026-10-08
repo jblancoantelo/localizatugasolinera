@@ -86,6 +86,7 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 - **Histórico para la IA**: si la pregunta pide evolución, tendencia, nombra una marca concreta o trae un rango ("en 60 días", "3 meses"), se cargan esos días del Ministerio —los mismos 7/14/21/30/60/90/180 que el combo del modal, reutilizando su caché— y se le pasan las medias de la provincia, la serie de precios con fecha de hasta 12 gasolineras (con mín/máx/variación) y las mayores subidas y bajadas
 - Botón **Cancelar** para abortar mensaje en curso (AbortController)
 - Botón **✎ Editar** en mensajes enviados para corregir y reenviar
+- **Respuesta formateada**: el Markdown que devuelve el modelo (negrita, cursiva, títulos, listas, tablas, código y saltos de línea) se convierte a HTML con `renderAiMarkdown()`, en vez de pintarse tal cual y amontonarse en un bloque. El texto original se guarda en `data-raw` — así el historial que se reenvía al modelo y la edición recuperan el Markdown, no el HTML— y lo que teclea el usuario se escapa para que una etiqueta no se inyecte
 - Modelos gratuitos por proveedor (sin coste de API)
 
 ### ⚙️ Panel de Configuración
@@ -103,7 +104,7 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 ```powershell
 npm install                # playwright + web-push
 
-npm test                   # 180 tests (173 HTTP + 7 file://) — suite completa
+npm test                   # 185 tests (178 HTTP + 7 file://) — suite completa
 node check-syntax.mjs      # sintaxis de todo el JS (incluye el <script> inline del HTML)
 npm run bump               # regenera ASSETS de sw.js + incrementa APP_VERSION y BUILD_TIME
 npm run sync-assets        # solo regenera la lista ASSETS de sw.js
@@ -131,7 +132,7 @@ npm run check-assets       # verifica ASSETS sin escribir (sale con 1 si no cuad
 | `js/controls.js` | `render()`, `setActiveTab()`, filtros, favoritos |
 | `js/api.js` | Fetch de datos, `apiFetch()` con log, `tryAutoRestoreProvince()` |
 | `js/storage.js` | localStorage, `createRingLog()`, tabs de caché y de logs |
-| `js/ai-chat.js` | Chat IA: proveedores, catálogo de modelos, contexto e histórico |
+| `js/ai-chat.js` | Chat IA: proveedores, catálogo de modelos, contexto, histórico y formato de la respuesta (`renderAiMarkdown()`) |
 | `js/push-notifications.js` | Suscripción Web Push + log de eventos |
 | `js/main.js` | Eventos, arranque y restauración de estado |
 | `sw.js` | Caché, periodicsync, `checkPrices()`, notificaciones + `APP_VERSION` |
@@ -153,7 +154,7 @@ npm run check-assets       # verifica ASSETS sin escribir (sale con 1 si no cuad
 | Notificaciones | Web Push API + Periodic Background Sync |
 | Service Worker | Cache-first + Network-first híbrido, precaché generado por script |
 | Chat IA | 7 proveedores (Groq, Mistral, OpenRouter, LLM7.io, NVIDIA vía Worker, Google Gemini, Chrome Built-in AI) |
-| Tests | Playwright (180 tests, servidor HTTP inline) |
+| Tests | Playwright (185 tests, servidor HTTP inline) |
 | Desarrollo | [OpenCode](https://opencode.ai) con modelos DeepSeek (libres) |
 
 ---

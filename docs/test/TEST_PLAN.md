@@ -19,7 +19,7 @@ node docs/test/full_test.mjs
 ### Qué hace el script:
 - Inicia servidor HTTP en :8080 sirviendo desde la raíz del proyecto
 - Lanza Chromium headless
-- Ejecuta 180 tests: 173 contra HTTP + 7 contra `file://`
+- Ejecuta 185 tests: 178 contra HTTP + 7 contra `file://`
 - Empieza por la sección 17 (build), que lee ficheros del disco sin abrir el navegador
 - Cierra servidor y navegador automáticamente
 - Exit code 0 = todo OK, 1 = algún fallo
@@ -132,7 +132,7 @@ node docs/test/full_test.mjs
 
 ## Resultados actuales
 
-**180 tests — 180 ✅ 0 ❌**
+**185 tests — 185 ✅ 0 ❌**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
@@ -157,10 +157,10 @@ node docs/test/full_test.mjs
 | Caché (limpiar caché borra de verdad) | 1 ✅ | — |
 | Push Notifications | 8 ✅ | — |
 | Helpers (norm/parsePrice/comparePrices) | 14 ✅ | — |
-| Chat IA (sección 15) | 100 ✅ | — |
+| Chat IA (sección 15) | 105 ✅ | — |
 | Ring logs (sección 16) | 7 ✅ | — |
 | Build (sección 17) | 4 ✅ | — |
-| **Total** | **173 ✅** | **7 ✅** |
+| **Total** | **178 ✅** | **7 ✅** |
 
 ## 15. Chat IA (automatizado)
 
@@ -189,6 +189,15 @@ guarda el modelo enviado como el último de su proveedor en
 `gasolineras_ai_last_models`, y al poblar de nuevo se restaura ese último modelo
 —aunque venga del catálogo remoto— o se vuelve al `defaultModel` si ya no existe
 en la lista.
+
+**Formato de la respuesta (5 tests nuevos)**: el Markdown que devuelve el modelo
+se pinta con `renderAiMarkdown()` en vez de verse literal en un bloque —títulos
+(`#`), `**negrita**`, `*cursiva*`, párrafos y `<br>` por salto de línea—, y las
+listas, el código (con y sin cerrar), los enlaces y las tablas se convierten a
+HTML. El texto del usuario y el del modelo se escapan (`<img onerror>` no llega
+a ejecutarse), `data-raw` conserva el Markdown original para que
+`getMessagesForProvider()` lo reenvíe y `editAiMessage()` lo recupere en el
+input (antes mandaba el HTML renderizado y el ✎ del botón de editar).
 
 **NVIDIA vía proxy** (25 tests nuevos): tab/panel y los 8 ids presentes, es el
 único `viaProxy` con rutas relativas, sin clave en el navegador (ni campo, ni

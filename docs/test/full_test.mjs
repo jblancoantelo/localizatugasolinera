@@ -1593,6 +1593,70 @@ async function testAiChat(page) {
   log('IA', 'Si el último modelo desapareció de la lista se vuelve al default',
     restauradoModelo.sinOpcion === 'codestral-latest', restauradoModelo.sinOpcion);
 
+  // --- El Markdown del LLM se formatea en el chat (no se amontona en un bloque) ---
+  // Los modelos devuelven **negrita**, saltos de línea, listas y tablas. Antes
+  // se pintaba con innerHTML directo: el navegador colapsaba los saltos y los
+  // ** se veían literales. renderAiMarkdown() lo convierte a HTML y el texto
+  // original se guarda en data-raw para poder reenviarlo y editarlo.
+  const formato = await page.evaluate(() => {
+    const msgs = document.getElementById('iaMessagesLlm7');
+    const input = document.getElementById('iaInputLlm7');
+    const guardadoHtml = msgs.innerHTML;
+    const guardadoInput = input.value;
+    msgs.innerHTML = '';
+    const md = ['# Resumen', '', '**Repsol** baja a *1,542* €/L.', '',
+      '- Atocha: 1,589', '- Sur: 1,542', '', '1. Primero', '2. Segundo', '',
+      'Linea uno', 'Linea dos', '',
+      'Código `inline` y [web](https://example.com)', '',
+      '| Estación | Precio |', '|---|---|', '| Atocha | 1,589 |', '',
+      '```js', 'const x = 1 < 2;', '```'].join('\n');
+    const usuarioTxt = 'hola <b>mundo</b> & adios';
+    addAiMessage(msgs, usuarioTxt, 'user', 'llm7', input);
+    addAiMessage(msgs, md, 'assistant', 'llm7', input);
+    const asistente = msgs.querySelector('.ia-msg.assistant');
+    const usuario = msgs.querySelector('.ia-msg.user');
+    const r = {
+      titulo: !!asistente.querySelector('.ia-md-h1'),
+      negrita: !!asistente.querySelector('b') && asistente.querySelector('b').textContent === 'Repsol',
+      cursiva: !!asistente.querySelector('i'),
+      parrafos: asistente.querySelectorAll('p').length === 3 && asistente.querySelectorAll('br').length >= 1,
+      listas: asistente.querySelectorAll('li').length === 4 && !!asistente.querySelector('ol'),
+      codigo: asistente.querySelectorAll('code').length === 2 && !!asistente.querySelector('.ia-md-pre'),
+      tabla: !!asistente.querySelector('.ia-md-table'),
+      enlace: !!asistente.querySelector('a[href="https://example.com"]'),
+      sinAsteriscos: !/\*\*/.test(asistente.textContent),
+      rawAsistente: asistente.dataset.raw === md,
+      userEscapado: !usuario.querySelector('b') && /&lt;b&gt;mundo/.test(usuario.innerHTML)
+        && usuario.textContent.replace('✎', '') === usuarioTxt,
+      rawUsuario: usuario.dataset.raw === usuarioTxt
+    };
+    const enviados = getMessagesForProvider('llm7');
+    r.historial = enviados.length === 2
+      && enviados[0].role === 'user' && enviados[0].content === usuarioTxt
+      && enviados[1].role === 'assistant' && enviados[1].content === md;
+    // El texto del modelo se escapa: un <img onerror> no debe llegar a ejecutarse
+    delete window.__pwned;
+    addAiMessage(msgs, 'Cuidado <img src=x onerror="window.__pwned=1">', 'assistant', 'llm7', input);
+    r.sinXss = !msgs.querySelector('img') && !window.__pwned;
+    editAiMessage('llm7', usuario, input);
+    r.editDevuelve = input.value === usuarioTxt;
+    msgs.innerHTML = guardadoHtml;
+    input.value = guardadoInput;
+    return r;
+  });
+  const fmt = formato;
+  log('IA', 'El Markdown del LLM se pinta formateado (títulos, negrita, cursiva, párrafos)',
+    fmt.titulo && fmt.negrita && fmt.cursiva && fmt.parrafos && fmt.sinAsteriscos,
+    `h1:${fmt.titulo} b:${fmt.negrita} i:${fmt.cursiva} p:${fmt.parrafos} sin**:${fmt.sinAsteriscos}`);
+  log('IA', 'Listas, código, enlaces y tablas se convierten a HTML (no texto pegado)',
+    fmt.listas && fmt.codigo && fmt.tabla && fmt.enlace,
+    `li:${fmt.listas} code:${fmt.codigo} table:${fmt.tabla} a:${fmt.enlace}`);
+  log('IA', 'El texto del usuario se escapa: una etiqueta HTML no se inyecta',
+    fmt.userEscapado && fmt.sinXss, `user:${fmt.userEscapado} xss:${fmt.sinXss}`);
+  log('IA', 'El historial reenvía el Markdown original (data-raw), no el HTML renderizado',
+    fmt.historial && fmt.rawAsistente && fmt.rawUsuario, `hist:${fmt.historial} rawA:${fmt.rawAsistente} rawU:${fmt.rawUsuario}`);
+  log('IA', 'Editar un mensaje recupera el texto original en el input', fmt.editDevuelve, String(fmt.editDevuelve));
+
   // --- Restaurar fetch y limpiar ---
   await page.evaluate(() => {
     if (window.__realFetch) window.fetch = window.__realFetch;

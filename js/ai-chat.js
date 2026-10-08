@@ -7,8 +7,8 @@ function aiModelReply(model, data, alternativeModel) {
   const content = (msg?.content || '').trim();
   if (content) return content;
   if (msg?.reasoning_content) {
-    return '<b>' + model + ' se pasó el tiempo pensando y no llegó a responder.</b>'
-      + '<br><span class="ia-warn-detail">Es un modelo de razonamiento: consume el máximo de tokens para pensar antes de contestar. Prueba con ' + alternativeModel + ' o formula una pregunta más corta.</span>';
+    return '**' + model + ' se pasó el tiempo pensando y no llegó a responder.**\n\n'
+      + 'Es un modelo de razonamiento: consume el máximo de tokens para pensar antes de contestar. Prueba con ' + alternativeModel + ' o formula una pregunta más corta.';
   }
   return '(sin respuesta)';
 }
@@ -189,11 +189,11 @@ const AI_PROVIDERS = {
     models: ['gemini-nano'],
     async send(apiKey, model, messages, signal) {
       if (!window.ai || !window.ai.canCreateTextSession) {
-        return '<b>Chrome Built-in AI no disponible.</b> Necesitas Chrome Canary/Dev con flags: <code>chrome://flags/#prompt-api-for-gemini-nano</code>';
+        return '**Chrome Built-in AI no disponible.** Necesitas Chrome Canary/Dev con flags: `chrome://flags/#prompt-api-for-gemini-nano`';
       }
       const { available } = await window.ai.canCreateTextSession();
       if (available !== 'readily') {
-        return '<b>Gemini Nano no está disponible.</b> Descárgalo desde: chrome://components → "Optimization Guide On Device Model" → "Check for update"';
+        return '**Gemini Nano no está disponible.** Descárgalo desde: chrome://components → "Optimization Guide On Device Model" → "Check for update"';
       }
       const session = await window.ai.createTextSession({ systemPrompt: AI_CONTEXT_INSTRUCTION });
       const result = await session.prompt(messages.map(m => m.content).join('\n'));
@@ -1369,13 +1369,16 @@ function getMessagesForProvider(provider) {
   const msgs = [];
   el.querySelectorAll('.ia-msg:not(.empty):not(.loading)').forEach(m => {
     const role = m.classList.contains('user') ? 'user' : 'assistant';
-    msgs.push({ role, content: m.textContent });
+    // data-raw conserva el Markdown original; sin él (mensajes internos con
+    // HTML: error/info/warn) se manda el texto visible de siempre.
+    msgs.push({ role, content: m.dataset.raw !== undefined ? m.dataset.raw : m.textContent });
   });
   return msgs;
 }
 
 function editAiMessage(provider, msgEl, input) {
-  const text = msgEl.textContent.replace('✎', '').trim();
+  const crudo = msgEl.dataset.raw !== undefined ? msgEl.dataset.raw : msgEl.textContent;
+  const text = crudo.replace('✎', '').trim();
   let el = msgEl.nextElementSibling;
   while (el) {
     const next = el.nextElementSibling;
@@ -1461,10 +1464,137 @@ async function handleAiSend(provider, modelSelect, input, messagesEl, sendBtn) {
   }
 }
 
+// ===========================================================================
+// Formateo de la respuesta del LLM
+// Los modelos devuelven Markdown (**negrita**, `código`, listas, saltos de
+// línea...), y el navegador colapsa los saltos de línea en un bloque si se
+// pinta tal cual. Antes todo iba con innerHTML directo: el texto se amontonaba
+// y los ** se veían literales. Aquí se convierte un Markdown mínimo a HTML.
+// Los mensajes internos (error/info/warn) siguen siendo HTML a mano y NO
+// pasan por aquí: solo assistant y user.
+// ===========================================================================
+function escapeAiHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Formato en línea. El contenido ya viene escapado, así que cualquier etiqueta
+// que aparezca aquí es nuestra. El código entre `backticks` se aparta primero
+// para que ** ni * lo toquen dentro.
+function inlineAiMd(t) {
+  const spans = [];
+  let s = t.replace(/`([^`]+)`/g, (m, c) => {
+    spans.push('<code>' + c + '</code>');
+    return '\u0001' + (spans.length - 1) + '\u0001';
+  });
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  s = s.replace(/__([^_]+)__/g, '<b>$1</b>');
+  // Cursiva con * : sin espacios dentro de los asteriscos, o sea un texto
+  // pegado (`*hola*`). Así una operación como "2 * 3 * 4" no se convierte.
+  s = s.replace(/(^|[^*\w])\*([^\s*][^*\n]*[^\s*]|[^\s*])\*/g, '$1<i>$2</i>');
+  // Igual con guion bajos, pero pegado a palabra o puntuación: así nombres
+  // como gasolineras_prov_filters no se convierten en cursiva.
+  s = s.replace(/(^|\s)_([^_\s][^_\n]*[^_\s]|[^_\s])_(?=\s|$|[.,;:!?])/g, '$1<i>$2</i>');
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  return s.replace(/\u0001(\d+)\u0001/g, (m, i) => spans[+i]);
+}
+
+function renderAiMarkdown(md) {
+  let src = String(md == null ? '' : md).replace(/\r\n?/g, '\n');
+  const blocks = [];
+
+  // Bloques cercados por ```: fuera antes que nada, para que ni el escape ni
+  // el formato en línea toquen su contenido (incluido cualquier < literal).
+  const guardar = code => {
+    blocks.push('<pre class="ia-md-pre"><code>'
+      + escapeAiHtml(code.replace(/\n$/, '')) + '</code></pre>');
+    return '\u0000' + (blocks.length - 1) + '\u0000';
+  };
+  src = src.replace(/```[a-zA-Z0-9+#_-]*\n([\s\S]*?)```/g, (m, code) => guardar(code));
+  // ``` sin cerrar (respuesta cortada por max_tokens)
+  const suelto = src.indexOf('```');
+  if (suelto !== -1) {
+    const cabecera = src.indexOf('\n', suelto);
+    src = src.slice(0, suelto)
+      + guardar(cabecera === -1 ? '' : src.slice(cabecera + 1));
+  }
+
+  src = escapeAiHtml(src);
+
+  // Tablas Markdown: se convierten en bloques antes de trocear en líneas (ya
+  // escapadas, así que una celda con < no inyecta nada).
+  src = src.replace(/(?:^[ \t]*\|.*\|[ \t]*\n?)+/gm, bloque => {
+    const filas = bloque.trim().split('\n')
+      .map(f => f.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim()));
+    // La fila separadora (|---|---|) no aporta datos.
+    const cuerpo = filas.filter((f, i) => i === 0 || !f.every(c => /^:?-+:?$/.test(c)));
+    if (cuerpo.length < 2) return bloque;
+    const fila = (f, tag) => '<tr>' + f.map(c => '<' + tag + '>' + inlineAiMd(c) + '</' + tag + '>').join('') + '</tr>';
+    blocks.push('<table class="ia-md-table"><thead>' + fila(cuerpo[0], 'th') + '</thead><tbody>'
+      + cuerpo.slice(1).map(f => fila(f, 'td')).join('') + '</tbody></table>');
+    return '\u0000' + (blocks.length - 1) + '\u0000';
+  });
+
+  const out = [];
+  let para = [];
+  let listTag = null;
+  const cerrarLista = () => { if (listTag) { out.push('</' + listTag + '>'); listTag = null; } };
+  const cerrarParrafo = () => {
+    if (!para.length) return;
+    out.push('<p>' + inlineAiMd(para.join('<br>')) + '</p>');
+    para = [];
+  };
+
+  for (const linea of src.split('\n')) {
+    const t = linea.trim();
+    if (/^\u0000\d+\u0000$/.test(t)) { cerrarParrafo(); cerrarLista(); out.push(t); continue; }
+    if (!t) { cerrarParrafo(); cerrarLista(); continue; }
+    const h = /^(#{1,4})\s+(.*)$/.exec(t);
+    if (h) {
+      cerrarParrafo(); cerrarLista();
+      out.push('<div class="ia-md-h' + h[1].length + '">' + inlineAiMd(h[2]) + '</div>');
+      continue;
+    }
+    if (/^([-*_])\1{2,}$/.test(t)) { cerrarParrafo(); cerrarLista(); out.push('<hr>'); continue; }
+    const li = /^([-*+]|\d+[.)])\s+(.*)$/.exec(t);
+    if (li) {
+      cerrarParrafo();
+      const tag = /^\d/.test(li[1]) ? 'ol' : 'ul';
+      if (listTag !== tag) { cerrarLista(); out.push('<' + tag + '>'); listTag = tag; }
+      out.push('<li>' + inlineAiMd(li[2]) + '</li>');
+      continue;
+    }
+    const q = /^&gt;\s?(.*)$/.exec(t);
+    if (q) {
+      cerrarParrafo(); cerrarLista();
+      out.push('<div class="ia-md-quote">' + inlineAiMd(q[1]) + '</div>');
+      continue;
+    }
+    para.push(t);
+  }
+  cerrarParrafo();
+  cerrarLista();
+
+  return out.join('').replace(/\u0000(\d+)\u0000/g, (m, i) => blocks[+i]);
+}
+
+// El texto original (Markdown del LLM o lo que tecleó el usuario) se guarda en
+// data-raw: es lo que se reenvía al modelo en getMessagesForProvider() y lo que
+// se recarga en el input al editar, porque del HTML ya renderizado no se puede
+// recuperar.
 function addAiMessage(container, text, className, provider, input) {
   const div = document.createElement('div');
   div.className = 'ia-msg ' + className;
-  div.innerHTML = text;
+  if (className === 'assistant') {
+    div.dataset.raw = text;
+    div.innerHTML = renderAiMarkdown(text);
+  } else if (className === 'user') {
+    div.dataset.raw = text;
+    div.innerHTML = escapeAiHtml(text).replace(/\n/g, '<br>');
+  } else {
+    div.innerHTML = text;
+  }
   if (className === 'user' && provider) {
     const editBtn = document.createElement('button');
     editBtn.className = 'ia-edit-btn';
