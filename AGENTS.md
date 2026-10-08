@@ -294,6 +294,14 @@ Sin cuenta de Cloudflare **este proveedor no se puede usar** (su CORS solo permi
 - Botón 🔄 en cada desplegable (`initAiModelRefreshButtons()`) + botón dentro del aviso `warnAiModelUnavailable()`
 - `initAiChat()` repuebla cada desplegable al cargar (vacía antes `select.value` para que no se quede con la primera opción del HTML) mezclando la caché de catálogo si existe, así el orden y el último modelo valen desde el primer pintado
 
+**Historial de conversación por proveedor** (`AI_CHAT_HISTORY_PREFIX = 'gasolineras_ai_chat_'`):
+- Cada pestaña guarda sus mensajes en una **clave propia de localStorage** (`gasolineras_ai_chat_groq`, …, `gasolineras_ai_chat_general`) como array `[{ role, content }]` con el Markdown original de `data-raw`, máximo `AI_CHAT_HISTORY_MAX = 100` mensajes. Una clave por proveedor = se puede borrar una sin tocar las demás.
+- `persistAiChat(provider)` vuelca el DOM leyendo **solo** `.ia-msg.user` y `.ia-msg.assistant` (errores, loading, info/warn y el `.empty` de bienvenida no se guardan, o se recargarían al abrir la app). Se llama donde el historial cambia de verdad: `handleAiSend()` tras el mensaje del usuario (así sobrevive a un fallo/cancelación) y tras la respuesta, `handleAiGeneralSend()`/`generalAsk()` con la clave `general`, y `editAiMessage()` (borra el mensaje y todos los posteriores).
+- `restoreAiChatHistory()` se llama en `initAiChat()` **antes** del chequeo `messagesEl.children.length === 0` (si no, se pintaría el `.empty` encima) y reconstruye con `addAiMessage()`, así que repite `data-raw`, el Markdown y el botón ✎. Solo pinta si el contenedor está vacío o solo con el `.empty`.
+- Botón 🗑 en la `.ia-config` de **los 8 paneles** (clase `.ia-clear-btn` + `data-iaclear="<proveedor>"`), enganchado con delegación una sola vez en `initAiChat()` (guardado con `dataset.listener`). `clearAiChatHistory()` borra su clave, vacía el contenedor y repone el mensaje de bienvenida.
+- Las claves aparecen solas en Config → Caché → `localStorage` (prefijo `gasolineras_`) con su ✕, para el borrado completo desde ahí.
+- ⚠️ Los tests manipulan el DOM directamente (`msgs.innerHTML = …`), así que en `testAiChat()` hay que **limpiar por prefijo** (`gasolineras_ai_chat_`) en el bloque final, igual que se hace con `AI_LAST_MODEL_KEY`.
+
 **Último modelo por proveedor** (`AI_LAST_MODEL_KEY = 'gasolineras_ai_last_models'`):
 - `saveAiLastModel(provider, model)` se llama en `handleAiSend()` **al enviar**, no al mover el desplegable: lo recordado tiene que ser el modelo con el que se respondió por última vez
 - `restoreAiLastModel(provider, select)` lo vuelve a elegir si sigue entre las opciones; si ya no existe se cae al `defaultModel`
@@ -333,7 +341,7 @@ Orden actual de grupos:
 ### Tests
 - Ubicación: `docs/test/full_test.mjs`
 - Plan: `docs/test/TEST_PLAN.md`
-- 197 tests totales (190 HTTP + 7 file://)
+- 201 tests totales (194 HTTP + 7 file://)
 - Secciones: 1-12 UI, 13 claves IA (manual), 14 push, 15 chat IA, 16 ring logs, 17 build (`ASSETS`/`APP_VERSION`/`?v=` de los iconos)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)

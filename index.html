@@ -117,6 +117,7 @@
           <div class="ia-config">
             <span style="font-size:0.65rem;color:#888">🚀 Misma pregunta a todos los proveedores visibles, en paralelo</span>
             <span id="iaStatusGeneral" style="font-size:0.6rem;color:#999"></span>
+            <button class="ia-clear-btn" data-iaclear="general" title="Borrar el historial de este chat">🗑</button>
           </div>
           <div class="ia-chat">
             <div class="ia-messages" id="iaMessagesGeneral"></div>
@@ -132,6 +133,7 @@
             <button class="ia-refresh-btn" id="iaRefreshModelsGroq" title="Actualizar lista de modelos de Groq">🔄</button>
             <span class="ia-models-count" id="iaModelsStatusGroq"></span>
             <span id="iaStatusGroq" style="font-size:0.6rem;color:#999">⚠️ Sin API Key</span>
+            <button class="ia-clear-btn" data-iaclear="groq" title="Borrar el historial de este chat">🗑</button>
           </div>
           <div class="ia-chat">
             <div class="ia-messages" id="iaMessagesGroq"></div>
@@ -147,6 +149,7 @@
             <button class="ia-refresh-btn" id="iaRefreshModelsMistral" title="Actualizar lista de modelos de Mistral">🔄</button>
             <span class="ia-models-count" id="iaModelsStatusMistral"></span>
             <span id="iaStatusMistral" style="font-size:0.6rem;color:#999">⚠️ Sin API Key</span>
+            <button class="ia-clear-btn" data-iaclear="mistral" title="Borrar el historial de este chat">🗑</button>
           </div>
           <div class="ia-chat">
             <div class="ia-messages" id="iaMessagesMistral"></div>
@@ -162,6 +165,7 @@
             <button class="ia-refresh-btn" id="iaRefreshModelsOpenrouter" title="Actualizar lista de modelos gratis de OpenRouter">🔄</button>
             <span class="ia-models-count" id="iaModelsStatusOpenrouter"></span>
             <span id="iaStatusOpenrouter" style="font-size:0.6rem;color:#999">⚠️ Sin API Key</span>
+            <button class="ia-clear-btn" data-iaclear="openrouter" title="Borrar el historial de este chat">🗑</button>
           </div>
           <div class="ia-chat">
             <div class="ia-messages" id="iaMessagesOpenrouter"></div>
@@ -177,6 +181,7 @@
             <button class="ia-refresh-btn" id="iaRefreshModelsLlm7" title="Actualizar lista de modelos de LLM7.io">🔄</button>
             <span class="ia-models-count" id="iaModelsStatusLlm7"></span>
             <span id="iaStatusLlm7" style="font-size:0.6rem;color:#999">ℹ️ Sin clave: acceso anónimo (500k tokens/día)</span>
+            <button class="ia-clear-btn" data-iaclear="llm7" title="Borrar el historial de este chat">🗑</button>
           </div>
           <div class="ia-chat">
             <div class="ia-messages" id="iaMessagesLlm7"></div>
@@ -192,6 +197,7 @@
             <button class="ia-refresh-btn" id="iaRefreshModelsNvidia" title="Actualizar lista de modelos de NVIDIA (vía proxy)">🔄</button>
             <span class="ia-models-count" id="iaModelsStatusNvidia"></span>
             <span id="iaStatusNvidia" style="font-size:0.6rem;color:#999">✅ Proxy por defecto (cámbialo en Config → IA)</span>
+            <button class="ia-clear-btn" data-iaclear="nvidia" title="Borrar el historial de este chat">🗑</button>
           </div>
           <div class="ia-chat">
             <div class="ia-messages" id="iaMessagesNvidia"></div>
@@ -207,6 +213,7 @@
             <button class="ia-refresh-btn" id="iaRefreshModelsGoogle" title="Actualizar lista de modelos de Google">🔄</button>
             <span class="ia-models-count" id="iaModelsStatusGoogle"></span>
             <span id="iaStatusGoogle" style="font-size:0.6rem;color:#999">⚠️ Sin API Key</span>
+            <button class="ia-clear-btn" data-iaclear="google" title="Borrar el historial de este chat">🗑</button>
           </div>
           <div class="ia-chat">
             <div class="ia-messages" id="iaMessagesGoogle"></div>
@@ -220,6 +227,7 @@
           <div class="ia-config">
             <span style="font-size:0.65rem;color:#888">🤖 Gemini Nano integrado en Chrome</span>
             <span id="iaStatusChromeNano" style="font-size:0.6rem;color:#999"></span>
+            <button class="ia-clear-btn" data-iaclear="chrome-nano" title="Borrar el historial de este chat">🗑</button>
           </div>
           <div class="ia-chat">
             <div class="ia-messages" id="iaMessagesChromeNano"></div>

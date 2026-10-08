@@ -205,6 +205,10 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 .ia-refresh-btn:disabled { opacity: 0.5; cursor: wait; }
 .ia-models-count { font-size: 0.6rem; color: #999; }
 
+/* Borra el historial de ESTA pestaña (una clave de localStorage por proveedor) */
+.ia-clear-btn { background: #fff3e0; border: 1px solid #ffcc80; border-radius: 4px; padding: 0.1rem 0.3rem; cursor: pointer; font-size: 0.7rem; line-height: 1.2; margin-left: auto; }
+.ia-clear-btn:hover { background: #ffe0b2; }
+
 .ia-input-row { display: flex; padding: 0.4rem; border-top: 1px solid #eee; gap: 0.3rem; flex-shrink: 0; }
 .ia-input-row input { flex: 1; padding: 0.3rem 0.5rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.72rem; }
 .ia-input-row input:focus { border-color: #1a73e8; outline: none; box-shadow: 0 0 0 2px rgba(26,115,232,0.1); }

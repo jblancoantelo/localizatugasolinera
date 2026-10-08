@@ -1867,6 +1867,83 @@ async function testAiChat(page) {
     && v.restaurado.casillas === 7 && v.restaurado.panelesOcultos === 0,
     JSON.stringify(v.restaurado));
 
+  // --- Historial de conversación por proveedor en localStorage ---
+  // Cada pestaña tiene su propia clave (gasolineras_ai_chat_<proveedor>), así
+  // que se puede borrar una sin tocar las demás. Solo se guardan los mensajes
+  // reales (user/assistant) con su Markdown original: ni errores, ni loading,
+  // ni el mensaje de bienvenida. Al volver a abrir la app el chat se reconstruye.
+  const historial = await page.evaluate(async () => {
+    const clave = aiChatHistoryKey('llm7');
+    const msgs = document.getElementById('iaMessagesLlm7');
+    const input = document.getElementById('iaInputLlm7');
+    const sel = document.getElementById('iaModelLlm7');
+    const btn = document.getElementById('iaSendLlm7');
+    const guardado = {
+      html: msgs.innerHTML, input: input.value,
+      llm7: localStorage.getItem(clave),
+      groq: localStorage.getItem(aiChatHistoryKey('groq')),
+      botones: document.querySelectorAll('.ia-clear-btn').length
+    };
+    localStorage.removeItem(clave);
+    msgs.innerHTML = '';
+    const realSend = AI_PROVIDERS.llm7.send;
+    AI_PROVIDERS.llm7.send = async () => '**respuesta** de prueba';
+    input.value = 'pregunta de prueba';
+    await handleAiSend('llm7', sel, input, msgs, btn);
+
+    const trasEnvio = loadAiChatHistory('llm7');
+    // Un error no debe colarse en el historial
+    addAiMessage(msgs, '❌ Error: fallo', 'error');
+    persistAiChat('llm7');
+    const conError = loadAiChatHistory('llm7');
+    const groqTrasEnvio = localStorage.getItem(aiChatHistoryKey('groq')) === guardado.groq;
+
+    // Simular la recarga: contenedor vacío → se reconstruye desde localStorage
+    msgs.innerHTML = '';
+    const reconstruido = restoreAiChatHistory('llm7', msgs, input);
+    const reconstruidoEls = msgs.querySelectorAll('.ia-msg');
+    const r = {
+      trasEnvio, conError, groqTrasEnvio, reconstruido,
+      botones: guardado.botones,
+      user: reconstruidoEls[0] && reconstruidoEls[0].classList.contains('user'),
+      editar: !!(reconstruidoEls[0] && reconstruidoEls[0].querySelector('.ia-edit-btn')),
+      md: !!(reconstruidoEls[1] && reconstruidoEls[1].querySelector('b')),
+      raw: reconstruidoEls[1] && reconstruidoEls[1].dataset.raw === '**respuesta** de prueba'
+    };
+
+    // 🗑 borra su clave, su chat y deja el mensaje de bienvenida
+    clearAiChatHistory('llm7');
+    r.claveBorrada = localStorage.getItem(clave) === null;
+    r.soloVacio = msgs.querySelectorAll('.ia-msg').length === 1
+      && msgs.querySelector('.ia-msg.empty') !== null;
+    r.groqIntacta = localStorage.getItem(aiChatHistoryKey('groq')) === guardado.groq;
+
+    AI_PROVIDERS.llm7.send = realSend;
+    msgs.innerHTML = guardado.html;
+    input.value = guardado.input;
+    if (guardado.llm7 === null) localStorage.removeItem(clave);
+    else localStorage.setItem(clave, guardado.llm7);
+    if (guardado.groq === null) localStorage.removeItem(aiChatHistoryKey('groq'));
+    else localStorage.setItem(aiChatHistoryKey('groq'), guardado.groq);
+    return r;
+  });
+  const h = historial;
+  const envioOk = h.trasEnvio.length === 2
+    && h.trasEnvio[0].role === 'user' && h.trasEnvio[0].content === 'pregunta de prueba'
+    && h.trasEnvio[1].role === 'assistant' && h.trasEnvio[1].content === '**respuesta** de prueba';
+  log('IA', 'Al enviar se guarda la conversación en localStorage, una clave por proveedor',
+    envioOk && h.groqTrasEnvio,
+    'msgs:' + h.trasEnvio.length + ' groq sin tocar:' + h.groqTrasEnvio);
+  log('IA', 'Los mensajes internos (error) no entran en el historial',
+    h.conError.length === h.trasEnvio.length && !h.conError.some(m => /Error/.test(m.content)),
+    'con error: ' + h.conError.length);
+  log('IA', 'Al volver a abrir la app el chat se reconstruye (Markdown + botón editar)',
+    h.reconstruido && h.user && h.editar && h.md && h.raw,
+    `recon:${h.reconstruido} user:${h.user} ✎:${h.editar} md:${h.md} raw:${h.raw}`);
+  log('IA', 'Hay un botón 🗑 por pestaña y borra solo el historial de su proveedor',
+    h.botones === 8 && h.claveBorrada && h.soloVacio && h.groqIntacta,
+    `botones:${h.botones} clave:${h.claveBorrada} vacio:${h.soloVacio} groq:${h.groqIntacta}`);
+
   // --- Restaurar fetch y limpiar ---
   await page.evaluate(() => {
     if (window.__realFetch) window.fetch = window.__realFetch;
@@ -1875,6 +1952,9 @@ async function testAiChat(page) {
     localStorage.removeItem(AI_KEYS_KEY);
     localStorage.removeItem(AI_PROXY_KEY);
     localStorage.removeItem(AI_HIDDEN_KEY);
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('gasolineras_ai_chat_'))
+      .forEach(k => localStorage.removeItem(k));
     const input = document.getElementById('iaKeyLlm7');
     if (input) input.value = '';
     AI_PROVIDERS.llm7.key = null;

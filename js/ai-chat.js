@@ -1142,6 +1142,13 @@ function handleLoadDefaultKeys() {
 }
 
 function initAiChat() {
+  // Botón 🗑 de cada panel: borra SOLO el historial de su proveedor.
+  document.querySelectorAll('.ia-clear-btn').forEach(btn => {
+    if (btn.dataset.listener) return;
+    btn.dataset.listener = '1';
+    btn.addEventListener('click', () => clearAiChatHistory(btn.dataset.iaclear));
+  });
+
   // First sync keys from config inputs (already populated by renderAiKeysConfig)
   for (const [provider, config] of Object.entries(AI_PROVIDERS)) {
     if (provider !== 'chrome-nano') {
@@ -1165,12 +1172,12 @@ function initAiChat() {
       populateAiModelSelect(provider, getAiCachedModels(provider)?.models || null);
     }
 
-    if (messagesEl.children.length === 0) {
-      const empty = document.createElement('div');
-      empty.className = 'ia-msg empty';
-      empty.textContent = 'Inicia una conversación con ' + provider.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-      messagesEl.appendChild(empty);
-    }
+    // Historial guardado de sesiones anteriores (una clave por proveedor);
+    // solo se pinta si el chat está vacío, y antes del mensaje de bienvenida
+    // para que no lo cree encima.
+    restoreAiChatHistory(provider, messagesEl, input);
+
+    if (messagesEl.children.length === 0) showAiEmptyMessage(messagesEl, provider);
 
     const doSend = () => handleAiSend(provider, modelSelect, input, messagesEl, sendBtn);
     input.addEventListener('keydown', e => { if (e.key === 'Enter') doSend(); });
@@ -1186,12 +1193,8 @@ function initAiChat() {
   const genMsgs = document.getElementById(getProviderInputId(AI_GENERAL, 'iaMessages'));
   if (genInput && genBtn && genMsgs && !genInput.dataset.listener) {
     genInput.dataset.listener = '1';
-    if (genMsgs.children.length === 0) {
-      const empty = document.createElement('div');
-      empty.className = 'ia-msg empty';
-      empty.textContent = 'Pregunta a todos los proveedores visibles a la vez: cada respuesta lleva su proveedor, modelo y tiempo.';
-      genMsgs.appendChild(empty);
-    }
+    restoreAiChatHistory(AI_GENERAL, genMsgs, genInput);
+    if (genMsgs.children.length === 0) showAiEmptyMessage(genMsgs, AI_GENERAL);
     const doSend = () => handleAiGeneralSend(genInput, genMsgs, genBtn);
     genInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSend(); });
     genBtn.addEventListener('click', doSend);
@@ -1524,6 +1527,93 @@ function getMessagesForProvider(provider) {
   return readAiMessages(document.getElementById(getProviderInputId(provider, 'iaMessages')));
 }
 
+// ===========================================================================
+// Historial de conversación por proveedor — localStorage
+// Cada pestaña guarda sus mensajes en una CLAVE PROPIA
+// (`gasolineras_ai_chat_<proveedor>`) para poder borrar una sin tocar las
+// demás: desde el botón 🗑 del panel o desde Config → Caché → localStorage.
+// Solo se guardan los mensajes reales (user/assistant) con su Markdown
+// original en data-raw; los internos (error/info/warn/loading/empty) no, para
+// que un error o un "Pensando..." no se recarguen al volver a abrir la app.
+// ===========================================================================
+const AI_CHAT_HISTORY_PREFIX = 'gasolineras_ai_chat_';
+const AI_CHAT_HISTORY_MAX = 100;
+
+function aiChatHistoryKey(provider) {
+  return AI_CHAT_HISTORY_PREFIX + provider;
+}
+
+function loadAiChatHistory(provider) {
+  try {
+    const raw = localStorage.getItem(aiChatHistoryKey(provider));
+    const list = raw ? JSON.parse(raw) : null;
+    return Array.isArray(list)
+      ? list.filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+      : [];
+  } catch { return []; }
+}
+
+function saveAiChatHistory(provider, messages) {
+  if (!provider) return;
+  try {
+    const limpio = (messages || []).slice(-AI_CHAT_HISTORY_MAX);
+    if (!limpio.length) localStorage.removeItem(aiChatHistoryKey(provider));
+    else localStorage.setItem(aiChatHistoryKey(provider), JSON.stringify(limpio));
+  } catch {}
+}
+
+// Vuelca al localStorage lo que haya ahora mismo en el DOM del chat de ese
+// proveedor. Se llama tras cada cambio real (mensaje del usuario, respuesta,
+// edición o borrado), nunca tras pintar un error/loading.
+function persistAiChat(provider) {
+  const container = document.getElementById(getProviderInputId(provider, 'iaMessages'));
+  if (!container) return;
+  const msgs = [];
+  container.querySelectorAll('.ia-msg.user, .ia-msg.assistant').forEach(m => {
+    msgs.push({
+      role: m.classList.contains('user') ? 'user' : 'assistant',
+      content: m.dataset.raw !== undefined ? m.dataset.raw : m.textContent
+    });
+  });
+  saveAiChatHistory(provider, msgs);
+}
+
+function aiChatEmptyText(provider) {
+  if (provider === AI_GENERAL) {
+    return 'Pregunta a todos los proveedores visibles a la vez: cada respuesta lleva su proveedor, modelo y tiempo.';
+  }
+  return 'Inicia una conversación con ' + provider.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function showAiEmptyMessage(container, provider) {
+  const empty = document.createElement('div');
+  empty.className = 'ia-msg empty';
+  empty.textContent = aiChatEmptyText(provider);
+  container.appendChild(empty);
+}
+
+// Reconstruye el chat de una pestaña desde localStorage. Solo pinta si el
+// contenedor está vacío (o solo con el mensaje de bienvenida) y hay algo
+// guardado; addAiMessage repite el data-raw, el Markdown y el botón ✎.
+function restoreAiChatHistory(provider, container, input) {
+  const saved = loadAiChatHistory(provider);
+  if (!saved.length || !container) return false;
+  if (container.querySelector('.ia-msg:not(.empty)')) return false;
+  container.innerHTML = '';
+  saved.forEach(m => addAiMessage(container, m.content, m.role, provider, input));
+  return true;
+}
+
+// Borra la clave del proveedor, vacía su contenedor y vuelve al mensaje de
+// bienvenida. No toca las claves de los demás proveedores.
+function clearAiChatHistory(provider) {
+  try { localStorage.removeItem(aiChatHistoryKey(provider)); } catch {}
+  const container = document.getElementById(getProviderInputId(provider, 'iaMessages'));
+  if (!container) return;
+  container.innerHTML = '';
+  showAiEmptyMessage(container, provider);
+}
+
 function editAiMessage(provider, msgEl, input) {
   const crudo = msgEl.dataset.raw !== undefined ? msgEl.dataset.raw : msgEl.textContent;
   const text = crudo.replace('✎', '').trim();
@@ -1536,6 +1626,9 @@ function editAiMessage(provider, msgEl, input) {
   msgEl.remove();
   input.value = text;
   input.focus();
+  // El mensaje y todos los posteriores se han ido del DOM: hay que reflejarlo
+  // en localStorage, o al recargar volverían.
+  persistAiChat(provider);
 }
 
 function cancelAiMessage(provider, loadingEl) {
@@ -1570,6 +1663,9 @@ async function handleAiSend(provider, modelSelect, input, messagesEl, sendBtn) {
   if (empty) empty.remove();
 
   addAiMessage(messagesEl, text, 'user', provider, input);
+  // Se guarda ya el mensaje del usuario: si la petición falla o se cancela,
+  // la pregunta sigue estando en el historial.
+  persistAiChat(provider);
   input.value = '';
   input.disabled = true;
   sendBtn.disabled = true;
@@ -1595,6 +1691,7 @@ async function handleAiSend(provider, modelSelect, input, messagesEl, sendBtn) {
     // modelo, sin el contexto). No se reenvía al historial porque lo que se
     // manda es data-raw, no el texto visible.
     addAiMessageMeta(respuesta, model, Date.now() - t0);
+    persistAiChat(provider);
     updateAiStatus(provider, '✅ Listo');
   } catch (err) {
     if (err.name === 'AbortError') return;
@@ -1636,6 +1733,7 @@ async function generalAsk(provider, messages, signal, messagesEl, input) {
     // Marca de agua: proveedor · modelo · tiempo, para poder comparar quién
     // contestó y a qué velocidad con la misma pregunta.
     addAiMessageMeta(div, model, Date.now() - t0, label);
+    persistAiChat(AI_GENERAL);
     updateAiStatus(provider, '✅ Listo');
   } catch (err) {
     if (err.name === 'AbortError' || signal.aborted) return;
@@ -1659,6 +1757,7 @@ async function handleAiGeneralSend(input, messagesEl, sendBtn) {
   const empty = messagesEl.querySelector('.ia-msg.empty');
   if (empty) empty.remove();
   addAiMessage(messagesEl, text, 'user', AI_GENERAL, input);
+  persistAiChat(AI_GENERAL);
   input.value = '';
   input.disabled = true;
   sendBtn.disabled = true;
