@@ -50,11 +50,17 @@
       </div>
       <div class="filter-group">
         <span class="filter-group-label">🗺️<span class="label-text"> Mapa</span></span>
-        <select id="mapStyle" style="max-width:75px">
+        <select id="mapStyle">
+          <option value="satellite" selected>Satélite</option>
+          <option value="hybrid">Sat. nombres</option>
           <option value="street">Calle</option>
-          <option value="satellite">Satélite</option>
           <option value="standard">Estándar</option>
+          <option value="hot">Humanitario</option>
           <option value="cycling">Ciclismo</option>
+          <option value="dark">Oscuro</option>
+          <option value="topo">Topográfico</option>
+          <option value="natgeo">NatGeo</option>
+          <option value="relief">Relieve</option>
         </select>
         <span class="filter-sep"></span>
         <button class="btn" id="searchToggleBtn" title="Buscar">🔍</button>

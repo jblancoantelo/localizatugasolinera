@@ -1,21 +1,92 @@
+const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const ESR_ATTR = '&copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics';
+const CARTO_ATTR = OSM_ATTR + ', &copy; <a href="https://carto.com/">CARTO</a>';
+
+// Cada vista admite varios proveedores (`urls`): si el primero no devuelve tiles
+// (host bloqueado, adblock, caída) se pasa al siguiente en vez de dejar el mapa
+// en gris. Una entrada puede ser una URL o { url, attribution, maxNativeZoom }.
 const TILE_CONFIGS = {
-  street: {
-    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    opts: { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/">CARTO</a>' }
-  },
   satellite: {
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    opts: { maxZoom: 19, attribution: '&copy; <a href="https://www.esri.com/">ESRI</a>' }
+    urls: [
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+    ],
+    opts: { maxZoom: 19, attribution: ESR_ATTR }
+  },
+  hybrid: {
+    urls: [
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+    ],
+    opts: { maxZoom: 19, attribution: ESR_ATTR },
+    overlay: {
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+      opts: { maxZoom: 19, attribution: '&copy; Esri' }
+    }
+  },
+  street: {
+    urls: [
+      { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', attribution: CARTO_ATTR },
+      { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', attribution: ESR_ATTR },
+      { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: OSM_ATTR }
+    ],
+    opts: { maxZoom: 19 }
   },
   standard: {
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    opts: { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }
+    urls: [
+      { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: OSM_ATTR },
+      { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', attribution: ESR_ATTR }
+    ],
+    opts: { maxZoom: 19 }
+  },
+  hot: {
+    urls: [
+      { url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', attribution: OSM_ATTR + ', <a href="https://www.hotosm.org">HOT</a>' },
+      { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: OSM_ATTR }
+    ],
+    opts: { maxZoom: 19 }
   },
   cycling: {
-    url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
-    opts: { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, <a href="https://www.cyclosm.org">CyclOSM</a>' }
+    urls: [
+      { url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', attribution: OSM_ATTR + ', <a href="https://www.cyclosm.org">CyclOSM</a>' },
+      { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: OSM_ATTR }
+    ],
+    opts: { maxZoom: 19 }
+  },
+  dark: {
+    urls: [
+      { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attribution: CARTO_ATTR },
+      { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', attribution: ESR_ATTR }
+    ],
+    opts: { maxZoom: 19 }
+  },
+  topo: {
+    urls: [
+      { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', attribution: ESR_ATTR },
+      { url: 'https://tile.opentopomap.org/{z}/{x}/{y}.png', attribution: OSM_ATTR + ', &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)', maxNativeZoom: 17 },
+      { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: OSM_ATTR }
+    ],
+    opts: { maxZoom: 19 }
+  },
+  natgeo: {
+    urls: [
+      { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri, National Geographic, Esri, DeLorme, NAVTEQ', maxNativeZoom: 16 },
+      { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', attribution: ESR_ATTR }
+    ],
+    opts: { maxZoom: 19 }
+  },
+  relief: {
+    urls: [
+      { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri' },
+      { url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri' }
+    ],
+    opts: { maxZoom: 19 }
   }
 };
+
+// Índice de proveedor que ya funcionó en esta sesión: evita reintentar el
+// host que falló cada vez que se cambia de vista.
+const TILE_URL_PREFERRED = {};
 
 function popupHtml(d) {
   const items = [];
@@ -66,11 +137,34 @@ function initMap() {
   setTileLayer(STATE.selectedTile);
 }
 
-function setTileLayer(name) {
-  const cfg = TILE_CONFIGS[name] || TILE_CONFIGS.street;
+function setTileLayer(name, urlIdx) {
+  const cfg = TILE_CONFIGS[name] || TILE_CONFIGS.satellite;
+  const entries = cfg.urls;
+  let idx = urlIdx != null ? urlIdx : (TILE_URL_PREFERRED[name] || 0);
+  if (idx < 0 || idx >= entries.length) idx = 0;
+  const entry = typeof entries[idx] === 'string' ? { url: entries[idx] } : entries[idx];
+
   if (STATE.tileLayer) STATE.map.removeLayer(STATE.tileLayer);
-  STATE.tileLayer = L.tileLayer(cfg.url, cfg.opts).addTo(STATE.map);
+  if (STATE.tileOverlay) { STATE.map.removeLayer(STATE.tileOverlay); STATE.tileOverlay = null; }
+
+  const layer = L.tileLayer(entry.url, Object.assign({}, cfg.opts, entry));
+  let ok = 0, errors = 0;
+  layer.on('tileload', () => { ok++; TILE_URL_PREFERRED[name] = idx; });
+  if (entries.length > 1) {
+    layer.on('tileerror', () => {
+      errors++;
+      if (ok === 0 && errors >= 4 && STATE.tileLayer === layer && idx < entries.length - 1) {
+        setTileLayer(name, idx + 1);
+      }
+    });
+  }
+  layer.addTo(STATE.map);
+  STATE.tileLayer = layer;
   STATE.selectedTile = name;
+
+  if (cfg.overlay) {
+    STATE.tileOverlay = L.tileLayer(cfg.overlay.url, cfg.overlay.opts).addTo(STATE.map);
+  }
 }
 
 function updateUserMarker(lat, lng) {

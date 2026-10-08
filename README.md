@@ -16,7 +16,8 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 
 ### 🗺️ Vista Mapa
 - Mapa interactivo con **Leaflet** (OpenStreetMap + CartoDB + ESRI + CyclOSM)
-- 4 estilos de mapa: calle, satélite, estándar y ciclismo
+- 10 estilos de mapa: satélite (por defecto), satélite con nombres, calle, estándar, humanitario, ciclismo, oscuro, topográfico, NatGeo y relieve
+- Si el proveedor de una vista no devuelve tiles (host bloqueado o caído) se cambia solo al proveedor de respaldo en vez de dejar el mapa en gris
 - Marcadores coloreados por precio
 - Popup con datos de la estación e histórico de precios
 - Posicionamiento manual (clic derecho) y geolocalización automática
@@ -152,7 +153,7 @@ npm run check-assets       # verifica ASSETS sin escribir (sale con 1 si no cuad
 | Componente | Tecnología |
 |------------|------------|
 | App shell | HTML5 + CSS3 (responsive, ~430 líneas) |
-| Mapas | [Leaflet](https://leafletjs.com/) 1.9.4 con tiles OSM / CartoDB / ESRI / CyclOSM |
+| Mapas | [Leaflet](https://leafletjs.com/) 1.9.4 con tiles OSM / CartoDB / ESRI / CyclOSM / OpenTopoMap / NatGeo (con proveedor de respaldo por vista) |
 | Gráficas | Canvas 2D nativo — sin librerías de charts (`chart-core.js` compartido por las dos vistas) |
 | Persistencia | IndexedDB + localStorage |
 | Notificaciones | Web Push API + Periodic Background Sync |

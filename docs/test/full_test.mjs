@@ -251,6 +251,43 @@ async function testHTTP(browser, server) {
   await styleSel.selectOption('street');
   await sleep(300);
 
+  // Vistas del mapa: valor por defecto, catálogo completo y respaldo de proveedor
+  const vistas = await page.evaluate(() => {
+    const opts = [...document.getElementById('mapStyle').options].map(o => o.value);
+    return {
+      primera: opts[0],
+      total: opts.length,
+      sinCapa: opts.filter(v => !TILE_CONFIGS[v]).join(','),
+      calle: TILE_CONFIGS.street.urls.length
+    };
+  });
+  log('Mapa', 'Satélite es la primera opción (la que aplica por defecto)', vistas.primera === 'satellite');
+  log('Mapa', `Catálogo de ${vistas.total} vistas con capa configurada`,
+    vistas.total >= 8 && vistas.sinCapa === '');
+  log('Mapa', 'Calle tiene proveedor de respaldo', vistas.calle >= 2);
+
+  // Respaldo: sin tiles del proveedor principal debe pasar al siguiente
+  const respaldo = await page.evaluate(() => {
+    setTileLayer('street', 0);
+    const layer = STATE.tileLayer;
+    const url0 = layer._url;
+    for (let i = 0; i < 8; i++) layer.fire('tileerror', { coords: { x: 0, y: 0, z: 0 } });
+    return { url0, url1: STATE.tileLayer._url, misma: STATE.selectedTile === 'street' };
+  });
+  log('Mapa', 'Si el proveedor principal falla se usa el respaldo',
+    respaldo.misma && respaldo.url0 !== respaldo.url1);
+
+  // Todas las vistas nuevas se aplican al elegirlas
+  let vistasAplican = true;
+  for (const v of ['hybrid', 'standard', 'hot', 'cycling', 'dark', 'topo', 'natgeo', 'relief']) {
+    await styleSel.selectOption(v);
+    await sleep(80);
+    if (!(await page.evaluate(val => STATE.selectedTile === val, v))) vistasAplican = false;
+  }
+  log('Mapa', 'Todas las vistas se aplican al elegirlas', vistasAplican);
+  await styleSel.selectOption('satellite');
+  await sleep(300);
+
   // Geolocate button exists
   log('Geo', 'Botón visible', await page.locator('#geolocBtn').isVisible());
 

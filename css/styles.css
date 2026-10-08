@@ -31,6 +31,8 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
   padding: 0.2rem 0.35rem; border: 1px solid #d0d0d0; border-radius: 4px;
   font-size: 0.72rem; background: #fff; max-width: 115px;
 }
+/* El combo de vistas del mapa tiene más opciones, así que necesita algo más de ancho */
+#mapStyle { max-width: 120px; }
 .filter-group input:focus, .filter-group select:focus {
   border-color: #1a73e8; outline: none; box-shadow: 0 0 0 2px rgba(26,115,232,0.1);
 }
@@ -403,6 +405,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
   .filter-sep { display: none; }
   .filter-group-label .label-text { display: none; }
   .filter-group input, .filter-group select { font-size: 0.65rem; padding: 0.15rem 0.25rem; max-width: 85px; }
+  #mapStyle { max-width: 95px; }
   .filter-group .btn { font-size: 0.62rem; padding: 0.15rem 0.3rem; }
   .search-row { padding: 0.1rem 0.3rem 0.2rem; }
   .search-row input { font-size: 0.7rem; padding: 0.2rem 0.35rem; }
@@ -418,6 +421,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 @media (max-width: 480px) {
   .filter-group { min-width: 40px; padding: 0.05rem 0.1rem; }
   .filter-group select, .filter-group input { max-width: 65px; }
+  #mapStyle { max-width: 80px; }
   .table-wrap th:nth-child(4), .table-wrap td:nth-child(4),
   .table-wrap th:nth-child(5), .table-wrap td:nth-child(5) { display: none; }
 }
