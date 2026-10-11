@@ -103,7 +103,7 @@ async function loadChartForFuel(station, fuelName) {
       window._historyCache = { province: s.selectedProv, days: s.historyDays, data };
     }
     const stationData = window._historyCache.data;
-    const history = getStationHistory(stationData, station.IDEESS, fuelName);
+    const history = appendTodayPrice(getStationHistory(stationData, station.IDEESS, fuelName), station, fuelName);
     loadingEl.style.display = 'none';
     if (history.length < 2) {
       errorEl.textContent = 'No hay suficientes datos históricos para esta estación';

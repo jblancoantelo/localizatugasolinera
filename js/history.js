@@ -76,6 +76,33 @@ async function fetchHistoryByProvinceId(provinceId, days) {
   return results;
 }
 
+// Precio actual (datos en vivo) de una estación para el combustible o grupo
+// pedido, con la misma prioridad que getStationHistory.
+function currentStationFuelPrice(station, fuelName) {
+  const key = FUEL_KEYS[fuelName];
+  if (key) return getFuelPrice(station, key);
+  const members = FUEL_GROUPS[fuelName];
+  if (members) {
+    for (const name of members) {
+      const p = getFuelPrice(station, FUEL_KEYS[name]);
+      if (p !== null) return p;
+    }
+  }
+  return getFirstFuelPrice(station);
+}
+
+// La API del histórico publica con un día de retraso, así que historyDateList()
+// no incluye el día actual. Añade el precio de hoy (datos en vivo) al final de
+// la serie para que el tooltip de la gráfica llegue hasta el día actual.
+function appendTodayPrice(series, station, fuelName) {
+  if (!station || !series.length) return series;
+  const today = formatDateDDMMYYYY(new Date());
+  if (series[series.length - 1].date === today) return series;
+  const price = currentStationFuelPrice(station, fuelName);
+  if (price === null) return series;
+  return series.concat([{ date: today, price }]);
+}
+
 // Serie de precios de una estación: [{ date: 'dd-mm-aaaa', price, fuel? }].
 // Si `fuelName` es un grupo (Gasolina, Gasóleo) usa el primer combustible del
 // grupo con precio ese día; si no hay ninguno, el primero con precio.

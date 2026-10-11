@@ -389,7 +389,7 @@ async function loadPopupChartForFuel(container, station, fuelName) {
       window._historyCache = { province: s.selectedProv, days, data };
     }
     const stationData = window._historyCache.data;
-    const history = getStationHistory(stationData, station.IDEESS, fuelName);
+    const history = appendTodayPrice(getStationHistory(stationData, station.IDEESS, fuelName), station, fuelName);
     if (history.length < 2) {
       loadingEl.style.display = 'none';
       errorEl.textContent = 'No hay suficientes datos históricos';
