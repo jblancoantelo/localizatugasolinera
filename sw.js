@@ -2,8 +2,8 @@ const CACHE = 'gasolineras-v3';
 const CDN_CACHE = 'gasolineras-cdn-v1';
 const API_HOST = 'sedeaplicaciones.minetur.gob.es';
 const API_BASE = 'https://' + API_HOST + '/ServiciosRESTCarburantes/PreciosCarburantes/';
-const APP_VERSION = 38;
-const BUILD_TIME = '20261011-223924';
+const APP_VERSION = 39;
+const BUILD_TIME = '20261011-224447';
 
 importScripts('js/state.js', 'js/helpers.js', 'js/db.js', 'js/history.js');
 
@@ -392,6 +392,17 @@ self.addEventListener('fetch', e => {
         caches.open(CDN_CACHE).then(cache => cache.put(e.request, clone));
         return res;
       }))
+    );
+    return;
+  }
+
+  if (url.pathname === BASE + 'manifest.json') {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        const clone = res.clone();
+        caches.open(CACHE).then(cache => cache.put(e.request, clone));
+        return res;
+      }).catch(() => caches.match(e.request))
     );
     return;
   }

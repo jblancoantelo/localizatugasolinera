@@ -448,6 +448,16 @@ if (location.protocol.startsWith('http')) {
   lm.href = 'manifest.json';
   document.head.appendChild(lm);
   if ('serviceWorker' in navigator) {
+    // Al activarse un SW nuevo (skipWaiting + clients.claim) recargamos una vez
+    // para no quedarnos con el CSS/JS viejos ya parseados en memoria.
+    if (navigator.serviceWorker.controller) {
+      var refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function() {
+        if (refreshing) return;
+        refreshing = true;
+        location.reload();
+      });
+    }
     navigator.serviceWorker.register('sw.js').catch(function(){});
   }
 }
