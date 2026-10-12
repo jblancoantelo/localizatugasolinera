@@ -961,13 +961,13 @@ async function testAiChat(page) {
 
   const blobsOk = await page.evaluate(() => {
     const partes = Object.entries(AI_ENCRYPTED_KEYS).map(([p, b]) => p + ':' + (typeof b === 'string' && b.length > 20));
-    return { total: partes.length, malas: partes.filter(p => p.endsWith('false')), sinLlave: !!AI_ENCRYPTED_KEYS.llm7 };
+    return { total: partes.length, malas: partes.filter(p => p.endsWith('false')), conLlave: !!AI_ENCRYPTED_KEYS.llm7 };
   });
-  log('IA', 'Las 4 claves por defecto están cifradas y LLM7 no guarda ninguna (no hace falta)',
-    blobsOk.total === 4 && blobsOk.malas.length === 0 && !blobsOk.sinLlave, blobsOk.malas.join(', '));
+  log('IA', 'Las 5 claves por defecto están cifradas (LLM7 incluida, aunque su clave sea opcional)',
+    blobsOk.total === 5 && blobsOk.malas.length === 0 && blobsOk.conLlave, blobsOk.malas.join(', '));
 
   const wrongPass = await page.evaluate(() => tryDecryptDefaultKeys('xxxxxx') === null);
-  log('IA', 'Contraseña incorrecta devuelve null', wrongPass);
+  log('IA', 'Contraseña incorrecta devuelve null (LLM7 sin prefijo no la da por válida)', wrongPass);
 
   // --- Filtrado de modelos que no sirven para chat ---
   const filterOk = await page.evaluate(() => {

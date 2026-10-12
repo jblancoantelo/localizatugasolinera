@@ -214,12 +214,15 @@ const AI_ENCRYPTED_KEYS = {
   'google': 'MyYTEzwQMDgxJ0JcJw4xEVwmICFeCAEcKl0+JSAvXwwKCwQBGlkk',
   'groq': 'FRwCLS0cBxkFKAEiICkuJV4ZRi4/GwkZJSgNCw1aNDYwORZfIyoiJj0sEV8cJAdYGBYfPwgYEwk=',
   'mistral': 'ESIhBl86GiVYPQMZPFkfC14RRDokHTsxIiYeHQQiPC4=',
-  'openrouter': 'AQREHR1EBF5EFF4NEV4LSg1QRlxbEV9YQVkMR15QRAsKEF9eRVsKFAxQE1hQQQlZFA0LQVhQSl9RRwsKS1lfQlhZRFsNRVwIEw=='
+  'openrouter': 'AQREHR1EBF5EFF4NEV4LSg1QRlxbEV9YQVkMR15QRAsKEF9eRVsKFAxQE1hQQQlZFA0LQVhQSl9RRwsKS1lfQlhZRFsNRVwIEw==',
+  // llm7 es de clave OPCIONAL (sin clave accede anonimo con "unused"), pero
+  // tambien trae su token por defecto cifrado igual que el resto.
+  'llm7': 'WQMgOhYoEB4sHhYsSisPJRlZPiNdNj4FFyQGHyoCBUBdGR8ARwdGKF4fMSIBKlo9JwMuPCoKA1tdNToIFho5JxomCAIEJylbNioNJh4PMAgnA1g6ATUfCiJaBA4mMAw+RBonKx8ZQwYPGAIdOSw4HwUECgdRNQgOOi4BKFY/OgBbHDxeRikwCgUMNgoGEzkORAMGTw=='
 };
 
 // Prefijo obligatorio de la API key segun proveedor (evita guardar una clave
 // del proveedor equivocado, que solo fallaria al enviar la peticion).
-// llm7 NO aparece: su clave es opcional y no tiene prefijo reconocible.
+// llm7 NO aparece: su token no tiene prefijo reconocible (y es opcional).
 // nvidia tampoco: su clave no sale del proxy, vive en el secreto del Worker.
 const AI_KEY_PREFIXES = {
   'google': ['AIza'],
@@ -818,7 +821,12 @@ function tryDecryptDefaultKeys(passphrase) {
     keys[provider] = xorDecryptBase64(enc, passphrase);
   }
   const invalid = Object.keys(keys).filter(p => !isAiKeyFormatValid(p, keys[p]));
-  if (invalid.length === Object.keys(keys).length) return null;
+  // La contrasena es incorrecta cuando NINGUN proveedor CON prefijo descifra a
+  // un valor valido. Los proveedores sin prefijo (llm7, opcional) siempre
+  // "pasan" isAiKeyFormatValid, asi que no cuentan para decidir: si contaran,
+  // cualquier contrasena se daria por buena.
+  const conPrefijo = Object.keys(keys).filter(p => AI_KEY_PREFIXES[p]);
+  if (conPrefijo.length && conPrefijo.every(p => invalid.includes(p))) return null;
   return { keys, invalid };
 }
 

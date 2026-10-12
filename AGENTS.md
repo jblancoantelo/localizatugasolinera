@@ -193,17 +193,17 @@ Sin cuenta de Cloudflare **este proveedor no se puede usar** (su CORS solo permi
 
 **Errores descriptivos**: un `fetch` a un host que no responde solo da "Failed to fetch", así que los dos caminos con `viaProxy` reescriben el error — `aiFetchError()` en el `send()` de NVIDIA y `aiProxyDiagnostics()` en `fetchAiModels()` — con un mensaje que nombra la URL usada, la que debería ser y qué revisar.
 
-**API Keys**: cifradas en código fuente con XOR + base64 (contraseña de 6 chars, misma para las 4). Se descargan al introducir la passphrase correcta en Config y pulsar "Cargar claves". Si ya hay claves cargadas aparece enlace "Volver a cargar".
+**API Keys**: cifradas en código fuente con XOR + base64 (contraseña de 6 chars, misma para las 5). Se descargan al introducir la passphrase correcta en Config y pulsar "Cargar claves". Si ya hay claves cargadas aparece enlace "Volver a cargar".
 
-**LLM7.io (`llm7`) — el único con clave opcional**:
-- `keyOptional: true` + `anonymousKey: 'unused'`: sin clave se manda `Bearer unused` y se accede anónimo (500k tokens/24 h, 1 req/s, 10/min, 60/h). Con token gratuito de `dash.llm7.io` son 1M/día. Por eso **no** tiene entrada en `AI_KEY_PREFIXES` ni clave cifrada.
+**LLM7.io (`llm7`) — clave opcional**:
+- `keyOptional: true` + `anonymousKey: 'unused'`: sin clave se manda `Bearer unused` y se accede anónimo (500k tokens/24 h, 1 req/s, 10/min, 60/h). Con token gratuito de `dash.llm7.io` son 1M/día. Trae un token por defecto cifrado en `AI_ENCRYPTED_KEYS` como el resto, pero **no** aparece en `AI_KEY_PREFIXES`: su token no tiene prefijo reconocible, así que no se valida el formato (cualquier valor no vacío vale, que es como funciona su modo anónimo).
 - `listModelsNoAuth: true` → su `GET /v1/models` solo admite `If-None-Match` y `Content-Type` en el preflight; mandar `Authorization` hace fallar la petición con `ERR_FAILED`. El catálogo es público, así que se pide sin cabecera. Su `POST /chat/completions` sí admite `authorization`.
 - `parseModels()` filtra por `tier === 'turbo'` (los `pro` devuelven 403 sin suscripción) y quita `DeepSeek-V4-Flash-0731`, que figura como turbo pero devuelve 401 incluso con clave válida (`unavailable`).
 - `max_tokens: 1024`: `GLM-5.3-Flash` y `minimax-m2.7` son *reasoning* y con pocos tokens devuelven `content` vacío.
 
 **Validación de formato por proveedor** (`AI_KEY_PREFIXES` + `isAiKeyFormatValid()`):
 - Prefijos obligatorios: `google`→`AIza`, `groq`→`gsk_`, `mistral`→`cMHt`, `openrouter`→`sk-or-v1-`
-- `tryDecryptDefaultKeys()` devuelve `{ keys, invalid }`, o `null` si **ningún** descifrado tiene el prefijo de su proveedor (= contraseña incorrecta)
+- `tryDecryptDefaultKeys()` devuelve `{ keys, invalid }`, o `null` si **ningún proveedor con prefijo** descifra a un valor válido (= contraseña incorrecta). Los proveedores sin prefijo (llm7) no cuentan para esa decisión, o cualquier contraseña se daría por buena
 - Las claves con formato incorrecto **no se persisten** en `localStorage` y el panel del proveedor muestra `❌ Formato de clave incorrecto para <provider>`
 - Motivo: una clave del proveedor equivocado solo fallaría al enviar la petición, sin avisar
 
