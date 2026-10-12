@@ -1036,6 +1036,11 @@ function renderAiPromptButtons() {
   });
 }
 
+function autosizePromptTextarea(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+
 function renderAiPromptsConfig() {
   const cont = document.getElementById('aiPromptsConfig');
   if (!cont) return;
@@ -1049,11 +1054,12 @@ function renderAiPromptsConfig() {
     num.className = 'ia-prompt-config-num';
     num.textContent = AI_PROMPT_ICON + (i + 1);
 
-    const inp = document.createElement('input');
-    inp.type = 'text';
+    const inp = document.createElement('textarea');
+    inp.rows = 2;
     inp.dataset.aiprompt = String(i);
     inp.placeholder = 'Prompt ' + (i + 1) + ' (vacío = sin botón)';
     inp.value = prompts[i] || '';
+    inp.addEventListener('input', () => autosizePromptTextarea(inp));
     inp.addEventListener('change', () => {
       const lista = loadAiPrompts();
       while (lista.length < AI_PROMPTS_MAX) lista.push('');
@@ -1065,6 +1071,7 @@ function renderAiPromptsConfig() {
     row.appendChild(num);
     row.appendChild(inp);
     cont.appendChild(row);
+    autosizePromptTextarea(inp);
   }
 }
 

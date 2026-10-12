@@ -969,6 +969,43 @@ async function testAiChat(page) {
   const wrongPass = await page.evaluate(() => tryDecryptDefaultKeys('xxxxxx') === null);
   log('IA', 'Contraseña incorrecta devuelve null (LLM7 sin prefijo no la da por válida)', wrongPass);
 
+  // LLM7 se trata en Config igual que el resto: con la clave maestra correcta
+  // recupera su key por defecto (campo + localStorage) y sin clave usa anónimo.
+  // Se simula el descifrado correcto monkeypatching tryDecryptDefaultKeys:
+  // la real no se expone en los tests.
+  const llm7KeyWiring = await page.evaluate(async () => {
+    const campo = document.getElementById('iaKeyLlm7');
+    const pass = document.getElementById('iaPassphrase');
+    const btn = document.getElementById('iaLoadKeysBtn');
+    const sinClave = aiApiKey('llm7');
+    const realDecrypt = window.tryDecryptDefaultKeys;
+    window.tryDecryptDefaultKeys = () => ({ keys: { 'llm7': 'llm7-token-maestra' }, invalid: [] });
+    const passAntes = pass.style.display;
+    pass.value = 'cualquier-cosa';
+    btn.click();
+    const campoTras = document.getElementById('iaKeyLlm7').value;
+    const guardado = JSON.parse(localStorage.getItem(AI_KEYS_KEY) || '{}');
+    const status = document.getElementById('iaPassStatus').textContent;
+    window.tryDecryptDefaultKeys = realDecrypt;
+    // Restaura el estado para no contaminar el resto de tests
+    localStorage.removeItem(AI_KEYS_KEY);
+    document.getElementById('iaKeyLlm7').value = '';
+    AI_PROVIDERS.llm7.key = null;
+    pass.value = '';
+    pass.style.display = passAntes;
+    document.getElementById('iaLoadKeysBtn').style.display = 'inline-block';
+    document.getElementById('iaReloadKeysBtn').style.display = 'none';
+    document.getElementById('iaPassStatus').textContent = '';
+    renderAiKeysConfig();
+    return { campoOk: !!campo, tipo: campo && campo.type, sinClave, campoTras, guardado, status };
+  });
+  log('IA', 'LLM7 muestra su campo de clave en Config como el resto (y sin clave usa anónimo)',
+    llm7KeyWiring.campoOk && llm7KeyWiring.tipo === 'password' && llm7KeyWiring.sinClave === 'unused',
+    `tipo:${llm7KeyWiring.tipo} anónimo:${llm7KeyWiring.sinClave}`);
+  log('IA', 'Con la clave maestra correcta LLM7 recupera su key por defecto en campo + localStorage',
+    llm7KeyWiring.campoTras === 'llm7-token-maestra' && llm7KeyWiring.guardado.llm7 === 'llm7-token-maestra',
+    `campo:${llm7KeyWiring.campoTras}`);
+
   // --- Filtrado de modelos que no sirven para chat ---
   const filterOk = await page.evaluate(() => {
     const descartados = [
@@ -1996,7 +2033,7 @@ async function testAiChat(page) {
   // --- Prompts rápidos: Config (hasta 5) + botones de ejecución en General ---
   const prompts = await page.evaluate(async () => {
     const cont = document.getElementById('aiPromptsConfig');
-    const inputs = () => [...cont.querySelectorAll('input[data-aiprompt]')];
+    const inputs = () => [...cont.querySelectorAll('textarea[data-aiprompt]')];
     const header = document.getElementById('iaPromptsGeneral');
     const clearBtn = document.querySelector('.ia-clear-btn[data-iaclear="general"]');
     const guardado = localStorage.getItem(AI_PROMPTS_KEY);
@@ -2004,10 +2041,26 @@ async function testAiChat(page) {
 
     // 1) Config: exactamente 5 campos
     const campos = inputs().length;
-    const setVal = (i, v) => { const el = inputs()[i]; el.value = v; el.dispatchEvent(new Event('change')); };
+    const todosTextarea = inputs().length === 5 && inputs().every(el => el.tagName === 'TEXTAREA');
+    // Auto-crecimiento vertical: al escribir varias líneas, la caja crece en altura
+    const setVal = (i, v) => { const el = inputs()[i]; el.value = v; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); };
     setVal(0, 'Precio de la gasolina 95 en Madrid');
     setVal(1, '¿Qué estación es la más barata?');
     setVal(3, 'Compárame diésel y gasolina');   // 2 y 4 quedan vacíos: sin botón
+    // La Config debe estar visible para que offsetHeight mida algo (caja oculta = 0)
+    const tabAnterior = document.querySelector('.bottom-tab.active');
+    setActiveTab('tab-config');
+    const hAntes = inputs()[0].offsetHeight;
+    const scAntes = inputs()[0].scrollHeight;
+    setVal(0, 'Precio de la gasolina 95 en Madrid\nLínea segunda\ny una tercera muy muy larga para que el texto no quepa y la caja se estire verticalmente');
+    const scDesp = inputs()[0].scrollHeight;
+    const hDesp = inputs()[0].offsetHeight;
+    // Ya sin recorte: el alto inline (autosize) == scrollHeight, asi que el
+    // contenido de 3 lineas se ve entero y la caja ha crecido respecto al VACIO.
+    const sinRecorte = inputs()[0].style.height === scDesp + 'px';
+    const crece = hDesp > hAntes && scDesp > scAntes && sinRecorte;
+    setVal(0, 'Precio de la gasolina 95 en Madrid'); // vuelve a la corta para el test de ejecución
+    if (tabAnterior && tabAnterior.dataset.tab) setActiveTab(tabAnterior.dataset.tab);
 
     // 2) Botones: uno por prompt no vacío, con icono + número y su texto en el title
     const botones = [...header.querySelectorAll('.ia-prompt-btn')];
@@ -2044,12 +2097,15 @@ async function testAiChat(page) {
     else localStorage.setItem(AI_HIDDEN_KEY, guardadoOcultos);
     renderAiPromptsConfig();
     return {
-      campos, botones: botones.length, textos, titulos, antesDeBorrar, guardadoLS,
+      campos, todosTextarea, crece, hAntes, hDesp, scAntes, scDesp, botones: botones.length, textos, titulos, antesDeBorrar, guardadoLS,
       ejecutado, conNumero: textos.length > 0 && textos.every(t => /^\u26a1\d$/.test(t))
     };
   });
-  log('IA', 'Config → Prompts rápidos tiene 5 campos y guarda lo introducido',
-    prompts.campos === 5 && prompts.guardadoLS.length === 5, `campos:${prompts.campos} guardado:${prompts.guardadoLS.length}`);
+  log('IA', 'Config → Prompts rápidos tiene 5 campos (textarea) y guarda lo introducido',
+    prompts.campos === 5 && prompts.todosTextarea && prompts.guardadoLS.length === 5,
+    `campos:${prompts.campos} guardado:${prompts.guardadoLS.length}`);
+  log('IA', 'Las cajas de prompt crecen en vertical al meter varias líneas',
+    prompts.crece, `h:${prompts.hAntes}->${prompts.hDesp} sc:${prompts.scAntes}->${prompts.scDesp}`);
   log('IA', 'Solo los prompts rellenos crean botón (icono + número) a la izquierda de la papelera',
     prompts.botones === 3 && prompts.conNumero && prompts.antesDeBorrar
     && prompts.titulos[0].includes('Precio de la gasolina 95 en Madrid'),
