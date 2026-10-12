@@ -1993,6 +1993,70 @@ async function testAiChat(page) {
     h.botones === 8 && h.claveBorrada && h.soloVacio && h.groqIntacta,
     `botones:${h.botones} clave:${h.claveBorrada} vacio:${h.soloVacio} groq:${h.groqIntacta}`);
 
+  // --- Prompts rápidos: Config (hasta 5) + botones de ejecución en General ---
+  const prompts = await page.evaluate(async () => {
+    const cont = document.getElementById('aiPromptsConfig');
+    const inputs = () => [...cont.querySelectorAll('input[data-aiprompt]')];
+    const header = document.getElementById('iaPromptsGeneral');
+    const clearBtn = document.querySelector('.ia-clear-btn[data-iaclear="general"]');
+    const guardado = localStorage.getItem(AI_PROMPTS_KEY);
+    const guardadoOcultos = localStorage.getItem(AI_HIDDEN_KEY);
+
+    // 1) Config: exactamente 5 campos
+    const campos = inputs().length;
+    const setVal = (i, v) => { const el = inputs()[i]; el.value = v; el.dispatchEvent(new Event('change')); };
+    setVal(0, 'Precio de la gasolina 95 en Madrid');
+    setVal(1, '¿Qué estación es la más barata?');
+    setVal(3, 'Compárame diésel y gasolina');   // 2 y 4 quedan vacíos: sin botón
+
+    // 2) Botones: uno por prompt no vacío, con icono + número y su texto en el title
+    const botones = [...header.querySelectorAll('.ia-prompt-btn')];
+    const textos = botones.map(b => b.textContent);
+    const titulos = botones.map(b => b.title);
+
+    // 3) Orden en el DOM: los botones van justo antes del botón de borrar
+    const antesDeBorrar = !!(clearBtn && (header.compareDocumentPosition(clearBtn) & Node.DOCUMENT_POSITION_FOLLOWING));
+
+    // 4) Persistencia
+    const guardadoLS = JSON.parse(localStorage.getItem(AI_PROMPTS_KEY) || '[]');
+
+    // 5) Ejecución: clic en el primer botón → se envía a los proveedores visibles
+    const msgs = document.getElementById('iaMessagesGeneral');
+    const html = msgs.innerHTML;
+    saveAiHiddenProviders([]);
+    const realReady = window.isAiProviderReady;
+    const reales = {};
+    for (const p of Object.keys(AI_PROVIDERS)) { reales[p] = AI_PROVIDERS[p].send; AI_PROVIDERS[p].send = async () => 'ok'; }
+    window.isAiProviderReady = () => true;
+    msgs.innerHTML = '';
+    botones[0].click();
+    await new Promise(r => setTimeout(r, 300));
+    const enviado = msgs.querySelector('.ia-msg.user');
+    const ejecutado = !!enviado && enviado.dataset.raw === 'Precio de la gasolina 95 en Madrid';
+    for (const p of Object.keys(AI_PROVIDERS)) AI_PROVIDERS[p].send = reales[p];
+    window.isAiProviderReady = realReady;
+
+    // Restaura
+    msgs.innerHTML = html;
+    if (guardado === null) localStorage.removeItem(AI_PROMPTS_KEY);
+    else localStorage.setItem(AI_PROMPTS_KEY, guardado);
+    if (guardadoOcultos === null) localStorage.removeItem(AI_HIDDEN_KEY);
+    else localStorage.setItem(AI_HIDDEN_KEY, guardadoOcultos);
+    renderAiPromptsConfig();
+    return {
+      campos, botones: botones.length, textos, titulos, antesDeBorrar, guardadoLS,
+      ejecutado, conNumero: textos.length > 0 && textos.every(t => /^\u26a1\d$/.test(t))
+    };
+  });
+  log('IA', 'Config → Prompts rápidos tiene 5 campos y guarda lo introducido',
+    prompts.campos === 5 && prompts.guardadoLS.length === 5, `campos:${prompts.campos} guardado:${prompts.guardadoLS.length}`);
+  log('IA', 'Solo los prompts rellenos crean botón (icono + número) a la izquierda de la papelera',
+    prompts.botones === 3 && prompts.conNumero && prompts.antesDeBorrar
+    && prompts.titulos[0].includes('Precio de la gasolina 95 en Madrid'),
+    `botones:${prompts.botones} [${prompts.textos.join(' ')}] antesPapelera:${prompts.antesDeBorrar}`);
+  log('IA', 'Pulsar un prompt lo ejecuta directamente en todos los proveedores visibles',
+    prompts.ejecutado, String(prompts.ejecutado));
+
   // --- Restaurar fetch y limpiar ---
   await page.evaluate(() => {
     if (window.__realFetch) window.fetch = window.__realFetch;
@@ -2001,6 +2065,7 @@ async function testAiChat(page) {
     localStorage.removeItem(AI_KEYS_KEY);
     localStorage.removeItem(AI_PROXY_KEY);
     localStorage.removeItem(AI_HIDDEN_KEY);
+    localStorage.removeItem(AI_PROMPTS_KEY);
     Object.keys(localStorage)
       .filter(k => k.startsWith('gasolineras_ai_chat_'))
       .forEach(k => localStorage.removeItem(k));

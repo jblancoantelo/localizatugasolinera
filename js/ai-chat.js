@@ -970,6 +970,96 @@ function renderAiProviderVisibilityConfig() {
   applyAiProviderVisibility();
 }
 
+// ==========================================================================
+// Prompts rápidos — Config → "Prompts rápidos" + cabecera de la pestaña General
+// Hasta 5 prompts textuales guardados en localStorage. Los no vacíos se pintan
+// como botones (icono + número) en la cabecera de General, a la izquierda del
+// botón de borrar, y al pulsarlos se ejecutan directamente (se envían a todos
+// los proveedores visibles) sin pasar por el input.
+const AI_PROMPTS_KEY = 'gasolineras_ai_prompts';
+const AI_PROMPTS_MAX = 5;
+const AI_PROMPT_ICON = '⚡';
+
+function loadAiPrompts() {
+  try {
+    const raw = localStorage.getItem(AI_PROMPTS_KEY);
+    const lista = raw ? JSON.parse(raw) : [];
+    return (Array.isArray(lista) ? lista : [])
+      .slice(0, AI_PROMPTS_MAX)
+      .map(p => (typeof p === 'string' ? p : ''));
+  } catch { return []; }
+}
+
+function saveAiPrompts(lista) {
+  const limpia = (lista || []).slice(0, AI_PROMPTS_MAX).map(p => (p || '').trim());
+  if (!limpia.some(Boolean)) localStorage.removeItem(AI_PROMPTS_KEY);
+  else localStorage.setItem(AI_PROMPTS_KEY, JSON.stringify(limpia));
+}
+
+// Ejecuta un prompt desde su botón: vuelca el texto en el input de General y
+// lanza el envío a todos los proveedores visibles.
+function runAiGeneralPrompt(index) {
+  const texto = (loadAiPrompts()[index] || '').trim();
+  if (!texto) return;
+  const input = document.getElementById(getProviderInputId(AI_GENERAL, 'iaInput'));
+  const msgs = document.getElementById(getProviderInputId(AI_GENERAL, 'iaMessages'));
+  const btn = document.getElementById(getProviderInputId(AI_GENERAL, 'iaSend'));
+  if (!input || !msgs || !btn) return;
+  input.value = texto;
+  handleAiGeneralSend(input, msgs, btn);
+}
+
+// Botones de la cabecera de General: solo los prompts no vacíos, con el icono y
+// su número. El title lleva el texto completo para saber qué hace cada uno.
+function renderAiPromptButtons() {
+  const cont = document.getElementById('iaPromptsGeneral');
+  if (!cont) return;
+  cont.innerHTML = '';
+  loadAiPrompts().forEach((p, i) => {
+    const texto = (p || '').trim();
+    if (!texto) return;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ia-prompt-btn';
+    b.textContent = AI_PROMPT_ICON + (i + 1);
+    b.title = 'Ejecutar prompt ' + (i + 1) + ': ' + texto;
+    b.addEventListener('click', () => runAiGeneralPrompt(i));
+    cont.appendChild(b);
+  });
+}
+
+function renderAiPromptsConfig() {
+  const cont = document.getElementById('aiPromptsConfig');
+  if (!cont) return;
+  const prompts = loadAiPrompts();
+  cont.innerHTML = '';
+  for (let i = 0; i < AI_PROMPTS_MAX; i++) {
+    const row = document.createElement('div');
+    row.className = 'ia-prompt-config-row';
+
+    const num = document.createElement('span');
+    num.className = 'ia-prompt-config-num';
+    num.textContent = AI_PROMPT_ICON + (i + 1);
+
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.dataset.aiprompt = String(i);
+    inp.placeholder = 'Prompt ' + (i + 1) + ' (vacío = sin botón)';
+    inp.value = prompts[i] || '';
+    inp.addEventListener('change', () => {
+      const lista = loadAiPrompts();
+      while (lista.length < AI_PROMPTS_MAX) lista.push('');
+      lista[i] = inp.value;
+      saveAiPrompts(lista);
+      renderAiPromptButtons();
+    });
+
+    row.appendChild(num);
+    row.appendChild(inp);
+    cont.appendChild(row);
+  }
+}
+
 function initAiProviderTabs() {
   const tabs = document.querySelectorAll('.ia-provider-tab');
   tabs.forEach(tab => {
@@ -1200,6 +1290,9 @@ function initAiChat() {
     genBtn.addEventListener('click', doSend);
     updateAiStatus(AI_GENERAL);
   }
+
+  // Botones de prompts rápidos en la cabecera de General.
+  renderAiPromptButtons();
 }
 
 const AI_ABORT = {};
