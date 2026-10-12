@@ -2,7 +2,7 @@
 
 > Estado: **Parcialmente ejecutado** · Priorización: **MoSCoW** (Must/Should/Could/Won't)
 > Generado: 19/07/2026 tras revisión de 19 archivos (~3700 líneas)
-> Actualizado: 04/10/2026 — `T-05` y `T-06` ejecutados (ver las notas de cada uno).
+> Actualizado: 12/10/2026 — suite a 208 tests; el mapa tiene 10 vistas con respaldo de proveedor (`TILE_CONFIGS.urls`), las gráficas llegan a hoy (`appendTodayPrice()`) y la PWA se actualiza sola (ver `docs/CHANGELOG.md`).
 > El detalle de lo hecho está en [`docs/CHANGELOG.md`](../../docs/CHANGELOG.md).
 
 ## Priorización de paquetes de trabajo
@@ -678,7 +678,7 @@ graph TD
 |-----|-------------|-----------|-----------|-----------|-----------|
 | Código duplicado (líneas) | ~120 (5%) — bajó de ~260 con `js/chart-core.js` y `js/history.js` | ~30 (1%) | ~30 (1%) | 0 | 0 |
 | Archivos >400 líneas | 2 (main.js, sw.js) | 2 | 2 | 2 | 0 |
-| Tests (suite completa) | 163 E2E, 0 unitarios | 163 | 163 + unitarios | 163 + 30 unitarios | 200+ |
+| Tests (suite completa) | 208 E2E (201 HTTP + 7 file://), 0 unitarios | 208 | 208 + unitarios | 208 + 30 unitarios | 200+ |
 | Offline real | No | No | Sí | Sí | Sí |
 | Errores silenciosos | IndexedDB sigue resolviendo en `catch` (T-03) | Logeados | Logeados | Logeados | Logeados |
 | Precaché del SW | Generado por script y verificado por test | Sí | Sí | Sí | Sí |

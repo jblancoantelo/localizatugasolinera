@@ -1,5 +1,75 @@
 # CHANGELOG
 
+## [2026-10-11] — Móvil: modo apaisado, 5 columnas en vertical y PWA que se actualiza sola
+
+| Cambio | Detalle |
+|--------|---------|
+| `manifest.json` | `orientation` de `portrait-primary` a **`any`**: la PWA instalada ya gira a apaisado |
+| `css/styles.css` | En ≤480px se **elimina el ocultado de las columnas Localidad y Calle**: `.table-wrap` deja crecer la tabla (`width: max-content`) y añade **scroll horizontal**, así en un móvil vertical se ven las 5 columnas |
+| `index.html` | **Recarga automática al activarse un SW nuevo**: listener de `controllerchange` → `location.reload()` (una sola vez), para no quedarse con el CSS/JS viejos ya parseados en memoria |
+| `sw.js` | **`manifest.json` network-first**: el fetch intenta la red, guarda la última copia en caché y en caída usa la cacheada. Motivo: con el precaché de siempre, al reinstalar Android seguía leyendo el manifest viejo (orientation…) |
+
+### 🧪 Verificación
+
+- `node check-syntax.mjs`: 19/19 ficheros OK
+- Suite completa: **208 tests** (201 HTTP + 7 file://)
+- `node docs/test/full_test.mjs`: 208 ✅ 0 ❌
+
+---
+
+## [2026-10-11] — La gráfica histórica llega hasta el día actual
+
+La API del Ministerio publica el histórico con un día de retraso, así que la serie
+del modal de detalle y del popup del mapa acababa ayer y el tooltip no llegaba al
+precio de hoy.
+
+| Cambio | Detalle |
+|--------|---------|
+| `js/history.js` | **Nuevo** `currentStationFuelPrice(station, fuelName)`: precio en vivo de la estación para el combustible o grupo pedido, con la misma prioridad que `getStationHistory()` |
+| `js/history.js` | **Nuevo** `appendTodayPrice(series, station, fuelName)`: añade `{ date: hoy, price }` al final de la serie de la gráfica si la última fecha no es ya hoy |
+| `js/table.js` | `loadChartForFuel()` (panel de detalle) pasa la serie por `appendTodayPrice()` |
+| `js/map.js` | `loadPopupChartForFuel()` (gráfica del popup) igual |
+
+### 🧪 Verificación
+
+- Suite completa: **208 tests** (201 HTTP + 7 file://), sin nuevos: ambas gráficas ya
+  comparten el motor de `js/history.js`, así que el punto de hoy entra solo.
+
+---
+
+## [2026-10-08] — Mapa: 10 vistas con respaldo de proveedor, nombres de A a Z y clave CARTO
+
+### 🗺️ Cada vista se defiende sola
+
+La vista Calle se quedaba en gris cuando el host de CARTO no devolvía tiles. Ahora
+cada vista admite varios proveedores y, si el primero falla, salta al siguiente en
+vez de dejar el mapa en gris.
+
+| Cambio | Detalle |
+|--------|---------|
+| `js/map.js` | **Nuevo `TILE_CONFIGS`**: cada vista tiene una lista `urls` de proveedores (Calle→CARTO→Esri Street→OSM, Oscuro→CARTO Dark→Esri Dark Gray, Satélite→dos hosts de Esri, Topográfico→Esri Topo→OpenTopoMap→OSM…). Tras **4 tiles fallidos** sin ninguno cargado se pasa al siguiente proveedor |
+| `js/map.js` | **Nuevo `TILE_URL_PREFERRED`**: recuerda el proveedor que funcionó en la sesión, así no se reintenta el host caído en cada cambio de vista |
+| `js/map.js` | Vista **Hybrid** ("Satélite con nombres"): overlay de etiquetas de Esri sobre el satélite |
+| `js/map.js` | **Clave CARTO** (`?key=`) en Calle y Oscuro: sin ella sus raster devuelven un tile de marca de agua con status 200 (ETag `wm-`) que **no** dispara `tileerror`, así que el respaldo no llegaba a actuar |
+| `js/map.js` | **NatGeo** con `maxNativeZoom: 12` — solo tiene datos reales hasta z12, antes pintaba un lienzo vacío en zoom alto |
+| `js/state.js` | `selectedTile` pasa de `street` a **`satellite`**: el satélite es la vista por defecto |
+| `index.html` | 10 opciones (`satellite`, `hybrid`, `street`, `standard`, `hot`, `cycling`, `dark`, `topo`, `natgeo`, `relief`) **en orden alfabético** por etiqueta; "Sat. nombres" renombrada a "Satélite con nombres". `#mapStyle` ampliado a 145px (125 en móvil) |
+| `css/styles.css` | Combo de vistas más ancho |
+| `docs/test/full_test.mjs` | Tests de la sección Mapa: catálogo completo, `satellite` por defecto aunque no sea la primera opción, etiquetas A-Z, respaldo al fallar el proveedor principal, todas las vistas se aplican al elegirlas y la clave en las URLs de CARTO |
+
+### 🧪 Verificación
+
+- Suite completa: **208 tests** (201 HTTP + 7 file://), 7 nuevos en la sección Mapa.
+- `node docs/test/full_test.mjs`: 208 ✅ 0 ❌
+
+### 📜 Workflow de ejemplo de GitHub Actions
+
+| Cambio | Detalle |
+|--------|---------|
+| `.github/workflows/demo-secret.yml` | **Nuevo**: workflow manual que lee el secreto `API_KEY` del repositorio con `env:` y muestra solo su longitud (el valor aparece enmascarado en el log). Ejemplo de cómo pasar secretos sin volcarlos en los logs |
+
+---
+
 ## [2026-10-08] — Historial de conversación por proveedor en localStorage
 
 ### 💬 El chat IA recuerda la conversación entre sesiones

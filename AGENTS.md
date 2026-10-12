@@ -27,7 +27,14 @@ Ver [`README.md`](./README.md) para visión general del proyecto, funcionalidade
    ```
    Si los tests no existen o fallan, no continuar hasta que pasen todos.
 
-3. **Dónde commitear** (regla del usuario, 04/10/2026):
+4. **Actualizar la documentación antes de subir a main** (regla del usuario, 12/10/2026):
+   - Toda funcionalidad o cambio visible debe quedar reflejado en la documentación **antes** de commitear/entregar con PR contra `main`.
+   - Revisar siempre: `README.md`, `docs/CHANGELOG.md` (entrada nueva por release), `docs/mejoras-petrol.md` (por qué de cada mejora), `docs/test/TEST_PLAN.md` (contadores y secciones de tests) y `AGENTS.md` (convenios nuevos o cambiados).
+   - Si el cambio toca la API del Ministerio o el push, actualizar también `docs/API.md` y `docs/PUSH_NOTIFICATIONS.md`.
+   - Los **contadores de tests** (README `npm test` dice "N tests (X HTTP + 7 file://)", TEST_PLAN y el changelog/mejoras) deben cuadrar con la salida real de `node docs/test/full_test.mjs`.
+   - Un commit que cambie comportamiento **sin** tocar la documentación se considera incompleto y se pregunta antes de subir.
+
+5. **Dónde commitear** (regla del usuario, 04/10/2026):
    - **Fixes y cambios pequeños**: se trabaja y se commitea **directo en `main`**, sin rama. Es el caso por defecto.
    - **Cambios grandes** (refactors, varios ficheros de los que dependen otros, features): se trabaja en una rama corta (`chatIA`, `cache-fix`, …), se sube y se entregan **con una PR contra `main`** para que se revisen antes de integrar.
    - **Nunca integrar una rama en `main` por la vía rápida** (`git merge --ff-only` + `git push origin main`) sin que el usuario haya revisado antes la PR. Ese atajo solo con petición expresa suya.
@@ -341,7 +348,7 @@ Orden actual de grupos:
 ### Tests
 - Ubicación: `docs/test/full_test.mjs`
 - Plan: `docs/test/TEST_PLAN.md`
-- 201 tests totales (194 HTTP + 7 file://)
+- 208 tests totales (201 HTTP + 7 file://)
 - Secciones: 1-12 UI, 13 claves IA (manual), 14 push, 15 chat IA, 16 ring logs, 17 build (`ASSETS`/`APP_VERSION`/`?v=` de los iconos)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)
@@ -356,6 +363,8 @@ Orden actual de grupos:
 - Motivo: `navigator.serviceWorker.ready.then(r => r.update())` solo detecta cambios en `sw.js`; si no se incrementa la versión, los nuevos assets no se descargan
 - **`?v=` en los iconos del manifest**: `manifest.json` lleva `icons/…png?v=<APP_VERSION>` para que Chrome (sobre todo Android, que reutiliza el icono cacheado por URL) descargue la imagen fresca en cada release. El query **no** entra en `ASSETS` (el sync lo recorta con `split('?')`): el SW precachea el fichero sin query y el fetch con query salta la caché del SW e irá directo a la red. El test "Build > Los iconos del manifest llevan la `?v=`…" falla si no cuadra con `APP_VERSION`
 - El botón "Comprobar actualizaciones" en la UI usa `reg.update()` + `updatefound` para detectar el cambio y ofrecer recarga
+- **Recarga automática al activarse**: `index.html` escucha `controllerchange` y hace un único `location.reload()` cuando un SW nuevo toma el control (`skipWaiting` + `clients.claim()`), para no quedarse con los CSS/JS viejos en memoria
+- **`manifest.json` network-first en el SW**: al ser precacheado, Android lo relee con la configuración vieja al reinstalar (orientation…). El SW hace `fetch` → guarda en caché → en caída sirve la cacheada
 - En config se muestra la versión actual (`#appCurrentVersion`) al cargar la aplicación
 
 ### Comandos
@@ -376,6 +385,9 @@ npm run check-assets    # verifica ASSETS sin escribir
 - **Gráfica histórica**: Canvas 2D con dibujo manual (sin librería de charts), primitivas en `js/chart-core.js` para las dos gráficas. Tooltip al hover con precio + fecha en dos líneas
 - **Precaché del SW**: generado por script desde `index.html` + `manifest.json`, con los 4 iconos (192/512, PNG y SVG)
 - **Mapa único**: Una instancia Leaflet reutilizada entre tabs vía CSS `display: none` / `block`
+- **Vistas del mapa**: 10 vistas definidas en `TILE_CONFIGS` (`js/map.js`) con **varios proveedores por vista** (`urls`). Si el primero no carga (4 `tileerror` sin ningún tile OK) se pasa al siguiente, y `TILE_URL_PREFERRED` recuerda el que funcionó en la sesión. El orden del `<select id="mapStyle">` es **alfabético** por etiqueta (test A-Z), pero la vista por defecto la marca el `<option selected>` (`satellite`), no la posición. Las URLs de CARTO llevan `?key=` obligatoria: sin ella devuelven una marca de agua con status 200 que no dispara `tileerror`
+- **Gráfica hasta hoy**: la API del histórico publica con un día de retraso, así que `appendTodayPrice()` (`js/history.js`) remata la serie con el precio **en vivo** (`currentStationFuelPrice()`) si la última fecha no es ya hoy. Lo usan `loadChartForFuel()` (table) y `loadPopupChartForFuel()` (map)
+- **Móvil**: `orientation: any` en el manifest (la PWA gira a apaisado) y en ≤480px la tabla ya **no oculta** Localidad/Calle: `width: max-content` + scroll horizontal del `.table-wrap`
 - **Tabla "Ambos"**: Sin paginación — muestra todas las estaciones filtradas
 - **Tabla "Tabla"**: Paginada (default 30) con sort dual (asc/desc)
 - **Reset filtros**: Sin re-fetch cuando ya hay datos cargados

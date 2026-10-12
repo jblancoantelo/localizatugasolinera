@@ -25,6 +25,7 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 
 ### 📋 Vista Tabla
 - Columnas: Marca, Precio, Distancia, Localidad, Calle
+- En móvil vertical se ven **las 5 columnas** (la tabla hace scroll horizontal en vez de ocultar Localidad y Calle)
 - Ordenación ascendente/descendente por cualquier columna
 - Paginación configurable (30 filas por defecto)
 - Panel de detalle con histórico de precios y gráfica canvas
@@ -38,6 +39,7 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 - Gráfica de evolución de precios en canvas (sin librerías externas)
 - Tooltip interactivo al pasar el ratón
 - Combustible y número de días configurables (7-180 días)
+- La serie llega **hasta el día actual**: la API del Ministerio publica el histórico con un día de retraso, así que la gráfica cierra el último punto con el precio en vivo de la estación
 - Disponible en panel de detalle y popup del mapa, con el **mismo motor de dibujo** (`js/chart-core.js`) y **el mismo código de histórico** (`js/history.js`) para el chat de IA y el Service Worker
 - Descarga por fecha con caché en IndexedDB (clave `hist_<idProvincia>_<dd-mm-aaaa>`) y peticiones agrupadas de 3 en 3
 - El rango se recorta en memoria si la caché ya cubre más días: no vuelve a descargar
@@ -73,9 +75,10 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 ### 📱 Progressive Web App (PWA)
 - Service Worker con caché de assets para funcionamiento offline parcial
 - **Precaché generado**: la lista `ASSETS` de `sw.js` no se escribe a mano, se genera con `node scripts/sync-sw-assets.mjs` a partir de lo que referencian `index.html` y `manifest.json` (así un script o icono nuevo nunca se queda fuera)
-- Instalable en el dispositivo (manifest.json con iconos SVG + PNG con `?v=APP_VERSION` para forzar su re-descarga, los cuatro precacheados)
+- Instalable en el dispositivo (manifest.json con iconos SVG + PNG con `?v=APP_VERSION` para forzar su re-descarga, los cuatro precacheados); con `orientation: any` la app instalada gira a apaisado
 - Página offline (`offline.html`)
 - Botón "Comprobar actualizaciones" que detecta cambios en `sw.js` (`APP_VERSION` + `BUILD_TIME`)
+- Al detectar un `sw.js` nuevo la pestaña **se recarga sola** al activarse, para no quedarse con el CSS/JS viejos en memoria; el `manifest.json` se sirve **network-first** para que Android relea la configuración al reinstalar
 
 ### 🤖 Chat IA integrado
 - **8 pestañas**: General (misma pregunta a todos los proveedores visibles, en paralelo) + Groq, Mistral, OpenRouter, LLM7.io, NVIDIA, Google Gemini y Chrome Built-in AI
@@ -109,7 +112,7 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 ```powershell
 npm install                # playwright + web-push
 
-npm test                   # 201 tests (194 HTTP + 7 file://) — suite completa
+npm test                   # 208 tests (201 HTTP + 7 file://) — suite completa
 node check-syntax.mjs      # sintaxis de todo el JS (incluye el <script> inline del HTML)
 npm run bump               # regenera ASSETS de sw.js + incrementa APP_VERSION y BUILD_TIME
 npm run sync-assets        # solo regenera la lista ASSETS de sw.js
@@ -153,13 +156,13 @@ npm run check-assets       # verifica ASSETS sin escribir (sale con 1 si no cuad
 | Componente | Tecnología |
 |------------|------------|
 | App shell | HTML5 + CSS3 (responsive, ~430 líneas) |
-| Mapas | [Leaflet](https://leafletjs.com/) 1.9.4 con tiles OSM / CartoDB / ESRI / CyclOSM / OpenTopoMap / NatGeo (con proveedor de respaldo por vista) |
+| Mapas | [Leaflet](https://leafletjs.com/) 1.9.4 con tiles OSM / CartoDB / ESRI / CyclOSM / OpenTopoMap / NatGeo / HOT, con proveedor de respaldo por vista |
 | Gráficas | Canvas 2D nativo — sin librerías de charts (`chart-core.js` compartido por las dos vistas) |
 | Persistencia | IndexedDB + localStorage |
 | Notificaciones | Web Push API + Periodic Background Sync |
 | Service Worker | Cache-first + Network-first híbrido, precaché generado por script |
 | Chat IA | Pestaña **General** (misma pregunta a todos los proveedores visibles, en paralelo) + 7 proveedores (Groq, Mistral, OpenRouter, LLM7.io, NVIDIA vía Worker, Google Gemini, Chrome Built-in AI) |
-| Tests | Playwright (201 tests, servidor HTTP inline) |
+| Tests | Playwright (208 tests, servidor HTTP inline) |
 | Desarrollo | [OpenCode](https://opencode.ai) con modelos DeepSeek (libres) |
 
 ---

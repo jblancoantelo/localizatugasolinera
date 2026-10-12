@@ -1,5 +1,91 @@
 # Mejoras realizadas — Precios Gasolina España
 
+## 2026-10-11 — Móvil apaisado, 5 columnas en vertical y PWA que se actualiza sola
+
+### Por qué hacía falta
+En un móvil vertical las columnas Localidad y Calle se ocultaban a ≤480px para que la
+tabla cupiese, pero el usuario perdía justo los datos que distinguen una gasolinera de
+otra. Además la PWA instalada se quedaba con el manifest y los assets viejos: Android
+relee el manifest al reinstalar desde el precaché, así que forzar la orientación
+`portrait-primary` incluso después de cambiarla seguía rompiendo en apaisado.
+
+### La tabla se adapta, no se corta
+- Se eliminó el `display: none` de las columnas 4 y 5 en ≤480px: ahora `.table-wrap` deja
+  crecer la tabla (`width: max-content; min-width: 100%`) y el contenedor se desplaza con
+  scroll horizontal. En vertical se ven las 5 columnas.
+- `orientation: any` en el manifest: la PWA ya gira a apaisado como el resto.
+
+### La actualización llega sola
+- `sw.js` ya pedía el nuevo `sw.js` con `reg.update()`, pero al activarse el SW nuevo
+  (`skipWaiting` + `clients.claim()`) los CSS/JS viejos seguían parseados en memoria: el
+  usuario veía una mezcla. Ahora `index.html` escucha `controllerchange` y hace un solo
+  `location.reload()` cuando el SW nuevo toma el control.
+- El `manifest.json` se servía del precaché; Android lo relee al reinstalar y se quedaba
+  con la configuración vieja (orientation, iconos…). Ahora es **network-first** en el SW:
+  intenta la red, guarda la última copia y en caída usa la cacheada.
+
+### Tests
+- 208 tests (201 HTTP + 7 file://) en verde, sin nuevos: son cambios de CSS, manifest y
+  registro del SW que ya cubren los tests de build y de carga existentes.
+
+---
+
+## 2026-10-11 — Las gráficas históricas llegan hasta el día actual
+
+### Por qué hacía falta
+La API del Ministerio publica el histórico con un día de retraso, así que la serie del
+modal y del popup acababa ayer: el tooltip no llegaba al precio de hoy y la tendencia se
+veía cortada en el último dato publicado.
+
+### Solución
+- `appendTodayPrice()` en `js/history.js`: añade `{ date: hoy, price }` al final de la
+  serie usando el **precio en vivo** de la estación (`currentStationFuelPrice()`, con la
+  misma prioridad de combustibles que `getStationHistory()`, incluidos los grupos).
+- No duplica la fecha si el histórico ya llega a hoy, y no pinta nada si la estación no
+  tiene precio para ese combustible.
+- Se aplica a las dos gráficas (detalle y popup), que comparten el motor de `js/history.js`.
+
+### Tests
+- 208 tests (201 HTTP + 7 file://) en verde; el dato de hoy entra solo porque el punto se
+  añade en la fuente compartida, sin duplicar lógica por vista.
+
+---
+
+## 2026-10-08 — Mapa: 10 vistas, respaldo de proveedor, orden A-Z y clave CARTO
+
+### Por qué hacía falta
+La vista Calle se quedaba **en gris** cuando el host de CARTO no devolvía tiles: no había
+ningún respaldo, así que un bloqueo o caída dejaba la vista inutilizable. Y con las URLs
+de CARTO **sin `?key=`** el problema era peor: su raster devuelve un tile de marca de
+agua con status **200** (ETag `wm-`) que no dispara `tileerror`, así que un respaldo por
+errores no habría llegado a actuar.
+
+### Cada vista se defiende sola
+- `TILE_CONFIGS` agrupa **varios proveedores por vista** (`urls`): tras 4 tiles fallidos
+  sin ninguno cargado se pasa al siguiente (Calle→CARTO→Esri Street→OSM, Oscuro→CARTO
+  Dark→Esri Dark Gray, Satélite→dos hosts de Esri, Topo→Esri→OpenTopoMap→OSM…).
+- `TILE_URL_PREFERRED` recuerda el proveedor que funcionó, así no se reintenta el host
+  caído cada vez que se cambia de vista.
+- Se añaden **Hybrid** (satélite + etiquetas), **Humanitario** (HOT), **Oscuro**,
+  **Topográfico**, **NatGeo** y **Relieve**: 10 vistas en total.
+- **CARTO key**: las vistas Calle y Oscuro añaden `?key=` (clave gratuita de
+  `carto.com/basemaps/apikey`, 5M tiles/mes) — sin ella el respaldo por `tileerror` no
+  saltaría.
+- **NatGeo** baja a `maxNativeZoom: 12` (solo tiene datos reales hasta z12): antes
+  pintaba un lienzo vacío en zoom alto.
+- El satélite deja de ser la primera opción pero sigue siendo la **por defecto**
+  (`selected` en el `<option>` y `selectedTile: 'satellite'` en `state.js`); el orden es
+  A-Z, y "Sat. nombres" pasa a **"Satélite con nombres"** para que se entienda. El combo
+  crece a 145px (125 en móvil).
+
+### Tests
+- 208 tests (201 HTTP + 7 file://) en verde, 7 nuevos en la sección Mapa: catálogo
+  completo, satélite por defecto aunque no sea la primera opción, etiquetas A-Z, respaldo
+  al fallar el proveedor (se dispara `tileerror` y el mapa cambia de URL), todas las
+  vistas se aplican al elegirlas y la clave en las URLs de CARTO.
+
+---
+
 ## 2026-10-08 — El chat IA recuerda la conversación y puedes borrarla por pestaña
 
 ### Por qué hacía falta

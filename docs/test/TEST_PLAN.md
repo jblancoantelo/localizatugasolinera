@@ -19,7 +19,7 @@ node docs/test/full_test.mjs
 ### Qué hace el script:
 - Inicia servidor HTTP en :8080 sirviendo desde la raíz del proyecto
 - Lanza Chromium headless
-- Ejecuta 201 tests: 194 contra HTTP + 7 contra `file://`
+- Ejecuta 208 tests: 201 contra HTTP + 7 contra `file://`
 - Empieza por la sección 17 (build), que lee ficheros del disco sin abrir el navegador
 - Cierra servidor y navegador automáticamente
 - Exit code 0 = todo OK, 1 = algún fallo
@@ -98,6 +98,12 @@ node docs/test/full_test.mjs
 |---|--------|------|---------|-------------------|
 | 8.1 | Mapa activo | ✅ | — | Leaflet inicializado, zoom > 0 |
 | 8.2 | Cambio de estilo | ✅ | — | Selector cambia a satélite y vuelve |
+| 8.3 | Vista por defecto | ✅ | — | `satellite` es la por defecto aunque no sea la primera opción |
+| 8.4 | Orden del desplegable | ✅ | — | Los nombres de las 10 vistas van de A a Z |
+| 8.5 | Catálogo completo | ✅ | — | Las 10 opciones del combo tienen capa configurada en `TILE_CONFIGS` |
+| 8.6 | Respaldo de proveedor | ✅ | — | Los `urls` de una vista admiten ≥2 proveedores; si el principal falla (`tileerror` ×4) se usa el siguiente |
+| 8.7 | Aplicación de vistas | ✅ | — | Todas las vistas se aplican al elegirlas (`selectedTile`) |
+| 8.8 | Clave CARTO | ✅ | — | Las URLs de Calle y Oscuro llevan `?key=` (sin ella la marca de agua no dispara `tileerror`)
 
 ### 9. Geolocalización
 
@@ -132,7 +138,7 @@ node docs/test/full_test.mjs
 
 ## Resultados actuales
 
-**201 tests — 201 ✅ 0 ❌**
+**208 tests — 208 ✅ 0 ❌**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
@@ -149,7 +155,7 @@ node docs/test/full_test.mjs
 | Histórico | 4 ✅ | — |
 | Ambos | 2 ✅ | — |
 | Config | 2 ✅ | 1 ✅ |
-| Mapa | 2 ✅ | — |
+| Mapa | 9 ✅ | — |
 | Geo | 1 ✅ | — |
 | Búsqueda | 1 ✅ | 1 ✅ |
 | Popup | 8 ✅ | — |
@@ -160,7 +166,7 @@ node docs/test/full_test.mjs
 | Chat IA (sección 15) | 121 ✅ | — |
 | Ring logs (sección 16) | 7 ✅ | — |
 | Build (sección 17) | 4 ✅ | — |
-| **Total** | **194 ✅** | **7 ✅** |
+| **Total** | **201 ✅** | **7 ✅** |
 
 ## 15. Chat IA (automatizado)
 
