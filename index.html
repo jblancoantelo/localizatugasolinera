@@ -123,6 +123,7 @@
           <div class="ia-config">
             <span style="font-size:0.65rem;color:#888">🚀 Misma pregunta a todos los proveedores visibles, en paralelo</span>
             <span id="iaStatusGeneral" style="font-size:0.6rem;color:#999"></span>
+            <span id="iaPromptsGeneral" class="ia-prompts"></span>
             <button class="ia-clear-btn" data-iaclear="general" title="Borrar el historial de este chat">🗑</button>
           </div>
           <div class="ia-chat">
@@ -365,6 +366,11 @@
           <p class="config-desc">Elige qué proveedores aparecen en la pestaña IA. Por defecto están todos; desmarca los que no uses y dejan de mostrarse (su chat y sus mensajes se conservan por si los vuelves a activar).</p>
           <div id="aiProviderVisibility" style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem;font-size:0.72rem"></div>
           <p class="config-desc" id="aiProviderVisibilityHint" style="margin-top:0.4rem"></p>
+        </div>
+        <div class="config-card">
+          <h3>⚡ Prompts rápidos</h3>
+          <p class="config-desc">Hasta 5 prompts que aparecen como botones numerados en la cabecera de la pestaña General. Al pulsarlos se envían directamente a todos los proveedores visibles. Deja un campo vacío para no mostrar su botón.</p>
+          <div id="aiPromptsConfig" style="display:flex;flex-direction:column;gap:0.35rem;font-size:0.72rem"></div>
         </div>
         <div class="config-card">
           <h3>🔄 Actualización de la app</h3>
