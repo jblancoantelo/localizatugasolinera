@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>v02 · Mapa voraz — el mapa manda, la lista vive en una hoja</title>
+<style>
+:root{
+  --tinta:#141a22; --sub:#66727f; --fondo:#fff; --linea:#e6eaef;
+  --azul:#106ceb; --verde:#0a8a3c; --rojo:#c62828; --naranja:#b26a00;
+  --baja:#0a8a3c; --media:#b26a00; --alta:#c62828;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:var(--tinta)}
+button{font-family:inherit}
+
+/* ---------- mapa ---------- */
+.mapa{position:fixed;inset:0 0 0 0}
+.mm{position:absolute;inset:0}
+@media (min-width:960px){
+  .mapa{left:430px}
+  .pin{position:absolute;transform:translate(-50%,-100%)}
+}
+.pin{position:absolute;transform:translate(-50%,-100%);border:none;border-radius:12px 12px 12px 3px;font-weight:800;
+  font-size:.72rem;padding:5px 8px;color:#fff;cursor:pointer;box-shadow:0 2px 7px rgba(0,0,0,.32);transition:transform .15s}
+.pin.nivel-baja{background:var(--baja)}.pin.nivel-media{background:var(--media)}.pin.nivel-alta{background:var(--alta)}
+.pin.pin-sel{outline:3px solid #fff;z-index:6;transform:translate(-50%,-120%) scale(1.18)}
+.pin.pin-fav::after{content:' ★';font-size:.8rem}
+.mtop{position:absolute;top:calc(8px + env(safe-area-inset-top));left:10px;right:10px;display:flex;gap:8px;align-items:flex-start;z-index:40;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.mtop::-webkit-scrollbar{display:none}
+.mch{border:none;background:#fff;box-shadow:0 2px 10px rgba(10,25,50,.16);border-radius:999px;padding:9px 14px;
+  font-size:.82rem;font-weight:700;white-space:nowrap;cursor:pointer;color:var(--tinta);display:flex;align-items:center;gap:6px}
+.mch.act{background:var(--azul);color:#fff}
+.mch .sub{opacity:.6;font-weight:500}
+.mfabs{position:absolute;right:12px;bottom:calc(96px + env(safe-area-inset-bottom));flex-direction:column;display:flex;gap:10px;z-index:40}
+.fab{width:48px;height:48px;border-radius:50%;border:none;background:#fff;box-shadow:0 4px 14px rgba(10,25,50,.28);font-size:1.05rem;cursor:pointer}
+.fab.act{background:var(--azul);color:#fff}
+
+/* ---------- hoja ---------- */
+.hoja{position:fixed;left:0;right:0;bottom:0;background:#fff;border-radius:24px 24px 0 0;z-index:50;height:100%;
+  box-shadow:0 -10px 34px rgba(10,25,50,.18);display:flex;flex-direction:column;will-change:transform}
+@media (min-width:960px){ .hoja{left:0;right:auto;width:430px;border-radius:0;box-shadow:2px 0 24px rgba(10,25,50,.08);transform:none!important;top:0;bottom:0} .asa,.grip{display:none} }
+.asa{padding:9px 0 4px;flex-shrink:0;touch-action:none;cursor:grab}
+.asa span{display:block;width:44px;height:5px;border-radius:3px;background:#d6dce4;margin:0 auto}
+.hhead{padding:4px 16px 12px;border-bottom:1px solid var(--linea);flex-shrink:0}
+.hhead h2{margin:0;font-size:1.02rem;font-weight:800;letter-spacing:-.2px}
+.hhead .s{font-size:.78rem;color:var(--sub);margin-top:2px}
+.hhead .fila2{display:flex;gap:8px;margin-top:10px}
+.hhead select{flex:1;border:1px solid var(--linea);border-radius:12px;padding:9px 10px;font-size:.85rem;background:#fafbfd;color:var(--tinta)}
+.hlista{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:6px 12px calc(16px + env(safe-area-inset-bottom))}
+.card{display:flex;gap:11px;align-items:center;padding:11px 8px;border-radius:14px;cursor:pointer;position:relative}
+.card:hover{background:#f5f7fa}
+.card:active{background:#edf1f6}
+.card .lm{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:.85rem;flex-shrink:0}
+.card .tx{flex:1;min-width:0}
+.card .m{font-weight:700;font-size:.92rem;display:flex;align-items:center;gap:6px}
+.card .m .fv{color:#f5a623;font-size:.8rem}
+.card .d{font-size:.76rem;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .kb{margin-top:4px;display:flex;gap:6px}
+.tagk{font-size:.62rem;font-weight:700;background:#f2f4f7;border-radius:99px;padding:3px 8px;color:var(--sub)}
+.tagk.dd{color:var(--verde);background:#eafaf1}
+.card .fin{text-align:right;flex-shrink:0}
+.card .px{font-size:1.34rem;font-weight:800;letter-spacing:-.5px}
+.card .un{font-size:.6rem;color:var(--sub);display:block}
+.card .tvv{font-size:.68rem;font-weight:700}
+.card.sel{background:#eaf2ff;outline:2px solid #bcd4ff}
+.sep{height:1px;background:var(--linea);margin:2px 8px}
+.nivel-baja{color:var(--baja)}.nivel-media{color:var(--media)}.nivel-alta{color:var(--alta)}
+
+/* ---------- ficha overlay ---------- */
+.velo{position:fixed;inset:0;background:rgba(10,22,40,.42);z-index:70;opacity:0;pointer-events:none;transition:.2s}
+.velo.vis{opacity:1;pointer-events:auto}
+.ficha{position:fixed;left:0;right:0;bottom:0;z-index:71;background:#fff;border-radius:24px 24px 0 0;max-height:94dvh;
+  transform:translateY(104%);transition:transform .28s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column}
+.ficha.vis{transform:none}
+@media (min-width:960px){ .ficha{left:430px;width:400px} }
+.fhead{padding:8px 18px 10px;display:flex;gap:12px;align-items:center;border-bottom:1px solid var(--linea)}
+.fhead .lm{width:46px;height:46px;border-radius:15px}
+.fhead .n{font-weight:800;font-size:1rem}
+.fhead .d{font-size:.78rem;color:var(--sub);margin-top:2px}
+.fav{margin-left:auto;background:#fff5e0;border:none;font-size:1.25rem;cursor:pointer;width:44px;height:44px;border-radius:999px}
+.fav.on{background:#ffedc2;color:#e8930c}
+.fbody{overflow-y:auto;padding:12px 18px calc(20px + env(safe-area-inset-bottom))}
+.ptabla{border:1px solid var(--linea);border-radius:14px;overflow:hidden;margin-bottom:12px}
+.filaP{display:flex;justify-content:space-between;padding:9px 13px;border-bottom:1px solid var(--linea);font-size:.86rem}
+.filaP:last-child{border-bottom:none}
+.filaP:nth-child(odd){background:#fafbfd}
+.chartw{border:1px solid var(--linea);border-radius:14px;padding:8px 6px 2px;margin-top:10px}
+.lm-line{stroke:#e6ebf1}.lm-num{font-size:8px;fill:#8b97a4}
+.rang{display:flex;gap:6px;margin-top:10px}
+.rang button{flex:1;border:1px solid var(--linea);background:#fff;border-radius:10px;padding:7px 0;font-size:.75rem;font-weight:700;color:var(--sub);cursor:pointer}
+.rang button.act{background:var(--azul);color:#fff;border-color:var(--azul)}
+.acc{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.bx{flex:1;min-width:100px;border:none;border-radius:12px;padding:11px 8px;font-weight:700;font-size:.83rem;cursor:pointer;background:#f2f4f7;color:var(--tinta)}
+.bx.pri{background:var(--azul);color:#fff}
+.bx.al{background:#fdeeee;color:var(--rojo)}
+
+/* ---------- filtro modal ---------- */
+.fmodal{position:fixed;inset:0;z-index:80;display:none}
+.fmodal.vis{display:grid;place-items:end center;background:rgba(8,20,40,.45)}
+.fmodal .caj{background:#fff;width:min(560px,100%);border-radius:24px 24px 0 0;padding:6px 20px 22px;max-height:86dvh;overflow-y:auto}
+@media (min-width:960px){ .fmodal.vis{place-items:center start;padding-left:430px} .fmodal .caj{border-radius:0 24px 24px 0} }
+.fmodal h3{margin:14px 0 10px;font-size:.95rem}
+.grupo{display:flex;flex-wrap:wrap;gap:8px}
+.grupo .mch{box-shadow:none;border:1px solid var(--linea);padding:8px 13px}
+.grupo .mch.act{border-color:var(--azul)}
+.fmodal .pie{display:flex;gap:10px;margin-top:18px}
+.fmodal .pie button{flex:1;border:none;border-radius:14px;padding:13px;font-weight:800;font-size:.9rem;cursor:pointer}
+.pie .gramar{background:#f2f4f7;color:var(--tinta)}
+.pie .rapli{background:var(--azul);color:#fff}
+
+/* aviso */
+.snack{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translate(-50%,12px);z-index:99;
+  background:#141a22;color:#fff;font-size:.8rem;padding:9px 15px;border-radius:999px;opacity:0;pointer-events:none;transition:.25s}
+.snack-vis{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div class="mapa">
+  <div class="mm" id="mm"></div>
+  <div class="mtop" id="chipsComb"></div>
+  <div class="mfabs">
+    <button class="fab" id="fCapas" title="Tipo de mapa">🗺️</button>
+    <button class="fab" id="fLoc" title="Mi posición">📍</button>
+    <button class="fab" id="fRefil" title="Filtros">≡</button>
+    <button class="fab" id="fModo" title="Vista lista/mapa">⊞</button>
+  </div>
+</div>
+
+<div class="hoja" id="hoja">
+  <div class="asa" id="asa"><span></span></div>
+  <div class="hhead">
+    <h2 id="hTitulo">132 estaciones</h2>
+    <p class="s" id="hSub">Gasolina 95 · Madrid · media 1,531 €/L</p>
+    <div class="fila2">
+      <select id="selLoc"><option>Todas las localidades</option></select>
+      <select id="selOrden">
+        <option value="precio">Ordenar: baratas primero</option>
+        <option value="cerca">Ordenar: más cerca</option>
+        <option value="favos">Favoritas ⭐ / precio</option>
+      </select>
+    </div>
+  </div>
+  <div class="hlista" id="lista"></div>
+</div>
+
+<div class="velo" id="velo"></div>
+<section class="ficha" id="ficha" role="dialog" aria-modal="true" aria-label="Ficha de estación">
+  <div class="fhead">
+    <div class="lm" id="fcLm">R</div>
+    <div><div class="n" id="fcN">—</div><div class="d" id="fcD">—</div></div>
+    <button class="fav" id="fcFav">☆</button>
+  </div>
+  <div class="fbody" id="fcBody"></div>
+</section>
+
+<div class="fmodal" id="fmodal">
+  <div class="caj">
+    <h3>🏘️ Localidad</h3>
+    <select id="fLocSel" style="width:100%;border:1px solid var(--linea);border-radius:12px;padding:11px;font-size:.9rem"></select>
+    <h3>🏷️ Marcas</h3>
+    <div class="grupo" id="fMarcas"></div>
+    <h3>⭐ Otros</h3>
+    <div class="grupo">
+      <button class="mch" id="fFv">Solo favoritas</button>
+      <button class="mch" id="fBar">Solo con descuento</button>
+    </div>
+    <div class="pie">
+      <button class="gramar" id="fLimpiar">Limpiar</button>
+      <button class="rapli" id="fAplicar">Aplicar filtros</button>
+    </div>
+  </div>
+</div>
+
+<script src="../_lib/mock.js"></script>
+<script>
+(function(){
+'use strict';
+var ST = { prov:'Madrid', comb:'Gasolina 95 E5', loc:'Todas', orden:'precio', marcas:[], soloFav:false,
+  sel:null, favoritos:{}, estado:'media' };
+
+GLM.de('Madrid').forEach(function(e){ ST.favoritos[e.id] = !!e.fav; });
+
+/* ---------- chips de combustible sobre el mapa ---------- */
+function pintaChips(){
+  document.getElementById('chipsComb').innerHTML =
+    '<select id="selProv" class="mch" style="padding-right:10px;color:var(--azul)">'+
+    GLM.PROVINCIAS.map(function(p){return '<option'+(p===ST.prov?' selected':'')+'>'+p+'</option>'}).join('')+'</select>'+
+    GLM.COMBUSTIBLES.slice(0,6).map(function(c){
+      var n = GLM.de(ST.prov).filter(function(e){return e.precios[c]!=null}).length;
+      return '<button class="mch'+(ST.comb===c?' act':'')+'" data-c="'+c+'">'+GLM.COMBUSTIBLES_CORTOS[c]+' <span class="sub">'+n+'</span></button>';
+    }).join('') +
+    '<button class="mch" id="chipFiltrar">≡ Filtros'+(ST.marcas.length||ST.soloFav?' <span class="sub">●</span>':'')+'</button>';
+}
+document.getElementById('chipsComb').addEventListener('click',function(e){
+  var b=e.target.closest('[data-c]'); if(b){ ST.comb=b.dataset.c; actualizar(); return; }
+  if(e.target.closest('#chipFiltrar')) abreFiltros();
+});
+document.getElementById('chipsComb').addEventListener('change',function(e){
+  if(e.target.id==='selProv'){ ST.prov=e.target.value; ST.loc='Todas'; document.getElementById('selLoc').innerHTML='<option value="Todas">Todas las localidades</option>'; actualizar(); }
+});
+
+/* ---------- lista dentro de la hoja ---------- */
+function nombreMediaZona(){
+  var l = filtradas().filter(function(e){return e.precios[ST.comb]!=null});
+  if(!l.length) return '—';
+  return GLM.fmt(l.reduce(function(t,e){return t+GLM.precioFinal(e,ST.comb)},0)/l.length);
+}
+function filtradas(){
+  var l = GLM.de(ST.prov,{loc:ST.loc,marcas:ST.marcas});
+  if(ST.soloFav) l = l.filter(function(e){return ST.favoritos[e.id]});
+  return l;
+}
+function render(){
+  var l = filtradas(), conP = l.filter(function(e){return e.precios[ST.comb]!=null});
+  if(ST.orden==='cerca') conP.sort(function(a,b){return a.dist-b.dist});
+  else if(ST.orden==='favos') conP.sort(function(a,b){return (ST.favoritos[b.id]-ST.favoritos[a.id])||GLM.precioFinal(a,ST.comb)-GLM.precioFinal(b,ST.comb)});
+  else conP.sort(function(a,b){return GLM.precioFinal(a,ST.comb)-GLM.precioFinal(b,ST.comb)});
+  var sinP = l.filter(function(e){return e.precios[ST.comb]==null});
+  ST.lista = conP.concat(sinP);
+  var hh = document.getElementById('hTitulo');
+  hh.textContent = conP.length + (conP.length===1?' estación':' estaciones');
+  document.getElementById('hSub').textContent = GLM.COMBUSTIBLES_CORTOS[ST.comb]+' · '+ST.prov+' · media '+nombreMediaZona()+' €/L';
+  document.getElementById('lista').innerHTML = ST.lista.map(function(e){return card(e)}).join('') ||
+    '<p style="text-align:center;color:var(--sub);padding:30px 10px">Sin resultados — prueba a limpiar los filtros.</p>';
+  mm.pines(ST.lista, estSel(), ST.comb);
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+function card(e){
+  var p = e.precios[ST.comb], fin = p==null?null:GLM.precioFinal(e,ST.comb);
+  var t = p==null?{d:0}:GLM.tendencia(e,ST.comb);
+  var dd = GLM.descuento(e.marca);
+  return '<div class="card'+(p==null?'':'')+(ST.sel===e.id?' sel':'')+'" data-id="'+e.id+'">'+
+    '<div class="lm" style="background:'+GLM.colorMarca(e.marca)+'">'+esc(e.marca.slice(0,2))+'</div>'+
+    '<div class="tx"><div class="m">'+esc(e.marca)+(ST.favoritos[e.id]?'<span class="fv">★</span>':'')+'</div>'+
+    '<div class="d">'+esc(e.direccion)+' · '+esc(e.localidad)+'</div>'+
+    '<div class="kb">'+(e.dist<6?'<span class="tagk">'+GLM.fmt2(e.dist)+' km</span>':'')+
+    (dd?'<span class="tagk dd">'+GLM.cent(dd)+'</span>':'')+'</div></div>'+
+    '<div class="fin">'+(fin==null?'<span style="color:var(--sub);font-size:.8rem">sin dato</span>':
+      '<span class="px nivel-'+GLM.nivel(fin)+'">'+GLM.fmt(fin)+'</span><span class="un">€/L</span>'+
+      '<span class="tvv" style="color:'+(t.d<0?'var(--verde)':'var(--rojo)')+'">'+(t.d<0?'▼':'▲')+GLM.fmt(Math.abs(t.d))+'</span>')+'</div></div>';
+}
+document.getElementById('lista').addEventListener('click',function(e){
+  var c = e.target.closest('[data-id]'); if(!c) return;
+  var est = estacion(c.dataset.id);
+  if(est) abreFicha(est);
+});
+function estacion(id){
+  var l = ST.lista || filtradas();
+  return l.filter(function(x){return x.id===id})[0] || GLM.de(ST.prov).filter(function(x){return x.id===id})[0];
+}
+function estSel(){ return ST.sel?estacion(ST.sel):null; }
+
+/* ---------- hoja arrastrable ---------- */
+var hoja = document.getElementById('hoja'), asa = document.getElementById('asa');
+var POS = { peek:66, media:0.55, alta:1.0 }; // altura visible como fracción de innerHeight (o px)
+var cur = 'media';
+function tyDe(est){
+  var vh = window.innerHeight;
+  if(typeof(est)==='string') return vh-est;
+  return vh - vh*est;
+}
+function aplicarSnap(anim){
+  var vh = window.innerHeight;
+  var ty = cur==='peek'? vh-64 : (cur==='media'? vh*0.46 : 0);
+  hoja.style.transition = anim===false?'none':'transform .24s cubic-bezier(.2,.8,.2,1)';
+  hoja.style.transform = 'translateY('+ty+'px)';
+}
+function fijaEstado(s){ cur=s; aplicarSnap(); }
+
+asa.addEventListener('pointerdown', function(ev){
+  asa.setPointerCapture(ev.pointerId);
+  var y0=ev.clientY, vh=window.innerHeight;
+  var initTy = cur==='peek'? vh-64 : (cur==='media'? vh*0.46 : 0);
+  hoja.style.transition='none';
+  function mv(e){
+    var ty = Math.max(0, Math.min(vh-64, initTy + (e.clientY-y0)));
+    hoja.style.transform='translateY('+ty+'px)';
+  }
+  function up(e){
+    asa.removeEventListener('pointermove',mv); asa.removeEventListener('pointerup',up); asa.removeEventListener('pointercancel',up);
+    var m = (hoja.style.transform||'').match(/-?\d+(\.\d+)?/);
+    var fin = m ? parseFloat(m[0]) : 0;
+    var fr = 1 - fin/vh;
+    cur = fr<0.2?'alta':(fr<0.62?'media':'peek');
+    aplicarSnap();
+  }
+  asa.addEventListener('pointermove',mv); asa.addEventListener('pointerup',up); asa.addEventListener('pointercancel',up);
+});
+
+/* ---------- ficha ---------- */
+var velo=document.getElementById('velo'), ficha=document.getElementById('ficha');
+function abreFicha(est){
+  ST.sel = est.id; render();
+  fijaEstado('media');
+  document.getElementById('fcLm').style.background = GLM.colorMarca(est.marca);
+  document.getElementById('fcLm').textContent = est.marca.slice(0,2);
+  document.getElementById('fcN').textContent = est.marca;
+  document.getElementById('fcD').textContent = est.direccion+' · '+est.localidad+' · '+GLM.fmt2(est.dist)+' km';
+  var fv = document.getElementById('fcFav');
+  fv.textContent = ST.favoritos[est.id]?'★':'☆'; fv.classList.toggle('on',ST.favoritos[est.id]);
+  document.getElementById('fcBody').innerHTML = cuerpoFicha(est);
+  engancha(est);
+  ficha.classList.add('vis'); velo.classList.add('vis');
+  document.getElementById('fcBody').scrollTop=0;
+}
+document.getElementById('fcFav').addEventListener('click',function(){
+  if(!ST.sel) return;
+  ST.favoritos[ST.sel] = !ST.favoritos[ST.sel];
+  GLM.snack(ST.favoritos[ST.sel]?'⭐ Añadida a favoritas':'Quitada de favoritas');
+  abreFicha(estacion(ST.sel)); render();
+});
+document.getElementById('velo').addEventListener('click',function(){
+  ficha.classList.remove('vis'); velo.classList.remove('vis'); ST.sel=null; render();
+});
+function cuerpoFicha(est){
+  var pillas = Object.keys(est.precios).map(function(c){
+    var p = GLM.precioFinal(est,c);
+    return '<div class="filaP"><span>'+c+'</span><b class="nivel-'+GLM.nivel(p)+'">'+GLM.fmt(p)+' €/L</b></div>';
+  }).join('');
+  var r = GLM.resumen(GLM.historico(est,ST.comb,ST.rango||14));
+  return '<div class="ptabla">'+pillas+'</div>'+
+    '<div class="rang">'+[7,14,30].map(function(d){return '<button class="'+((ST.rango||14)===d?'act':'')+'" data-rango="'+d+'">'+d+' d</button>'}).join('')+'</div>'+
+    '<div class="chartw">'+GLM.chart(GLM.historico(est,ST.comb,ST.rango||14),{w:360,h:160})+'</div>'+
+    '<p style="font-size:.78rem;color:var(--sub);margin:8px 2px">'+
+      'Mínimo '+GLM.fmt(r.min)+' el '+r.minFecha+' · máximo '+GLM.fmt(r.max)+' el '+r.maxFecha+' · media '+GLM.fmt(r.media)+' €/L</p>'+
+    '<div class="acc"><button class="bx pri">🧭 Cómo llegar</button><button class="bx al">🔔 Avisar si baja</button><button class="bx" id="fcIA">✨ Preguntar IA</button></div>';
+}
+function engancha(est){
+  document.querySelectorAll('[data-rango]').forEach(function(b){
+    b.addEventListener('click',function(){
+      ST.rango = +b.dataset.rango;
+      document.getElementById('fcBody').innerHTML = cuerpoFicha(est);
+      engancha(est);
+    });
+  });
+  var ia = document.getElementById('fcIA');
+  if(ia) ia.addEventListener('click',function(){ GLM.snack('✨ En la app real abre el chat IA con la pregunta escrita.'); });
+}
+
+/* ---------- filtros ---------- */
+var fmodal=document.getElementById('fmodal');
+function abreFiltros(){
+  document.getElementById('fLocSel').innerHTML =
+    '<option value="Todas">Todas las localidades</option>'+GLM.localidades(ST.prov).map(function(l){
+      return '<option'+(ST.loc===l?' selected':'')+'>'+l+'</option>';
+    }).join('');
+  document.getElementById('fMarcas').innerHTML = GLM.MARCAS.map(function(m){
+    return '<button class="mch'+(ST.marcas.indexOf(m.n)>=0?' act':'')+'" data-m="'+m.n+'">'+m.n+'</button>';
+  }).join('');
+  document.getElementById('fFv').classList.toggle('act',ST.soloFav);
+  fmodal.classList.add('vis');
+}
+document.getElementById('fMarcas').addEventListener('click',function(e){
+  var b=e.target.closest('[data-m]'); if(!b) return;
+  var m=b.dataset.m, i=ST.marcas.indexOf(m);
+  if(i>=0) ST.marcas.splice(i,1); else ST.marcas.push(m);
+  b.classList.toggle('act');
+});
+document.getElementById('fFv').addEventListener('click',function(){ ST.soloFav=!ST.soloFav; this.classList.toggle('act',ST.soloFav); });
+document.getElementById('fBar').addEventListener('click',function(){ GLM.snack('En la app real: filtrar por marcas con descuento guardado'); this.classList.toggle('act'); });
+document.getElementById('fAplicar').addEventListener('click',function(){
+  ST.loc=document.getElementById('fLocSel').value;
+  document.getElementById('selLoc').value=ST.loc;
+  pintaChips(); render(); fmodal.classList.remove('vis'); fijaEstado('media');
+});
+document.getElementById('fLimpiar').addEventListener('click',function(){
+  ST.marcas=[]; ST.soloFav=false; ST.loc='Todas';
+  document.querySelectorAll('#fMarcas .mch').forEach(function(x){x.classList.remove('act')});
+  document.getElementById('fFv').classList.remove('act');
+  document.getElementById('fAplicar').click();
+});
+fmodal.addEventListener('click',function(e){ if(e.target===fmodal) fmodal.classList.remove('vis'); });
+
+/* ---------- selects de cabecera ---------- */
+document.getElementById('selLoc').innerHTML='<option value="Todas">Todas las localidades</option>';
+document.getElementById('selLoc').addEventListener('change',function(){
+  ST.loc=this.value; pintaChips(); render();
+});
+document.getElementById('selOrden').addEventListener('change',function(){ ST.orden=this.value; render(); });
+
+/* ---------- fabs ---------- */
+document.getElementById('fCapas').addEventListener('click',function(){ GLM.snack('Maqueta: selector Satélite / Oscuro / Relieve…'); });
+document.getElementById('fLoc').addEventListener('click',function(){ GLM.snack('Centramos el mapa en tu posición (maqueta)'); });
+document.getElementById('fModo').addEventListener('click',function(){ fijaEstado(cur==='peek'?'media':'peek'); });
+document.getElementById('fRefil').addEventListener('click',abreFiltros);
+
+/* ---------- init ---------- */
+var mm = GLM.miniMapa(document.getElementById('mm'),{onpin:function(est){ abreFicha(est); }});
+actualizar();
+window.addEventListener('resize', aplicarSnap);
+function actualizar(){ pintaChips(); render(); aplicarSnap(); }
+window.PT_VALID='v02';
+})();
+</script>
+</body>
+</html>

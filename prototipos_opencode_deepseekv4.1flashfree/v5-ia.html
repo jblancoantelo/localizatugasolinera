@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Prototipo v5 · Copiloto IA · Gasolineras</title>
+<link rel="stylesheet" href="assets/proto.css">
+<style>
+  /* ==========================================================================
+     v5 · Copiloto IA
+     El chat deja de ser una pestaña escondida y pasa a ser la app. Lo que
+     cambia respecto a la PWA actual:
+       · el copiloto responde con tarjetas de estación citadas, gráfica y mapa
+       · el contexto que se manda al modelo se puede inspeccionar
+       · se ve qué proveedor contesta, con qué modelo y en cuánto tiempo
+       · la misma pregunta se puede lanzar a varios proveedores a la vez
+       · se puede editar la pregunta (y se recorta el hilo) y borrar el hilo
+       · transcripción por voz antes de enviar
+     ========================================================================== */
+  .v5-content { display: flex; }
+
+  /* --- Rail de proveedores (solo escritorio) --------------------------- */
+  .v5-rail {
+    flex: 0 0 68px; display: none; flex-direction: column; align-items: center; gap: var(--s1);
+    padding: var(--s3) 0; background: var(--surface); border-right: 1px solid var(--line);
+    overflow-y: auto; scrollbar-width: none;
+  }
+  .v5-rail::-webkit-scrollbar { display: none; }
+  .v5-rail .rail-sep { width: 26px; height: 1px; background: var(--line); margin: var(--s2) 0; }
+  .prov-btn {
+    position: relative; width: 44px; height: 44px; border-radius: 14px;
+    display: grid; place-items: center; font-weight: 800; font-size: var(--t-2xs);
+    color: var(--fg-2); background: var(--surface-2); transition: all var(--dur) var(--ease);
+  }
+  .prov-btn:hover { color: var(--fg); }
+  .prov-btn.on { background: var(--brand-soft); color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand-line); }
+  .prov-btn[data-off="1"] { opacity: .5; }
+  .prov-btn .pip {
+    position: absolute; right: 5px; top: 5px; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--ok); border: 2px solid var(--surface);
+  }
+  .prov-btn[data-off="1"] .pip { background: var(--bad); }
+
+  /* --- Hilo ------------------------------------------------------------ */
+  .chat-pane { min-width: 0; }
+  .ctxchips { flex: 0 0 auto; padding: var(--s2) var(--s3) 0; border-bottom: 1px solid var(--line); background: var(--surface); }
+  .ctxchips .chips { padding-bottom: var(--s2); }
+
+  .thread { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; position: relative; }
+  .thread-in { max-width: 820px; margin: 0 auto; padding: var(--s4) var(--s3) var(--s5); display: flex; flex-direction: column; gap: var(--s4); }
+
+  .msg { display: flex; flex-direction: column; gap: 8px; position: relative; }
+  .msg.user { align-items: flex-end; }
+  .msg .bubble {
+    padding: 10px var(--s3); border-radius: var(--r-lg); background: var(--surface);
+    border: 1px solid var(--line); box-shadow: var(--sh-1);
+    font-size: var(--t-sm); line-height: 1.55; max-width: min(88%, 640px);
+    overflow-wrap: anywhere;
+  }
+  .msg.assistant .bubble { border-top-left-radius: 7px; }
+  .msg.user .bubble { background: var(--brand); border-color: transparent; color: var(--brand-ink); border-top-right-radius: 7px; box-shadow: 0 4px 12px rgba(11, 98, 214, .22); }
+  .msg .row-meta { display: flex; align-items: center; gap: 6px; font-size: var(--t-3xs); color: var(--fg-3); font-weight: 700; padding-inline: 4px; }
+  .msg.user .row-meta { justify-content: flex-end; }
+  .msg .row-meta .edit { color: var(--fg-3); }
+  .msg .row-meta .edit:hover { color: var(--brand); }
+
+  .who { display: flex; align-items: center; gap: 7px; font-size: var(--t-3xs); font-weight: 800; color: var(--fg-2); text-transform: uppercase; letter-spacing: .04em; }
+  .who .cop {
+    width: 22px; height: 22px; border-radius: 8px; display: grid; place-items: center;
+    background: linear-gradient(150deg, var(--brand), var(--brand-2)); color: #fff; flex: 0 0 auto;
+  }
+  .who .cop .ico { --ico: 13px; }
+  .who .when { color: var(--fg-3); font-weight: 600; text-transform: none; letter-spacing: 0; }
+  .who.err { color: var(--bad); }
+  .who.err .cop { background: var(--bad); }
+  .who.err-off .cop { background: var(--fg-3); }
+
+  .msg .meta { font-size: var(--t-3xs); color: var(--fg-3); font-weight: 600; display: flex; align-items: center; gap: 5px; padding-inline: 4px; }
+
+  /* Markdown mínimo (negrita, cursiva, listas, cita, código) */
+  .md > * + * { margin-top: 8px; }
+  .md ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+  .md li::marker { color: var(--brand); }
+  .md blockquote {
+    margin: 0; padding: 8px var(--s3); border-left: 3px solid var(--brand-line);
+    background: var(--brand-soft); border-radius: 0 var(--r-sm) var(--r-sm) 0; color: var(--fg-2);
+  }
+  .md strong { font-weight: 800; }
+  .md code { font-family: var(--mono); font-size: .92em; background: var(--surface-3); padding: 1px 5px; border-radius: 5px; }
+  .md table { width: 100%; border-collapse: collapse; font-size: var(--t-2xs); }
+  .md table th, .md table td { border-bottom: 1px solid var(--line); padding: 5px 6px; text-align: left; }
+  .md table th { color: var(--fg-2); font-weight: 700; }
+  .md table td.num, .md table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .md .md-note { font-size: var(--t-3xs); color: var(--fg-3); }
+
+  /* Tarjetas citadas */
+  .cites { display: flex; gap: var(--s2); overflow-x: auto; scrollbar-width: none; padding: 2px 0 4px; }
+  .cites::-webkit-scrollbar { display: none; }
+  .cite {
+    flex: 0 0 auto; width: 232px; text-align: left; padding: 10px var(--s3);
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md);
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .cite:hover { border-color: var(--brand-line); }
+  .cite.best { background: var(--ok-bg); border-color: var(--ok-line); }
+  .cite .c-top { display: flex; align-items: center; gap: 7px; }
+  .cite .c-name { font-size: var(--t-2xs); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cite .c-sub { font-size: var(--t-3xs); color: var(--fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cite .c-price { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); margin-top: 2px; }
+
+  /* Gráfica y mapa dentro del mensaje. Ojo: ProtoChart fija el alto del canvas
+     en píxeles (data-h), así que el contenedor no debe forzar altura. */
+  .msg-chart { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 6px 6px 0; }
+  .msg-chart canvas { width: 100%; display: block; }
+  .msg-map { position: relative; height: 184px; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+
+  /* Pensando */
+  .dots { display: inline-flex; gap: 4px; align-items: center; height: 18px; }
+  .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); animation: dotJump 1s infinite ease-in-out; }
+  .dots i:nth-child(2) { animation-delay: .15s; }
+  .dots i:nth-child(3) { animation-delay: .3s; }
+  @keyframes dotJump { 0%, 60%, 100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-5px); opacity: 1; } }
+  .caret { display: inline-block; width: 7px; height: 1.05em; background: var(--brand); vertical-align: -2px; animation: blink 1s steps(2) infinite; border-radius: 1px; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Compositor */
+  .composer { flex: 0 0 auto; border-top: 1px solid var(--line); background: var(--glass); backdrop-filter: saturate(1.4) blur(12px); padding: var(--s2) var(--s3) calc(var(--s2) + var(--safe-b)); }
+  .composer-in { max-width: 820px; margin: 0 auto; display: flex; align-items: flex-end; gap: var(--s2); }
+  .composer .field { flex: 1 1 auto; min-height: 48px; border-radius: var(--r-lg); align-items: flex-end; padding: 8px var(--s2) 8px var(--s3); }
+  #ask { width: 100%; border: 0; background: none; outline: none; resize: none; font: inherit; font-size: var(--t-md); line-height: 1.4; max-height: 132px; padding: 3px 0; }
+  .send-btn {
+    width: 48px; height: 48px; flex: 0 0 auto; border-radius: var(--r-full); display: grid; place-items: center;
+    background: linear-gradient(150deg, var(--brand), var(--brand-2)); color: #fff;
+    box-shadow: 0 6px 16px rgba(11, 98, 214, .32); transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
+  }
+  .send-btn:active { transform: scale(.94); }
+  .send-btn[disabled] { opacity: .4; pointer-events: none; box-shadow: none; }
+  .composer-hint { max-width: 820px; margin: 6px auto 0; text-align: center; }
+
+  /* Sugerencias de arranque */
+  .empty-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--s3); padding: var(--s5) var(--s3) var(--s2); }
+  .empty-hero .avatar {
+    width: 64px; height: 64px; border-radius: 22px; display: grid; place-items: center;
+    background: linear-gradient(150deg, var(--brand), var(--brand-2)); color: #fff;
+    box-shadow: 0 10px 26px rgba(11, 98, 214, .3);
+  }
+  .empty-hero .avatar .ico { --ico: 30px; }
+  .sugg { display: grid; grid-template-columns: 1fr; gap: var(--s2); }
+  .sugg button {
+    display: flex; align-items: center; gap: var(--s3); text-align: left;
+    padding: var(--s3); background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--r-md); box-shadow: var(--sh-1); font-size: var(--t-sm); font-weight: 600;
+  }
+  .sugg button:hover { border-color: var(--brand-line); background: var(--brand-soft); }
+  .sugg .ico { color: var(--brand); }
+
+  /* --- Paneles laterales / de contexto --------------------------------- */
+  .side-pane { background: var(--bg); }
+  .side-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--s3) var(--s4) var(--s5); display: flex; flex-direction: column; gap: var(--s3); }
+  .kv { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); padding: 7px 0; border-bottom: 1px solid var(--line); font-size: var(--t-xs); }
+  .kv:last-child { border-bottom: 0; }
+  .kv .k { color: var(--fg-2); }
+  .kv .v { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+  .prompt-box {
+    font-family: var(--mono); font-size: var(--t-3xs); line-height: 1.6; white-space: pre-wrap;
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md);
+    padding: var(--s3); max-height: 320px; overflow: auto;
+  }
+  .prompt-box .h { color: var(--brand); font-weight: 700; }
+
+  /* --- Comparativa ------------------------------------------------------ */
+  .cmp-card { display: flex; flex-direction: column; gap: var(--s2); }
+  .cmp-card .cc-head { display: flex; align-items: center; gap: var(--s2); }
+  .cmp-card .cc-model { font-size: var(--t-3xs); color: var(--fg-3); font-family: var(--mono); }
+  .cmp-card .cc-body { font-size: var(--t-xs); line-height: 1.5; color: var(--fg-2); flex: 1 1 auto; }
+  .cmp-rail { display: flex; gap: var(--s3); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: var(--s2); }
+  .cmp-rail > * { flex: 0 0 82%; scroll-snap-align: center; }
+  /* Tablet en vertical: el panel ocupa la pantalla, caben dos columnas. */
+  @media (min-width: 760px) and (max-width: 1023px) {
+    .cmp-rail { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+    .cmp-rail > * { flex: none; }
+  }
+  /* Escritorio: la comparativa vive en una columna de ~390 px → apilada. */
+  @media (min-width: 1024px) {
+    .cmp-rail { flex-direction: column; overflow: visible; }
+    .cmp-rail > * { flex: none; }
+  }
+
+  /* --- Voz -------------------------------------------------------------- */
+  .voice-wrap { display: flex; flex-direction: column; align-items: center; gap: var(--s4); padding: var(--s5) 0 var(--s3); text-align: center; }
+  .mic-orb {
+    width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; color: #fff;
+    background: linear-gradient(150deg, var(--brand), var(--brand-2)); box-shadow: 0 12px 34px rgba(11, 98, 214, .35);
+    position: relative;
+  }
+  .mic-orb .ico { --ico: 40px; }
+  .mic-orb::after { content: ''; position: absolute; inset: -10px; border-radius: 50%; border: 2px solid var(--brand-line); animation: orb 1.8s infinite; }
+  @keyframes orb { 0% { transform: scale(.9); opacity: .8; } 100% { transform: scale(1.25); opacity: 0; } }
+  .wave { display: flex; align-items: flex-end; gap: 3px; height: 46px; }
+  .wave i { width: 4px; border-radius: 99px; background: var(--brand); animation: wv 900ms infinite ease-in-out; }
+  @keyframes wv { 0%, 100% { height: 8px; opacity: .55; } 50% { height: var(--h, 34px); opacity: 1; } }
+  .voice-text { font-size: var(--t-lg); font-weight: 600; min-height: 3.2em; max-width: 420px; }
+  .voice-text .caret { background: var(--fg); }
+
+  /* --- Aviso de proveedor sin configurar ------------------------------- */
+  .offline-note {
+    display: flex; gap: var(--s3); align-items: flex-start; padding: var(--s3);
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: var(--r-md);
+    font-size: var(--t-xs); color: var(--fg-2);
+  }
+  .offline-note .ico { color: var(--warn); flex: 0 0 auto; }
+
+  /* --- Escritorio ------------------------------------------------------- */
+  @media (min-width: 1024px) {
+    .v5-content { display: grid; grid-template-columns: 68px minmax(0, 1fr) 388px; grid-template-rows: minmax(0, 1fr); }
+    .v5-rail { display: flex; grid-column: 1; grid-row: 1; }
+    /* El hilo nunca se oculta en escritorio: los paneles laterales ocupan la
+       tercera columna sin desalojarlo. */
+    .chat-pane { grid-column: 2; grid-row: 1; display: flex !important; }
+    .side-pane { grid-column: 3; grid-row: 1; border-left: 1px solid var(--line); display: none; }
+    .side-pane.on { display: flex; }
+    /* Con el chat activo, la columna derecha enseña el contexto del copiloto */
+    body[data-pane="chat"] .side-pane[data-panel="ctx"] { display: flex; }
+    .side-pane > .topbar { min-height: 54px; padding: var(--s2) var(--s4); background: var(--surface); backdrop-filter: none; }
+    .side-pane > .topbar .topbar-title { font-size: var(--t-md); }
+    .side-scroll { padding-bottom: var(--s4); }
+    .msg .bubble { font-size: var(--t-md); }
+  }
+  @media (min-width: 1240px) {
+    .v5-content { grid-template-columns: 68px minmax(0, 1fr) 420px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="statusbar only-mobile">
+    <span>9:41</span>
+    <span class="sb-right">
+      <span class="ico" data-ico="signal"></span><span class="ico" data-ico="wifiOff"></span><span class="ico" data-ico="battery"></span>
+    </span>
+  </div>
+
+  <header class="topbar">
+    <span class="who"><span class="cop"><span data-ico="sparkles"></span></span></span>
+    <div class="grow" style="min-width:0">
+      <div class="topbar-title" style="font-size:var(--t-lg)">Copiloto
+        <span class="badge brand" id="provBadge">General</span>
+      </div>
+      <div class="topbar-sub truncate" id="headSub">3 proveedores listos · 11 estaciones en Madrid</div>
+    </div>
+    <button class="iconbtn" id="voiceBtn" title="Preguntar por voz"><span data-ico="mic"></span></button>
+    <button class="iconbtn only-mobile" id="provBtn" title="Proveedores"><span data-ico="sparkles"></span></button>
+    <button class="iconbtn" id="clearBtn" title="Borrar conversación"><span data-ico="trash"></span></button>
+    <button class="iconbtn" data-theme-toggle title="Tema"></button>
+  </header>
+
+  <div class="content v5-content">
+
+    <!-- ============ Rail de proveedores (escritorio) ============ -->
+    <aside class="v5-rail" id="rail" aria-label="Proveedores de IA"></aside>
+
+    <!-- ============ Panel: chat ================================ -->
+    <section class="pane on chat-pane" data-panel="chat">
+      <div class="ctxchips">
+        <div class="chips" id="ctxChips"></div>
+      </div>
+
+      <div class="thread" id="thread">
+        <div class="thread-in" id="threadIn"></div>
+      </div>
+
+      <div class="composer">
+        <div class="composer-in">
+          <button class="iconbtn" id="plusBtn" title="Añadir al contexto"><span data-ico="plus"></span></button>
+          <label class="field">
+            <textarea id="ask" rows="1" placeholder="Pregunta por precios, histórico o si te compensa el desvío…"></textarea>
+          </label>
+          <button class="iconbtn" id="micBtn" title="Dictar"><span data-ico="mic"></span></button>
+          <button class="send-btn" id="sendBtn" title="Enviar"><span data-ico="send"></span></button>
+        </div>
+        <div class="composer-hint tiny dim">El copiloto solo usa lo que ya está descargado (11 estaciones · caché de hace 8 min). Si falta un dato, lo dice.</div>
+      </div>
+    </section>
+
+    <!-- ============ Panel: contexto =========================== -->
+    <section class="pane side-pane" data-panel="ctx">
+      <header class="topbar">
+        <span class="topbar-title">Contexto</span>
+        <div class="spacer"></div>
+        <button class="iconbtn" data-theme-toggle title="Tema"></button>
+      </header>
+      <div class="side-scroll" id="ctxBody"></div>
+    </section>
+
+    <!-- ============ Panel: comparar proveedores ================ -->
+    <section class="pane side-pane" data-panel="cmp">
+      <header class="topbar">
+        <span class="topbar-title">Comparar modelos</span>
+        <div class="spacer"></div>
+        <button class="iconbtn" id="cmpAgain" title="Volver a preguntar"><span data-ico="refresh"></span></button>
+      </header>
+      <div class="side-scroll" id="cmpBody"></div>
+    </section>
+
+    <!-- ============ Panel: ajustes del copiloto ================ -->
+    <section class="pane side-pane" data-panel="set">
+      <header class="topbar">
+        <span class="topbar-title">Ajustes del copiloto</span>
+        <div class="spacer"></div>
+        <button class="iconbtn" data-theme-toggle title="Tema"></button>
+      </header>
+      <div class="side-scroll" id="setBody"></div>
+    </section>
+  </div>
+
+  <nav class="bottomnav" id="nav" data-nav="v5">
+    <button class="nav-btn on" data-tab="chat"><span class="ico" data-ico="sparkles"></span>Copiloto</button>
+    <button class="nav-btn" data-tab="ctx"><span class="ico" data-ico="layers"></span>Contexto</button>
+    <button class="nav-btn" data-tab="cmp"><span class="ico" data-ico="compare"></span>Comparar</button>
+    <button class="nav-btn" data-tab="set"><span class="ico" data-ico="gear"></span>Ajustes</button>
+  </nav>
+</div>
+
+<!-- ===================== Sheet: prompt enviado ========================== -->
+<div class="sheet wide" data-sheet="prompt" id="promptSheet">
+  <div class="sheet-head"><span class="sheet-grab"></span>
+    <h2>Lo que se envía al modelo</h2>
+    <div class="spacer"></div>
+    <button class="iconbtn" data-sheet-close><span data-ico="close"></span></button>
+  </div>
+  <div class="sheet-body">
+    <p class="small muted">El copiloto no manda tus datos a ningún sitio sin contexto: esto es exactamente lo que viaja como <span class="mono">system message</span> antes de tu pregunta. Se genera con <span class="mono">getAiContext()</span> y el histórico solo se añade si la pregunta lo pide.</p>
+    <div class="prompt-box mt3" id="promptBox"></div>
+    <div class="row mt3" style="gap:var(--s2)">
+      <button class="btn sm soft" data-toast="Contexto copiado (mock)" data-toast-icon="share">Copiar</button>
+      <button class="btn sm ghost" data-toast="El histórico se descarta si no hace falta (mock)" data-toast-icon="trash">Quitar histórico</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== Sheet: detalle de estación ==================== -->
+<div class="sheet" data-sheet="station" id="stationSheet">
+  <div class="sheet-head"><span class="sheet-grab"></span>
+    <h2 id="stationTitle">Estación</h2>
+    <div class="spacer"></div>
+    <button class="iconbtn" data-sheet-close><span data-ico="close"></span></button>
+  </div>
+  <div class="sheet-body" id="stationBody"></div>
+</div>
+
+<!-- ===================== Sheet: voz ==================================== -->
+<div class="sheet wide" data-sheet="voice" id="voiceSheet">
+  <div class="sheet-head"><span class="sheet-grab"></span>
+    <h2>Pregúntale hablando</h2>
+    <div class="spacer"></div>
+    <button class="iconbtn" data-sheet-close><span data-ico="close"></span></button>
+  </div>
+  <div class="sheet-body">
+    <div class="voice-wrap">
+      <div class="mic-orb"><span class="ico" data-ico="mic"></span></div>
+      <div class="wave" id="wave"></div>
+      <div class="voice-text" id="voiceText"></div>
+      <p class="tiny dim">Transcripción en el dispositivo (mock) · no se envía audio al proveedor.</p>
+    </div>
+  </div>
+  <div class="sheet-foot">
+    <button class="btn ghost" data-sheet-close>Cancelar</button>
+    <button class="btn primary" id="voiceUse" disabled>Enviar</button>
+  </div>
+</div>
+
+<!-- ===================== Sheet: proveedores ============================ -->
+<div class="sheet" data-sheet="provs" id="provSheet">
+  <div class="sheet-head"><span class="sheet-grab"></span>
+    <h2>Proveedor de IA</h2>
+    <div class="spacer"></div>
+    <button class="iconbtn" data-sheet-close><span data-ico="close"></span></button>
+  </div>
+  <div class="sheet-body" id="provBody"></div>
+</div>
+
+<div class="proto-tag">v5 · copiloto IA</div>
+
+<script src="assets/proto-data.js"></script>
+<script src="assets/proto-chart.js"></script>
+<script src="assets/proto-map.js"></script>
+<script src="assets/proto-ui.js"></script>
+<script>
+Proto.boot();
+
+/* ============================================================================
+   Estado
+   ========================================================================== */
+const state = {
+  pane: 'chat', prov: 'general', fuel: 'diesel', tank: 50,
+  tone: 'equilibrado', useHistory: true, keepThreads: true,
+  members: { team: true, app: true },   // filtros de contexto
+  busy: false, lastKind: null, lastQ: '',
+};
+const STORE_KEY = 'proto_v5_prov';
+try { state.prov = localStorage.getItem(STORE_KEY) || 'general'; } catch (e) {}
+
+const LIST = () => PROTO.filterStations(PROTO.STATIONS, { province: 'Madrid', fuel: state.fuel });
+const stats = () => PROTO.stats(LIST(), state.fuel);
+const byId = (id) => PROTO.STATIONS.find(s => s.id === id);
+const priceOf = (st) => PROTO.finalPrice(st, state.fuel);
+const eur2 = (v) => PROTO.money(v, 2);
+const cents = (v) => (Math.round(v * 1000) / 10).toFixed(1).replace('.', ',') + ' ¢';
+
+/* Proveedores: mismo listado que la PWA real (AI_PROVIDERS) */
+const PROVS = [
+  { id: 'general', label: 'General', model: '—', ok: true, initials: 'ALL', note: 'Pregunta a todos los configurados a la vez' },
+  { id: 'groq', label: 'Groq', model: 'qwen/qwen3.8-27b', ok: true, initials: 'GQ', ms: 640 },
+  { id: 'mistral', label: 'Mistral', model: 'open-mistral-nemo', ok: true, initials: 'MI', ms: 980 },
+  { id: 'google', label: 'Gemini', model: 'gemini-3.8-flash', ok: true, initials: 'GE', ms: 1180 },
+  { id: 'llm7', label: 'LLM7.io', model: 'codestral-latest', ok: true, initials: 'L7', ms: 820, note: 'Funciona sin clave (modo anónimo)' },
+  { id: 'nvidia', label: 'NVIDIA', model: 'nvidia/nemotron-3-ultra-550b-a55b', ok: false, initials: 'NV', note: 'Va por Cloudflare Worker: falta configurar la URL' },
+];
+const provOf = (id) => PROVS.find(p => p.id === id) || PROVS[0];
+const readyProvs = () => PROVS.filter(p => p.id !== 'general' && p.ok);
+
+/* ============================================================================
+   Markdown mínimo (mismo espíritu que renderAiMarkdown de la app real)
+   ========================================================================== */
+function mdInline(s) {
+  return s
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[\s(])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+}
+function md(text) {
+  const src = Proto.esc(text);
+  const blocks = src.split(/\n{2,}/);
+  return blocks.map(b => {
+    const lines = b.split('\n');
+    if (/^\s*[-*·]\s/.test(lines[0])) {
+      return '<ul>' + lines.map(l => '<li>' + mdInline(l.replace(/^\s*[-*·]\s/, '')) + '</li>').join('') + '</ul>';
+    }
+    if (/^\s*&gt;\s?/.test(lines[0])) {
+      return '<blockquote>' + lines.map(l => mdInline(l.replace(/^\s*&gt;\s?/, ''))).join('<br>') + '</blockquote>';
+    }
+    if (/^\|/.test(lines[0]) && lines.length > 1) {
+      const rows = lines.filter(l => !/^\|[\s|:-]+\|$/.test(l)).map(l => l.replace(/^\||\|$/g, '').split('|').map(c => c.trim()));
+      const head = rows.shift();
+      return '<table><thead><tr>' + head.map((c, i) => `<th class="${i ? 'num' : ''}">${mdInline(c)}</th>`).join('') + '</tr></thead><tbody>'
+        + rows.map(r => '<tr>' + r.map((c, i) => `<td class="${i ? 'num' : ''}">${mdInline(c)}</td>`).join('') + '</tr>').join('')
+        + '</tbody></table>';
+    }
+    return '<p>' + lines.map(mdInline).join('<br>') + '</p>';
+  }).join('');
+}
+
+/* ============================================================================
+   Respuestas del copiloto (calculadas sobre los datos cargados)
+   ========================================================================== */
+const liters = () => state.tank;
+
+/** Estación más barata y más barata por distancia razonable. */
+function picks() {
+  const list = LIST().slice().sort((a, b) => priceOf(a) - priceOf(b));
+  const cheapest = list[0];
+  const listNear = list.filter(s => PROTO.kmFromUser(s) <= 4).sort((a, b) => priceOf(a) - priceOf(b));
+  const nearest = listNear[0] || cheapest;
+  const closest = LIST().slice().sort((a, b) => PROTO.kmFromUser(a) - PROTO.kmFromUser(b))[0];
+  return { list, cheapest, near: nearest, closest };
+}
+
+function fuelLabel() { return PROTO.fuelShort(state.fuel); }
+
+/* --- tipos de respuesta ------------------------------------------------- */
+const ANSWERS = {
+  barato() {
+    const { list, cheapest, near, closest } = picks();
+    const st = stats();
+    const fav = PROTO.favorites().find(s => s.province === 'Madrid') || closest;
+    const saving = (st.avg - priceOf(cheapest)) * liters();
+    const savingFav = (priceOf(fav) - priceOf(cheapest)) * liters();
+    const km = PROTO.kmFromUser(cheapest);
+    return {
+      title: 'barato',
+      text: [
+        `Con **${state.tank} L** de depósito y el **${fuelLabel()}** a ${PROTO.money(st.avg, 3)} de media en Madrid, hoy te sale a cuenta salir del centro.`,
+        '',
+        `- **${Proto.shortName(cheapest)}** (${Proto.titleCase(cheapest.brand)}) — **${PROTO.money(priceOf(cheapest), 3)}/L**, a ${PROTO.dist(km)} · ${PROTO.driveMin(km)} min`,
+        `- Frente a la media de la provincia: **${eur2(saving)} por depósito**`,
+        `- Frente a **${Proto.shortName(fav)}**, tu favorita: **${eur2(savingFav)}**`,
+        `- Si no quieres desviarte, **${Proto.shortName(near)}** está a ${PROTO.dist(PROTO.kmFromUser(near))} y su precio es ${cents(Math.abs(st.avg - priceOf(near)))} ${priceOf(near) <= st.avg ? 'más bajo' : 'más alto'} que la media`,
+        '',
+        `> Ojo con la carretera: ${PROTO.dist(km)} de ida y vuelta son ${PROTO.money(km * 2 / 100 * 6.5 * priceOf(cheapest), 2)} de combustible extra. Aun así compensa ${eur2(saving - km * 2 / 100 * 6.5 * priceOf(cheapest))}.`,
+      ].join('\n'),
+      cites: [cheapest.id, near.id, fav.id],
+      chart: null,
+      map: cheapest.id,
+      follow: ['¿Y si voy el viernes?', 'Ruta hasta ahí', 'Avísame si baja de 1,35 €'],
+    };
+  },
+
+  tendencia() {
+    const { cheapest } = picks();
+    const st = stats();
+    const series = PROTO.series(cheapest, state.fuel, 14);
+    const s = PROTO.seriesStats(series);
+    const avg = series.map((p, i) => {
+      const vals = PROTO.sortStations(LIST(), 'price', 'asc', state.fuel).slice(0, 6)
+        .map(x => PROTO.series(x, state.fuel, 14)[i]?.price).filter(v => v != null);
+      return { date: p.date, price: vals.reduce((a, b) => a + b, 0) / (vals.length || 1) };
+    });
+    const statsAvg = PROTO.seriesStats(avg);
+    const dir = statsAvg.diff < 0 ? 'bajando' : 'subiendo';
+    return {
+      title: 'tendencia',
+      text: [
+        `En las últimas **2 semanas** el ${fuelLabel()} se ha movido poco: **${cents(Math.abs(statsAvg.diff))}** de ${dir} en la media de las 6 más baratas.`,
+        '',
+        `- Mínimo del periodo: **${PROTO.money(s.min, 3)}/L** el ${s.minDate}`,
+        `- Máximo: **${PROTO.money(s.max, 3)}/L** el ${s.maxDate}`,
+        `- Hoy se mueve entre ${PROTO.money(st.min, 3)} y ${PROTO.money(st.max, 3)}/L`,
+        '',
+        state.useHistory
+          ? '> Tendencia suave, sin picos: no hay motivo para repostar hoy mismo si te queda depósito. La subida típica de fin de mes empezaría el jueves.'
+          : '> He respondido **sin histórico** (lo tienes desactivado en Ajustes): esto es solo el precio de hoy comparado con la media.',
+      ].join('\n'),
+      cites: [cheapest.id],
+      chart: { kind: 'avg', st: cheapest.id },
+      follow: ['Compárame con hace un mes', '¿Cuánto he pagado de media?', 'Avísame si sube 2 ¢'],
+    };
+  },
+
+  compensa() {
+    const { cheapest, closest } = picks();
+    const base = priceOf(closest);
+    const st = stats();
+    const cheap = priceOf(cheapest);
+    const savedPerL = base - cheap;
+    const detourKm = Math.max(0, PROTO.kmFromUser(cheapest) - PROTO.kmFromUser(closest));
+    const extraL = detourKm * 2 / 100 * 6.5;              // ida y vuelta, 6,5 L/100 km
+    const extraEur = extraL * base;                        // repostando a precio del más cercano
+    const saved = savedPerL * liters();
+    const net = saved - extraEur;
+    return {
+      title: 'compensa',
+      text: [
+        net > 0
+          ? `Sí, **compensa**: ganas ${eur2(net)} en un depósito de ${liters()} L.`
+          : `No, **no compensa**: el desvío se come el ahorro (${eur2(Math.abs(net))} en contra).`,
+        '',
+        '| Concepto | Valor |',
+        '| --- | --- |',
+        `| Más barata | ${Proto.shortName(cheapest)} · ${PROTO.money(cheap, 3)}/L |`,
+        `| Sin desviarte | ${Proto.shortName(closest)} · ${PROTO.money(base, 3)}/L |`,
+        `| Diferencia | ${cents(savedPerL)} × ${liters()} L = ${eur2(saved)} |`,
+        `| Desvío | ${PROTO.dist(detourKm)} extra · ${eur2(extraEur)} de combustible |`,
+        `| Media Madrid | ${PROTO.money(st.avg, 3)}/L |`,
+        '',
+        `> Cálculo honesto: ${PROTO.dist(detourKm)} de más por trayecto, ida y vuelta, a 6,5 L/100 km y el precio del ${fuelLabel()} más cercano. Con el coche en frío y tráfico real el desvío pesa más.`,
+      ].join('\n'),
+      cites: [cheapest.id, closest.id],
+      chart: null,
+      map: cheapest.id,
+      follow: ['¿Y si lleno solo 20 L?', 'Ruta hasta ahí', '¿Hay algo a menos de 2 km?'],
+    };
+  },
+
+  compara() {
+    const st = stats();
+    const brands = ['REPSOL', 'BALLENOIL', 'MOEVE', 'GALP'];
+    const rows = brands.map(b => {
+      const list = LIST().filter(s => s.brand === b);
+      if (!list.length) return null;
+      const best = list.slice().sort((a, c) => priceOf(a) - priceOf(c))[0];
+      return { b, st: best, p: priceOf(best) };
+    }).filter(Boolean).sort((a, c) => a.p - c.p);
+    return {
+      title: 'compara',
+      text: [
+        `Comparando las marcas con presencia en tu provincia (${fuelLabel()}, precio ya con descuentos de app aplicados):`,
+        '',
+        '| Marca | Precio | Ahorro vs media |',
+        '| --- | --- | --- |',
+        ...rows.map(r => `| ${Proto.titleCase(r.b)} | ${PROTO.money(r.p, 3)}/L | ${eur2(Math.max(0, (st.avg - r.p) * liters()))} |`),
+        '',
+        `La **más barata de la provincia** es ${Proto.shortName(picks().cheapest)} con ${PROTO.money(priceOf(picks().cheapest), 3)}/L. Las desatendidas (Ballenoil, Petroprix, Plenergy) mandan en precio pero suelen tener menos servicios.`,
+      ].join('\n'),
+      cites: rows.slice(0, 3).map(r => r.st.id),
+      chart: null,
+      follow: ['¿Cuál tiene 24 h?', 'Solo desatendidas', 'Compárame con gasolina 95'],
+    };
+  },
+
+  resumen() {
+    const st = stats();
+    const { cheapest } = picks();
+    const series = PROTO.series(cheapest, state.fuel, 14);
+    return {
+      title: 'resumen',
+      text: [
+        `**Madrid · ${fuelLabel()}** — ${st.fuelsCount} de ${st.count} estaciones publican precio.`,
+        '',
+        `- Mínimo **${PROTO.money(st.min, 3)}** · media **${PROTO.money(st.avg, 3)}** · máximo **${PROTO.money(st.max, 3)}** → diferencia de ${cents(st.spread)}`,
+        `- Media del 25 % más barato: **${PROTO.money(st.p25, 3)}/L**`,
+        `- Llenar ${liters()} L cuesta entre ${eur2(st.min * liters())} y ${eur2(st.max * liters())}`,
+        `- Hay **${PROTO.favorites().filter(s => s.province === 'Madrid').length} favoritas** tuyas, la más barata de ellas a ${PROTO.money(priceOf(PROTO.favorites().find(s => s.province === 'Madrid') || cheapest), 3)}/L`,
+        '',
+        '> Datos del listado de precios del Ministerio, descargados hace 8 minutos. Un día sin precio no significa precio constante.',
+      ].join('\n'),
+      cites: PROTO.sortStations(LIST(), 'price', 'asc', state.fuel).slice(0, 3).map(s => s.id),
+      chart: { kind: 'avg', st: cheapest.id },
+      follow: ['¿Y la más cara?', 'Compárame con Barcelona', 'Ver histórico de 90 días'],
+    };
+  },
+};
+
+function buildAnswer(q) {
+  const t = q.toLowerCase();
+  if (/compensa|desv|merece|ruta|ida y vuelta/.test(t)) return ANSWERS.compensa();
+  if (/sube|baja|tendencia|evoluci|semana|mes|histor|ayer/.test(t)) return ANSWERS.tendencia();
+  if (/compara|vs|mejor que|diferencia|marca/.test(t)) return ANSWERS.compara();
+  if (/resumen|provincia|madrid|cara|barata|panorama/.test(t)) return ANSWERS.resumen();
+  if (/barat|cerca|d\(o|ó\)nde|donde|repost|llenar|deposito|depósito/.test(t)) return ANSWERS.barato();
+  return ANSWERS.barato();
+}
+
+/** Cada proveedor recibe el mismo contexto pero responde con su propio estilo:
+ *  los rápidos (Groq, LLM7) van al grano; Mistral resume; Gemini desarrolla. */
+function forProvider(ans, pid) {
+  const blocks = ans.text.split('\n\n');
+  const first = blocks[0];
+  const listBlock = blocks.find(b => b.startsWith('- ')) || '';
+  const quote = blocks.find(b => b.startsWith('> ')) || '';
+  if (state.tone === 'breve' || pid === 'groq' || pid === 'llm7') {
+    const bullet = (listBlock.split('\n')[0] || '');
+    return { ...ans, text: [first, bullet].filter(Boolean).join('\n\n') };
+  }
+  if (pid === 'mistral') {
+    const bullets = listBlock.split('\n').slice(0, 2).join('\n');
+    return { ...ans, text: [first, bullets, quote].filter(Boolean).join('\n\n') };
+  }
+  return ans;
+}
+
+/* ============================================================================
+   Hilos (una conversación por proveedor, como en la app real)
+   ========================================================================== */
+const THREADS = {};
+const thread = () => (THREADS[state.prov] = THREADS[state.prov] || []);
+
+/* ============================================================================
+   Pintado del hilo
+   ========================================================================== */
+const threadIn = document.getElementById('threadIn');
+const threadEl = document.getElementById('thread');
+
+function scrollDown(force = false) {
+  const near = threadEl.scrollHeight - threadEl.scrollTop - threadEl.clientHeight < 240;
+  if (force || near) threadEl.scrollTop = threadEl.scrollHeight;
+}
+
+function citesHTML(ids) {
+  const st = stats();
+  return `<div class="cites">${ids.filter(Boolean).map(id => {
+    const s = byId(id); if (!s) return '';
+    const p = priceOf(s);
+    return `<button class="cite ${p === st.min ? 'best' : ''}" data-open-station="${s.id}">
+      <span class="c-top">
+        <span class="brandlogo sm" style="width:26px;height:26px;border-radius:9px;font-size:10px;background:${PROTO.brandMeta(s.brand).color};color:${PROTO.brandMeta(s.brand).ink}">${s.brand.slice(0, 2)}</span>
+        <span class="grow">
+          <span class="c-name">${Proto.esc(s.name)}</span>
+          <span class="c-sub">${PROTO.dist(PROTO.kmFromUser(s))} · ${Proto.esc(s.city)}</span>
+        </span>
+      </span>
+      <span class="c-price">
+        <span class="price p-sm ${PROTO.level(p, st.lo, st.hi)}">${PROTO.money(p, 3).replace(' €', '')}<span class="p-unit">€/L</span></span>
+        <span class="tiny ${s.fav ? 'bold' : 'dim'}">${s.fav ? '★ favorita' : PROTO.since(s.updatedMin)}</span>
+      </span>
+    </button>`;
+  }).join('')}</div>`;
+}
+
+function chartHTML(chart) {
+  if (!chart) return '';
+  return `<div class="msg-chart" data-chart='${JSON.stringify(chart)}'><canvas data-h="168"></canvas></div>`;
+}
+function mapHTML(id) {
+  return id ? `<div class="msg-map" data-mapstation="${id}"><div class="pm" data-map-host></div></div>` : '';
+}
+
+/** Pinta la gráfica de un bloque del mensaje (se llama tras insertarlo). */
+function paintChart(box) {
+  if (!box || box.dataset.done) return;
+  const chart = JSON.parse(box.dataset.chart);
+  const canvas = box.querySelector('canvas');
+  box.dataset.done = '1';
+  if (chart.kind === 'station') return Proto.drawStationChart(canvas, byId(chart.st), { fuel: state.fuel, days: chart.days || 14, list: LIST() });
+  const st = byId(chart.st);
+  const days = 14;
+  const own = PROTO.series(st, state.fuel, days);
+  const avg = own.map((p, i) => {
+    const vals = PROTO.sortStations(LIST(), 'price', 'asc', state.fuel).slice(0, 6)
+      .map(x => PROTO.series(x, state.fuel, days)[i]?.price).filter(v => v != null);
+    return { date: p.date, price: vals.reduce((a, b) => a + b, 0) / (vals.length || 1) };
+  });
+  ProtoChart.draw(canvas, {
+    series: [
+      { label: 'Media de las 6 más baratas', color: ProtoChart.css('--brand'), data: avg, dash: true, area: false },
+      { label: Proto.titleCase(st.brand), color: ProtoChart.css('--lo'), data: own },
+    ],
+    avg: false,
+  });
+}
+
+function paintMap(box) {
+  if (!box || box.dataset.done) return;
+  box.dataset.done = '1';
+  const id = box.dataset.mapstation;
+  const st = byId(id);
+  const near = PROTO.sortStations(LIST().filter(s => s.id !== id), 'distance', 'asc').slice(0, 3);
+  const host = box.querySelector('[data-map-host]');
+  const m = ProtoMap.create(host, {
+    stations: [st, ...near], fuel: state.fuel, seed: 'v5-' + id,
+    fit: 'stations', padding: 42, showUser: true, showLayers: false, showCtrl: false,
+  });
+  m.select(id);
+  return m;
+}
+
+function metaLine(prov, ms, extra) {
+  const p = provOf(prov);
+  return `<div class="meta">⏱ ${Proto.esc(p.label)} · ${p.model !== '—' ? Proto.esc(p.model) + ' · ' : ''}${(ms / 1000).toFixed(1).replace('.', ',')} s${extra ? ' · ' + extra : ''}</div>`;
+}
+
+function assistantHTML(ans, prov, { streaming = false, partial = '', ms = 0 } = {}) {
+  const p = provOf(prov);
+  return `
+    <div class="who"><span class="cop"><span class="ico" data-ico="sparkles"></span></span>
+      ${Proto.esc(p.id === 'general' ? 'Copiloto' : p.label)}
+      <span class="when">${p.model !== '—' ? Proto.esc(p.model) : 'varios modelos'}</span>
+    </div>
+    <div class="bubble md">${md(streaming ? partial : ans.text)}${streaming ? '<span class="caret"></span>' : ''}</div>
+    ${streaming ? '' : citesHTML(ans.cites)}
+    ${streaming ? '' : chartHTML(ans.chart)}
+    ${streaming ? '' : mapHTML(ans.map)}
+    ${!streaming && ans.follow ? `<div class="chips wrap">
+        ${ans.follow.map(f => `<button class="chip" data-ask="${Proto.esc(f)}">${Proto.esc(f)}</button>`).join('')}
+        <button class="chip soft" data-tab="cmp"><span class="ico" data-ico="compare"></span>Misma pregunta a todos</button>
+      </div>` : ''}
+    ${streaming ? '' : metaLine(prov, ms, ans.chart ? 'histórico 14 d' : 'contexto 11 estaciones')}`;
+}
+
+function userHTML(text) {
+  return `<div class="row-meta">${Proto.esc(hora())}
+      <button class="edit iconbtn sm" data-edit title="Editar y reenviar"><span data-ico="pencil"></span></button>
+    </div>
+    <div class="bubble">${md(text)}</div>`;
+}
+function hora() {
+  const d = new Date();
+  return d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+
+function addMsg(cls, html, raw, extra = {}) {
+  const d = Proto.el(`<div class="msg ${cls}">${html}</div>`);
+  if (raw != null) d.dataset.raw = raw;
+  Object.entries(extra).forEach(([k, v]) => d.dataset[k] = v);
+  threadIn.appendChild(d);
+  Proto.hydrateIcons(d);
+  scrollDown(!extra.noScroll);
+  return d;
+}
+
+function renderEmpty() {
+  threadIn.innerHTML = '';
+  const p = provOf(state.prov);
+  addMsg('assistant empty', `
+    <div class="empty-hero">
+      <span class="avatar"><span class="ico" data-ico="sparkles"></span></span>
+      <div>
+        <div class="bold md">Tu copiloto de repostaje</div>
+        <div class="tiny muted mt1">${p.id === 'general'
+          ? 'Pregunta una vez y compara las respuestas de los ' + readyProvs().length + ' proveedores configurados.'
+          : 'Conversación con ' + Proto.esc(p.label) + ' · ' + Proto.esc(p.model)}</div>
+      </div>
+      <div class="sugg">
+        ${['¿Dónde reposto más barato cerca?', '¿Me compensa el desvío?', '¿Sube o baja el diésel?', 'Resumen de precios en Madrid']
+          .map((q, i) => `<button data-ask="${Proto.esc(q)}">${Proto.icon(['crosshair', 'route', 'trendDown', 'list'][i], 'sm')}${Proto.esc(q)}</button>`).join('')}
+      </div>
+      <div class="tiny dim">Contexto cargado: 11 estaciones · ${fuelLabel()} · favoritos y histórico de 14 días disponibles</div>
+    </div>`);
+}
+
+function renderThread() {
+  threadIn.innerHTML = '';
+  const t = thread();
+  if (!t.length) { renderEmpty(); return; }
+  t.forEach(m => {
+    if (m.role === 'user') addMsg('user', userHTML(m.text), m.text, { noScroll: true });
+    else addMsg('assistant', assistantHTML(m.ans, m.prov, { ms: m.ms }), null, { noScroll: true });
+  });
+  threadIn.querySelectorAll('[data-chart]').forEach(paintChart);
+  threadIn.querySelectorAll('[data-mapstation]').forEach(box => setTimeout(() => paintMap(box), 30));
+  scrollDown(true);
+}
+
+/* ============================================================================
+   Envío con streaming simulado
+   ========================================================================== */
+let job = null;
+function cancelJob(silent) {
+  if (!job) return;
+  job.cancelled = true;
+  job.timers.forEach(clearTimeout);
+  job.inter && clearInterval(job.inter);
+  const bubble = job.bubble;
+  job = null;
+  setBusy(false);
+  if (!silent && bubble) {
+    const row = bubble.querySelector('.meta-row');
+    if (row) row.remove();
+    const box = bubble.querySelector('.bubble');
+    if (box) box.innerHTML = '<span class="dim">—</span>';
+    const note = Proto.el('<div class="meta">Cancelado por ti · respuesta incompleta</div>');
+    bubble.appendChild(note);
+  }
+}
+function setBusy(b) {
+  state.busy = b;
+  document.getElementById('sendBtn').disabled = b;
+  document.getElementById('micBtn').disabled = b;
+  document.getElementById('cmpAgain').disabled = b;
+}
+
+function ask(text) {
+  text = (text || '').trim();
+  if (!text || state.busy) return;
+  state.lastQ = text;
+  const prov = state.prov;
+
+  threadIn.querySelector('.msg.empty')?.remove();
+  addMsg('user', userHTML(text), text);
+  thread().push({ role: 'user', text });
+  document.getElementById('ask').value = '';
+
+  if (!provOf(prov).ok) { providerError(prov, text); return; }
+
+  job = { cancelled: false, timers: [], bubble: null };
+  setBusy(true);
+  const targets = prov === 'general' ? readyProvs().map(p => p.id) : [prov];
+  runTargets(targets, text, 0);
+}
+
+function providerError(prov, text) {
+  const p = provOf(prov);
+  const d = addMsg('assistant err', `
+    <div class="who err"><span class="cop"><span class="ico" data-ico="alert"></span></span>${Proto.esc(p.label)}<span class="when">no disponible</span></div>
+    <div class="bubble">
+      <p><strong>❌ ${Proto.esc(p.label)}:</strong> URL del proxy sin el subdominio de tu cuenta — ve a <em>Config → IA</em>.</p>
+      <p class="md-note">La app lo detecta antes de hacer ninguna petición: tres etiquetas en un dominio <span class="mono">*.workers.dev</span> no existen. El Cloudflare Worker propio es obligatorio porque el gateway de NVIDIA solo acepta el origen de build.nvidia.com.</p>
+      <div class="row mt2 wrap" style="gap:6px">
+        <button class="btn sm soft" data-testproxy><span class="ico" data-ico="search"></span>Probar URL</button>
+        <button class="btn sm ghost" data-toast="Config → IA → Claves API (mock)" data-toast-icon="key">Ir a Config</button>
+      </div>
+      <div class="prompt-box mt2" data-proxyout hidden></div>
+    </div>`);
+  d.dataset.raw = text;
+  Proto.hydrateIcons(d);
+  scrollDown(true);
+}
+
+function runTargets(targets, text, i) {
+  if (!job || job.cancelled || i >= targets.length) { job = null; setBusy(false); renderCtx(); renderCmp(); return; }
+  const prov = targets[i];
+  const p = provOf(prov);
+  const wait = (p.ms || 900) * (i === 0 ? .55 : i === 1 ? .75 : 1);
+  const ans = forProvider(buildAnswer(text), prov);
+
+  const bubble = addMsg('assistant streaming', `
+    <div class="who"><span class="cop"><span class="ico" data-ico="sparkles"></span></span>${Proto.esc(p.label)}
+      <span class="when">${Proto.esc(p.model)}</span></div>
+    <div class="bubble">${i === 0 ? '<span class="dots"><i></i><i></i><i></i></span>' : '<span class="dots"><i></i><i></i><i></i></span>'}</div>
+    <div class="row meta-row"><span class="tiny dim">${i === 0 ? 'Analizando los precios cargados…' : 'Consultando con el mismo contexto…'}</span>
+      <button class="btn sm ghost" data-cancel>Cancelar</button></div>`);
+  job.bubble = bubble;
+  Proto.hydrateIcons(bubble);
+
+  const t = setTimeout(() => {
+    if (!job || job.cancelled) return;
+    streamInto(bubble, ans, prov, () => runTargets(targets, text, i + 1));
+  }, wait);
+  job.timers.push(t);
+}
+
+function streamInto(bubble, ans, prov, done) {
+  const p = provOf(prov);
+  const words = ans.text.split(/(\s+)/);
+  let n = 0;
+  const box = bubble.querySelector('.bubble');
+  const inter = setInterval(() => {
+    if (!job || job.cancelled) { clearInterval(inter); return; }
+    n += 2;
+    const partial = words.slice(0, n).join('');
+    box.innerHTML = md(partial) + (n < words.length ? '<span class="caret"></span>' : '');
+    scrollDown();
+    if (n >= words.length) {
+      clearInterval(inter);
+      if (!job || job.cancelled) return;
+      bubble.className = 'msg assistant';
+      bubble.innerHTML = assistantHTML(ans, prov, { ms: p.ms || 900 });
+      Proto.hydrateIcons(bubble);
+      bubble.querySelectorAll('[data-chart]').forEach(paintChart);
+      bubble.querySelectorAll('[data-mapstation]').forEach(bx => setTimeout(() => paintMap(bx), 20));
+      thread().push({ role: 'assistant', ans, prov, ms: p.ms || 900 });
+      state.lastKind = ans;
+      scrollDown();
+      /* El siguiente proveedor arranca antes de repintar los paneles: así un
+         fallo de pintado no deja la conversación bloqueada. */
+      done && done();
+      renderCtx(); renderCmp();
+    }
+  }, 22);
+  job.inter = inter;
+}
+
+/* ============================================================================
+   Chips de contexto
+   ========================================================================== */
+function renderCtxChips() {
+  const st = stats();
+  const items = [
+    { ico: 'map', label: 'Madrid', sub: st.count + ' estaciones' },
+    { ico: 'droplet', label: fuelLabel(), sub: PROTO.money(st.avg, 3) + ' de media' },
+    { ico: 'wallet', label: state.tank + ' L', sub: 'tu depósito' },
+    { ico: 'clock', label: 'caché 8 min', sub: state.useHistory ? 'histórico 14 d' : 'sin histórico' },
+  ];
+  document.getElementById('ctxChips').innerHTML = items.map(i =>
+    `<button class="chip" data-tab="ctx">${Proto.icon(i.ico, 'xs')}${Proto.esc(i.label)}<span class="dim">· ${Proto.esc(i.sub)}</span></button>`
+  ).join('') + `<button class="chip dashed" data-sheet-open="prompt">${Proto.icon('eye', 'xs')}Ver lo que se envía</button>`;
+}
+
+/* ============================================================================
+   Panel de contexto
+   ========================================================================== */
+function renderCtx() {
+  const st = stats();
+  const { cheapest, closest } = picks();
+  const ans = state.lastKind;
+  const cited = ans ? ans.cites.map(byId).filter(Boolean) : [];
+  const lines = promptLines();
+  document.getElementById('ctxBody').innerHTML = `
+    <div class="card">
+      <div class="card-title">${Proto.icon('layers', 'sm')}Contexto que ve el copiloto</div>
+      <div class="mt2">
+        <div class="kv"><span class="k">Provincia</span><span class="v">Madrid</span></div>
+        <div class="kv"><span class="k">Estaciones cargadas</span><span class="v">${st.count} (${st.fuelsCount} con ${fuelLabel()})</span></div>
+        <div class="kv"><span class="k">Combustible</span><span class="v">${fuelLabel()} · media ${PROTO.money(st.avg, 3)}</span></div>
+        <div class="kv"><span class="k">Rango de precios</span><span class="v">${PROTO.money(st.min, 3)} – ${PROTO.money(st.max, 3)}</span></div>
+        <div class="kv"><span class="k">Fuente</span><span class="v">caché · hace 8 min</span></div>
+        <div class="kv"><span class="k">Histórico</span><span class="v">${state.useHistory ? '14 días · 11 estaciones' : 'no se envía'}</span></div>
+        <div class="kv"><span class="k">Favoritas</span><span class="v">${PROTO.favorites().filter(s => s.province === 'Madrid').length}</span></div>
+        <div class="kv"><span class="k">Depósito</span><span class="v">${state.tank} L</span></div>
+      </div>
+      <button class="btn sm soft block mt3" data-sheet-open="prompt">${Proto.icon('eye', 'sm')}Ver el prompt completo</button>
+    </div>
+
+    ${cited.length ? `<div class="card">
+      <div class="card-title">${Proto.icon('bookmark', 'sm')}Estaciones citadas</div>
+      <div class="cites mt2" style="flex-direction:column">${cited.map(s => citeRow(s)).join('')}</div>
+    </div>` : ''}
+
+    <div class="card">
+      <div class="card-title">${Proto.icon('speed', 'sm')}Última llamada</div>
+      <div class="mt2">
+        <div class="kv"><span class="k">Proveedor</span><span class="v">${Proto.esc(provOf(state.prov).label)}</span></div>
+        <div class="kv"><span class="k">Modelo</span><span class="v">${state.prov === 'general' ? 'varios (' + readyProvs().length + ')' : Proto.esc(provOf(state.prov).model)}</span></div>
+        <div class="kv"><span class="k">Tiempo</span><span class="v">${((provOf(state.prov).ms || 900) / 1000).toFixed(1).replace('.', ',')} s</span></div>
+        <div class="kv"><span class="k">Tokens aprox.</span><span class="v">${Math.round(lines.join('\n').length / 4)} entrada · ~300 salida</span></div>
+        <div class="kv"><span class="k">Coste</span><span class="v">plan gratuito</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">${Proto.icon('crosshair', 'sm')}Referencias de hoy</div>
+      <div class="mt2">
+        <div class="kv"><span class="k">Más barata</span><span class="v">${Proto.shortName(cheapest)} · ${PROTO.money(priceOf(cheapest), 3)}</span></div>
+        <div class="kv"><span class="k">Más cercana</span><span class="v">${Proto.shortName(closest)} · ${PROTO.money(priceOf(closest), 3)}</span></div>
+        <div class="kv"><span class="k">Ahorro en un depósito</span><span class="v">${eur2((st.avg - priceOf(cheapest)) * state.tank)}</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">${Proto.icon('alert', 'sm')}Límites del copiloto</div>
+      <ul class="small muted mt2" style="padding-left:18px; display:flex; flex-direction:column; gap:6px">
+        <li>No inventa precios: solo usa el listado del Ministerio y el histórico descargado.</li>
+        <li>Si el proveedor falla (401, 429, cuota) lo dice con el motivo exacto.</li>
+        <li>Un día sin precio <strong>no</strong> es un precio constante.</li>
+      </ul>
+    </div>`;
+  Proto.hydrateIcons(document.getElementById('ctxBody'));
+}
+
+function citeRow(s) {
+  const st = stats();
+  const p = priceOf(s);
+  return `<button class="cite" style="width:auto" data-open-station="${s.id}">
+    <span class="c-top">
+      <span class="brandlogo sm" style="width:26px;height:26px;border-radius:9px;font-size:10px;background:${PROTO.brandMeta(s.brand).color};color:${PROTO.brandMeta(s.brand).ink}">${s.brand.slice(0, 2)}</span>
+      <span class="grow"><span class="c-name">${Proto.esc(s.name)}</span>
+      <span class="c-sub">${PROTO.dist(PROTO.kmFromUser(s))} · ${Proto.esc(s.address)}</span></span>
+      <span class="price p-sm ${PROTO.level(p, st.lo, st.hi)}">${PROTO.money(p, 3).replace(' €', '')}</span>
+    </span>
+  </button>`;
+}
+
+function promptLines() {
+  const st = stats();
+  const top = PROTO.sortStations(LIST(), 'price', 'asc', state.fuel).slice(0, 8)
+    .map(s => `[${s.id}] ${s.name} | ${PROTO.money(priceOf(s), 3)}/L | ${PROTO.dist(PROTO.kmFromUser(s))} | ${s.city} — ${s.address}`);
+  const out = [
+    '<span class="h">=== CONTEXTO ===</span>',
+    `Provincia: Madrid · estaciones cargadas: ${st.count} · combustible activo: ${fuelLabel()} (${PROTO.fuelName(state.fuel)})`,
+    `Fuente de datos: caché de hace 8 min (no se fuerza descarga al preguntar)`,
+    `Tu ubicación: ${PROTO.USER.label} (precisión ±${PROTO.USER.accuracy} m) · depósito habitual: ${state.tank} L`,
+    '',
+    '<span class="h">=== PRECIOS DESTACADOS ===</span>',
+    `Mínimo ${PROTO.money(st.min, 3)}/L · media ${PROTO.money(st.avg, 3)}/L · máximo ${PROTO.money(st.max, 3)}/L`,
+    ...top,
+    '',
+    '<span class="h">=== FAVORITAS ===</span>',
+    ...PROTO.favorites().map(s => `[${s.id}] ${s.name} | ${PROTO.money(priceOf(s), 3)}/L | ${PROTO.dist(PROTO.kmFromUser(s))}`),
+  ];
+  if (state.useHistory) {
+    const { cheapest } = picks();
+    out.push('', '<span class="h">=== HISTÓRICO DE PRECIOS (14 días) ===</span>',
+      `Serie de ${cheapest.name} (dd-mm-aaaa): ` +
+      PROTO.series(cheapest, state.fuel, 14).map(p => `${p.date}=${PROTO.money(p.price, 3)}`).join(' '));
+  }
+  out.push('', '<span class="h">=== INSTRUCCIONES ===</span>',
+    `Responde en español, ${state.tone === 'breve' ? 'en una sola frase' : state.tone === 'detallado' ? 'con el detalle del cálculo y alternativas' : 'conciso pero con las cifras clave'}.`,
+    'Cita las estaciones con su IDEESS entre corchetes. Formatea precios con 3 decimales y fechas dd-mm-aaaa.');
+  return out;
+}
+
+function renderPrompt() {
+  document.getElementById('promptBox').innerHTML = promptLines().join('\n');
+}
+
+/** Corta un texto Markdown sin dejar bloques a medias (y por tanto sin `**`
+ *  huérfanos, que en la comparativa quedaban a la vista). */
+function trimMd(t, max = 340) {
+  if (t.length <= max) return t;
+  const blocks = t.slice(0, max).split('\n\n');
+  if (blocks.length > 1) blocks.pop();
+  return blocks.join('\n\n').trimEnd() + '\n\n*…*';
+}
+
+/* ============================================================================
+   Comparativa entre proveedores
+   ========================================================================== */
+function renderCmp() {
+  const q = state.lastQ || '¿Dónde reposto más barato cerca?';
+  const ans0 = buildAnswer(q);
+  const cards = readyProvs().map(p => {
+    const a = forProvider(ans0, p.id);
+    return `<div class="card cmp-card">
+      <div class="cc-head">
+        <span class="brandlogo sm" style="background:${p.id === 'google' ? 'var(--brand)' : p.id === 'groq' ? '#e2582b' : p.id === 'mistral' ? '#f0a92a' : '#1d5fbf'};color:#fff">${p.initials}</span>
+        <div class="grow">
+          <div class="bold small">${Proto.esc(p.label)}</div>
+          <div class="cc-model">${Proto.esc(p.model)}</div>
+        </div>
+        <span class="badge">${(p.ms / 1000).toFixed(1).replace('.', ',')} s</span>
+      </div>
+      <div class="cc-body">${md(trimMd(a.text))}</div>
+      <div class="row" style="gap:6px">
+        <button class="btn sm soft" data-use-prov="${p.id}">${Proto.icon('check', 'xs')}Usar esta</button>
+        <button class="btn sm ghost" data-open-station="${a.cites[0]}">${Proto.icon('info', 'xs')}Estación</button>
+      </div>
+    </div>`;
+  });
+  document.getElementById('cmpBody').innerHTML = `
+    <div class="card flat" style="border-style:dashed">
+      <div class="tiny dim">Pregunta comparada</div>
+      <div class="bold md mt1">${Proto.esc(q)}</div>
+    </div>
+    <div class="cmp-rail">${cards.join('')}</div>
+    <p class="tiny dim">Todos reciben <strong>el mismo contexto</strong> y la misma pregunta, en paralelo: así se comparan modelos sin que uno arrastre la respuesta de otro. Bajo consumo, mismo hilo: solo cambia el proveedor.</p>`;
+  Proto.hydrateIcons(document.getElementById('cmpBody'));
+}
+
+/* ============================================================================
+   Ajustes del copiloto
+   ========================================================================== */
+function renderSet() {
+  const provs = PROVS.filter(p => p.id !== 'general');
+  document.getElementById('setBody').innerHTML = `
+    <div class="card">
+      <div class="card-title">${Proto.icon('palette', 'sm')}Estilo de respuesta</div>
+      <div class="segmented mt3" id="toneSeg">
+        ${['breve', 'equilibrado', 'detallado'].map(t => `<button data-val="${t}" class="${state.tone === t ? 'on' : ''}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}
+      </div>
+      <p class="tiny dim mt2">Cambia la instrucción que se manda en el prompt; el modelo no se descarga de nuevo.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">${Proto.icon('wallet', 'sm')}Tu coche</div>
+      <div class="field-row mt2">
+        <div><div class="fr-label">Litros por repostaje</div><div class="fr-hint">Se usa para calcular el ahorro por depósito</div></div>
+        <div class="stepper">
+          <button data-tank="-5" aria-label="Menos">−</button><span class="val" id="tankVal">${state.tank} L</span><button data-tank="5" aria-label="Más">+</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <div><div class="fr-label">Combustible</div><div class="fr-hint">El copiloto cita precios de este combustible</div></div>
+        <select class="select-native" id="fuelSel" style="max-width:170px">
+          ${PROTO.FUELS.filter(f => f.id !== 'adblue').map(f => `<option value="${f.id}" ${f.id === state.fuel ? 'selected' : ''}>${f.name}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">${Proto.icon('clock', 'sm')}Datos que puede usar</div>
+      <label class="field-row">
+        <div><div class="fr-label">Histórico de precios</div><div class="fr-hint">Solo se descarga si la pregunta lo pide</div></div>
+        <span class="switch"><input type="checkbox" id="swHist" ${state.useHistory ? 'checked' : ''}><span class="track"></span></span>
+      </label>
+      <label class="field-row">
+        <div><div class="fr-label">Guardar cada conversación</div><div class="fr-hint">Una clave propia por proveedor</div></div>
+        <span class="switch"><input type="checkbox" id="swKeep" ${state.keepThreads ? 'checked' : ''}><span class="track"></span></span>
+      </label>
+    </div>
+
+    <div class="card">
+      <div class="card-title">${Proto.icon('key', 'sm')}Proveedores</div>
+      <div class="mt2">
+        ${provs.map(p => `<div class="kv">
+          <span class="k row" style="gap:6px"><span class="badge ${p.ok ? 'ok' : 'bad'}">${p.ok ? 'listo' : 'sin configurar'}</span>${Proto.esc(p.label)}</span>
+          <span class="v tiny dim mono">${Proto.esc(p.model)}</span>
+        </div>`).join('')}
+      </div>
+      <button class="btn sm soft block mt3" data-toast="Config → Claves API - IA (mock)" data-toast-icon="key">${Proto.icon('key', 'sm')}Gestionar claves</button>
+      <p class="tiny dim mt2">NVIDIA necesita un Cloudflare Worker propio: su gateway solo acepta el origen de build.nvidia.com.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">${Proto.icon('trash', 'sm')}Conversaciones guardadas</div>
+      <div class="mt2">
+        ${provs.map(p => `<div class="kv">
+          <span class="k">${Proto.esc(p.label)}</span>
+          <span class="v">${(THREADS[p.id] || []).length} mensajes <button class="btn sm ghost" data-clear-prov="${p.id}" style="min-height:26px;padding:0 8px">Borrar</button></span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  Proto.hydrateIcons(document.getElementById('setBody'));
+}
+
+/* ============================================================================
+   Rail y sheet de proveedores
+   ========================================================================== */
+function provTile(p) {
+  return `<button class="prov-btn ${p.id === state.prov ? 'on' : ''}" data-prov="${p.id}" data-off="${p.ok ? 0 : 1}" title="${Proto.esc(p.label)}${p.note ? ' · ' + Proto.esc(p.note) : ''}">
+      ${p.initials}<span class="pip"></span>
+    </button>`;
+}
+function renderRail() {
+  document.getElementById('rail').innerHTML = PROVS.map(provTile).join('')
+    + '<span class="rail-sep"></span>'
+    + ['ctx', 'cmp', 'set'].map(k => `<button class="prov-btn" data-tab="${k}" title="${{ ctx: 'Contexto', cmp: 'Comparar proveedores', set: 'Ajustes' }[k]}">${Proto.icon({ ctx: 'layers', cmp: 'compare', set: 'gear' }[k], 'sm')}</button>`).join('')
+    + '<span class="rail-sep"></span>'
+    + `<button class="prov-btn" data-theme-toggle title="Tema"></button>`;
+}
+function renderProvSheet() {
+  document.getElementById('provBody').innerHTML = `
+    <div class="list">
+      ${PROVS.map(p => `<button class="row-item tap ${p.id === state.prov ? 'sel' : ''}" data-prov="${p.id}" ${p.id === state.prov ? 'style="border-color:var(--brand);box-shadow:0 0 0 2px var(--brand-soft)"' : ''}>
+        <span class="brandlogo sm" style="background:${p.ok ? 'var(--surface-3)' : 'var(--surface-3)'};color:${p.ok ? 'var(--brand)' : 'var(--fg-3)'};font-size:10px">${p.initials}</span>
+        <span class="ri-main">
+          <span class="ri-title">${Proto.esc(p.label)}</span>
+          <span class="ri-sub">${p.note ? Proto.esc(p.note) : Proto.esc(p.model)}</span>
+        </span>
+        ${p.ok ? '<span class="badge ok">listo</span>' : '<span class="badge bad">sin URL</span>'}
+      </button>`).join('')}
+    </div>
+    <p class="tiny dim mt3">Con <strong>General</strong> la pregunta se lanza a la vez a los ${readyProvs().length} proveedores configurados y se guarda un hilo por proveedor, igual que la pestaña General de la app.</p>`;
+  Proto.hydrateIcons(document.getElementById('provBody'));
+}
+
+function setProv(id) {
+  state.prov = id;
+  try { localStorage.setItem(STORE_KEY, id); } catch (e) {}
+  const p = provOf(id);
+  document.getElementById('provBadge').textContent = p.label;
+  document.getElementById('provBadge').className = 'badge ' + (p.ok ? 'brand' : 'bad');
+  document.getElementById('headSub').textContent = id === 'general'
+    ? readyProvs().length + ' proveedores listos · ' + LIST().length + ' estaciones en Madrid'
+    : p.model + (p.note ? ' · ' + p.note : '');
+  renderRail(); renderThread(); renderCtx(); renderCmp(); renderSet();
+}
+
+/* ============================================================================
+   Detalle de estación
+   ========================================================================== */
+const stationSheet = Proto.sheet(document.getElementById('stationSheet'), { snaps: ['half', 'full'], start: 'full' });
+let detailCtl = null;
+function openStation(id) {
+  const st = byId(id); if (!st) return;
+  document.getElementById('stationTitle').textContent = st.name;
+  detailCtl = Proto.stationDetail(document.getElementById('stationBody'), st, { fuel: state.fuel, list: LIST(), days: 14 });
+  stationSheet.open('full');
+}
+
+/* ============================================================================
+   Voz
+   ========================================================================== */
+const voiceSheet = Proto.sheet(document.getElementById('voiceSheet'), { snaps: ['half', 'full'], start: 'half' });
+const VOICE_LINES = [
+  '¿Dónde reposto más barato cerca de casa?',
+  '¿Me compensa desviarme a Las Tablas?',
+];
+let voiceTimer = null;
+function startVoice() {
+  const txt = document.getElementById('voiceText');
+  const wave = document.getElementById('wave');
+  wave.innerHTML = Array.from({ length: 28 }, (_, i) =>
+    `<i style="--h:${10 + Math.round(Math.abs(Math.sin(i * 1.7)) * 30)}px;animation-delay:${(i % 7) * 90}ms"></i>`).join('');
+  const target = VOICE_LINES[Math.floor(Math.random() * VOICE_LINES.length)];
+  txt.innerHTML = '<span class="caret"></span>';
+  let i = 0;
+  clearInterval(voiceTimer);
+  voiceTimer = setInterval(() => {
+    i++;
+    txt.innerHTML = Proto.esc(target.slice(0, i)) + (i < target.length ? '<span class="caret"></span>' : '');
+    if (i >= target.length) {
+      clearInterval(voiceTimer);
+      wave.querySelectorAll('i').forEach(b => b.style.animationPlayState = 'paused');
+      document.getElementById('voiceUse').disabled = false;
+      document.getElementById('voiceUse').dataset.text = target;
+    }
+  }, 42);
+}
+function stopVoice() {
+  clearInterval(voiceTimer);
+  document.getElementById('voiceUse').disabled = true;
+}
+
+/* ============================================================================
+   Navegación
+   ========================================================================== */
+const NAV = Proto.nav(document.body, {
+  attr: 'data-tab',
+  paneAttr: 'data-panel',
+  store: 'proto_v5_pane',
+  start: 'chat',
+  onSwitch(k) {
+    state.pane = k;
+    document.body.dataset.pane = k;
+    if (k === 'ctx') renderCtx();
+    if (k === 'cmp') renderCmp();
+    if (k === 'set') renderSet();
+  },
+});
+document.body.dataset.pane = state.pane;
+/* El rail, los chips y las tarjetas se pintan después de Proto.nav, así que no
+   están en su lista de botones: se enganchan por delegación. */
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-tab]');
+  if (b && !NAV.btns.includes(b)) NAV.go(b.dataset.tab);
+});
+
+/* ============================================================================
+   Eventos
+   ========================================================================== */
+const askEl = document.getElementById('ask');
+function autoGrow() {
+  askEl.style.height = 'auto';
+  askEl.style.height = Math.min(askEl.scrollHeight, 132) + 'px';
+}
+askEl.addEventListener('input', autoGrow);
+askEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(askEl.value); }
+});
+document.getElementById('sendBtn').addEventListener('click', () => ask(askEl.value));
+document.getElementById('micBtn').addEventListener('click', () => { stopVoice(); voiceSheet.open('half'); setTimeout(startVoice, 260); });
+document.getElementById('voiceBtn').addEventListener('click', () => { stopVoice(); voiceSheet.open('half'); setTimeout(startVoice, 260); });
+document.getElementById('voiceUse').addEventListener('click', (e) => {
+  const t = e.currentTarget.dataset.text || '';
+  voiceSheet.close(); stopVoice();
+  askEl.value = t; autoGrow();
+  setTimeout(() => ask(t), 320);
+});
+document.getElementById('clearBtn').addEventListener('click', () => {
+  cancelJob(true);
+  THREADS[state.prov] = [];
+  renderThread(); renderCtx(); renderSet();
+  Proto.toast('Conversación borrada: solo la de ' + provOf(state.prov).label, { iconName: 'trash' });
+});
+document.getElementById('provBtn').addEventListener('click', () => { renderProvSheet(); provSheet.open('half'); });
+document.getElementById('plusBtn').addEventListener('click', () => Proto.toast('Añadir contexto: favoritos, una ruta o un rango de fechas (mock)', { iconName: 'plus', ms: 2600 }));
+document.getElementById('cmpAgain').addEventListener('click', () => {
+  const q = state.lastQ || '¿Dónde reposto más barato cerca?';
+  const asked = state.prov;
+  state.prov = 'general';
+  renderCmp();
+  Proto.toast('Repreguntando a los ' + readyProvs().length + ' proveedores', { iconName: 'refresh' });
+  document.querySelector('[data-tab="chat"]').click();
+  setTimeout(() => ask(q), 260);
+  setTimeout(() => { if (asked !== 'general') setProv(asked); }, 100);
+});
+
+const provSheet = Proto.sheet(document.getElementById('provSheet'), { snaps: ['half', 'full'], start: 'half' });
+
+document.addEventListener('click', (e) => {
+  const ask_ = e.target.closest('[data-ask]');
+  if (ask_) { ask(ask_.dataset.ask); return; }
+
+  const prov = e.target.closest('[data-prov]');
+  if (prov) { setProv(prov.dataset.prov); provSheet.close(); Proto.toast('Proveedor: ' + provOf(prov.dataset.prov).label + ' (mock)', { iconName: 'sparkles' }); return; }
+
+  const st = e.target.closest('[data-open-station]');
+  if (st) { openStation(st.dataset.openStation); return; }
+
+  const cancel = e.target.closest('[data-cancel]');
+  if (cancel) { cancelJob(); return; }
+
+  const sheetOpen = e.target.closest('[data-sheet-open]');
+  if (sheetOpen) {
+    if (sheetOpen.dataset.sheetOpen === 'prompt') { renderPrompt(); promptSheet.open('full'); }
+    return;
+  }
+
+  const edit = e.target.closest('[data-edit]');
+  if (edit) {
+    const msg = edit.closest('.msg');
+    const raw = msg.dataset.raw;
+    const t = thread();
+    const idx = t.findIndex(m => m.role === 'user' && m.text === raw);
+    if (idx >= 0) THREADS[state.prov] = t.slice(0, idx);
+    askEl.value = raw; autoGrow(); askEl.focus();
+    cancelJob(true);
+    renderThread(); renderSet();
+    Proto.toast('Pregunta recuperada: corrige y reenvía', { iconName: 'pencil' });
+    return;
+  }
+
+  const useProv = e.target.closest('[data-use-prov]');
+  if (useProv) {
+    const pid = useProv.dataset.useProv;
+    const a = forProvider(buildAnswer(state.lastQ || '¿Dónde reposto más barato cerca?'), pid);
+    thread().push({ role: 'assistant', ans: a, prov: pid, ms: provOf(pid).ms || 900 });
+    renderThread(); renderCtx();
+    Proto.toast('Respuesta de ' + provOf(pid).label + ' añadida al hilo', { iconName: 'check' });
+    return;
+  }
+
+  const testProxy = e.target.closest('[data-testproxy]');
+  if (testProxy) {
+    const out = testProxy.closest('.bubble').querySelector('[data-proxyout]');
+    out.hidden = false;
+    out.textContent = 'GET https://petrol-nvidia-proxy.workers.dev/v1/models\n' +
+      '→ fallo de DNS: el host no responde\n\n' +
+      'Motivo: nosubdomain — a un dominio *.workers.dev le falta el subdominio de tu cuenta.\n' +
+      'Pega la URL que imprime `wrangler deploy`:\n' +
+      '  https://petrol-nvidia-proxy.mi-cuenta.workers.dev\n' +
+      '(0 peticiones hechas: se detecta antes de llamar a la red)';
+    return;
+  }
+
+  const tank = e.target.closest('[data-tank]');
+  if (tank) {
+    state.tank = Math.max(20, Math.min(80, state.tank + Number(tank.dataset.tank)));
+    document.getElementById('tankVal').textContent = state.tank + ' L';
+    renderCtxChips(); renderCtx();
+    return;
+  }
+
+  const clr = e.target.closest('[data-clear-prov]');
+  if (clr) { THREADS[clr.dataset.clearProv] = []; renderSet(); Proto.toast('Conversación borrada', { iconName: 'trash' }); return; }
+});
+
+const promptSheet = Proto.sheet(document.getElementById('promptSheet'), { snaps: ['full'], start: 'full' });
+
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'swHist') { state.useHistory = e.target.checked; renderCtxChips(); renderCtx(); }
+  if (e.target.id === 'swKeep') { state.keepThreads = e.target.checked; if (!state.keepThreads) { Object.keys(THREADS).forEach(k => THREADS[k] = []); renderThread(); renderSet(); } }
+  if (e.target.id === 'fuelSel') {
+    state.fuel = e.target.value;
+    renderCtxChips(); renderCtx(); renderThread();
+    Proto.toast('Combustible del copiloto: ' + PROTO.fuelShort(state.fuel), { iconName: 'droplet' });
+  }
+});
+document.addEventListener('click', (e) => {
+  const seg = e.target.closest('#toneSeg button');
+  if (seg) {
+    state.tone = seg.dataset.val;
+    [...seg.parentElement.children].forEach(b => b.classList.toggle('on', b === seg));
+    Proto.toast('Estilo: ' + state.tone, { iconName: 'palette' });
+  }
+});
+
+document.addEventListener('proto:theme', () => {
+  threadIn.querySelectorAll('[data-chart]').forEach(box => { delete box.dataset.done; paintChart(box); });
+  if (detailCtl && stationSheet.snap) detailCtl.redraw();
+});
+
+/* Enlaces cruzados */
+const crossLinks = document.createElement('div');
+crossLinks.className = 'card flat mt3';
+crossLinks.innerHTML = `<div class="card-title">Otros prototipos</div><div class="chips wrap mt2">` +
+  [['v1-sheet.html', 'v1 · Sheet + pestañas'], ['v2-map.html', 'v2 · Mapa primero'], ['v3-cards.html', 'v3 · Feed de ahorro'], ['v4-desktop.html', 'v4 · Consola escritorio'], ['v6-drive.html', 'v6 · Una mano'], ['styleguide.html', 'Estilo y componentes'], ['index.html', '← Galería']]
+  .map(([f, l]) => `<a class="chip" href="${f}">${Proto.icon('arrowRight', 'xs')}${l}</a>`).join('') + '</div>';
+document.getElementById('setBody').appendChild(crossLinks);
+
+/* ============================================================================
+   Arranque
+   ========================================================================== */
+renderRail();
+setProv(state.prov);
+renderCtxChips();
+renderPrompt();
+Proto.theme.set(Proto.theme.get(), false);
+Proto.hydrateIcons();
+</script>
+</body>
+</html>

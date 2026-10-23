@@ -1,5 +1,46 @@
 # CHANGELOG
 
+## [2026-10-18] — Prototipos Big_pickle: renombrado y colisión de selectores corregida
+
+| Cambio | Detalle |
+|--------|---------|
+| `prototipos_opencode_bigpickle/` | Renombrada la carpeta `prototipos_bigpickle/` para alinearla con las carpetas `prototipos_opencode_*` de los demás modelos. Se actualizan todas las referencias (README, índice, scripts, informes e interiores de los prototipos) |
+| `prototipo1/6/7 estilo.css` | El selector del toast `.aviso` (`position: fixed; z-index: 200`) coincidía con las etiquetas de descuento `.etiqueta.aviso` de las tarjetas: heredaban el posicionamiento fijo y, en el prototipo 6, las tarjetas de la hoja salían de su sitio y tapaban el indicador del carril (auditoría: 3 «navegación tapada»). El toast ahora se estiliza por id (`#aviso`) |
+| `shared/informes/` | Auditoría regenerada: **0 avisos en móvil y PC en los 8 prototipos** (antes 3 en el 6) |
+| `shared/capturas/` | Capturas regeneradas; se completan las 4 que faltaban del prototipo 6 (móvil, detalle, vista y PC) |
+
+### 🧪 Verificación
+
+- `node prototipos_opencode_bigpickle/auditar.mjs`: 8/8 ✅ con 0 avisos (móvil 390×844 y PC 1440×900)
+- `node prototipos_opencode_bigpickle/capturar.mjs`: 8 prototipos sin errores de consola, 31 capturas
+- `node check-syntax.mjs`: 19/19 ficheros OK (la app real no cambia)
+- Suite completa: **214 tests** (207 HTTP + 7 file://), intactos
+
+---
+
+## [2026-10-17] — Prototipos de rediseño responsive (carpeta `prototipos_mimo/`)
+
+| Cambio | Detalle |
+|--------|---------|
+| `prototipos_mimo/` | **Nueva carpeta** con 6 prototipos de rediseño enfocados en móvil actual y escritorio. **No toca la app real**: son páginas estáticas con datos fake, sin red ni backend |
+| `index.html` | Galería que enlaza los 6 conceptos con descripción, decisiones de diseño y **previsualizaciones en vivo** (iframe a escala con marco de móvil) |
+| `comun/` | Base compartida: `base.css` (temas claro/oscuro, safe-areas, mapa fake, gráfica SVG), `datos.js` (14 estaciones, histórico determinista, KPIs, chat IA fake) y `ui.js` (mapa, gráfica, badges, toasts) |
+| `c1-flow` | **Card Flow** · mobile-first: lista de tarjetas + bottom nav de 5 destinos + bottom sheet con snaps. Escritorio en 3 paneles (rail + lista + mapa) |
+| `c2-atlas` | **Atlas** · mapa-héroe tipo Uber/Google Maps: hoja inferior que sube a 3 alturas con lista y filtros. Escritorio: mapa + panel flotante |
+| `c3-nocturne` | **Nocturne** · tema oscuro de alto contraste para conducir de noche: targets XXL, glass sutil, acentos cálidos |
+| `c4-radar` | **Radar** · comparador: KPIs, recomendación "¿repostar hoy?", ranking con barras relativas y ahorro €/tanque, comparador multi-estación con gráfica |
+| `c5-cockpit` | **Cockpit** · escritorio-primero: 3 columnas (filtros+KPIs · mapa · lista+detalle) con IA lateral colapsable. En móvil colapsa a sheets |
+| `c6-gesture` | **Gesture** · experimental: swipe horizontal entre vistas, tarjetas apiladas de las más baratas y pull-to-refresh simulado |
+
+### 🧪 Verificación
+
+- `node check-syntax.mjs`: 19/19 ficheros OK (la app real no cambia)
+- Suite completa: **214 tests** (207 HTTP + 7 file://), intactos
+- Prototipos: los 6 conceptos + galería cargan sin errores de consola en móvil (390×844) y escritorio (1400×900), capturados en `prototipos_mimo/_shots/`
+- Interacción smoke-test (Playwright): abrir detalle, filtrar por combustible, comparador y navegación por gestos responden sin errores JS
+
+---
+
 ## [2026-10-11] — Móvil: modo apaisado, 5 columnas en vertical y PWA que se actualiza sola
 
 | Cambio | Detalle |

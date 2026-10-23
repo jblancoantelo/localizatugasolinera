@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#0f4c81">
+<title>Prototipo 8 · Panel de datos — Gasolineras</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<!-- =============================================================================
+     Prototipo 8 · «Panel de datos / analítica» — maqueta interactiva
+     -----------------------------------------------------------------------------
+     No forma parte de la app real: es una maqueta con datos simulados
+     (../shared/datos-fake.js). Su objetivo es el usuario que quiere ENTENDER el
+     mercado (comparar, agregar, visualizar), no solo encontrar una estación.
+
+     Estructura:
+       .cinta      aviso de prototipo
+       .topbar     título + controles globales (provincia · combustible · periodo)
+       .cuerpo     nav (barra inferior en móvil / lateral en PC) + <main>
+       <main>      5 vistas: Panel · Mapa · Estaciones · IA · Config
+     ========================================================================== -->
+<div class="app">
+  <div class="cinta" aria-hidden="true">PROTOTIPO 8 · «Panel de datos» · analítica del mercado · datos simulados</div>
+
+  <!-- ===================== CABECERA ===================== -->
+  <header class="topbar">
+    <div class="marca-app">
+      <span class="logo" aria-hidden="true"></span>
+      <div class="marca-texto">
+        <h1>Panel de datos</h1>
+        <p id="topbarSub">—</p>
+      </div>
+    </div>
+    <div class="controles">
+      <label class="campo"><span>Provincia</span><select id="selProv" aria-label="Provincia"></select></label>
+      <label class="campo"><span>Combustible</span><select id="selFuel" aria-label="Combustible"></select></label>
+      <label class="campo"><span>Periodo</span><select id="selDias" aria-label="Periodo en días"></select></label>
+    </div>
+  </header>
+
+  <!-- ===================== CUERPO ===================== -->
+  <div class="cuerpo">
+    <nav class="nav" id="nav" aria-label="Secciones de la aplicación"></nav>
+
+    <main class="vistas" id="vistas">
+
+      <!-- --------- Vista PANEL (analítica) --------- -->
+      <section class="vista activa" id="v-panel" data-vista="panel" aria-label="Panel de analítica">
+        <div class="rejilla" id="panelRejilla"></div>
+      </section>
+
+      <!-- --------- Vista MAPA --------- -->
+      <section class="vista" id="v-mapa" data-vista="mapa" aria-label="Mapa de precios">
+        <div class="vista-cab">
+          <h2>Mapa de precios</h2>
+          <p id="mapaSub">—</p>
+        </div>
+        <div class="mapa" id="mapa">
+          <div class="mapa-fondo" id="mapaFondo" aria-hidden="true"></div>
+          <div class="mapa-marcadores" id="mapaMarcadores"></div>
+          <div class="mapa-leyenda" id="mapaLeyenda"></div>
+        </div>
+      </section>
+
+      <!-- --------- Vista ESTACIONES --------- -->
+      <section class="vista" id="v-estaciones" data-vista="estaciones" aria-label="Listado de estaciones">
+        <div class="vista-cab">
+          <h2>Estaciones</h2>
+          <p id="estSub">—</p>
+        </div>
+        <div class="barra-filtros">
+          <div class="buscador">
+            <span class="lupa" aria-hidden="true"></span>
+            <input type="search" id="buscar" placeholder="Busca marca, localidad o calle" aria-label="Buscar estaciones" autocomplete="off">
+          </div>
+          <div class="segmentado" id="ordenEst" role="group" aria-label="Ordenar estaciones">
+            <button type="button" data-orden="precio-asc" class="activo" aria-pressed="true">Precio ↑</button>
+            <button type="button" data-orden="precio-desc" aria-pressed="false">Precio ↓</button>
+            <button type="button" data-orden="dist" aria-pressed="false">Distancia</button>
+          </div>
+        </div>
+        <div class="tabla-envoltorio">
+          <table class="tabla" id="tablaEst">
+            <thead>
+              <tr>
+                <th scope="col" data-col="marca">Marca <span class="flecha" aria-hidden="true"></span></th>
+                <th scope="col" data-col="precio">Precio <span class="flecha" aria-hidden="true"></span></th>
+                <th scope="col" data-col="dist">Distancia <span class="flecha" aria-hidden="true"></span></th>
+                <th scope="col" data-col="localidad">Localidad <span class="flecha" aria-hidden="true"></span></th>
+                <th scope="col">Calle</th>
+                <th scope="col" class="col-comp"><span class="visualmente-oculto">Comparar</span></th>
+              </tr>
+            </thead>
+            <tbody id="tablaCuerpo"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- --------- Vista IA --------- -->
+      <section class="vista" id="v-ia" data-vista="ia" aria-label="Asistente de IA">
+        <div class="vista-cab">
+          <h2>Asistente IA</h2>
+          <p id="iaSub">—</p>
+        </div>
+        <div class="ia-pills" id="iaPills" role="tablist" aria-label="Proveedor de IA"></div>
+        <div class="ia-cabecera" id="iaCabecera"></div>
+        <div class="ia-mensajes" id="iaMensajes" role="log" aria-live="polite"></div>
+        <div class="ia-prompts" id="iaPrompts"></div>
+        <form class="ia-form" id="iaForm">
+          <input type="text" id="iaInput" placeholder="Pregunta sobre precios, tendencias o estaciones…" aria-label="Mensaje para la IA">
+          <button type="submit">Enviar</button>
+        </form>
+      </section>
+
+      <!-- --------- Vista CONFIG --------- -->
+      <section class="vista" id="v-config" data-vista="config" aria-label="Configuración">
+        <div class="vista-cab">
+          <h2>Configuración</h2>
+          <p>Los ajustes se aplican en memoria en esta maqueta.</p>
+        </div>
+        <div class="config" id="configLista"></div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ===================== CAPAS SUPERPUESTAS ===================== -->
+<div class="velo" id="velo" hidden></div>
+
+<!-- Ficha de estación (drawer lateral en PC, hoja inferior en móvil) -->
+<aside class="ficha" id="ficha" role="dialog" aria-modal="true" aria-labelledby="fichaTitulo" hidden>
+  <div class="ficha-caja">
+    <header class="ficha-cab">
+      <div class="ficha-titulos">
+        <span class="ficha-marca" id="fichaMarca"></span>
+        <h2 id="fichaTitulo">—</h2>
+      </div>
+      <button type="button" class="icono-btn" id="fichaCerrar" aria-label="Cerrar la ficha">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </header>
+    <div class="ficha-precio" id="fichaPrecio"></div>
+    <p class="ficha-meta" id="fichaMeta"></p>
+    <div class="ficha-acciones">
+      <button type="button" class="btn-sec" id="fichaFav">☆ Favorita</button>
+      <button type="button" class="btn-sec" id="fichaComparar">+ Comparar</button>
+    </div>
+    <div class="ficha-controles">
+      <label class="campo"><span>Combustible</span><select id="fichaFuel" aria-label="Combustible de la gráfica"></select></label>
+      <label class="campo"><span>Periodo</span><select id="fichaDias" aria-label="Periodo de la gráfica"></select></label>
+    </div>
+    <div class="grafica-caja">
+      <canvas id="fichaCanvas" data-grafica height="200" role="img" aria-label="Evolución del precio de la estación"></canvas>
+      <div class="gtip" hidden></div>
+    </div>
+    <div class="ficha-resumen" id="fichaResumen"></div>
+    <div class="ficha-precios" id="fichaPrecios"></div>
+  </div>
+</aside>
+
+<div class="aviso" id="aviso" role="status" aria-live="polite" hidden></div>
+
+<script src="../shared/datos-fake.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

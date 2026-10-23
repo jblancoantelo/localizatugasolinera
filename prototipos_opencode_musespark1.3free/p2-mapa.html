@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>P2 · Mapa Vivo — Gasolineras</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#0b1220;color:#e2e8f0;height:100vh;overflow:hidden}
+.app{height:100vh;display:flex;flex-direction:column;max-width:1280px;margin:0 auto}
+/* floating top */
+.top{position:absolute;top:0;left:0;right:0;z-index:30;max-width:1280px;margin:0 auto;padding:.6rem .7rem;display:flex;flex-direction:column;gap:.45rem;pointer-events:none}
+.top>*{pointer-events:auto}
+.pill{display:flex;gap:.4rem;background:rgba(15,23,42,.92);backdrop-filter:blur(10px);border:1px solid #263349;border-radius:99px;padding:.35rem .35rem .35rem .9rem;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.pill input{flex:1;background:none;border:none;color:#fff;font-size:.9rem;min-height:44px;outline:none}
+.pill input::placeholder{color:#64748b}
+.pill button{border:none;border-radius:50%;width:44px;height:44px;font-size:1.1rem;cursor:pointer;background:#38bdf8}
+.chips{display:flex;gap:.4rem;overflow-x:auto;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;border:1px solid #263349;background:rgba(15,23,42,.92);color:#cbd5e1;border-radius:99px;padding:.5rem .8rem;font-size:.76rem;cursor:pointer;min-height:40px}
+.chip.on{background:#38bdf8;color:#082f49;border-color:#38bdf8;font-weight:800}
+/* body */
+.mid{flex:1;display:flex;min-height:0;position:relative}
+.side{display:none;width:320px;background:#0f172a;border-right:1px solid #1e293b;padding:.8rem;overflow:auto}
+.map{flex:1;position:relative;overflow:hidden;background:#0b1220 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><path d="M0 60h120M60 0v120" stroke="%23162633" stroke-width="5"/><path d="M0 20h120M20 0v120M0 100h120M100 0v120" stroke="%2311202e" stroke-width="2"/></svg>');}
+.map .road{position:absolute;background:#16263a;border-radius:99px}
+.pin{position:absolute;width:34px;height:34px;border-radius:50% 50% 50% 6px;transform:rotate(-45deg) translate(-4px,-4px);border:3px solid #fff;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center}
+.pin b{transform:rotate(45deg);font-size:.62rem;color:#fff}
+.pin.sel{outline:3px solid #38bdf8;z-index:6}
+.me{position:absolute;width:18px;height:18px;background:#38bdf8;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 10px rgba(56,189,248,.25)}
+.fabs{position:absolute;right:.7rem;top:5.2rem;display:flex;flex-direction:column;gap:.5rem;z-index:20}
+.fab{width:52px;height:52px;border-radius:50%;border:1px solid #263349;background:rgba(15,23,42,.94);color:#fff;font-size:1.25rem;cursor:pointer}
+.fab.on{background:#fbbf24;border-color:#fbbf24}
+.legend{position:absolute;left:.7rem;top:5.2rem;z-index:20;background:rgba(15,23,42,.9);border:1px solid #263349;border-radius:12px;padding:.4rem .6rem;font-size:.68rem;display:flex;gap:.5rem}
+/* carousel */
+.car{position:absolute;left:0;right:0;bottom:0;z-index:25;display:flex;gap:.55rem;overflow-x:auto;padding:.6rem .7rem calc(.7rem + env(safe-area-inset-bottom));scroll-snap-type:x mandatory}
+.ccard{scroll-snap-align:center;flex:0 0 78%;max-width:340px;background:#f8fafc;color:#0f172a;border-radius:18px;padding:.7rem .8rem;cursor:pointer;border:3px solid transparent}
+.ccard.sel{border-color:#38bdf8}
+.ccard .r1{display:flex;justify-content:space-between;align-items:center}
+.ccard b.price{font-size:1.4rem;font-variant-numeric:tabular-nums}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+/* detail + other views */
+.panel{position:absolute;left:.6rem;right:.6rem;bottom:0;z-index:40;background:#fff;color:#0f172a;border-radius:20px 20px 0 0;padding:.8rem .9rem calc(.9rem + env(safe-area-inset-bottom));transform:translateY(110%);transition:.25s;max-height:78%;overflow:auto;max-width:560px;margin:0 auto}
+.panel.open{transform:none}
+.desk{flex:1;display:none;min-height:0}
+canvas{width:100%;height:150px;background:#f1f5f9;border-radius:12px}
+select,input[type=text]{min-height:44px}
+table{width:100%;border-collapse:collapse;font-size:.8rem;background:#fff;color:#0f172a;border-radius:14px;overflow:hidden}
+th,td{padding:.55rem .45rem;border-bottom:1px solid #f1f5f9;text-align:left}th{background:#0f172a;color:#fff;font-size:.65rem;text-transform:uppercase}
+.nav{display:flex;background:#0f172a;border-top:1px solid #1e293b;padding-bottom:env(safe-area-inset-bottom)}
+.nav button{flex:1;background:none;border:none;color:#64748b;font-size:.62rem;padding:.5rem;cursor:pointer;min-height:62px}
+.nav button.on{color:#38bdf8;font-weight:800}
+.toast{position:fixed;left:50%;bottom:170px;transform:translateX(-50%);background:#fff;color:#0f172a;padding:.55rem 1rem;border-radius:99px;font-size:.8rem;display:none;z-index:99}
+@media(min-width:960px){
+.side{display:block}
+.ccard{flex:0 0 300px}
+.fabs{top:auto;bottom:12rem}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="mid">
+<div class="side">
+<h3 style="font-size:.9rem;margin-bottom:.5rem">⛽ Filtros</h3>
+<p style="font-size:.72rem;color:#94a3b8;margin-bottom:.5rem">Provincia <b style="color:#fff">Madrid</b> · 12 estaciones</p>
+<select id="locS" style="width:100%;margin-bottom:.4rem;background:#1e293b;color:#fff;border:1px solid #334155;border-radius:10px;padding:.5rem"><option value="">Todas las localidades</option></select>
+<select id="brandS" style="width:100%;margin-bottom:.4rem;background:#1e293b;color:#fff;border:1px solid #334155;border-radius:10px;padding:.5rem"><option value="">Todas las marcas</option></select>
+<label style="font-size:.75rem;color:#94a3b8"><input type="checkbox" id="favS"> Solo favoritas (<span id="favN">2</span>)</label>
+<div id="sideList" style="display:flex;flex-direction:column;gap:.4rem;margin-top:.6rem"></div>
+</div>
+<div class="map" id="map">
+<div class="road" style="left:-5%;top:32%;width:110%;height:10px;transform:rotate(-8deg)"></div>
+<div class="road" style="left:30%;top:-5%;width:10px;height:110%"></div>
+<div class="road" style="left:-5%;top:64%;width:110%;height:6px;transform:rotate(5deg)"></div>
+<div class="me" style="left:48%;top:46%"></div>
+<div class="top">
+<div class="pill"><span>🔍</span><input id="q" placeholder="Madrid · busca marca, calle…"><button id="gps">📍</button></div>
+<div class="chips" id="chips"></div>
+</div>
+<div class="legend"><span><i class="dot" style="background:#22c55e"></i> &lt;1,50</span><span><i class="dot" style="background:#f59e0b"></i> 1,50–1,60</span><span><i class="dot" style="background:#ef4444"></i> &gt;1,60</span></div>
+<div class="fabs"><button class="fab" id="favF" title="Solo favoritas">☆</button><button class="fab" id="listF" title="Tabla">☰</button></div>
+<div id="pins"></div>
+<div class="car" id="car"></div>
+<div class="panel" id="panel"></div>
+</div>
+</div>
+<nav class="nav">
+<button data-t="mapa" class="on">🗺️<br>Mapa</button><button data-t="tabla">☰<br>Tabla</button><button data-t="ia">🤖<br>IA</button><button data-t="cfg">⚙️<br>Config</button>
+</nav>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const S=[{id:1,marca:"Ballenoil",loc:"Alcobendas",calle:"Av. Valdelaparra 12",p:1.429,d:1.359,dist:1.2,x:20,y:25},{id:2,marca:"Plenergy",loc:"Madrid",calle:"Bravo Murillo 180",p:1.449,d:1.379,dist:.6,x:45,y:40},{id:3,marca:"Avia",loc:"Getafe",calle:"Av. España 44",p:1.469,d:1.399,dist:3.1,x:60,y:70},{id:4,marca:"Galp",loc:"Madrid",calle:"Castellana 210",p:1.519,d:1.449,dist:2.4,x:52,y:30},{id:5,marca:"BP",loc:"Leganés",calle:"Av. Fuenlabrada 58",p:1.549,d:1.479,dist:4.8,x:30,y:72},{id:6,marca:"Cepsa",loc:"Madrid",calle:"Alcalá 320",p:1.569,d:1.499,dist:3.6,x:68,y:45},{id:7,marca:"Repsol",loc:"Madrid",calle:"Goya 89",p:1.589,d:1.519,dist:2.9,x:58,y:52},{id:8,marca:"Shell",loc:"Alcalá",calle:"Vía Complutense 120",p:1.599,d:1.529,dist:8.5,x:82,y:22},{id:9,marca:"Ballenoil",loc:"Madrid",calle:"Vallecas 77",p:1.439,d:1.369,dist:5.2,x:63,y:62},{id:10,marca:"Cepsa",loc:"Getafe",calle:"Madrid 101",p:1.579,d:1.509,dist:6.1,x:38,y:80},{id:11,marca:"Repsol",loc:"Alcobendas",calle:"Real 5",p:1.619,d:1.549,dist:1.8,x:26,y:15},{id:12,marca:"BP",loc:"Madrid",calle:"Av. América 45",p:1.659,d:1.589,dist:4.2,x:74,y:58}];
+const FUELS=["Gasolina 95","Gasóleo A","Gasolina 98","GLP"];let fuel=FUELS[0],favOnly=false,favs=new Set([1,9]),sel=null,mode="mapa";
+const $=id=>document.getElementById(id);
+function toast(t){const e=$("toast");e.textContent=t;e.style.display="block";clearTimeout(e._t);e._t=setTimeout(()=>e.style.display="none",1800)}
+function price(s){return fuel.includes("Gasóleo")?s.d:s.p}
+function col(v){return v<1.5?"#22c55e":v<1.6?"#f59e0b":"#ef4444"}
+$("chips").innerHTML=FUELS.map((f,i)=>`<button class="chip${i==0?" on":""}" data-f="${f}">${f}</button>`).join("");
+document.querySelectorAll("#chips .chip").forEach(c=>c.onclick=()=>{document.querySelectorAll("#chips .chip").forEach(x=>x.classList.remove("on"));c.classList.add("on");fuel=c.dataset.f;render()});
+[...new Set(S.map(s=>s.loc))].forEach(l=>$("locS").innerHTML+=`<option>${l}</option>`);
+[...new Set(S.map(s=>s.marca))].forEach(b=>$("brandS").innerHTML+=`<option>${b}</option>`);
+function filt(){return S.filter(s=>(!$("locS").value||s.loc==$("locS").value)&&(!$("brandS").value||s.marca==$("brandS").value)&&(!favOnly||favs.has(s.id))&&(s.marca+s.calle+s.loc).toLowerCase().includes($("q").value.toLowerCase())).sort((a,b)=>price(a)-price(b))}
+function render(){const a=filt();$("favN").textContent=favs.size;
+$("pins").innerHTML=a.map(s=>`<div class="pin${sel==s.id?" sel":""}" data-id="${s.id}" style="left:${s.x}%;top:${s.y}%;background:${col(price(s))}"><b>${price(s).toFixed(2).slice(2)}</b></div>`).join("");
+document.querySelectorAll(".pin").forEach(p=>p.onclick=()=>{select(+p.dataset.id);document.querySelector(`[data-card="${p.dataset.id}"]`)?.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"})});
+$("car").innerHTML=a.map(s=>`<div class="ccard${sel==s.id?" sel":""}" data-card="${s.id}"><div class="r1"><b>${favs.has(s.id)?"★":"☆"} ${s.marca}</b><span class="dot" style="background:${col(price(s))}"></span></div><b class="price">${price(s).toFixed(3)} €</b><div style="font-size:.74rem;color:#475569">${s.loc} · ${s.calle} · ${s.dist.toFixed(1)} km</div></div>`).join("")||`<div class="ccard">Sin resultados</div>`;
+document.querySelectorAll("[data-card]").forEach(c=>c.onclick=()=>select(+c.dataset.card));
+$("sideList").innerHTML=a.map(s=>`<button data-card="${s.id}" style="text-align:left;background:${sel==s.id?"#38bdf8":"#1e293b"};color:${sel==s.id?"#082f49":"#e2e8f0"};border:1px solid #334155;border-radius:10px;padding:.5rem;font-size:.78rem;cursor:pointer;min-height:48px"><b>${price(s).toFixed(3)} €</b> · ${s.marca} · ${s.dist.toFixed(1)} km</button>`).join("");
+document.querySelectorAll("#sideList [data-card]").forEach(c=>c.onclick=()=>select(+c.dataset.card));
+}
+function select(id){sel=id;render();const s=S.find(x=>x.id==id);const v=price(s);
+$("panel").innerHTML=`<div style="display:flex;gap:.5rem;align-items:flex-start"><div style="flex:1"><b style="font-size:1rem">${favs.has(id)?"★ ":""}${s.marca} · ${v.toFixed(3)} €</b><div style="font-size:.78rem;color:#475569">${s.loc} · ${s.calle} · ${s.dist} km de ti</div></div><button onclick="document.getElementById('panel').classList.remove('open')" style="border:none;background:#f1f5f9;border-radius:50%;width:38px;height:38px;cursor:pointer">✕</button></div>
+<div style="display:flex;gap:.4rem;margin:.55rem 0"><select id="hd" style="flex:1;border:1px solid #e2e8f0;border-radius:10px;padding:.5rem"><option value="7">7 días</option><option value="14" selected>14 días</option><option value="30">30 días</option><option value="90">90 días</option></select><button class="chip" style="background:#0f172a;color:#fff" onclick="tgl(${id})">${favs.has(id)?"★ Favorita":"☆ Guardar"}</button><button class="chip" style="background:#dcfce7;border-color:#86efac" onclick="toast2()">🧭 Ir</button></div>
+<canvas id="ch" width="520" height="150"></canvas><p id="ht" style="font-size:.72rem;color:#64748b;margin-top:.3rem"></p>`;
+$("panel").classList.add("open");draw(s,$("hd").value);$("hd").onchange=e=>draw(s,e.target.value)}
+window.tgl=id=>{favs.has(id)?favs.delete(id):favs.add(id);select(id);render()};window.toast2=()=>toast("Navegación simulada");
+function draw(s,days){const c=$("ch"),x=c.getContext("2d"),W=c.width,H=c.height;x.clearRect(0,0,W,H);let p=price(s)+.05,pts=[];for(let i=days-1;i>=0;i--){p+=(Math.sin(i*3+s.id)-.45)*.008;pts.push(p)}pts.push(price(s));
+const mn=Math.min(...pts)-.005,mx=Math.max(...pts)+.005,X=i=>14+i*(W-28)/(pts.length-1),Y=v=>H-16-(v-mn)/(mx-mn)*(H-32);
+x.strokeStyle="#e2e8f0";x.beginPath();for(let g=0;g<3;g++){x.moveTo(14,10+g*(H-30)/2);x.lineTo(W-14,10+g*(H-30)/2)}x.stroke();
+x.beginPath();pts.forEach((v,i)=>i?x.lineTo(X(i),Y(v)):x.moveTo(X(i),Y(v)));x.strokeStyle="#0284c7";x.lineWidth=3;x.stroke();
+$("ht").textContent=`Mín ${Math.min(...pts).toFixed(3)} € · máx ${Math.max(...pts).toFixed(3)} € · ${days} días de ${fuel} (simulado)`}
+$("q").oninput=render;$("locS").onchange=render;$("brandS").onchange=render;$("favS").onchange=e=>{favOnly=e.target.checked;$("favF").classList.toggle("on",favOnly);render()};
+$("favF").onclick=e=>{favOnly=!favOnly;e.target.classList.toggle("on",favOnly);e.target.textContent=favOnly?"★":"☆";$("favS").checked=favOnly;render()};
+$("gps").onclick=()=>toast("📍 Eres el punto azul. Ordenado por distancia.");
+$("listF").onclick=()=>{const a=filt();$("panel").innerHTML=`<b>☰ Tabla · ${fuel}</b><div style="max-height:40vh;overflow:auto;margin-top:.5rem"><table><tr><th>Marca</th><th>Precio</th><th>Km</th><th></th></tr>${a.map(s=>`<tr><td>${favs.has(s.id)?"★":"☆"} ${s.marca}</td><td><b>${price(s).toFixed(3)}</b></td><td>${s.dist}</td><td><button onclick="select(${s.id})">Ver</button></td></tr>`).join("")}</table></div><br><button class="chip" style="background:#0f172a;color:#fff" onclick="document.getElementById('panel').classList.remove('open')">Cerrar</button>`;$("panel").classList.add("open")};
+window.select=select;
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("on"));b.classList.add("on");
+if(b.dataset.t=="tabla")$("listF").click();else if(b.dataset.t=="ia"){$("panel").innerHTML=`<b>🤖 IA · pregunta simulada</b><div id="m" style="background:#f1f5f9;border-radius:12px;padding:.6rem;font-size:.84rem;margin:.5rem 0">¿Dónde reposto hoy? → <b>${filt()[0].marca}</b> a ${price(filt()[0]).toFixed(3)} €.</div><div style="display:flex;gap:.4rem"><input id="qi" placeholder="Pregunta…" style="flex:1;border:1px solid #e2e8f0;border-radius:10px;padding:.6rem"><button class="chip" style="background:#0f172a;color:#fff" onclick="document.getElementById('m').innerHTML+='<br>✓ Respuesta simulada con tus favoritas.'">Enviar</button></div>`;$("panel").classList.add("open")}
+else if(b.dataset.t=="cfg"){$("panel").innerHTML=`<b>⚙️ Config</b><p style="font-size:.8rem;color:#475569;margin:.4rem 0">Alertas, TTL 12 h, paginación 30, claves IA (simulado).</p><button class="chip" style="background:#0f172a;color:#fff" onclick="toast('Guardado (simulado)') & document.getElementById('panel').classList.remove('open')">Guardar</button>`;$("panel").classList.add("open")}
+else $("panel").classList.remove("open")});
+render();
+</script>
+</body>
+</html>

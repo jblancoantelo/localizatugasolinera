@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#1667d3">
+<title>Prototipo 6 · Gestos y atajos — Gasolineras</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<!-- =============================================================================
+     Prototipo 6 · «Gestos y atajos»
+     -----------------------------------------------------------------------------
+     Maqueta interactiva con datos simulados (../shared/datos-fake.js).
+     Tesis de diseño: se puede operar la app casi sin chrome visible.
+       · Móvil → se navega con el dedo (carril deslizable, hojas arrastrables,
+         swipe en tarjetas, pulsación larga, tirar para refrescar).
+       · PC → se navega con el teclado (paleta de comandos, atajos).
+     La barra inferior tiene solo 5 destinos y la cabecera dos botones.
+     ========================================================================== -->
+<div class="marco">
+  <div class="cinta" aria-hidden="true">PROTOTIPO 6 · «Gestos y atajos» · datos simulados</div>
+
+  <!-- ===================== CABECERA MÍNIMA ===================== -->
+  <header class="cabecera">
+    <div class="marca-app">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8v7H6z"/><path d="M6 10h8v11H6z"/><path d="M9 14h2"/><path d="M14 6h2a2 2 0 0 1 2 2v9a2 2 0 0 0 2 2"/></svg>
+      </span>
+      <span class="marca-nombre">Gasolinas</span>
+    </div>
+    <!-- Navegación de escritorio: en móvil vive abajo -->
+    <nav class="nav-superior" id="navSuperior" aria-label="Navegación principal"></nav>
+    <div class="cabecera-acciones">
+      <button class="icono-btn" id="btnPaleta" aria-label="Abrir paleta de comandos" title="Paleta de comandos (Ctrl+K)">⌘</button>
+      <button class="icono-btn" id="btnAyudaGestos" aria-label="Ayuda de gestos y atajos" title="Ayuda de gestos (?)">?</button>
+    </div>
+  </header>
+
+  <!-- ===================== CONTENIDO ===================== -->
+  <main class="contenido" id="contenido">
+
+    <!-- Carril deslizable con las 3 páginas principales (móvil) -->
+    <div class="carril" id="carril">
+
+      <!-- --------- PÁGINA 1: MAPA --------- -->
+      <section class="panel" id="panel-mapa" data-vista="mapa" aria-label="Mapa de estaciones">
+        <div class="mapa" id="mapa">
+          <div class="mapa-fondo" id="mapaFondo" aria-hidden="true"></div>
+          <div class="mapa-marcadores" id="mapaMarcadores"></div>
+          <div class="mapa-hud">
+            <button class="hud-btn" id="btnAyudaMapa">? Gestos y atajos</button>
+            <div class="leyenda" id="leyenda" aria-hidden="true"><!-- dinámica --></div>
+          </div>
+          <div class="mapa-zoom">
+            <button id="btnZoomMas" aria-label="Acercar mapa">+</button>
+            <button id="btnZoomMenos" aria-label="Alejar mapa">−</button>
+            <button id="btnCentrar" aria-label="Centrar en mi ubicación">◎</button>
+          </div>
+          <p class="mapa-pista" aria-hidden="true">Arrastra para mover · toca un precio · mantén pulsado para más opciones</p>
+        </div>
+      </section>
+
+      <!-- --------- PÁGINA 2: LISTA --------- -->
+      <section class="panel" id="panel-lista" data-vista="lista" aria-label="Lista de estaciones">
+        <div class="barra-pegajosa">
+          <div class="buscador">
+            <span class="buscador-lupa" aria-hidden="true"></span>
+            <input type="search" id="buscador" placeholder="Busca localidad, calle o marca" aria-label="Buscar localidad, calle o marca" autocomplete="off">
+            <button class="buscador-limpiar" id="btnLimpiarBusqueda" aria-label="Borrar búsqueda" hidden>✕</button>
+          </div>
+        </div>
+        <div class="fila-chips" id="filaChips" role="toolbar" aria-label="Filtros"></div>
+        <div class="lista-scroll" id="listaScroll" data-scroll-x>
+          <div class="tirar" id="tirar"><span class="tirar-ico" aria-hidden="true">↻</span><span id="tirarTexto">Tira para actualizar</span></div>
+          <div class="lista-tarjetas" id="listaTarjetas"></div>
+        </div>
+      </section>
+
+      <!-- --------- PÁGINA 3: AMBOS --------- -->
+      <section class="panel" id="panel-ambos" data-vista="ambos" aria-label="Mapa y tabla">
+        <div class="ambos-mapa" id="ambosMapa">
+          <div class="mapa-fondo" aria-hidden="true"></div>
+          <div class="mapa-marcadores"></div>
+        </div>
+        <!-- Columna derecha: contador + tabla + paginación (en PC van al lado
+             del mini-mapa; en móvil se apilan debajo) -->
+        <div class="col-der">
+          <div class="barra-pegajosa">
+            <span class="contador" id="ambosContador">—</span>
+            <span class="pista-orden">Pulsa una columna para ordenar</span>
+          </div>
+          <div class="tabla-envoltorio" data-scroll-x>
+            <table class="tabla" id="tablaEstaciones">
+              <thead>
+                <tr>
+                  <th data-col="marca" scope="col">Marca<span class="flecha"></span></th>
+                  <th data-col="precio" scope="col">Precio<span class="flecha"></span></th>
+                  <th data-col="dist" scope="col">Distancia<span class="flecha"></span></th>
+                  <th data-col="localidad" scope="col">Localidad<span class="flecha"></span></th>
+                  <th data-col="direccion" scope="col">Calle<span class="flecha"></span></th>
+                  <th class="col-fav" scope="col"><span class="visualmente-oculto">Favorito</span></th>
+                </tr>
+              </thead>
+              <tbody id="tablaCuerpo"></tbody>
+            </table>
+          </div>
+          <div class="paginacion" id="paginacion"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Hoja de lista del mapa: arrastrable en móvil, panel lateral en PC.
+         Va FUERA del carril a propósito: el transform del carril convertiría
+         esta hoja (position: fixed) en absoluta y rompería la lección aprendida
+         de que la caja de la hoja debe medir lo que de verdad se ve. -->
+    <aside class="hoja-lista" id="hojaLista" aria-label="Estaciones cercanas">
+      <button class="hoja-agarre" id="agarreLista" data-tap-exenta aria-label="Cambiar la altura de la lista">
+        <span class="agarre-barra" aria-hidden="true"></span>
+      </button>
+      <div class="hoja-cabecera">
+        <div class="hoja-titulos">
+          <strong id="hojaTitulo">—</strong>
+          <span class="hoja-sub" id="hojaSub"></span>
+        </div>
+        <button class="mini-btn" id="btnHojaCiclo" aria-label="Cambiar la altura de la hoja">≡</button>
+      </div>
+      <div class="hoja-cuerpo" id="listaHoja"></div>
+    </aside>
+
+    <!-- --------- PÁGINA IA --------- -->
+    <section class="panel-suelto" id="vista-ia" data-vista="ia" aria-label="Chat de IA">
+      <div class="ia-pills" id="iaPills" role="tablist" aria-label="Proveedor de IA"></div>
+      <div class="ia-cabecera" id="iaCabecera"></div>
+      <div class="ia-mensajes" id="iaMensajes" role="log" aria-live="polite"></div>
+      <div class="ia-prompts" id="iaPrompts" aria-label="Prompts rápidos"></div>
+      <form class="ia-entrada" id="iaForm">
+        <input type="text" id="iaInput" placeholder="Pregunta sobre precios, estaciones o tendencias…" aria-label="Mensaje para la IA">
+        <button type="submit" id="iaEnviar">Enviar</button>
+      </form>
+    </section>
+
+    <!-- --------- PÁGINA CONFIG --------- -->
+    <section class="panel-suelto" id="vista-config" data-vista="config" aria-label="Configuración">
+      <div class="config-lista" id="configLista"></div>
+    </section>
+  </main>
+
+  <!-- ===================== INDICADOR DE PÁGINA (carril) ===================== -->
+  <div class="indicador" id="indicador" role="tablist" aria-label="Página del carril"></div>
+
+  <!-- ===================== BARRA DE ESTADO ===================== -->
+  <div class="info-barra">
+    <span id="infoTexto">—</span>
+    <span class="info-datos" id="infoDatos"></span>
+  </div>
+
+  <nav class="nav-inferior" id="navInferior" aria-label="Navegación principal"></nav>
+</div>
+
+<!-- ===================== CAPAS SUPERPUESTAS ===================== -->
+<div class="velo" id="velo" hidden></div>
+
+<!-- Detalle de estación -->
+<div class="hoja hoja-detalle" id="hojaDetalle" role="dialog" aria-modal="true" aria-labelledby="detTitulo" hidden>
+  <button class="hoja-agarre" id="agarreDetalle" data-tap-exenta aria-label="Cerrar el detalle"><span class="agarre-barra" aria-hidden="true"></span></button>
+  <header class="detalle-cabecera">
+    <button class="detalle-cerrar" id="detalleCerrar" aria-label="Cerrar detalle">✕</button>
+    <div class="detalle-marca" id="detMarca"></div>
+    <h2 class="detalle-titulo" id="detTitulo">—</h2>
+    <div class="detalle-precio" id="detPrecio"></div>
+    <div class="detalle-meta" id="detMeta"></div>
+    <div class="detalle-acciones">
+      <button class="accion" id="detFav"></button>
+      <button class="accion" id="detRuta">Cómo llegar</button>
+      <button class="accion" id="detCompartir">Compartir</button>
+      <button class="accion" id="detLlamar">Llamar</button>
+    </div>
+  </header>
+  <div class="detalle-tabs" role="tablist" aria-label="Secciones del detalle">
+    <button class="detalle-tab activa" data-dtab="precios" role="tab" aria-selected="true">Precios</button>
+    <button class="detalle-tab" data-dtab="historico" role="tab" aria-selected="false">Histórico</button>
+  </div>
+  <div class="detalle-cuerpo">
+    <div class="detalle-panel activa" id="detPanelPrecios" role="tabpanel"></div>
+    <div class="detalle-panel" id="detPanelHistorico" role="tabpanel" hidden>
+      <div class="historico-controles">
+        <select id="histFuel" aria-label="Combustible del histórico"></select>
+        <select id="histDias" aria-label="Días del histórico"></select>
+      </div>
+      <div class="grafica-caja">
+        <canvas id="histCanvas" height="190" aria-label="Gráfica de evolución de precios" role="img"></canvas>
+        <div class="grafica-tooltip" id="histTooltip" hidden></div>
+      </div>
+      <div class="historico-resumen" id="histResumen"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Hoja genérica de opciones (provincia, combustible, marcas, distancia, orden) -->
+<div class="hoja hoja-opciones" id="hojaOpciones" role="dialog" aria-modal="true" aria-labelledby="opcTitulo" hidden>
+  <button class="hoja-agarre" id="agarreOpciones" data-tap-exenta aria-label="Cerrar las opciones"><span class="agarre-barra" aria-hidden="true"></span></button>
+  <div class="opciones-cabecera">
+    <h2 id="opcTitulo">Opciones</h2>
+    <button class="detalle-cerrar" id="opcionesCerrar" aria-label="Cerrar">✕</button>
+  </div>
+  <div class="opciones-cuerpo" id="opcCuerpo"></div>
+  <div class="opciones-pie" id="opcPie"></div>
+</div>
+
+<!-- Menú contextual de un marcador (pulsación larga) -->
+<div class="menu-contexto" id="menuContexto" role="menu" aria-label="Acciones de la estación" hidden></div>
+
+<!-- Paleta de comandos (Ctrl+K / ⌘K) -->
+<div class="paleta" id="paleta" hidden>
+  <div class="paleta-caja" role="dialog" aria-modal="true" aria-label="Paleta de comandos">
+    <div class="paleta-cab">
+      <span class="paleta-ico" aria-hidden="true">⌘</span>
+      <input type="text" id="paletaInput" placeholder="Escribe un comando o el nombre de una estación…" aria-label="Buscar comando" autocomplete="off">
+      <button class="detalle-cerrar" id="paletaCerrar" aria-label="Cerrar la paleta">✕</button>
+    </div>
+    <div class="paleta-lista" id="paletaLista" role="listbox" aria-label="Comandos disponibles"></div>
+    <div class="paleta-pie">↑ ↓ elegir · Enter ejecutar · Esc cerrar · Ctrl+K abrir</div>
+  </div>
+</div>
+
+<!-- Ayuda de gestos y atajos -->
+<div class="ayuda" id="ayuda" hidden>
+  <div class="ayuda-caja" role="dialog" aria-modal="true" aria-labelledby="ayudaTitulo">
+    <div class="ayuda-cab">
+      <h2 id="ayudaTitulo">Gestos y atajos</h2>
+      <button class="detalle-cerrar" id="ayudaCerrar" aria-label="Cerrar la ayuda">✕</button>
+    </div>
+    <div class="ayuda-cuerpo" id="ayudaCuerpo"></div>
+    <div class="ayuda-pie">
+      <span class="pista">Pulsa <kbd>?</kbd> para abrir o cerrar esta ayuda.</span>
+      <button class="btn-primario" id="ayudaEntendido">Entendido</button>
+    </div>
+  </div>
+</div>
+
+<!-- Aviso breve (toast) -->
+<div class="aviso" id="aviso" role="status" aria-live="polite" hidden></div>
+
+<script src="../shared/datos-fake.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

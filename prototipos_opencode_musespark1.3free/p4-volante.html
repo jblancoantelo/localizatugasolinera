@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>P4 · Volante — Gasolineras</title>
+<style>
+:root{--bg:#18181b;--card:#27272a;--ink:#fafafa;--mut:#a1a1aa;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--pri:#38bdf8}
+.light{--bg:#f4f4f5;--card:#fff;--ink:#18181b;--mut:#71717a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+.app{max-width:760px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding-bottom:110px}
+.top{position:sticky;top:0;z-index:20;background:var(--bg);padding:.8rem .9rem .4rem;border-bottom:1px solid #3f3f46}
+.top .row{display:flex;align-items:center;gap:.5rem}
+.top h1{font-size:1.05rem;flex:1}
+.bigbtn{border:1px solid #52525b;background:var(--card);color:var(--ink);border-radius:16px;min-width:56px;min-height:56px;font-size:1.3rem;cursor:pointer}
+.bigbtn.on{background:var(--warn);border-color:var(--warn);color:#18181b}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:.6rem .9rem}
+.seg button{border:2px solid #52525b;background:var(--card);color:var(--ink);border-radius:16px;min-height:60px;font-size:1rem;font-weight:800;cursor:pointer}
+.seg button.on{border-color:var(--ok);background:#052e16;color:var(--ok)}
+.light .seg button.on{background:#dcfce7;color:#166534}
+.hero{margin:.2rem .9rem .6rem;background:linear-gradient(135deg,#052e16,#14532d);color:#fff;border-radius:24px;padding:1.1rem 1.1rem .9rem;border:1px solid #16a34a}
+.hero small{font-size:.8rem;opacity:.85;letter-spacing:.04em;text-transform:uppercase;font-weight:700}
+.hero .p{font-size:3.2rem;font-weight:900;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums;margin:.2rem 0}
+.hero .s{font-size:.95rem;opacity:.92}
+.hero .cta{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.8rem}
+.hero .cta button{border:none;border-radius:16px;min-height:56px;font-size:1rem;font-weight:900;cursor:pointer}
+.go{background:#fff;color:#052e16}.watch{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4)}
+.list{padding:0 .9rem;display:flex;flex-direction:column;gap:.55rem}
+.row2{display:grid;grid-template-columns:1fr auto;gap:.1rem .6rem;width:100%;text-align:left;background:var(--card);color:var(--ink);border:1px solid #3f3f46;border-radius:20px;padding:.85rem .95rem;cursor:pointer;font:inherit;min-height:76px}
+.row2.sel{outline:3px solid var(--pri)}
+.row2 b.n{font-size:1.05rem}.row2 .pr{font-size:1.6rem;font-weight:900;font-variant-numeric:tabular-nums;text-align:right}
+.row2 .m{font-size:.85rem;color:var(--mut)}
+.star{background:none;border:none;font-size:1.5rem;cursor:pointer;min-width:48px;min-height:48px;color:var(--mut)}
+.star.on{color:var(--warn)}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--card);color:var(--ink);border-radius:26px 26px 0 0;max-width:760px;margin:0 auto;transform:translateY(110%);transition:.25s;padding:.6rem 1.1rem calc(1.2rem + env(safe-area-inset-bottom));max-height:86vh;overflow:auto;border-top:2px solid #52525b}
+.sheet.open{transform:none}
+canvas{width:100%;height:170px;background:rgba(0,0,0,.25);border-radius:16px}
+.light canvas{background:#f4f4f5;border:1px solid #e4e4e7}
+select{min-height:56px;font-size:1rem;border-radius:14px;padding:.4rem .6rem;background:var(--card);color:var(--ink);border:1px solid #52525b;width:100%}
+.nav{position:fixed;bottom:0;left:0;right:0;z-index:40;background:var(--card);border-top:1px solid #52525b;padding-bottom:env(safe-area-inset-bottom)}
+.nav div{max-width:760px;margin:0 auto;display:flex}
+.nav button{flex:1;background:none;border:none;color:var(--mut);font-size:.72rem;min-height:72px;cursor:pointer;font-weight:700}
+.nav button.on{color:var(--pri)}
+.view{display:none}.view.on{display:block}
+.ia .m{border-radius:16px;padding:.8rem;font-size:1rem;line-height:1.55;margin-bottom:.5rem}
+.ia .u{background:#1d4ed8;color:#fff;margin-left:15%}.ia .a{background:rgba(127,127,127,.18)}
+.irow{display:flex;gap:.5rem}.irow input{flex:1;min-height:56px;border-radius:16px;border:1px solid #52525b;padding:.4rem .9rem;font-size:1rem;background:var(--bg);color:var(--ink)}
+.irow button{min-width:88px;min-height:56px;border-radius:16px;border:none;background:var(--pri);font-weight:900;font-size:1rem;cursor:pointer}
+.cfg{background:var(--card);border:1px solid #52525b;border-radius:18px;padding:1rem;margin-bottom:.6rem}
+@media(min-width:1000px){.app{max-width:1000px}.app .cols{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;align-items:start}.hero{position:sticky;top:76px}}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="top"><div class="row"><h1>🚗 Volante</h1><button class="bigbtn" id="mode" title="Claro/oscuro">🌙</button><button class="bigbtn" id="favB" title="Solo favoritas">☆</button></div></div>
+<div class="cols">
+<div>
+<div class="seg" id="seg"><button data-f="Gasolina 95" class="on">⛽ Gasolina</button><button data-f="Gasóleo A">🚚 Gasóleo</button></div>
+<div class="view on" id="v-home">
+<div class="hero" id="hero"></div>
+<div style="margin:0 .9rem .5rem"><select id="loc"><option value="">📍 Todas las zonas (Madrid)</option></select></div>
+<div class="list" id="list"></div>
+</div>
+<div class="view ia" id="v-ia" style="padding:0 .9rem">
+<div id="msgs"><div class="m a">Soy tu copiloto. Dime <b>"la más barata"</b> o <b>"¿bajo hoy?"</b>. Hablo claro y en grande.</div></div>
+<div class="irow"><input id="qin" placeholder="Habla o escribe…"><button id="qsend">➤</button></div>
+</div>
+<div class="view" id="v-cfg" style="padding:0 .9rem">
+<div class="cfg"><h3>🔔 Avisar si baja</h3><p style="color:var(--mut)">Vigilo tus favoritas cada 8 h.</p><button class="bigbtn" style="width:100%" onclick="this.classList.toggle('on');this.textContent=this.classList.contains('on')?'✅ Activado':'🔔 Activar'">🔔 Activar</button></div>
+<div class="cfg"><h3>🔎 Filtros grandes</h3><select id="brand"><option value="">Todas las marcas</option></select></div>
+</div>
+</div>
+<div class="sheet" id="sheet"></div>
+</div>
+</div>
+<nav class="nav"><div>
+<button data-v="v-home" class="on" style="font-size:.85rem">⛽<br>Repostar</button>
+<button data-v="v-ia" style="font-size:.85rem">🤖<br>Ayuda</button>
+<button data-v="v-cfg" style="font-size:.85rem">⚙️<br>Ajustes</button>
+</div></nav>
+<script>
+const S=[{id:1,marca:"Ballenoil",loc:"Alcobendas",calle:"Av. Valdelaparra 12",p:1.429,d:1.359,dist:1.2},{id:2,marca:"Plenergy",loc:"Madrid",calle:"Bravo Murillo 180",p:1.449,d:1.379,dist:.6},{id:3,marca:"Avia",loc:"Getafe",calle:"Av. España 44",p:1.469,d:1.399,dist:3.1},{id:4,marca:"Galp",loc:"Madrid",calle:"Castellana 210",p:1.519,d:1.449,dist:2.4},{id:5,marca:"BP",loc:"Leganés",calle:"Av. Fuenlabrada 58",p:1.549,d:1.479,dist:4.8},{id:6,marca:"Cepsa",loc:"Madrid",calle:"Alcalá 320",p:1.569,d:1.499,dist:3.6},{id:7,marca:"Repsol",loc:"Madrid",calle:"Goya 89",p:1.589,d:1.519,dist:2.9},{id:8,marca:"Shell",loc:"Alcalá",calle:"Vía Complutense 120",p:1.599,d:1.529,dist:8.5},{id:9,marca:"Ballenoil",loc:"Vallecas",calle:"Vallecas 77",p:1.439,d:1.369,dist:5.2},{id:10,marca:"Cepsa",loc:"Getafe",calle:"Madrid 101",p:1.579,d:1.509,dist:6.1}];
+let fuel="Gasolina 95",favs=new Set([1,9]),favOnly=false,sel=null;
+const $=id=>document.getElementById(id);
+const price=s=>fuel.includes("Gasóleo")?s.d:s.p;
+document.querySelectorAll("#seg button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#seg button").forEach(x=>x.classList.remove("on"));b.classList.add("on");fuel=b.dataset.f;render()});
+[...new Set(S.map(s=>s.loc))].forEach(l=>$("loc").innerHTML+=`<option>${l}</option>`);
+[...new Set(S.map(s=>s.marca))].forEach(b=>$("brand").innerHTML+=`<option>${b}</option>`);
+$("mode").onclick=e=>{document.body.classList.toggle("light");e.target.textContent=document.body.classList.contains("light")?"☀️":"🌙"};
+$("favB").onclick=e=>{favOnly=!favOnly;e.target.classList.toggle("on",favOnly);e.target.textContent=favOnly?"★":"☆";render()};
+function filt(){return S.filter(s=>(!$("loc").value||s.loc==$("loc").value)&&(!$("brand").value||s.marca==$("brand").value)&&(!favOnly||favs.has(s.id))).sort((a,b)=>price(a)-price(b))}
+function render(){const a=filt(),best=a[0];
+$("hero").innerHTML=best?`<small>La más barata · a ${best.dist} km</small><div class="p">${price(best).toFixed(3)} €</div><div class="s"><b>${best.marca}</b> · ${best.loc}, ${best.calle}</div><div class="cta"><button class="go" onclick="openS(${best.id})">Ver detalle</button><button class="watch" onclick="alert('🔔 Te avisaremos si baja (simulado)')">${favs.has(best.id)?"★ Guardada":"☆ Vigilar"}</button></div>`:`<small>Sin resultados</small><div class="p">—</div>`;
+$("list").innerHTML=a.slice(1).map(s=>`<button class="row2${sel==s.id?" sel":""}" data-id="${s.id}"><span><b class="n">${favs.has(s.id)?"★ ":""}${s.marca}</b><br><span class="m">${s.loc} · ${s.dist} km · ${s.calle}</span></span><span><span class="pr">${price(s).toFixed(3)}€</span><br><button class="star${favs.has(s.id)?" on":""}" data-f="${s.id}">${favs.has(s.id)?"★":"☆"}</button></span></button>`).join("");
+document.querySelectorAll("[data-id]").forEach(b=>b.onclick=e=>{if(e.target.dataset.f){const id=+e.target.dataset.f;favs.has(id)?favs.delete(id):favs.add(id);render();e.stopPropagation();return}openS(+b.dataset.id)})}
+function openS(id){sel=id;const s=S.find(x=>x.id==id),v=price(s);
+$("sheet").innerHTML=`<div style="width:44px;height:5px;background:#71717a;border-radius:99px;margin:.3rem auto .6rem"></div>
+<div style="display:flex;gap:.5rem;align-items:flex-start"><div style="flex:1"><h2 style="font-size:1.3rem">${s.marca}</h2><p style="color:var(--mut)">${s.loc} · ${s.calle} · a ${s.dist} km</p><p style="font-size:2.2rem;font-weight:900">${v.toFixed(3)} €</p></div><button class="bigbtn" onclick="document.getElementById('sheet').classList.remove('open')">✕</button></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:.6rem 0"><button class="bigbtn" style="font-size:1rem;font-weight:800" onclick="tgl(${id})">${favs.has(id)?"★ Guardada":"☆ Guardar"}</button><button class="bigbtn" style="font-size:1rem;font-weight:800" onclick="alert('Navegación simulada')">🧭 Ir</button></div>
+<div style="display:flex;gap:.5rem;margin-bottom:.5rem"><select id="hd"><option value="7">7 días</option><option value="14" selected>14 días</option><option value="30">30 días</option></select></div>
+<canvas id="ch" width="640" height="170"></canvas><p id="ht" style="color:var(--mut);margin-top:.3rem"></p>`;
+$("sheet").classList.add("open");drawH(s,14);$("hd").onchange=e=>drawH(s,+e.target.value);render()}
+window.tgl=id=>{favs.has(id)?favs.delete(id):favs.add(id);openS(id)};
+function drawH(s,days){const c=$("ch"),x=c.getContext("2d"),W=c.width,H=c.height;x.clearRect(0,0,W,H);let p=price(s)+.05,pts=[];for(let i=days-1;i>=0;i--){p+=(Math.sin(i*2.5+s.id)-.45)*.01;pts.push(p)}pts.push(price(s));
+const mn=Math.min(...pts)-.005,mx=Math.max(...pts)+.005,X=i=>16+i*(W-32)/(pts.length-1),Y=v=>H-18-(v-mn)/(mx-mn)*(H-36);
+x.lineWidth=5;x.strokeStyle="#4ade80";x.beginPath();pts.forEach((v,i)=>i?x.lineTo(X(i),Y(v)):x.moveTo(X(i),Y(v)));x.stroke();
+$("ht").textContent=`Ha ${pts[pts.length-1]<=pts[0]?"bajado":"subido"} ${(pts[pts.length-1]-pts[0]).toFixed(3)} € en ${days} días.`}
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("on"));b.classList.add("on");document.querySelectorAll(".view").forEach(v=>v.classList.remove("on"));$(b.dataset.v).classList.add("on")});
+$("loc").onchange=render;$("brand").onchange=render;
+$("qsend").onclick=()=>{const q=$("qin").value||"la más barata";const b=filt()[0];$("msgs").innerHTML+=`<div class="m u">${q}</div><div class="m a">Ve a <b>${b.marca}</b> (${b.calle}): <b>${price(b).toFixed(3)} €</b>, a ${b.dist} km. Te ahorras unos ${((1.659-price(b))*40).toFixed(0)} céntimos por depósito frente a la cara.</div>`;$("qin").value=""};
+render();
+</script>
+</body>
+</html>

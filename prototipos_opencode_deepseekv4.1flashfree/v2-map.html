@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Prototipo v2 · Mapa primero · Gasolineras</title>
+<link rel="stylesheet" href="assets/proto.css">
+<style>
+  /* ==========================================================================
+     v2 · Mapa primero
+     El mapa ES la pantalla; todo lo demás flota encima y se aparta cuando no
+     se necesita. El sheet arrastrable (peek → half → full) sustituye a la
+     navegación por pestañas; el menú lateral recoge las vistas secundarias.
+     ========================================================================== */
+  .app { position: relative; }
+  .stage { position: absolute; inset: 0; overflow: hidden; background: var(--map-bg); }
+
+  .map-top { position: absolute; left: 0; right: 0; top: calc(var(--safe-t) + var(--s2)); z-index: 7; padding: 0 var(--s3); }
+  .map-top .bar { display: flex; gap: var(--s2); align-items: center; }
+  .roundbtn {
+    width: 44px; height: 44px; border-radius: var(--r-full); display: grid; place-items: center;
+    background: var(--glass); backdrop-filter: blur(12px); border: 1px solid var(--line);
+    box-shadow: var(--sh-2); color: var(--fg); flex: 0 0 auto;
+  }
+  .roundbtn:active { transform: scale(.94); }
+  .map-chips { margin-top: var(--s2); }
+
+  .map-fabs { position: absolute; right: var(--s3); bottom: calc(var(--sheet-vis, 200px) + var(--s3)); z-index: 7; display: flex; flex-direction: column; gap: var(--s2); transition: bottom var(--dur-2) var(--ease); }
+  .map-fabs .roundbtn { width: 46px; height: 46px; }
+  .map-fabs .roundbtn.on { color: var(--brand); background: var(--brand-soft); border-color: var(--brand-line); }
+
+  .layers-pop {
+    position: absolute; right: var(--s3); bottom: calc(var(--sheet-vis, 200px) + 160px); z-index: 8;
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
+    box-shadow: var(--sh-3); padding: var(--s2); display: none; width: 190px;
+  }
+  .layers-pop.on { display: block; }
+  .layers-pop button { display: flex; align-items: center; gap: var(--s2); width: 100%; padding: var(--s2) var(--s3); border-radius: var(--r-sm); font-size: var(--t-xs); font-weight: 600; color: var(--fg-2); text-align: left; }
+  .layers-pop button:hover { background: var(--surface-2); }
+  .layers-pop button.on { background: var(--brand-soft); color: var(--brand); }
+
+  /* Tarjeta flotante de la estación seleccionada, anclada sobre el sheet */
+  .mini-card {
+    position: absolute; left: 50%; transform: translate(-50%, 12px); z-index: 9;
+    width: min(430px, calc(100% - var(--s4)));
+    bottom: calc(var(--sheet-vis, 200px) + var(--s2));
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
+    box-shadow: var(--sh-3); padding: var(--s3);
+    opacity: 0; pointer-events: none; transition: opacity var(--dur-2) var(--ease), transform var(--dur-2) var(--ease), bottom var(--dur-2) var(--ease);
+  }
+  .mini-card.on { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+  .mini-card .mc-close { position: absolute; right: 6px; top: 6px; }
+
+  /* Sheet de resultados */
+  .v2-sheet .sheet-head { padding-bottom: var(--s1); }
+  .peek-only, .mid-only, .full-only { display: none; }
+  .v2-sheet[data-snap="peek"] .peek-only { display: block; }
+  .v2-sheet[data-snap="half"] .mid-only, .v2-sheet[data-snap="full"] .mid-only { display: block; }
+  .v2-sheet[data-snap="full"] .full-only { display: block; }
+
+  .hcar { display: flex; gap: var(--s2); overflow-x: auto; padding: var(--s1) var(--s4) var(--s3); scrollbar-width: none; scroll-snap-type: x mandatory; }
+  .hcar::-webkit-scrollbar { display: none; }
+  .hcard {
+    flex: 0 0 auto; width: 168px; scroll-snap-align: start; text-align: left;
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md); padding: var(--s2) var(--s3) 10px;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .hcard:hover { border-color: var(--brand-line); }
+  .hcard .h-top { display: flex; align-items: center; gap: var(--s2); }
+  .hcard .h-name { font-size: var(--t-2xs); color: var(--fg-2); font-weight: 600; }
+  .hcard .h-price { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); }
+
+  .map-legend-chip { background: var(--glass); backdrop-filter: blur(10px); border: 1px solid var(--line); border-radius: var(--r-full); padding: 5px 11px; box-shadow: var(--sh-1); }
+
+  /* La escala sube por encima del sheet y la atribución desaparece: en una
+     pantalla llena de overlays no hay hueco libre para ella. */
+  .pm.v2 .pm-scale { top: auto; bottom: calc(var(--sheet-vis, 186px) + var(--s3)); transition: bottom var(--dur-2) var(--ease); }
+  .pm.v2 .pm-attrib { display: none; }
+  .pm.v2 .pm-ctrl { display: none; }
+
+  /* Panel de secciones y tabla: overlays a pantalla completa */
+  .menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s2); }
+  .menu-tile {
+    display: flex; align-items: center; gap: var(--s3); padding: var(--s3); text-align: left;
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-1);
+  }
+  .menu-tile:hover { border-color: var(--brand-line); }
+  .menu-tile .t-ico { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; background: var(--brand-soft); color: var(--brand); flex: 0 0 auto; }
+  .menu-tile .t-title { font-size: var(--t-sm); font-weight: 700; }
+  .menu-tile .t-sub { font-size: var(--t-3xs); color: var(--fg-2); }
+
+  /* ====== Escritorio: el sheet se acopla a la izquierda ================== */
+  @media (min-width: 1024px) {
+    :root { --panel-w: 452px; }
+    .v2-sheet {
+      left: var(--s4); right: auto; top: calc(var(--safe-t) + 84px); bottom: var(--s4);
+      width: 420px; max-height: none; height: auto !important; transform: none !important;
+      border-radius: var(--r-xl); padding-bottom: 0;
+    }
+    .v2-sheet .sheet-grab { display: none; }
+    .v2-sheet .sheet-head { cursor: default; }
+    .v2-sheet .peek-only, .v2-sheet .mid-only, .v2-sheet .full-only { display: block; }
+    .v2-sheet .peek-only { border-bottom: 1px solid var(--line); margin-bottom: var(--s3); }
+    .hcar { padding-inline: var(--s4); }
+    .map-top { left: calc(var(--panel-w) + var(--s3)); right: var(--s4); padding: 0; }
+    .map-top .bar { justify-content: flex-end; }
+    .map-chips { justify-content: flex-end; }
+    .map-fabs { right: var(--s4); bottom: var(--s4); }
+    .layers-pop { right: var(--s4); bottom: 190px; }
+    .mini-card { left: calc(var(--panel-w) + (100% - var(--panel-w)) / 2); bottom: calc(var(--s4) + 62px); }
+    .hcard { width: 186px; }
+    .pm.v2 .pm-scale { left: calc(var(--panel-w) + var(--s3)); bottom: var(--s4); }
+  }
+  /* Con un overlay de paridad abierto (IA/Ajustes/Histórico) el sheet flotante
+     se oculta: si no, quedaría por encima del overlay (z 95 > z 80) */
+  body:has(.pf-overlay.on) .v2-sheet,
+  body:has(.pf-overlay.on) .mini-card { visibility: hidden; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="statusbar only-mobile">
+    <span>9:41</span>
+    <span class="sb-right" data-ico-group>
+      <span class="ico" data-ico="signal"></span><span class="ico" data-ico="wifiOff"></span><span class="ico" data-ico="battery"></span>
+    </span>
+  </div>
+
+  <!-- ======================= MAPA ==================================== -->
+  <div class="stage">
+    <div id="mapHost" style="position:absolute;inset:0"></div>
+
+    <div class="map-top">
+      <div class="bar">
+        <button class="roundbtn" id="menuBtn" title="Menú" aria-label="Menú"><span data-ico="list"></span></button>
+        <div class="field pill shadow grow" style="min-height:44px">
+          <span class="ico" data-ico="search"></span>
+          <input id="q" type="search" placeholder="Buscar gasolinera, calle…" aria-label="Buscar">
+          <button class="iconbtn sm" id="micBtn" title="Buscar por voz"><span data-ico="mic"></span></button>
+        </div>
+        <button class="roundbtn" id="fuelBtn" title="Combustible"><span data-ico="droplet"></span></button>
+      </div>
+      <div class="chips map-chips" id="chips"></div>
+    </div>
+
+    <div class="map-fabs">
+      <button class="roundbtn" id="favFab" title="Solo favoritos"><span data-ico="star"></span></button>
+      <button class="roundbtn" id="layersFab" title="Capas y mapa"><span data-ico="layers"></span></button>
+      <button class="roundbtn" id="whereFab" title="Mi ubicación"><span data-ico="crosshair"></span></button>
+    </div>
+    <div class="layers-pop" id="layersPop">
+      <div style="padding:2px 6px 6px;min-width:190px"><select class="select-native" id="mapStyle" aria-label="Vista del mapa" style="width:100%;min-height:36px"></select></div>
+      <div class="divider" style="margin:6px 0"></div>
+      <button data-layer="favorites"><span data-ico="star" class="ico sm"></span>Solo favoritos</button>
+      <button data-layer="radius"><span data-ico="crosshair" class="ico sm"></span>Radio de 3 km</button>
+    </div>
+
+    <!-- Tarjeta flotante de la estación tocada en el mapa -->
+    <div class="mini-card" id="miniCard" aria-live="polite"></div>
+  </div>
+
+  <!-- ======================= SHEET DE RESULTADOS ====================== -->
+  <section class="sheet abs v2-sheet" id="resSheet" data-snap="peek">
+    <div class="sheet-head">
+      <span class="sheet-grab"></span>
+      <div class="grow">
+        <div class="row" style="gap:var(--s2)">
+          <h2 id="sheetTitle">Madrid</h2>
+          <span class="badge brand" id="sheetCount">12</span>
+          <span class="badge" id="sheetFuel">Diésel</span>
+        </div>
+        <div class="tiny muted" id="sheetSub">Ordenado por precio · actualizado hace 8 min</div>
+      </div>
+      <button class="iconbtn sm" id="sheetFilterBtn" title="Filtros"><span data-ico="sliders"></span></button>
+      <button class="iconbtn sm" id="sheetTableBtn" title="Ver en tabla"><span data-ico="columns"></span></button>
+    </div>
+
+    <!-- peek: carrusel de las más cercanas -->
+    <div class="peek-only">
+      <div class="hcar" id="peekCar"></div>
+    </div>
+
+    <div class="sheet-body">
+      <!-- full: resumen de la zona -->
+      <div class="full-only" id="zoneSummary"></div>
+
+      <div class="mid-only">
+        <div class="row between" style="gap:var(--s2)">
+          <div class="segmented" id="sortSeg">
+            <button data-val="price" class="on">Precio</button>
+            <button data-val="distance">Cerca</button>
+            <button data-val="saving">Descuento</button>
+            <button data-val="rating">Mejor valor</button>
+          </div>
+          <span class="tiny dim" id="listHint"></span>
+        </div>
+      </div>
+
+      <div class="list mt2" id="cardList"></div>
+      <div class="tc mt4 mid-only"><button class="btn block" id="moreBtn">Cargar más estaciones</button></div>
+      <p class="tiny dim tc mt3">Prototipo con datos simulados · sin llamadas a la API real</p>
+    </div>
+  </section>
+
+  <!-- ======================= SHEET DE FILTROS ========================= -->
+  <section class="sheet wide" id="filterSheet">
+    <div class="sheet-head">
+      <span class="sheet-grab"></span>
+      <h2 class="grow">Filtros</h2>
+      <button class="iconbtn sm" data-sheet-close><span data-ico="close"></span></button>
+    </div>
+    <div class="sheet-body">
+      <div class="row" style="gap:var(--s2)">
+        <div class="field grow"><span class="ico" data-ico="map"></span><select id="fProv"></select></div>
+        <div class="field grow"><span class="ico" data-ico="crosshair"></span><select id="fLoc"></select></div>
+      </div>
+      <div class="field mt2"><span class="ico" data-ico="droplet"></span><select id="fFuel"></select></div>
+
+      <div class="section-head" style="padding-inline:0"><h2 style="font-size:var(--t-md)">Marca</h2><button class="link" id="fBrandAll">Todas</button></div>
+      <div class="chips wrap" id="fBrands"></div>
+
+      <div class="section-head" style="padding-inline:0"><h2 style="font-size:var(--t-md)">Distancia máxima</h2><span class="badge brand" id="fKmLabel">Sin límite</span></div>
+      <input class="range" type="range" min="0" max="30" step="1" value="0" id="fKm">
+
+      <div class="mt3">
+        <label class="field-row"><span><span class="bold">Solo favoritos</span><span class="fr-hint">Las estrellas ⭐ que has guardado</span></span>
+          <span class="switch"><input type="checkbox" id="fFav"><span class="track"></span></span></label>
+        <label class="field-row"><span><span class="bold">Con descuento de marca</span><span class="fr-hint">Repsol Vivit, Alcampo Mi, Club Carrefour…</span></span>
+          <span class="switch"><input type="checkbox" id="fCheap"><span class="track"></span></span></label>
+        <label class="field-row"><span><span class="bold">Abiertas 24 h</span><span class="fr-hint">Dispensan siempre</span></span>
+          <span class="switch"><input type="checkbox" id="f24"><span class="track"></span></span></label>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn ghost" id="fReset">Limpiar</button>
+      <button class="btn primary" data-sheet-close id="fApply">Ver resultados</button>
+    </div>
+  </section>
+
+  <!-- ======================= MENÚ (secciones) ======================== -->
+  <div class="fullscreen-panel" id="menuPanel">
+    <header class="topbar">
+      <button class="iconbtn" data-close-panel title="Cerrar"><span data-ico="close"></span></button>
+      <span class="topbar-title">Gasolineras</span>
+      <div class="spacer"></div>
+      <button class="iconbtn" data-theme-toggle title="Tema"></button>
+    </header>
+    <div class="pane on scroll">
+      <div class="section">
+        <div class="card pad-4">
+          <div class="row" style="gap:var(--s3)">
+            <span class="brandlogo lg" style="background:var(--brand);color:#fff"><span data-ico="crosshair" class="ico" style="--ico:22px"></span></span>
+            <div class="grow">
+              <div class="bold">Madrid · Chamberí</div>
+              <div class="tiny muted">12 estaciones cargadas · caché de hace 8 min</div>
+              <div class="row mt2" style="gap:4px"><span class="badge ok">Caché fresca</span><span class="badge">Diésel A</span><span class="badge">12/12 con precio</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="section" style="padding-top:0">
+        <div class="menu-grid">
+          <button class="menu-tile" data-goto="table"><span class="t-ico"><span data-ico="columns"></span></span><span><span class="t-title">Tabla</span><span class="t-sub">Comparar de un vistazo</span></span></button>
+          <button class="menu-tile" data-goto="fav"><span class="t-ico"><span data-ico="star"></span></span><span><span class="t-title">Favoritos</span><span class="t-sub">3 guardadas</span></span></button>
+          <button class="menu-tile" data-goto="history"><span class="t-ico"><span data-ico="trendDown"></span></span><span><span class="t-title">Histórico</span><span class="t-sub">Evolución y ranking</span></span></button>
+          <button class="menu-tile" data-goto="ia"><span class="t-ico"><span data-ico="sparkles"></span></span><span><span class="t-title">Copiloto IA</span><span class="t-sub">Pregunta en lenguaje natural</span></span></button>
+          <button class="menu-tile" data-goto="compare"><span class="t-ico"><span data-ico="compare"></span></span><span><span class="t-title">Comparador</span><span class="t-sub">Hasta 3 estaciones</span></span></button>
+          <button class="menu-tile" data-goto="config"><span class="t-ico"><span data-ico="gear"></span></span><span><span class="t-title">Ajustes</span><span class="t-sub">Caché, claves, alertas</span></span></button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="card">
+          <div class="card-title"><span data-ico="bell" class="ico sm" style="color:var(--brand)"></span> Avisos de precio</div>
+          <div class="card-sub mt1">Te avisamos cuando una estación guardada baje durante 3 días seguidos.</div>
+          <div class="row mt3" style="gap:var(--s2)"><span class="badge ok">✓ Activado</span><span class="badge">cada 8 h</span><span class="badge">3 favoritos</span></div>
+          <button class="btn sm soft mt3" data-toast="Avisos configurados (mock)" data-toast-icon="bell">Configurar avisos</button>
+        </div>
+      </div>
+      <div class="section-head"><h2>Otras pasadas de diseño</h2></div>
+      <div class="chips wrap px4" id="crossLinks"></div>
+      <div class="section"><p class="tiny dim">Prototipo v2 · mapa primero. Convive con v1 (sheet + pestañas), v3 (feed), v4 (escritorio), v5 (IA) y v6 (una mano).</p></div>
+    </div>
+  </div>
+
+  <!-- ======================= TABLA =================================== -->
+  <div class="fullscreen-panel" id="tablePanel">
+    <header class="topbar">
+      <button class="iconbtn" data-close-panel title="Cerrar"><span data-ico="arrowLeft"></span></button>
+      <span class="topbar-title" id="tableTitle">Tabla</span>
+      <div class="spacer"></div>
+      <span class="badge" id="tableCount">12</span>
+    </header>
+    <div class="tablewrap">
+      <table class="data compact" id="table">
+        <thead><tr>
+          <th data-sort="brand">Marca</th><th data-sort="price">Precio</th>
+          <th class="num" data-sort="distance">Dist.</th><th data-sort="locality">Localidad</th><th>Calle</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ======================= DETALLE ================================= -->
+  <div class="fullscreen-panel" id="detailPanel">
+    <header class="topbar">
+      <button class="iconbtn" data-close-panel title="Cerrar"><span data-ico="arrowLeft"></span></button>
+      <span class="topbar-title" id="detailTitle">Detalle</span>
+      <div class="spacer"></div>
+      <button class="iconbtn" data-toast="Enlace copiado (mock)" data-toast-icon="share" title="Compartir"><span data-ico="share"></span></button>
+    </header>
+    <div class="pane on scroll">
+      <div class="section" id="detailBody"></div>
+    </div>
+  </div>
+
+  <div class="proto-tag">v2 · mapa primero</div>
+</div>
+
+<script src="assets/proto-data.js"></script>
+<script src="assets/proto-chart.js"></script>
+<script src="assets/proto-map.js"></script>
+<script src="assets/proto-ui.js"></script>
+<script src="assets/proto-features.js"></script>
+<script>
+Proto.boot();
+
+/* ===== Estado ============================================================ */
+const state = {
+  fuel: 'diesel', sort: 'price', prov: 'Madrid', loc: '', brands: [],
+  q: '', maxKm: 0, fav: false, cheap: false, only24: false, sel: null,
+  historyDays: 14, snap: 'peek', pageSize: 30, shown: 30,
+};
+
+const baseList = () => PROTO.filterStations(PROTO.STATIONS, { province: state.prov });
+function visible() {
+  return PROTO.filterStations(baseList(), {
+    locality: state.loc, fuel: state.fuel, brands: state.brands, maxKm: state.maxKm,
+    favoritesOnly: state.fav, cheapOnly: state.cheap, q: state.q,
+  }).filter(s => !state.only24 || s.schedule === '24h');
+}
+const sorted = (list) => PROTO.sortStations(list, state.sort, 'asc', state.fuel);
+
+/* ===== Mapa ============================================================== */
+const mapHostEl = document.getElementById('mapHost');
+mapHostEl.classList.add('v2');
+const map = ProtoMap.create(mapHostEl, {
+  stations: baseList(), fuel: state.fuel, seed: 'madrid-v2', fit: 'stations', padding: 70, showUser: true, showLayers: false,
+});
+map.on('marker', (id) => showMini(id));
+
+/* ===== Sheet ============================================================= */
+const sheetEl = document.getElementById('resSheet');
+const resSheet = Proto.sheet(sheetEl, {
+  snaps: ['peek', 'half', 'full'], start: 'peek', peek: 186, half: .54, full: .92,
+  scrim: false,
+  onSnap(name) {
+    state.snap = name;
+    const vis = name === 'peek' ? 186 : name === 'half' ? Math.round(window.innerHeight * .54) : window.innerHeight;
+    document.documentElement.style.setProperty('--sheet-vis', (isDesktop() ? 0 : vis) + 'px');
+    if (name === 'full') hideMini();
+    if (name === 'full') renderSummary();
+  },
+});
+
+const isDesktop = () => window.innerWidth >= 1024;
+document.documentElement.style.setProperty('--sheet-vis', '186px');
+
+/* ===== Render: chips ===================================================== */
+const chip = (key, label, on, iconName) =>
+  `<button class="chip ${on ? 'on' : ''}" data-chip="${key}">${iconName ? Proto.icon(iconName, 'xs') : ''}${Proto.esc(label)}${on ? '<span class="x">✕</span>' : ''}</button>`;
+
+function renderChips() {
+  const v = visible();
+  const out = [];
+  out.push(chip('loc', state.loc || 'Toda la provincia', !!state.loc, 'crosshair'));
+  out.push(chip('fuel', PROTO.fuelShort(state.fuel), true, 'droplet'));
+  out.push(chip('fav', 'Favoritos', state.fav, 'star'));
+  out.push(chip('cheap', 'Con descuento', state.cheap, 'percent'));
+  out.push(chip('only24', '24 h', state.only24, 'clock'));
+  out.push(chip('km', state.maxKm ? '≤ ' + state.maxKm + ' km' : 'Distancia', !!state.maxKm, 'route'));
+  out.push(chip('brands', state.brands.length ? state.brands.length + ' marcas' : 'Marca', !!state.brands.length, 'filter'));
+  out.push(`<button class="chip dashed" id="allFilters">${Proto.icon('sliders', 'xs')}Más filtros</button>`);
+  document.getElementById('chips').innerHTML = out.join('');
+  const title = state.loc || state.prov;
+  document.getElementById('sheetTitle').textContent = title;
+  document.getElementById('sheetCount').textContent = v.length;
+  document.getElementById('sheetFuel').textContent = PROTO.fuelShort(state.fuel);
+  document.getElementById('sheetSub').innerHTML = (state.sort === 'price' ? 'Ordenado por precio' : state.sort === 'distance' ? 'Ordenado por cercanía' : state.sort === 'saving' ? 'Ordenado por descuento' : 'Ordenado por valoración')
+    + ' · ' + (v.length ? 'más barata ' + PROTO.money(PROTO.stats(v, state.fuel).min, 3) : 'sin resultados');
+  document.getElementById('listHint').textContent = v.length + ' de ' + baseList().length;
+  document.getElementById('tableCount').textContent = v.length;
+  document.getElementById('tableTitle').textContent = title;
+
+  /* el chip activo se apaga al pulsarlo otra vez */
+  document.querySelectorAll('#chips [data-chip]').forEach(b => b.addEventListener('click', (e) => {
+    const k = b.dataset.chip;
+    if (k === 'fuel') { openFilterSheet('fFuel'); return; }
+    if (k === 'loc') { openFilterSheet('fLoc'); return; }
+    if (k === 'km' || k === 'brands') { openFilterSheet(k === 'km' ? 'fKm' : 'fBrands'); return; }
+    if (e.target.classList.contains('x') || state[k] === true) state[k] = false; else state[k] = true;
+    refresh();
+  }));
+  document.getElementById('allFilters').addEventListener('click', () => filterSheet.open('full'));
+}
+
+/* ===== Render: carrusel (peek) ========================================== */
+function renderPeek() {
+  const list = sorted(visible()).slice(0, 5);
+  const stats = PROTO.stats(visible(), state.fuel);
+  document.getElementById('peekCar').innerHTML = list.map(st => {
+    const price = PROTO.finalPrice(st, state.fuel);
+    const s = PROTO.seriesStats(PROTO.series(st, state.fuel, 14)) || { diff: 0 };
+    const meta = PROTO.brandMeta(st.brand);
+    const lvl = stats ? PROTO.level(price, stats.lo, stats.hi) : 'mid';
+    return `<button class="hcard" data-id="${st.id}">
+      <span class="h-top">
+        <span class="brandlogo sm" style="background:${meta.color};color:${meta.ink}">${st.brand.slice(0, 2)}</span>
+        <span class="grow">
+          <span class="h-name truncate" style="display:block">${Proto.esc(Proto.shortName(st))}</span>
+          <span class="tiny dim">${PROTO.dist(PROTO.kmFromUser(st))} · ${PROTO.driveMin(PROTO.kmFromUser(st))} min</span>
+        </span>
+      </span>
+      <span class="h-price">
+        <span class="price p-sm ${lvl}">${PROTO.money(price, 3).replace(' €', '')}<span class="p-unit">€/L</span></span>
+        <span class="delta ${s.diff < 0 ? 'down' : 'up'}">${Proto.icon(s.diff < 0 ? 'trendDown' : 'trendUp', 'xs')}${Math.abs(s.diff * 100).toFixed(1).replace('.', ',')} ¢</span>
+      </span>
+    </button>`;
+  }).join('') || `<p class="tiny dim" style="padding:0 var(--s4) var(--s4)">Sin resultados con estos filtros.</p>`;
+
+  document.querySelectorAll('#peekCar [data-id]').forEach(b => b.addEventListener('click', () => {
+    map.focus(b.dataset.id); showMini(b.dataset.id); renderList();
+  }));
+}
+
+/* ===== Render: lista ===================================================== */
+function renderList() {
+  const host = document.getElementById('cardList');
+  const list = sorted(visible());
+  const stats = PROTO.stats(visible(), state.fuel);
+  if (!list.length) {
+    host.innerHTML = `<div class="empty"><span class="e-icon">${Proto.icon('search')}</span><h3>Sin resultados</h3><p>Prueba a quitar algún filtro o amplía la distancia.</p><button class="btn soft" id="emptyReset">Limpiar filtros</button></div>`;
+    document.getElementById('emptyReset').addEventListener('click', resetFilters);
+    return;
+  }
+  host.innerHTML = list.slice(0, state.shown).map(st => Proto.stationCard(st, {
+    fuel: state.fuel, stats, showSpark: true, selected: st.id === state.sel, showDrive: true,
+  })).join('');
+}
+Proto.bindCards(document.getElementById('cardList'), {
+  onOpen: (st) => { state.sel = st.id; map.focus(st.id); openDetail(st.id); },
+  onFav: (st) => { Proto.toast(st.fav ? st.name + ' en favoritos' : 'Quitada de favoritos', { iconName: 'starFill' }); renderPeek(); },
+  onRoute: (st) => Proto.toast('Ruta a ' + st.name + ' · ' + PROTO.driveMin(PROTO.kmFromUser(st)) + ' min', { iconName: 'navigate' }),
+  onCompare: (st) => Proto.toast('Añadida al comparador: ' + Proto.shortName(st), { iconName: 'compare' }),
+});
+
+/* ===== Render: resumen (full) =========================================== */
+function renderSummary() {
+  const list = visible();
+  const stats = PROTO.stats(list, state.fuel);
+  if (!stats) { document.getElementById('zoneSummary').innerHTML = ''; return; }
+  const cheapest = sorted(list)[0];
+  const save = (stats.avg - stats.min) * 50;
+  document.getElementById('zoneSummary').innerHTML = `
+    <div class="kpis mb3">
+      <div class="kpi hero">
+        <div class="k-label">Ahorro por depósito</div>
+        <div class="k-val">${PROTO.money(save, 2)}</div>
+        <div class="k-sub">50 L en la más barata vs. media</div>
+      </div>
+      <div class="kpi">
+        <div class="k-label">Más barata</div>
+        <div class="k-val num">${stats.min.toFixed(3).replace('.', ',')}</div>
+        <div class="k-sub truncate">${Proto.esc(Proto.shortName(cheapest))}</div>
+      </div>
+      <div class="kpi">
+        <div class="k-label">Media zona</div>
+        <div class="k-val num">${stats.avg.toFixed(3).replace('.', ',')}</div>
+        <div class="k-sub">${stats.count} estaciones</div>
+      </div>
+    </div>
+    <div class="card flat mb3">
+      <div class="row between tiny muted"><span>${PROTO.money(stats.min, 3)}</span><span>${PROTO.money(stats.median, 3)}</span><span>${PROTO.money(stats.max, 3)}</span></div>
+      <div class="levelbar mt2"><span class="pin" style="left:${((stats.median - stats.min) / Math.max(stats.spread, .001) * 100).toFixed(0)}%"></span></div>
+      <div class="row between tiny dim mt1"><span>mínimo</span><span>mediana</span><span>máximo</span></div>
+      <div class="divider"></div>
+      <div class="row between"><span class="small muted">Diferencia máxima</span><span class="bold num">${(stats.spread * 100).toFixed(1).replace('.', ',')} ¢/L</span></div>
+      <div class="row between mt1"><span class="small muted">Sin publicar hoy</span><span class="bold num">${list.filter(s => s.updatedMin > 1440).length} estaciones</span></div>
+    </div>`;
+}
+
+/* ===== Tarjeta flotante del marcador ===================================== */
+function showMini(id) {
+  const st = PROTO.STATIONS.find(s => s.id === id); if (!st) return;
+  state.sel = id;
+  const price = PROTO.finalPrice(st, state.fuel);
+  const stats = PROTO.stats(visible(), state.fuel);
+  const s = PROTO.seriesStats(PROTO.series(st, state.fuel, 14)) || { diff: 0 };
+  const meta = PROTO.brandMeta(st.brand);
+  const lvl = stats ? PROTO.level(price, stats.lo, stats.hi) : 'mid';
+  const card = document.getElementById('miniCard');
+  card.innerHTML = `
+    <button class="iconbtn sm mc-close" data-mc="close" aria-label="Cerrar"><span data-ico="close"></span></button>
+    <div class="row" style="gap:var(--s3);padding-right:26px">
+      <span class="brandlogo" style="background:${meta.color};color:${meta.ink}">${st.brand.slice(0, 2)}</span>
+      <div class="grow">
+        <div class="bold truncate">${Proto.esc(st.name)}</div>
+        <div class="tiny muted truncate">${Proto.esc(st.address)}</div>
+        <div class="row mt1" style="gap:6px">
+          <span class="badge">${PROTO.dist(PROTO.kmFromUser(st))}</span>
+          <span class="badge">${st.schedule === '24h' ? '24 h' : Proto.esc(st.schedule)}</span>
+          ${st.fav ? '<span class="badge warn">★ Favorita</span>' : ''}
+        </div>
+      </div>
+      <div class="tr">
+        <span class="price p-lg ${lvl}">${PROTO.money(price, 3).replace(' €', '')}<span class="p-unit">€/L</span></span>
+        <div class="delta ${s.diff < 0 ? 'down' : 'up'}">${Proto.icon(s.diff < 0 ? 'trendDown' : 'trendUp', 'xs')}${Math.abs(s.diff * 100).toFixed(1).replace('.', ',')} ¢</div>
+      </div>
+    </div>
+    <div class="row mt3" style="gap:var(--s2)">
+      <button class="btn sm primary" style="flex:1" data-mc="route">${Proto.icon('navigate', 'xs')}${PROTO.driveMin(PROTO.kmFromUser(st))} min</button>
+      <button class="btn sm" style="flex:1" data-mc="open">${Proto.icon('info', 'xs')}Detalle</button>
+      <button class="iconbtn sm ${st.fav ? 'on' : ''}" data-mc="fav" aria-label="Favorito">${Proto.icon(st.fav ? 'starFill' : 'star', st.fav ? 'sm fill' : 'sm')}</button>
+    </div>`;
+  Proto.hydrateIcons(card);
+  card.classList.add('on');
+  card.querySelector('[data-mc]').parentElement.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-mc]'); if (!b) return;
+    const act = b.dataset.mc;
+    if (act === 'close') { hideMini(); return; }
+    if (act === 'open') { openDetail(st.id); return; }
+    if (act === 'route') { Proto.toast('Ruta a ' + st.name + ' · ' + PROTO.driveMin(PROTO.kmFromUser(st)) + ' min', { iconName: 'navigate' }); return; }
+    if (act === 'fav') { st.fav = !st.fav; showMini(st.id); Proto.toast(st.fav ? st.name + ' en favoritos' : 'Quitada de favoritos', { iconName: 'starFill' }); }
+  });
+  renderList();
+}
+function hideMini() {
+  document.getElementById('miniCard').classList.remove('on');
+  state.sel = null; map.select(null); renderList();
+}
+
+/* ===== Detalle =========================================================== */
+const detailPanel = document.getElementById('detailPanel');
+let detailCtl = null;
+function openDetail(id) {
+  const st = PROTO.STATIONS.find(s => s.id === id); if (!st) return;
+  state.sel = id;
+  document.getElementById('detailTitle').textContent = st.brand + ' · ' + Proto.shortName(st);
+  detailCtl = Proto.stationDetail(document.getElementById('detailBody'), st, {
+    fuel: state.fuel, days: state.historyDays, list: visible().length ? visible() : baseList(),
+    onFuel: (f) => { state.fuel = f; refresh(); },
+    onDays: (d) => { state.historyDays = d; },
+  });
+  detailPanel.classList.add('on');
+}
+
+/* ===== Tabla ============================================================ */
+let tableSort = { key: 'price', dir: 'asc' };
+function renderTable() {
+  const list = PROTO.sortStations(visible(), tableSort.key === 'locality' ? 'locality' : tableSort.key, tableSort.dir, state.fuel);
+  const stats = PROTO.stats(visible(), state.fuel);
+  const tbody = document.querySelector('#table tbody');
+  tbody.innerHTML = list.map(st => {
+    const price = PROTO.finalPrice(st, state.fuel);
+    const lvl = stats ? PROTO.level(price, stats.lo, stats.hi) : 'mid';
+    return `<tr data-id="${st.id}" class="${st.id === state.sel ? 'sel' : ''} ${stats && price === stats.min ? 'best' : ''}">
+      <td><span class="row" style="gap:6px"><span class="brandlogo sm" style="width:24px;height:24px;border-radius:8px;font-size:10px;background:${PROTO.brandMeta(st.brand).color};color:${PROTO.brandMeta(st.brand).ink}">${st.brand.slice(0, 2)}</span>${Proto.titleCase(st.brand)}</span></td>
+      <td><span class="price p-sm ${lvl}">${PROTO.money(price, 3).replace(' €', '')}</span></td>
+      <td class="num">${PROTO.dist(PROTO.kmFromUser(st))}</td>
+      <td>${Proto.esc(st.city)}</td>
+      <td class="muted">${Proto.esc(st.address)}</td>
+    </tr>`;
+  }).join('');
+  document.querySelectorAll('#table thead th[data-sort]').forEach(th => {
+    th.classList.remove('asc', 'desc');
+    if (th.dataset.sort === tableSort.key) th.classList.add(tableSort.dir);
+  });
+}
+document.querySelectorAll('#table thead th[data-sort]').forEach(th => th.addEventListener('click', () => {
+  const k = th.dataset.sort;
+  if (tableSort.key === k) tableSort.dir = tableSort.dir === 'asc' ? 'desc' : 'asc';
+  else tableSort = { key: k, dir: 'asc' };
+  renderTable();
+}));
+document.querySelector('#table tbody').addEventListener('click', (e) => {
+  const tr = e.target.closest('tr[data-id]'); if (!tr) return;
+  openDetail(tr.dataset.id);
+});
+
+/* ===== Filtros ========================================================== */
+const filterSheet = Proto.sheet(document.getElementById('filterSheet'), { snaps: ['half', 'full'], start: 'full', half: .6, full: .94, scrim: true });
+
+function fillFilterControls() {
+  document.getElementById('fProv').innerHTML = PROTO.PROVINCES.filter(p => PROTO.STATIONS.some(s => s.province === p.name))
+    .map(p => `<option ${p.name === state.prov ? 'selected' : ''}>${p.name}</option>`).join('');
+  const locs = [...new Set(baseList().map(s => s.city))].sort((a, b) => a.localeCompare(b, 'es'));
+  document.getElementById('fLoc').innerHTML = `<option value="">Todas las localidades</option>` + locs.map(l => `<option ${l === state.loc ? 'selected' : ''}>${l}</option>`).join('');
+  document.getElementById('fFuel').innerHTML = PROTO.FUELS.map(f => `<option value="${f.id}" ${f.id === state.fuel ? 'selected' : ''}>${f.name}</option>`).join('');
+  document.getElementById('fKm').value = state.maxKm;
+  document.getElementById('fKmLabel').textContent = state.maxKm ? '≤ ' + state.maxKm + ' km' : 'Sin límite';
+  document.getElementById('fFav').checked = state.fav;
+  document.getElementById('fCheap').checked = state.cheap;
+  document.getElementById('f24').checked = state.only24;
+  const brands = PROTO.brandsOf(baseList());
+  document.getElementById('fBrands').innerHTML = brands.map(b =>
+    `<button class="chip ${state.brands.includes(b) ? 'on' : ''}" data-brand="${b}">${Proto.icon('filter', 'xs')}${Proto.titleCase(b)}${state.brands.includes(b) ? '<span class="x">✕</span>' : ''}</button>`).join('');
+  document.querySelectorAll('#fBrands [data-brand]').forEach(b => b.addEventListener('click', () => {
+    const b2 = b.dataset.brand;
+    state.brands = state.brands.includes(b2) ? state.brands.filter(x => x !== b2) : state.brands.concat(b2);
+    fillFilterControls(); refresh();
+  }));
+}
+function openFilterSheet(anchor) {
+  fillFilterControls();
+  filterSheet.open('full');
+  if (anchor) setTimeout(() => document.getElementById(anchor)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 320);
+}
+document.getElementById('fProv').addEventListener('change', (e) => { state.prov = e.target.value; state.loc = ''; state.brands = []; fillFilterControls(); refresh(); });
+document.getElementById('fLoc').addEventListener('change', (e) => { state.loc = e.target.value; fillFilterControls(); refresh(); });
+document.getElementById('fFuel').addEventListener('change', (e) => { state.fuel = e.target.value; fillFilterControls(); refresh(); });
+document.getElementById('fKm').addEventListener('input', (e) => { state.maxKm = +e.target.value; document.getElementById('fKmLabel').textContent = state.maxKm ? '≤ ' + state.maxKm + ' km' : 'Sin límite'; });
+document.getElementById('fKm').addEventListener('change', () => refresh());
+document.getElementById('fFav').addEventListener('change', (e) => { state.fav = e.target.checked; refresh(); });
+document.getElementById('fCheap').addEventListener('change', (e) => { state.cheap = e.target.checked; refresh(); });
+document.getElementById('f24').addEventListener('change', (e) => { state.only24 = e.target.checked; refresh(); });
+document.getElementById('fBrandAll').addEventListener('click', () => { state.brands = []; fillFilterControls(); refresh(); });
+document.getElementById('fReset').addEventListener('click', () => { resetFilters(); fillFilterControls(); });
+document.getElementById('fApply').addEventListener('click', () => { filterSheet.close(); resSheet.open('half'); });
+function resetFilters() {
+  Object.assign(state, { loc: '', brands: [], q: '', maxKm: 0, fav: false, cheap: false, only24: false });
+  document.getElementById('q').value = '';
+  document.getElementById('fKm').value = 0;
+  fillFilterControls(); refresh();
+}
+
+/* ===== Refresco global =================================================== */
+function refresh() {
+  state.shown = Math.max(state.shown, state.pageSize);
+  const mb = document.getElementById('moreBtn');
+  if (mb) { mb.removeAttribute('disabled'); mb.textContent = 'Cargar más estaciones'; }
+  map.setStations(visible());
+  map.setRadius(state.maxKm ? 3 : 0);
+  renderChips(); renderPeek(); renderList(); renderSummary(); renderTable();
+}
+
+/* ===== Controles de la pantalla ========================================= */
+document.getElementById('menuBtn').addEventListener('click', () => openPanel('menuPanel'));
+document.getElementById('sheetFilterBtn').addEventListener('click', () => openFilterSheet());
+document.getElementById('sheetTableBtn').addEventListener('click', () => { renderTable(); openPanel('tablePanel'); });
+document.getElementById('sortSeg').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-val]'); if (!b) return;
+  state.sort = b.dataset.val;
+  document.querySelectorAll('#sortSeg button').forEach(x => x.classList.toggle('on', x === b));
+  renderChips(); renderPeek(); renderList(); renderSummary();
+});
+document.getElementById('q').addEventListener('input', (e) => {
+  state.q = e.target.value;
+  clearTimeout(window._qt); window._qt = setTimeout(() => { renderChips(); renderPeek(); renderList(); map.setStations(visible()); }, 180);
+});
+document.getElementById('micBtn').addEventListener('click', () => Proto.toast('Escuchando… di «gasolinera más barata cerca»', { iconName: 'mic', ms: 2600 }));
+document.getElementById('fuelBtn').addEventListener('click', () => openFilterSheet('fFuel'));
+document.getElementById('favFab').addEventListener('click', (e) => {
+  state.fav = !state.fav;
+  e.currentTarget.classList.toggle('on', state.fav);
+  refresh();
+});
+document.getElementById('whereFab').addEventListener('click', () => { map.zoomTo(1.8, PROTO.USER.lat, PROTO.USER.lng); Proto.toast('Centrado en tu ubicación (mock)', { iconName: 'crosshair' }); });
+document.getElementById('layersFab').addEventListener('click', () => document.getElementById('layersPop').classList.toggle('on'));
+document.getElementById('layersPop').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-layer]'); if (!b) return;
+  const k = b.dataset.layer;
+  if (k === 'favorites') { state.fav = !state.fav; b.classList.toggle('on', state.fav); document.getElementById('favFab').classList.toggle('on', state.fav); refresh(); return; }
+  if (k === 'radius') { state.maxKm = state.maxKm ? 0 : 3; b.classList.toggle('on', !!state.maxKm); document.getElementById('fKm').value = state.maxKm; document.getElementById('fKmLabel').textContent = state.maxKm ? '≤ ' + state.maxKm + ' km' : 'Sin límite'; refresh(); }
+});
+ProtoFeat.mapStyleSelect(document.getElementById('mapStyle'), { mapHost: mapHostEl });
+document.getElementById('moreBtn').addEventListener('click', (e) => {
+  state.shown += state.pageSize; renderList();
+  if (state.shown >= sorted(visible()).length) { e.currentTarget.textContent = 'No hay más resultados en la provincia'; e.currentTarget.setAttribute('disabled', ''); }
+});
+
+/* ===== Paneles a pantalla completa ====================================== */
+function openPanel(id) { document.getElementById(id).classList.add('on'); }
+function closePanel(el) { el.classList.remove('on'); }
+document.addEventListener('click', (e) => {
+  const c = e.target.closest('[data-close-panel]');
+  if (c) closePanel(c.closest('.fullscreen-panel'));
+  const g = e.target.closest('[data-goto]');
+  if (g) {
+    const k = g.dataset.goto;
+    if (k === 'table') renderTable(), openPanel('tablePanel');
+    else if (k === 'ia') { closePanel(g.closest('.fullscreen-panel')); iaOverlay.open(); }
+    else if (k === 'config') { closePanel(g.closest('.fullscreen-panel')); cfgOverlay.open(); }
+    else if (k === 'history') { closePanel(g.closest('.fullscreen-panel')); histOverlay.open(); histDraw && histDraw(); }
+    else if (k === 'compare') { Proto.toast('Esta pasada se centra en el mapa; el comparador vive en v1 y v7', { iconName: 'compare' }); }
+    else if (k === 'fav') { state.fav = true; document.getElementById('favFab').classList.add('on'); refresh(); closePanel(document.getElementById('menuPanel')); resSheet.open('half'); }
+  }
+});
+
+/* ===== Capa de paridad: IA, Ajustes e Histórico ========================== */
+let iaFeat = null;
+const iaOverlay = ProtoFeat.overlay({ title: 'Copiloto IA', icon: 'sparkles', render: (body) => {
+  iaFeat = ProtoFeat.iaPanel(body, {
+    list: () => visible(),
+    onOpenStation: (id) => { iaOverlay.close(); state.sel = id; openDetail(id); },
+  });
+}});
+const cfgOverlay = ProtoFeat.overlay({ title: 'Ajustes', icon: 'gear', render: (body) => {
+  const scroll = Proto.el('<div class="pf-scroll"></div>');
+  body.appendChild(scroll);
+  ProtoFeat.configPanel(scroll, {
+    onDiscounts: () => refresh(),
+    onPageSize: (n) => { state.pageSize = n > 0 ? n : 30; state.shown = n > 0 ? n : 999; refresh(); },
+    getHiddenIa: () => (iaFeat ? iaFeat.hidden : []),
+    onIaTabs: (ids) => iaFeat && iaFeat.setHidden(ids),
+  });
+}});
+
+let histDraw = null;
+const histOverlay = ProtoFeat.overlay({ title: 'Histórico', icon: 'trendDown', render: (body) => {
+  body.innerHTML = `
+    <div class="pf-scroll" style="padding:12px">
+      <div class="row between mb3" style="gap:var(--s2)">
+        <select class="select-native" id="histFuelSel" style="width:auto;min-height:38px"></select>
+        <div class="chips" id="histDayChips"></div>
+      </div>
+      <div class="card" style="padding:10px">
+        <div class="chartbox"><canvas id="histOvChart" data-h="200"></canvas></div>
+        <div class="row" style="gap:var(--s4);padding:6px 8px 2px">
+          <span class="tiny"><i class="leveldot" style="background:var(--brand)"></i> Media de la zona</span>
+          <span class="tiny"><i class="leveldot" style="background:var(--mid)"></i> Estación resaltada</span>
+        </div>
+      </div>
+      <div class="section-head" style="padding-inline:0"><h2 style="font-size:var(--t-md)">Mayores bajadas y subidas</h2></div>
+      <div class="list" id="histRank"></div>
+    </div>`;
+  Proto.hydrateIcons(body);
+  const fuelSel = body.querySelector('#histFuelSel');
+  fuelSel.innerHTML = PROTO.FUELS.filter(f => visible().some(st => st.prices[f.id] != null))
+    .map(f => `<option value="${f.id}" ${f.id === state.fuel ? 'selected' : ''}>${f.name}</option>`).join('');
+  let days = state.historyDays;
+  body.querySelector('#histDayChips').innerHTML = [7, 14, 21, 30, 60, 90, 180]
+    .map(d => `<button class="chip ${d === days ? 'on' : ''}" data-hd="${d}">${d} d</button>`).join('');
+  body.querySelector('#histDayChips').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-hd]'); if (!b) return;
+    days = +b.dataset.hd; state.historyDays = days;
+    body.querySelectorAll('#histDayChips .chip').forEach(c => c.classList.toggle('on', c === b));
+    histDraw();
+  });
+  histDraw = () => {
+    const fuel = fuelSel.value || state.fuel;
+    const list = sorted(visible()).slice(0, 6);
+    const canvas = document.getElementById('histOvChart');
+    if (!list.length || !canvas) return;
+    const ref = PROTO.series(list[0], fuel, days);
+    const avg = ref.map((d, i) => {
+      const vals = list.map(st => PROTO.series(st, fuel, days)[i]?.price).filter(v => v != null);
+      return { date: d.date, price: vals.reduce((a, b) => a + b, 0) / (vals.length || 1) };
+    });
+    const sel = state.sel ? PROTO.STATIONS.find(s => s.id === state.sel) : null;
+    const own = sel && sel.prices[fuel] != null ? PROTO.series(sel, fuel, days) : null;
+    const series = [{ label: 'Media', color: ProtoChart.css('--brand'), data: avg }];
+    if (own) series.push({ label: sel.brand, color: ProtoChart.css('--mid'), data: own, dash: true, area: false });
+    const geom = ProtoChart.draw(canvas, { series, avg: false });
+    ProtoChart.tooltip(canvas, canvas.parentElement, geom, { live: true });
+    const rows = list.map(st => ({ st, s: PROTO.seriesStats(PROTO.series(st, fuel, days)) })).filter(r => r.s);
+    rows.sort((a, b) => a.s.diff - b.s.diff);
+    document.getElementById('histRank').innerHTML = rows.map(({ st, s }) => `
+      <button class="row-item tap" data-id="${st.id}">
+        <span class="brandlogo sm" style="background:${PROTO.brandMeta(st.brand).color};color:${PROTO.brandMeta(st.brand).ink}">${st.brand.slice(0, 2)}</span>
+        <span class="ri-main"><span class="ri-title">${st.brand} <span class="muted tiny">${st.city}</span></span>
+        <span class="ri-sub">${s.min.toFixed(3).replace('.', ',')} – ${s.max.toFixed(3).replace('.', ',')} €/L</span></span>
+        <span class="col" style="align-items:flex-end">
+          <span class="delta ${s.diff < 0 ? 'down' : 'up'}"><span data-ico="${s.diff < 0 ? 'trendDown' : 'trendUp'}" class="ico xs"></span>${Math.abs(s.diff * 100).toFixed(1).replace('.', ',')} ¢</span>
+          <span style="color:var(--${s.diff < 0 ? 'lo' : 'hi'})">${ProtoChart.spark(PROTO.series(st, fuel, days).map(x => x.price), { color: s.diff < 0 ? ProtoChart.css('--lo') : ProtoChart.css('--hi') })}</span>
+        </span>
+      </button>`).join('');
+    Proto.hydrateIcons(document.getElementById('histRank'));
+    document.getElementById('histRank').onclick = (e) => {
+      const b = e.target.closest('[data-id]');
+      if (b) { histOverlay.close(); state.sel = b.dataset.id; openDetail(b.dataset.id); }
+    };
+  };
+  fuelSel.onchange = () => { state.fuel = fuelSel.value; histDraw(); refresh(); };
+}});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { document.querySelectorAll('.fullscreen-panel.on').forEach(p => p.classList.remove('on')); hideMini(); document.getElementById('layersPop').classList.remove('on'); }
+});
+
+/* Enlaces cruzados con el tema y el modo incrustado actuales */
+function crossHref(file) {
+  const t = Proto.theme.get();
+  return file + (file.includes('?') ? '&' : '?') + 'embed=1&theme=' + t;
+}
+document.getElementById('crossLinks').innerHTML = [
+  ['v1-sheet.html', 'v1 · Sheet + pestañas'],
+  ['v3-cards.html', 'v3 · Feed de ahorro'],
+  ['v4-desktop.html', 'v4 · Consola escritorio'],
+  ['v5-ia.html', 'v5 · Copiloto IA'],
+  ['v6-drive.html', 'v6 · Una mano'],
+].map(([f, label]) => `<a class="chip" href="${crossHref(f)}">${Proto.icon('arrowRight', 'xs')}${label}</a>`).join('');
+
+/* ===== Arranque ========================================================= */
+fillFilterControls();
+renderTable();
+refresh();
+resSheet.open('peek');
+document.addEventListener('proto:theme', () => { /* la gráfica del detalle usa colores del tema */ if (detailPanel.classList.contains('on') && detailCtl) detailCtl.redraw(); });
+</script>
+</body>
+</html>

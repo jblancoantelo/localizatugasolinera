@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Prototipo v7 · Comparador con veredicto · Gasolineras</title>
+<link rel="stylesheet" href="assets/proto.css">
+<style>
+  /* ==========================================================================
+     v7 · Comparador con veredicto
+     La pregunta que responde: "¿me compensa desviarme o me quedo con la de
+     al lado?" Se comparan 2-3 estaciones en una tabla de métricas y un gráfico
+     histórico superpuesto, y una tarjeta de veredicto cierra la decisión con
+     el ahorro NETO: (precio base − precio) × litros − coste del desvío.
+     ========================================================================== */
+  .sel-strip { flex: 0 0 auto; display: flex; gap: var(--s2); overflow-x: auto; scrollbar-width: none; padding: var(--s3) var(--s4) var(--s2); }
+  .sel-strip::-webkit-scrollbar { display: none; }
+  .selchip {
+    flex: 0 0 auto; position: relative; display: flex; align-items: center; gap: var(--s2);
+    min-width: 158px; max-width: 190px; padding: var(--s2) var(--s3) var(--s2) var(--s2);
+    border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--sh-1);
+  }
+  .selchip.win { border-color: var(--ok-line); box-shadow: 0 6px 18px rgba(0, 135, 90, .16); }
+  .selchip .sc-main { min-width: 0; }
+  .selchip .sc-name { font-size: var(--t-sm); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .selchip .sc-meta { font-size: var(--t-3xs); color: var(--fg-3); white-space: nowrap; }
+  .selchip .sc-x {
+    position: absolute; top: -7px; right: -7px; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--surface); border: 1px solid var(--line); color: var(--fg-2); display: grid; place-items: center;
+  }
+  .selchip.add { justify-content: center; min-width: 118px; border-style: dashed; background: transparent; box-shadow: none; color: var(--brand); font-weight: 700; font-size: var(--t-xs); gap: 6px; }
+
+  /* Controles del cálculo (litros / consumo / combustible) */
+  .dep-row { flex: 0 0 auto; display: flex; gap: var(--s2); align-items: center; padding: 0 var(--s4) var(--s2); }
+  .dep-row .dep-field { flex: 1; background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 6px var(--s2); min-width: 0; }
+  .dep-row .dep-field label { font-size: var(--t-3xs); color: var(--fg-3); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+  .dep-row .dep-field input, .dep-row .dep-field select { width: 100%; background: none; border: 0; outline: none; font-size: var(--t-md); font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  /* Tarjeta de veredicto */
+  .hero-verdict {
+    margin: 0 var(--s3) var(--s3); padding: var(--s4); border-radius: var(--r-xl); position: relative; overflow: hidden;
+    background: radial-gradient(120% 130% at 100% 0%, rgba(0, 135, 90, .5), transparent 60%),
+                linear-gradient(150deg, var(--surface-3), var(--surface));
+    border: 1px solid var(--ok-line); box-shadow: var(--sh-2);
+  }
+  .hero-verdict.tie { background: linear-gradient(150deg, var(--surface-3), var(--surface)); border-color: var(--line-2); }
+  .hero-verdict .hv-kicker { font-size: var(--t-2xs); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--ok); }
+  .hero-verdict.tie .hv-kicker { color: var(--fg-2); }
+  .hero-verdict .hv-amount { font-size: 2.4rem; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .hero-verdict .hv-amount .cur { font-size: .5em; font-weight: 700; color: var(--fg-2); }
+  .hero-verdict .hv-note { font-size: var(--t-xs); color: var(--fg-2); }
+
+  /* Tabla comparativa */
+  .cmp-wrap { overflow-x: auto; margin: 0 var(--s3) var(--s3); border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--surface); box-shadow: var(--sh-1); }
+  .cmp-table { width: 100%; min-width: 520px; border-collapse: separate; border-spacing: 0; font-size: var(--t-xs); }
+  .cmp-table th, .cmp-table td { padding: 9px var(--s2); text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .cmp-table tbody tr:last-child td { border-bottom: 0; }
+  .cmp-table th:first-child, .cmp-table td:first-child {
+    text-align: left; position: sticky; left: 0; background: var(--surface); z-index: 1;
+    color: var(--fg-2); font-weight: 600; min-width: 116px;
+  }
+  .cmp-table thead th { font-size: var(--t-2xs); text-transform: uppercase; letter-spacing: .04em; color: var(--fg-3); border-bottom: 2px solid var(--line-2); }
+  .cmp-table .who { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+  .cmp-table td.best { background: var(--ok-bg); color: var(--ok); font-weight: 800; }
+  .cmp-table tr.net td { border-top: 2px solid var(--line-2); font-weight: 800; font-size: var(--t-sm); }
+  .cmp-table tr.net td:first-child { font-weight: 800; color: var(--fg); }
+  .cmp-table .hint-dot { color: var(--fg-3); font-size: var(--t-3xs); font-weight: 500; }
+
+  /* Insights de "por qué" */
+  .insight { display: flex; gap: var(--s3); align-items: flex-start; padding: var(--s3); border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--line); }
+  .insight .i-ico { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; flex: 0 0 auto; background: var(--bg-2); color: var(--brand); }
+  .insight.ok .i-ico { color: var(--ok); }
+  .insight.warn .i-ico { color: var(--warn); }
+  .insight .i-title { font-size: var(--t-sm); font-weight: 700; }
+  .insight .i-sub { font-size: var(--t-2xs); color: var(--fg-2); }
+
+  /* Leyenda del gráfico */
+  .legend { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s3); }
+  .lg-item { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-2xs); color: var(--fg-2); font-weight: 600; }
+  .lg-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+
+  .mapbox { height: 230px; border-radius: var(--r-md); overflow: hidden; position: relative; background: var(--map-bg); }
+
+  /* Escritorio: comparativa + columna lateral */
+  @media (min-width: 1024px) {
+    .shell { display: grid; grid-template-columns: minmax(0, 1fr) 372px; gap: var(--s5); padding: 0 var(--s5) var(--s6); align-items: start; }
+    .col-side { position: sticky; top: var(--s4); display: flex; flex-direction: column; gap: var(--s4); }
+    .sel-strip, .dep-row { padding-inline: var(--s5); }
+    .dep-row { max-width: 640px; }
+    .hero-verdict, .cmp-wrap { margin-inline: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="statusbar only-mobile">
+    <span>9:41</span>
+    <span class="sb-right">
+      <span class="ico" data-ico="signal"></span><span class="ico" data-ico="wifiOff"></span><span class="ico" data-ico="battery"></span>
+    </span>
+  </div>
+
+  <header class="topbar">
+    <span class="topbar-title"><span class="ico" data-ico="compare" style="color:var(--brand)"></span>Comparador</span>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="recalcBtn" title="Recalcular"><span data-ico="refresh"></span></button>
+    <button class="iconbtn" id="cfgBtn" title="Ajustes del coche"><span data-ico="gear"></span></button>
+    <button class="iconbtn" data-theme-toggle title="Tema"></button>
+  </header>
+
+  <div class="pane on scroll" data-panel="comparar">
+    <div class="sel-strip" id="selStrip"></div>
+
+    <div class="dep-row">
+      <span class="dep-field"><label>Combustible</label><select id="fuel"></select></span>
+      <span class="dep-field"><label>Litros</label><input id="liters" type="number" value="50" min="5" max="120" step="5" inputmode="numeric"></span>
+      <span class="dep-field"><label>Consumo L/100</label><input id="cons" type="number" value="6.4" min="3" max="20" step="0.1" inputmode="decimal"></span>
+    </div>
+
+    <div class="shell">
+      <div class="col-main">
+        <div id="cmpMain"></div>
+      </div>
+
+      <aside class="col-side only-desktop">
+        <div class="card pad-4">
+          <div class="card-title"><span data-ico="trendDown" class="ico sm" style="color:var(--brand)"></span> Histórico superpuesto</div>
+          <div class="card-sub mt1" id="chartSub">14 días · Diésel A</div>
+          <div class="chartbox mt3"><canvas data-h="150" id="cmpChart"></canvas><div class="chart-tip"></div></div>
+          <div class="legend mt3" id="cmpLegend"></div>
+        </div>
+        <div class="card pad-4">
+          <div class="card-title"><span data-ico="map" class="ico sm"></span> Dónde están</div>
+          <div class="mapbox mt3" id="sideMap"></div>
+          <div class="tiny muted mt2">Toca un pin para abrir su ficha.</div>
+        </div>
+        <div class="card pad-4">
+          <div class="card-title"><span data-ico="sparkles" class="ico sm" style="color:var(--brand)"></span> Cómo se calcula</div>
+          <div class="card-sub mt2">Ahorro neto = (precio de la más cercana − precio) × litros − coste del desvío de ida y vuelta, valorado al precio medio de la zona y tu consumo.</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <nav class="bottomnav" data-nav>
+    <button class="nav-btn on" data-tab="comparar" data-nav-tab="comparar"><span data-ico="compare"></span>Comparar</button>
+    <button class="nav-btn" data-tab="mapa" data-nav-tab="mapa"><span data-ico="map"></span>Mapa</button>
+    <button class="nav-btn" data-tab="ajustes" data-nav-tab="ajustes"><span data-ico="gear"></span>Ajustes</button>
+  </nav>
+</div>
+
+<!-- ============ PANELES SECUNDARIOS ==================================== -->
+<div class="fullscreen-panel" id="sidePanel">
+  <header class="topbar">
+    <button class="iconbtn" data-close-panel title="Cerrar"><span data-ico="arrowLeft"></span></button>
+    <span class="topbar-title" id="sideTitle">Mapa</span>
+    <div class="spacer"></div>
+    <button class="iconbtn" data-theme-toggle title="Tema"></button>
+  </header>
+  <div id="sideBody" style="flex:1;min-height:0;position:relative;display:flex;flex-direction:column"></div>
+</div>
+
+<div class="fullscreen-panel" id="detailPanel">
+  <header class="topbar">
+    <button class="iconbtn" data-close-panel title="Cerrar"><span data-ico="arrowLeft"></span></button>
+    <span class="topbar-title" id="detailTitle">Detalle</span>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="detailCmpBtn" title="Comparar esta"><span data-ico="compare"></span></button>
+  </header>
+  <div class="pane on scroll"><div class="section" id="detailBody"></div></div>
+</div>
+
+<!-- ============ HOJA: ELEGIR ESTACIONES ================================ -->
+<div class="sheet wide" id="pickerSheet" data-sheet>
+  <div class="sheet-head">
+    <span class="sheet-grab"></span>
+    <h2>Elegir estaciones</h2>
+    <div class="spacer"></div>
+    <button class="iconbtn" data-sheet-close><span data-ico="close"></span></button>
+  </div>
+  <div class="sheet-body">
+    <div class="row" style="gap:var(--s2)">
+      <label class="dep-field" style="flex:1;display:flex;align-items:center;gap:var(--s2);background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:6px var(--s2)">
+        <span class="ico sm dim" data-ico="search"></span>
+        <input id="pickSearch" placeholder="Marca, localidad o calle…" style="flex:1;background:none;border:0;outline:none;font-size:var(--t-md)">
+      </label>
+            <div class="segmented" id="pickOrder" style="font-size:var(--t-3xs)">
+        <button data-val="price" class="on">Precio</button><button data-val="dist">Cerca</button><button data-val="fav">☆</button>
+      </div>
+    </div>
+    <div class="list mt3" id="pickList"></div>
+    <p class="tiny dim mt3">Hasta 3 estaciones. Toca para añadir o quitar; la ✕ del chip también quita.</p>
+  </div>
+</div>
+
+<div class="proto-tag">v7 · comparador</div>
+
+<script src="assets/proto-data.js"></script>
+<script src="assets/proto-chart.js"></script>
+<script src="assets/proto-map.js"></script>
+<script src="assets/proto-ui.js"></script>
+<script>
+Proto.boot();
+
+/* ==========================================================================
+   Estado: 2-3 estaciones + el "garaje" del usuario. Todo lo demás se deriva:
+   precios, coste del depósito y ahorro neto (que descuenta el desvío).
+   ========================================================================== */
+const car = { fuel: 'diesel', liters: 50, cons: 6.4 };
+const state = { prov: 'Madrid', sel: [], order: 'price', q: '' };
+const MAX_SEL = 3;
+
+/* Tendencia en céntimos: por debajo de 0,05 ¢ es un empate y se pinta plano. */
+function trendInfo(t7) {
+  const c = t7 * 100;
+  if (Math.abs(c) < 0.05) return { cls: 'flat', icon: 'minus', txt: '0,0 ¢' };
+  return { cls: c < 0 ? 'down' : 'up', icon: c < 0 ? 'trendDown' : 'trendUp', txt: Math.abs(c).toFixed(1).replace('.', ',') + ' ¢' };
+}
+
+const baseList = () => PROTO.filterStations(PROTO.STATIONS, { province: state.prov, fuel: car.fuel });
+const byId = (id) => PROTO.STATIONS.find(s => s.id === id);
+const selected = () => state.sel.map(byId).filter(Boolean);
+const cts = (v) => (v == null ? '—' : (v > 0 ? '+' : '−') + Math.abs(v * 100).toFixed(1).replace('.', ',') + ' ¢');
+
+/* Selección por defecto: la más cercana contra la más barata (y una favorita
+   barata si hay hueco). Es el duelo que de verdad se plantea el usuario. */
+function defaultSelection() {
+  const list = baseList();
+  const near = PROTO.sortStations(list, 'distance', 'asc', car.fuel)[0];
+  const cheap = PROTO.sortStations(list, 'price', 'asc', car.fuel)[0];
+  const out = [near, cheap].filter(Boolean).map(s => s.id);
+  const fav = PROTO.sortStations(list.filter(s => s.fav), 'price', 'asc', car.fuel)[0];
+  if (fav && out.length < MAX_SEL && !out.includes(fav.id)) out.push(fav.id);
+  if (out.length < 2) {
+    const third = PROTO.sortStations(list, 'price', 'asc', car.fuel)[1];
+    if (third) out.push(third.id);
+  }
+  return [...new Set(out)].slice(0, MAX_SEL);
+}
+state.sel = defaultSelection();
+if (state.sel.length < 2) state.sel = PROTO.STATIONS.slice(0, 2).map(s => s.id);
+
+/* ==========================================================================
+   Métricas: para cada estación se calcula precio, depósito, distancia y el
+   ahorro NETO frente a la más cercana de las seleccionadas.
+   ========================================================================== */
+function metrics() {
+  const list = baseList();
+  const stats = PROTO.stats(list, car.fuel);
+  const avg = stats ? stats.avg : null;
+  const lo = stats ? stats.lo : null, hi = stats ? stats.hi : null;
+  const perKm = avg != null ? avg * car.cons / 100 : 0;      /* € por km al precio medio de la zona */
+  const rows = selected().map(st => {
+    const price = PROTO.finalPrice(st, car.fuel);
+    const km = PROTO.kmFromUser(st);
+    const s30 = PROTO.seriesStats(PROTO.series(st, car.fuel, 30)) || { min: price, minDate: '' };
+    const s7 = PROTO.seriesStats(PROTO.series(st, car.fuel, 7)) || { diff: 0 };
+    return { st, price, km, tank: price * car.liters, min30: s30.min, minDate: s30.minDate, t7: s7.diff, avg, delta: avg != null ? price - avg : 0 };
+  }).filter(r => r.price != null);
+  if (!rows.length) return { rows, base: null, winner: null, tally: [], avg, lo, hi, perKm };
+  const base = rows.reduce((a, b) => (b.km < a.km ? b : a), rows[0]);
+  rows.forEach(r => {
+    r.detourKm = Math.max(0, r.km - base.km);
+    r.extra = r.detourKm * 2 * perKm;                       /* ida y vuelta */
+    r.net = (base.price - r.price) * car.liters - r.extra;
+    r.breakEven = r.price < base.price && r.detourKm > 0 ? r.extra / (base.price - r.price) : null;
+  });
+  const ranks = rows.slice().sort((a, b) => b.net - a.net || a.km - b.km);
+  ranks.forEach((r, i) => { r.rank = i + 1; });
+  return { rows, base, winner: ranks[0], tally: ranks, avg, lo, hi, perKm };
+}
+
+/* ==========================================================================
+   Render: chips de selección, veredicto, tabla y "por qué".
+   ========================================================================== */
+function renderStrip(m) {
+  const win = m && m.winner ? m.winner.st.id : null;
+  const chips = selected().map(st => {
+    const price = PROTO.finalPrice(st, car.fuel);
+    const meta = PROTO.brandMeta(st.brand);
+    return `<div class="selchip ${st.id === win ? 'win' : ''}" data-id="${st.id}">
+      <span class="brandlogo sm" style="background:${meta.color};color:${meta.ink}">${st.brand.slice(0, 2)}</span>
+      <span class="sc-main">
+        <span class="sc-name">${Proto.esc(Proto.shortName(st))}</span>
+        <span class="sc-meta">${PROTO.money(price, 3)} · ${PROTO.dist(PROTO.kmFromUser(st))}</span>
+      </span>
+      <button class="sc-x" data-remove="${st.id}" title="Quitar">${Proto.icon('close', 'xs')}</button>
+    </div>`;
+  }).join('');
+  document.getElementById('selStrip').innerHTML = chips +
+    `<button class="selchip add" id="addChip" title="${state.sel.length >= MAX_SEL ? 'Máximo 3 estaciones' : 'Añadir estación'}">${Proto.icon('plus', 'sm')} Añadir</button>`;
+}
+
+function renderVerdict(m) {
+  const { winner, base } = m;
+  const w = winner, meta = PROTO.brandMeta(w.st.brand);
+  const worth = w.net > 0.05 && w.st.id !== base.st.id;
+  const tie = !worth;
+  const bad = [];
+  if (PROTO.brandMeta(w.st.brand).discount) bad.push(`<span class="badge ok">−${PROTO.brandMeta(w.st.brand).discount} ¢ con app</span>`);
+  if (w.st.id === base.st.id) bad.push('<span class="badge brand">La más cercana</span>');
+  const tw = trendInfo(w.t7);
+  if (tw.cls === 'down' && Math.abs(w.t7 * 100) >= 0.5) bad.push('<span class="badge ok">bajando</span>');
+  if (tw.cls === 'up' && Math.abs(w.t7 * 100) >= 0.5) bad.push('<span class="badge warn">subiendo</span>');
+
+  const note = worth
+    ? `Descontados ${PROTO.dist(w.detourKm)} de desvío (ida y vuelta), te sale <b>${PROTO.money(w.net, 2)}</b> mejor que quedarte con ${Proto.esc(Proto.shortName(base.st))}.`
+    : (w.st.id === base.st.id
+      ? `Ninguna de las demás compensa el desvío: quédate con ${Proto.esc(Proto.shortName(w.st))}, la más cercana.`
+      : `${Proto.esc(Proto.shortName(w.st))} está a apenas ${PROTO.driveMin(w.km)} min y el desvío se come el ahorro: empate técnico.`);
+
+  return `
+  <section class="hero-verdict ${tie ? 'tie' : ''}">
+    <div class="hv-kicker">${worth ? 'Merece la pena el desvío' : 'Veredicto'}</div>
+    <div class="row between top mt1" style="gap:var(--s3)">
+      <div class="row" style="gap:var(--s2);min-width:0">
+        <span class="brandlogo lg" style="background:${meta.color};color:${meta.ink}">${w.st.brand.slice(0, 2)}</span>
+        <div style="min-width:0">
+          <div class="bold lg truncate">${Proto.esc(Proto.shortName(w.st))}</div>
+          <div class="tiny muted truncate">${Proto.esc(w.st.address)} · ${w.st.city}</div>
+          <div class="row mt1" style="gap:4px">${bad.join('')}</div>
+        </div>
+      </div>
+      <div class="tr">
+        <div class="hv-amount">${PROTO.money(w.tank, 2).replace(' €', '')}<span class="cur"> €</span></div>
+        <div class="tiny muted">el depósito de ${car.liters} L</div>
+      </div>
+    </div>
+    <div class="hv-note mt3">${Proto.icon(worth ? 'check' : 'info', 'xs')} ${note}</div>
+    <div class="row between mt3" style="gap:var(--s2)">
+      <span class="tiny dim">Ahorro neto vs. más cercana</span>
+      <span class="bold ${w.net > 0.05 ? '' : 'muted'}" style="color:${w.net > 0.05 ? 'var(--ok)' : 'inherit'}">${PROTO.money(w.net, 2)}</span>
+    </div>
+  </section>`;
+}
+
+function renderTable(m) {
+  const cols = m.rows;
+  const bestOf = (vals, mode) => {
+    let bi = 0;
+    vals.forEach((v, i) => { if (v != null && (mode === 'min' ? v < vals[bi] : v > vals[bi])) bi = i; });
+    return bi;
+  };
+  const priceVals = cols.map(c => c.price);
+  const tankVals = cols.map(c => c.tank);
+  const kmVals = cols.map(c => c.km);
+  const detourVals = cols.map(c => c.extra);
+  const netVals = cols.map(c => c.net);
+  const trendVals = cols.map(c => c.t7);
+  const minVals = cols.map(c => c.min30);
+
+  const row = (label, hint, vals, best, fmt) => `
+    <tr>
+      <td>${label}${hint ? ` <span class="hint-dot" title="${hint}">ⓘ</span>` : ''}</td>
+      ${cols.map((c, i) => `<td class="${i === best ? 'best' : ''}">${fmt(c, i)}</td>`).join('')}
+    </tr>`;
+
+  const head = `<tr><th>Métrica</th>${cols.map((c, i) => `
+    <th><div class="who"><span class="brandlogo sm" style="background:${PROTO.brandMeta(c.st.brand).color};color:${PROTO.brandMeta(c.st.brand).ink}">${c.st.brand.slice(0, 2)}</span>${c.rank}º</div></th>`).join('')}</tr>`;
+
+  return `
+  <div class="cmp-wrap">
+    <table class="cmp-table">
+      <thead>${head}</thead>
+      <tbody>
+        ${row('Precio', 'Precio con descuentos de marca aplicados', priceVals, bestOf(priceVals, 'min'),
+          (c) => `<span class="price p-sm ${m.lo != null ? PROTO.level(c.price, m.lo, m.hi) : ''}">${PROTO.money(c.price, 3).replace(' €', '')}</span>`)}
+        ${row('vs. media de la zona', '', cols.map(c => c.delta), bestOf(cols.map(c => c.delta), 'min'),
+          (c) => `<span class="delta ${c.delta < 0 ? 'down' : 'up'}">${cts(c.delta)}</span>`)}
+        ${row(`Depósito (${car.liters} L)`, '', tankVals, bestOf(tankVals, 'min'),
+          (c) => PROTO.money(c.tank, 2))}
+        ${row('Distancia', '', kmVals, bestOf(kmVals, 'min'),
+          (c) => `${PROTO.dist(c.km)} · ${PROTO.driveMin(c.km)} min`)}
+        ${row('Desvío ida y vuelta', 'Distancia adicional frente a la más cercana, al precio medio de la zona y tu consumo', detourVals, bestOf(detourVals, 'min'),
+          (c) => c.extra < 0.01 ? '<span class="dim">—</span>' : `${PROTO.dist(c.detourKm)} · ${PROTO.money(c.extra, 2)}`)}
+        ${row('Tendencia 7 días', '', trendVals, bestOf(trendVals, 'min'),
+          (c) => { const t = trendInfo(c.t7); return `<span class="delta ${t.cls}">${Proto.icon(t.icon, 'xs')}${t.txt}</span>`; })}
+        ${row('Mínimo 30 días', '', minVals, bestOf(minVals, 'min'),
+          (c) => `${PROTO.money(c.min30, 3).replace(' €', '')} <span class="dim">${c.minDate ? PROTO.ddsmm(new Date(c.minDate.split('-').reverse().join('-'))) : ''}</span>`)}
+      </tbody>
+      <tbody>
+        <tr class="net">
+          <td>Neto vs. más cerca</td>
+          ${cols.map((c, i) => `<td class="${i === bestOf(netVals, 'max') ? 'best' : ''}">${c.net > 0.005 ? '+' : ''}${PROTO.money(c.net, 2)}</td>`).join('')}
+        </tr>
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function renderWhy(m) {
+  const rows = m.tally.map(r => {
+    if (r.st.id === m.winner.st.id) {
+      return { cls: 'ok', ico: 'percent', title: `${Proto.shortName(r.st)} gana la comparativa`,
+        sub: (r.st.id === m.base.st.id
+          ? 'Su precio, sumándole el desvío de las demás, es el que menos te cuesta. '
+          : `Ahorras ${PROTO.money(r.net, 2)} netos por depósito aunque hagas ${PROTO.dist(r.detourKm)} extra. `)
+          + `Depósito: ${PROTO.money(r.tank, 2)} · precio ${PROTO.money(r.price, 3)}.` };
+    }
+    if (r.st.id === m.base.st.id) {
+      return { cls: '', ico: 'crosshair', title: `${Proto.shortName(r.st)}: la referencia`,
+        sub: `Es la más cercana (${PROTO.dist(r.km)} · ${PROTO.driveMin(r.km)} min). Cualquier otra tiene que batir su precio por más que le cueste el desvío: ${PROTO.money(r.tank, 2)} el depósito.` };
+    }
+    if (r.net > 0.005) {
+      return { cls: 'ok', ico: 'check', title: `${Proto.shortName(r.st)} también sale a cuenta`,
+        sub: `Neto de ${PROTO.money(r.net, 2)} por depósito, aunque la ganadora le saca ${PROTO.money(m.winner.net - r.net, 2)}.` };
+    }
+    if (r.extra > 0.01) {
+      const sub = `Su precio es bueno, pero pagas ${PROTO.money(r.extra, 2)} de desvío por cada ${PROTO.dist(r.detourKm)} extra (ida y vuelta).`
+        + (r.breakEven != null ? ` Te saldría a cuenta a partir de <b>${Math.ceil(r.breakEven)} L</b> de repostaje.` : '');
+      return { cls: 'warn', ico: 'route', title: `${Proto.shortName(r.st)}: el desvío no compensa`, sub };
+    }
+    return { cls: 'warn', ico: 'minus', title: `${Proto.shortName(r.st)}: empate técnico`,
+      sub: `Con el desvío ya descontado la diferencia es de céntimos (${PROTO.money(Math.abs(r.net), 2)}): elige por horario o cercanía.` };
+  });
+
+  const tw = trendInfo(m.winner.t7);
+  if (Math.abs(m.winner.t7 * 100) >= 0.5) {
+    const sub = tw.cls === 'down'
+      ? `La ganadora lleva 7 días bajando (${tw.txt}): si no tienes prisa, hoy y mañana se parecen.`
+      : `Ojo: la ganadora lleva 7 días subiendo (${tw.txt}). Repostar hoy es la decisión segura.`;
+    rows.push({ cls: tw.cls === 'up' ? 'warn' : 'ok', ico: tw.icon, title: 'Tendencia de la ganadora', sub });
+  }
+
+  return `
+  <div class="section" style="padding-top:0">
+    <div class="section-head" style="padding-inline:0"><h2>Por qué gana</h2><span class="tiny dim">${m.rows.length} estaciones</span></div>
+    <div class="col" style="gap:var(--s2)">
+      ${rows.map(r => `<div class="insight ${r.cls}">
+        <span class="i-ico">${Proto.icon(r.ico, 'sm')}</span>
+        <div class="grow"><div class="i-title">${r.title}</div><div class="i-sub">${r.sub}</div></div></div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function renderMain(m) {
+  renderStrip(m);
+  const host = document.getElementById('cmpMain');
+  if (state.sel.length < 2 || !m || m.rows.length < 2) {
+    host.innerHTML = `<div class="section"><div class="card pad-4" style="text-align:center">
+      <div class="bold lg">Elige al menos 2 estaciones</div>
+      <p class="card-sub mt2">La comparativa calcula el ahorro neto descontando el desvío de cada una.</p>
+      <button class="btn primary mt3" id="emptyAdd">${Proto.icon('plus', 'xs')} Añadir estaciones</button></div></div>`;
+    document.getElementById('emptyAdd').addEventListener('click', () => picker.open('full'));
+    return;
+  }
+  host.innerHTML = renderVerdict(m) + renderTable(m) + renderWhy(m);
+}
+
+/* ==========================================================================
+   Gráfico superpuesto (escritorio) y leyenda.
+   ========================================================================== */
+const PALETTE = ['--brand', '--ok', '--hi'];
+function drawChart() {
+  const el = document.getElementById('cmpChart');
+  if (!el || state.sel.length < 2) return;
+  const series = selected().map((st, i) => ({
+    label: Proto.shortName(st), color: ProtoChart.css(PALETTE[i % 3]),
+    data: PROTO.series(st, car.fuel, 14), area: false,
+  })).filter(s => s.data && s.data.length);
+  if (!series.length) return;
+  const geom = ProtoChart.draw(el, { series, avg: false });
+  if (geom) ProtoChart.tooltip(el, el.parentElement, geom, { live: true });
+  document.getElementById('chartSub').textContent = '14 días · ' + PROTO.fuelName(car.fuel);
+  document.getElementById('cmpLegend').innerHTML = series.map(s =>
+    `<span class="lg-item"><span class="lg-dot" style="background:${s.color}"></span>${Proto.esc(s.label)} · ${PROTO.money(s.data[s.data.length - 1].price, 3)}</span>`).join('');
+}
+
+/* Mapa del comparador (solo escritorio: en móvil está la pestaña Mapa). */
+let cmpMap = null, cmpMapKey = '';
+function drawSideMap() {
+  const host = document.getElementById('sideMap');
+  if (!host || window.innerWidth < 1024) return;
+  const key = state.sel.join(',') + '|' + car.fuel;
+  if (key === cmpMapKey && cmpMap) return;
+  cmpMapKey = key;
+  host.innerHTML = '';
+  cmpMap = ProtoMap.create(host, { stations: baseList(), fuel: car.fuel, seed: 'cmp-v7', fit: 'stations', padding: 26 });
+  if (cmpMap) cmpMap.on('marker', (id) => openDetail(id));
+}
+
+/* ==========================================================================
+   Selector de estaciones (hoja) con búsqueda y orden.
+   ========================================================================== */
+function pickList() {
+  let list = baseList();
+  if (state.q) {
+    const q = state.q.toLowerCase();
+    list = list.filter(st => (st.brand + ' ' + st.city + ' ' + st.address + ' ' + st.name).toLowerCase().includes(q));
+  }
+  if (state.order === 'dist') return PROTO.sortStations(list, 'distance', 'asc', car.fuel);
+  if (state.order === 'fav') return PROTO.sortStations(list, 'price', 'asc', car.fuel).sort((a, b) => (b.fav ? 1 : 0) - (a.fav ? 1 : 0));
+  return PROTO.sortStations(list, 'price', 'asc', car.fuel);
+}
+function renderPicker() {
+  const list = pickList();
+  document.getElementById('pickList').innerHTML = list.length ? list.map(st => {
+    const on = state.sel.includes(st.id);
+    const price = PROTO.finalPrice(st, car.fuel);
+    return `<button class="row-item tap" data-pick="${st.id}" style="width:100%;text-align:left;${on ? 'border-color:var(--brand-line);background:var(--brand-soft)' : ''}">
+      <span class="brandlogo sm" style="background:${PROTO.brandMeta(st.brand).color};color:${PROTO.brandMeta(st.brand).ink}">${st.brand.slice(0, 2)}</span>
+      <span class="ri-main"><span class="ri-title">${Proto.esc(Proto.shortName(st))}</span>
+      <span class="ri-sub">${Proto.esc(st.city)} · ${PROTO.dist(PROTO.kmFromUser(st))}${st.fav ? ' · ★' : ''}</span></span>
+      <span class="price p-sm ${price != null ? '' : 'dim'}">${price != null ? PROTO.money(price, 3).replace(' €', '') : '—'}</span>
+      <span class="iconbtn sm" style="pointer-events:none;color:${on ? 'var(--brand)' : 'var(--fg-3)'}">${Proto.icon(on ? 'check' : 'plus', 'sm')}</span>
+    </button>`;
+  }).join('') : '<p class="tiny muted" style="padding:var(--s3)">Nada con ese filtro.</p>';
+}
+
+/* ==========================================================================
+   Detalle y paneles secundarios.
+   ========================================================================== */
+function openDetail(id) {
+  const st = byId(id); if (!st) return;
+  document.getElementById('detailTitle').textContent = st.brand + ' · ' + Proto.shortName(st);
+  window._det = Proto.stationDetail(document.getElementById('detailBody'), st, {
+    fuel: car.fuel, days: 14, list: baseList(),
+    onFuel: (f) => { car.fuel = f; document.getElementById('fuel').value = f; refresh(); },
+  });
+  const btn = document.getElementById('detailCmpBtn');
+  btn.classList.toggle('on', state.sel.includes(st.id));
+  btn.onclick = () => { toggleSel(st.id); document.getElementById('detailPanel').classList.remove('on'); };
+  document.getElementById('detailPanel').classList.add('on');
+}
+
+function openSide(kind) {
+  const host = document.getElementById('sideBody');
+  document.getElementById('sideTitle').textContent = kind === 'mapa' ? 'Mapa' : 'Ajustes';
+  host.innerHTML = '';
+  if (kind === 'mapa') {
+    host.innerHTML = `<div class="relative grow" id="mapHost" style="min-height:0"></div>
+      <div style="position:absolute;left:var(--s3);right:var(--s3);bottom:var(--s3);pointer-events:none">
+        <div class="card" style="pointer-events:auto">
+          <div class="row between" style="gap:var(--s2)">
+            <div class="grow" style="min-width:0">
+              <div class="small bold truncate" id="mapWho">—</div>
+              <div class="tiny muted">Mapa sintético del prototipo: valida la interfaz, no los datos.</div>
+            </div>
+            <button class="btn sm primary" id="mapGo">${Proto.icon('navigate', 'xs')}Ir</button>
+          </div>
+        </div>
+      </div>`;
+    const m = ProtoMap.create(document.getElementById('mapHost'), { stations: baseList(), fuel: car.fuel, seed: 'cmp-v7', fit: 'stations', padding: 40 });
+    if (m) m.on('marker', (id) => openDetail(id));
+    const w = metrics().winner;
+    document.getElementById('mapWho').textContent = w ? Proto.shortName(w.st) + ' · ' + PROTO.money(PROTO.finalPrice(w.st, car.fuel), 3) : 'Sin comparativa';
+    document.getElementById('mapGo').addEventListener('click', () => Proto.toast('Abriendo navegación hacia ' + (w ? Proto.shortName(w.st) : ''), { iconName: 'navigate' }));
+  } else {
+    host.innerHTML = `<div class="pane on scroll"><div class="section">
+      <div class="card pad-4">
+        <div class="card-title">${Proto.icon('car', 'sm')} Mi coche</div>
+        <p class="card-sub mt2">Alimenta el coste del desvío y el importe del depósito.</p>
+        <div class="field-row"><span class="fr-label">Depósito</span><span class="stepper"><button data-car="liters" data-d="-5">−</button><span class="val" id="pLiters">${car.liters} L</span><button data-car="liters" data-d="5">+</button></span></div>
+        <div class="field-row"><span class="fr-label">Consumo</span><span class="stepper"><button data-car="cons" data-d="-0.5">−</button><span class="val" id="pCons">${String(car.cons).replace('.', ',')}</span><button data-car="cons" data-d="0.5">+</button></span></div>
+      </div>
+      <div class="card pad-4 mt3">
+        <div class="card-title">${Proto.icon('sparkles', 'sm')} Cómo se calcula el neto</div>
+        <p class="card-sub mt2">(precio de la más cercana − precio) × ${car.liters} L − coste del desvío de ida y vuelta. El desvío se valora al precio medio de la zona × tu consumo: ${PROTO.money((metrics().avg ?? 0) * car.cons / 100, 3)} por km extra.</p>
+      </div>
+      <div class="card pad-4 mt3">
+        <div class="card-title">${Proto.icon('bell', 'sm')} Avisos</div>
+        <div class="card-sub mt2">Se te avisará cuando el ganador de tu comparativa baje 3 días seguidos.</div>
+        <div class="row mt3" style="gap:var(--s2)"><span class="badge ok">✓ Suscrito</span><span class="badge">Cada 8 h</span><span class="badge">${state.sel.length} en la comparativa</span></div>
+      </div></div></div>`;
+    document.querySelectorAll('[data-car]').forEach(b => b.addEventListener('click', () => {
+      const k = b.dataset.car, d = +b.dataset.d;
+      car[k] = Math.max(k === 'liters' ? 10 : 3, Math.min(k === 'liters' ? 120 : 20, Math.round((car[k] + d) * 10) / 10));
+      document.getElementById('pLiters').textContent = car.liters + ' L';
+      document.getElementById('pCons').textContent = String(car.cons).replace('.', ',');
+      document.getElementById('liters').value = car.liters;
+      document.getElementById('cons').value = car.cons;
+      refresh();
+    }));
+  }
+  Proto.hydrateIcons(host);
+  document.getElementById('sidePanel').classList.add('on');
+}
+
+/* ==========================================================================
+   Acciones.
+   ========================================================================== */
+function toggleSel(id) {
+  const i = state.sel.indexOf(id);
+  if (i >= 0) {
+    if (state.sel.length <= 2) { Proto.toast('Necesitas al menos 2 estaciones para comparar', { iconName: 'alert' }); return; }
+    state.sel.splice(i, 1);
+  } else {
+    if (state.sel.length >= MAX_SEL) { Proto.toast('Máximo 3 estaciones: quita una antes de añadir', { iconName: 'alert' }); return; }
+    state.sel.push(id);
+  }
+  refresh();
+}
+
+document.getElementById('fuel').innerHTML = PROTO.FUELS.map(f => `<option value="${f.id}" ${f.id === car.fuel ? 'selected' : ''}>${f.short}</option>`).join('');
+document.getElementById('fuel').addEventListener('change', (e) => {
+  car.fuel = e.target.value;
+  /* Una estación puede no vender el combustible nuevo: se saca de la comparativa. */
+  const avail = new Set(baseList().map(s => s.id));
+  state.sel = state.sel.filter(id => avail.has(id));
+  for (const id of defaultSelection()) { if (state.sel.length >= 2) break; if (!state.sel.includes(id)) state.sel.push(id); }
+  refresh();
+});
+document.getElementById('liters').addEventListener('change', (e) => { car.liters = Math.max(5, Math.min(120, +e.target.value || 50)); e.target.value = car.liters; refresh(); });
+document.getElementById('cons').addEventListener('change', (e) => { car.cons = Math.max(3, Math.min(20, +e.target.value || 6.4)); e.target.value = car.cons; refresh(); });
+document.getElementById('selStrip').addEventListener('click', (e) => {
+  if (e.target.closest('#addChip')) {
+    if (state.sel.length >= MAX_SEL) { Proto.toast('Máximo 3 estaciones: quita una antes de añadir', { iconName: 'alert' }); return; }
+    picker.open('full'); return;
+  }
+  const x = e.target.closest('[data-remove]');
+  if (x) { toggleSel(x.dataset.remove); return; }
+  const chip = e.target.closest('.selchip[data-id]');
+  if (chip) openDetail(chip.dataset.id);
+});
+document.getElementById('recalcBtn').addEventListener('click', () => { refresh(); Proto.toast('Comparativa recalculada', { iconName: 'refresh' }); });
+document.getElementById('cfgBtn').addEventListener('click', () => { document.querySelector('.bottomnav [data-tab="ajustes"]').click(); });
+document.addEventListener('click', (e) => {
+  const c = e.target.closest('[data-close-panel]');
+  if (c) c.closest('.fullscreen-panel').classList.remove('on');
+});
+
+/* Selector */
+const picker = Proto.sheet(document.getElementById('pickerSheet'), { snaps: ['half', 'full'], start: 'full', half: .62, full: .94 });
+document.getElementById('pickList').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-pick]'); if (!b) return;
+  const body = document.querySelector('#pickerSheet .sheet-body');
+  const st = body.scrollTop;
+  toggleSel(b.dataset.pick);
+  renderPicker();
+  body.scrollTop = st;
+});
+document.getElementById('pickSearch').addEventListener('input', (e) => { state.q = e.target.value.trim(); renderPicker(); });
+document.getElementById('pickOrder').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-val]'); if (!b) return;
+  state.order = b.dataset.val;
+  document.querySelectorAll('#pickOrder button').forEach(x => x.classList.toggle('on', x === b));
+  renderPicker();
+});
+
+/* ==========================================================================
+   Navegación inferior y refresco.
+   ========================================================================== */
+const nav = Proto.nav(document.querySelector('.bottomnav[data-nav]'), {
+  attr: 'data-tab', paneAttr: 'data-panel', store: 'proto_v7_tab', hash: false,
+  onSwitch(k) {
+    if (k === 'mapa' || k === 'ajustes') openSide(k);
+    else document.querySelectorAll('.fullscreen-panel.on').forEach(p => p.classList.remove('on'));
+  },
+});
+
+function refresh() {
+  const m = metrics();
+  renderMain(m);
+  drawChart();
+  drawSideMap();
+}
+refresh();
+renderPicker();
+
+document.addEventListener('proto:theme', () => { drawChart(); });
+window.addEventListener('resize', () => { if (window.innerWidth >= 1024) drawSideMap(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Prototipo v1 · Evolución · Gasolineras</title>
+<link rel="stylesheet" href="assets/proto.css">
+<style>
+  /* --- Específico de v1: layout de dos columnas en escritorio -------------- */
+  .filterbar { flex: 0 0 auto; padding: var(--s2) var(--s3) 0; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .filterbar .chips { padding-bottom: var(--s2); }
+  .summary { padding: var(--s3) var(--s4) var(--s2); }
+  .summary .kpis { margin-top: var(--s2); }
+  .list-wrap { display: flex; flex-direction: column; gap: var(--s2); padding: 0 var(--s3) var(--s6); }
+
+  @media (min-width: 1024px) {
+    .content { flex-direction: row; }
+    body[data-mode="list"] .pane[data-panel="list"], body[data-mode="list"] .pane[data-panel="map"],
+    body[data-mode="map"] .pane[data-panel="list"], body[data-mode="map"] .pane[data-panel="map"] { display: flex; }
+    .pane[data-panel="list"] { flex: 0 0 42%; max-width: 620px; border-right: 1px solid var(--line); }
+    .pane[data-panel="map"] { flex: 1 1 auto; position: relative; }
+    .filterbar { padding-inline: var(--s5); }
+    .summary, .list-wrap { padding-inline: var(--s5); }
+    .only-narrow { display: none; }
+  }
+  .map-overlay { position: absolute; left: var(--s3); right: var(--s3); bottom: var(--s3); display: flex; gap: var(--s2); justify-content: space-between; pointer-events: none; z-index: 6; }
+  .map-overlay > * { pointer-events: auto; }
+  .map-legend { background: var(--glass); backdrop-filter: blur(10px); border: 1px solid var(--line); border-radius: var(--r-full); padding: 6px 12px; box-shadow: var(--sh-1); }
+  .compare-bar { position: fixed; left: var(--s3); right: var(--s3); bottom: calc(var(--nav-h) + var(--safe-b) + var(--s2)); z-index: 60; display: none; align-items: center; gap: var(--s2); padding: var(--s2) var(--s3); background: var(--fg); color: var(--bg); border-radius: var(--r-lg); box-shadow: var(--sh-3); }
+  .compare-bar.on { display: flex; }
+  .compare-bar .stacked { display: flex; }
+  .compare-bar .stacked .brandlogo.sm { margin-left: -10px; border: 2px solid var(--fg); }
+  .cmp-table td, .cmp-table th { white-space: nowrap; }
+  .cmp-best { color: var(--lo); font-weight: 800; }
+  .cfg-row { display: flex; align-items: center; gap: var(--s3); padding: var(--s3) var(--s4); background: var(--surface); border-bottom: 1px solid var(--line); cursor: pointer; width: 100%; text-align: left; }
+  .cfg-row:hover { background: var(--surface-2); }
+  .cfg-row .g-ico { width: 38px; height: 38px; border-radius: 12px; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; flex: 0 0 auto; }
+  .cfg-row .g-main { flex: 1; min-width: 0; }
+  .cfg-row .g-title { font-size: var(--t-md); font-weight: 650; }
+  .cfg-row .g-sub { font-size: var(--t-2xs); color: var(--fg-2); }
+  .topnav { display: flex; gap: 2px; background: var(--surface-2); padding: 3px; border-radius: var(--r-full); }
+  .topnav button { min-height: 32px; padding: 0 var(--s4); border-radius: var(--r-full); font-size: var(--t-xs); font-weight: 650; color: var(--fg-2); }
+  .topnav button:hover { color: var(--fg); }
+  .topnav button.on { background: var(--surface); color: var(--fg); box-shadow: var(--sh-1); }
+  @media (min-width: 1024px) { .cfg-list { max-width: 720px; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="statusbar only-mobile">
+    <span>9:41</span>
+    <span class="sb-right" data-ico-group>
+      <span class="ico" data-ico="signal"></span><span class="ico" data-ico="wifiOff"></span><span class="ico" data-ico="battery"></span>
+    </span>
+  </div>
+
+  <header class="topbar">
+    <span class="topbar-title"><span class="ico" data-ico="flask" style="color:var(--brand)"></span>Gasolineras</span>
+    <nav class="topnav desk-only" style="margin-left:var(--s6)">
+      <button data-nav-tab="list" class="on">Lista</button>
+      <button data-nav-tab="map">Mapa</button>
+      <button data-nav-tab="history">Histórico</button>
+      <button data-nav-tab="ia">IA</button>
+      <button data-nav-tab="config">Ajustes</button>
+    </nav>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="favQuick" title="Solo favoritos"><span data-ico="star"></span></button>
+    <button class="iconbtn" id="bellQuick" title="Notificaciones"><span data-ico="bell"></span><span class="dot-badge"></span></button>
+    <button class="iconbtn" data-theme-toggle title="Tema"></button>
+  </header>
+
+  <div class="filterbar">
+    <div class="field pill">
+      <span class="ico" data-ico="search"></span>
+      <input id="q" type="search" placeholder="Marca, calle o localidad…" aria-label="Buscar">
+      <button class="iconbtn sm" id="micBtn" title="Buscar por voz"><span data-ico="mic"></span></button>
+      <button class="iconbtn sm" id="filterBtn" title="Filtros"><span data-ico="sliders"></span></button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="content" id="content">
+    <!-- ============ LISTA ============ -->
+    <section class="pane on scroll" data-panel="list">
+      <div class="summary">
+        <div class="row between">
+          <div>
+            <div class="bold" id="listTitle">Madrid · 12 estaciones</div>
+            <div class="tiny muted" id="listSub">Diésel A · actualizado hace 8 min</div>
+          </div>
+          <button class="btn sm" id="sortBtn"><span data-ico="sliders"></span><span id="sortLabel">Precio</span></button>
+        </div>
+        <div class="kpis mt3">
+          <div class="kpi hero">
+            <div class="k-label">Ahorro potencial</div>
+            <div class="k-val" id="kpiSave">— €</div>
+            <div class="k-sub">50 L vs. media de la zona</div>
+          </div>
+          <div class="kpi">
+            <div class="k-label">Más barata</div>
+            <div class="k-val num" id="kpiMin">—</div>
+            <div class="k-sub" id="kpiMinName">—</div>
+          </div>
+          <div class="kpi">
+            <div class="k-label">Media zona</div>
+            <div class="k-val num" id="kpiAvg">—</div>
+            <div class="k-sub" id="kpiSpread">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="list-wrap" id="cardList"></div>
+      <div class="section" style="padding-top:0">
+        <button class="btn block" id="moreBtn">Cargar más estaciones</button>
+        <p class="tiny dim tc mt2" id="loadHint"></p>
+      </div>
+    </section>
+
+    <!-- ============ MAPA ============ -->
+    <section class="pane" data-panel="map">
+      <div class="relative grow" id="mapHost" style="min-height:0"></div>
+      <div class="map-overlay">
+        <span class="map-legend levels">
+          <span><i class="leveldot g"></i><span id="legMin">—</span></span>
+          <span><i class="leveldot o"></i>media</span>
+          <span><i class="leveldot r"></i><span id="legMax">—</span></span>
+        </span>
+        <select class="select-native" id="mapStyle" aria-label="Vista del mapa" style="width:auto;min-height:36px;border-radius:var(--r-full);box-shadow:var(--sh-1)"></select>
+      </div>
+      <div class="grabber only-narrow" style="position:absolute;bottom:3.4rem;left:50%;transform:translateX(-50%);z-index:6;cursor:pointer" id="mapToList"></div>
+    </section>
+
+    <!-- ============ HISTÓRICO ============ -->
+    <section class="pane scroll" data-panel="history">
+      <div class="section">
+        <div class="row between">
+          <div>
+            <div class="bold">Evolución de precios</div>
+            <div class="tiny muted">Media provincial · últimos 14 días</div>
+          </div>
+          <select class="select-native" id="histDays" style="width:104px;min-height:38px"><option>7 días</option><option selected>14 días</option><option>30 días</option><option>90 días</option></select>
+        </div>
+        <div class="card mt3" style="padding:var(--s2)">
+          <div class="chartbox"><canvas id="histChart" data-h="200"></canvas></div>
+          <div class="row" style="gap:var(--s4);padding:var(--s2) var(--s3) var(--s1)">
+            <span class="tiny"><i class="leveldot" style="background:var(--brand)"></i> Media de la zona</span>
+            <span class="tiny"><i class="leveldot" style="background:var(--mid)"></i> Estación seleccionada</span>
+          </div>
+        </div>
+      </div>
+      <div class="section" style="padding-top:0">
+        <div class="section-head" style="padding-inline:0"><h2>Ranking de la zona</h2><span class="tiny dim">14 días</span></div>
+        <div class="list" id="rankingList"></div>
+      </div>
+      <div class="section" style="padding-top:0">
+        <div class="card flat" style="background:var(--warn-bg);border-color:var(--warn-line)">
+          <div class="row top"><span class="ico" data-ico="alert" style="color:var(--warn)"></span>
+          <div><div class="bold small">2 estaciones llevan más de un día sin publicar precio</div>
+          <div class="tiny" style="color:var(--warn)">Los datos del Ministerio se refrescan cada 30 min; si una estación no publica, se marca.</div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ IA ============ -->
+    <section class="pane" data-panel="ia">
+      <div id="iaFeat" class="grow" style="min-height:0;display:flex;flex-direction:column"></div>
+    </section>
+
+    <!-- ============ CONFIG ============ -->
+    <section class="pane scroll" data-panel="config">
+      <div class="section"><div class="bold">Ajustes</div><div class="tiny muted">Paridad con la app: descuentos, caché, paginación, logs, push, claves IA y actualización.</div></div>
+      <div class="cfg-list" id="cfgFeat"></div>
+      <p class="tiny dim tc" style="padding:var(--s5)">Prototipo v1 · los ajustes mutan los datos fake en vivo</p>
+    </section>
+  </div>
+
+  <nav class="bottomnav">
+    <button class="nav-btn on" data-nav-tab="list"><span data-ico="list"></span>Lista</button>
+    <button class="nav-btn" data-nav-tab="map"><span data-ico="map"></span>Mapa</button>
+    <button class="nav-btn" data-nav-tab="history"><span data-ico="trendDown"></span>Histórico</button>
+    <button class="nav-btn" data-nav-tab="ia"><span data-ico="sparkles"></span>IA</button>
+    <button class="nav-btn" data-nav-tab="config"><span data-ico="gear"></span>Ajustes</button>
+  </nav>
+</div>
+
+<!-- ================= HOJA DE FILTROS ================= -->
+<div class="sheet" id="filterSheet" data-sheet>
+  <div class="sheet-head"><span class="sheet-grab"></span><h2>Filtros</h2><div class="spacer"></div>
+    <button class="btn sm ghost" id="clearFilters">Limpiar</button>
+    <button class="iconbtn" data-sheet-close><span data-ico="close"></span></button>
+  </div>
+  <div class="sheet-body">
+    <div class="card flat" style="background:var(--bg-2)">
+      <div class="small bold mb2">Combustible</div>
+      <div class="chips wrap" id="fuelChips"></div>
+    </div>
+    <div class="mt4">
+      <div class="small bold mb2">Zona</div>
+      <select class="select-native mb2" id="fProv"></select>
+      <select class="select-native" id="fLoc"></select>
+    </div>
+    <div class="mt4">
+      <div class="row between"><span class="small bold">Distancia máxima</span><span class="small num muted" id="kmLabel">sin límite</span></div>
+      <input class="range mt2" type="range" id="fKm" min="0" max="40" step="1" value="0">
+      <div class="row between tiny dim"><span>0 km</span><span>40 km</span></div>
+    </div>
+    <div class="mt4">
+      <div class="row between mb2"><span class="small bold">Marca</span><button class="btn sm ghost" id="allBrands">Todas</button></div>
+      <div class="list" id="brandList"></div>
+    </div>
+    <div class="divider"></div>
+    <label class="check"><input type="checkbox" id="fFav"><span class="cb"><span class="ico xs" data-ico="check"></span></span>Solo favoritos</label>
+    <label class="check"><input type="checkbox" id="fCheap"><span class="cb"><span class="ico xs" data-ico="check"></span></span>Solo marcas con descuento</label>
+    <div class="divider"></div>
+    <div class="field-row"><div><div class="fr-label">Vista del mapa</div><div class="fr-hint">10 estilos de teselas</div></div>
+      <select class="select-native" id="fStyle" style="width:150px">
+        <option>Calle</option><option>Ciclismo</option><option>Estándar</option><option>Humanitario</option>
+        <option>NatGeo</option><option>Oscuro</option><option>Relieve</option><option selected>Satélite</option>
+        <option>Satélite con nombres</option><option>Topográfico</option>
+      </select>
+    </div>
+    <div class="field-row"><div><div class="fr-label">Caché de datos</div><div class="fr-hint">Se renueva sola cada 30 min en el servidor</div></div>
+      <div class="stepper"><button data-step="-1"><span data-ico="minus" class="ico sm"></span></button><span class="val" id="ttlVal">12 h</span><button data-step="1"><span data-ico="plus" class="ico sm"></span></button></div>
+    </div>
+  </div>
+  <div class="sheet-foot">
+    <button class="btn ghost" data-sheet-close>Cancelar</button>
+    <button class="btn primary" id="applyFilters">Ver <span id="applyCount">12</span> estaciones</button>
+  </div>
+</div>
+
+<!-- ================= HOJA DE ORDEN ================= -->
+<div class="sheet" id="sortSheet" data-sheet data-snaps="auto">
+  <div class="sheet-head"><span class="sheet-grab"></span><h2>Ordenar por</h2><div class="spacer"></div><button class="iconbtn" data-sheet-close><span data-ico="close"></span></button></div>
+  <div class="sheet-body" id="sortOptions"></div>
+</div>
+
+<!-- ================= HOJA DE DETALLE ================= -->
+<div class="sheet" id="detailSheet" data-sheet data-snaps="half,full">
+  <div class="sheet-head"><span class="sheet-grab"></span><h2 id="dHead">Estación</h2><div class="spacer"></div>
+    <button class="iconbtn" id="dFav"><span data-ico="star"></span></button>
+    <button class="iconbtn" data-sheet-close><span data-ico="close"></span></button>
+  </div>
+  <div class="sheet-body" id="detailBody"></div>
+  <div class="sheet-foot">
+    <button class="btn ghost" id="dShare"><span data-ico="share"></span>Compartir</button>
+    <button class="btn primary" id="dRoute"><span data-ico="navigate"></span>Ir a la gasolinera</button>
+  </div>
+</div>
+
+<!-- ================= HOJA DE AJUSTES ================= -->
+<div class="sheet" id="cfgSheet" data-sheet data-snaps="half,full">
+  <div class="sheet-head"><span class="sheet-grab"></span><h2 id="cfgHead">Ajustes</h2><div class="spacer"></div><button class="iconbtn" data-sheet-close><span data-ico="close"></span></button></div>
+  <div class="sheet-body" id="cfgBody"></div>
+</div>
+
+<div class="compare-bar" id="compareBar">
+  <span class="stacked" id="cmpThumbs"></span>
+  <span class="small grow" id="cmpText">Comparar 2</span>
+  <button class="btn sm" id="cmpOpen">Ver</button>
+  <button class="iconbtn sm" id="cmpClear"><span data-ico="close" class="ico sm"></span></button>
+</div>
+
+<div class="proto-tag">Prototipo v1 · Evolución</div>
+
+<script src="assets/proto-data.js"></script>
+<script src="assets/proto-chart.js"></script>
+<script src="assets/proto-map.js"></script>
+<script src="assets/proto-ui.js"></script>
+<script src="assets/proto-features.js"></script>
+<script>
+/* =========================================================================== */
+Proto.boot();
+
+const state = {
+  q: '', fuel: 'diesel', province: 'Madrid', locality: '', brands: [],
+  maxKm: 0, favOnly: false, cheapOnly: false, sortKey: 'price', sortDir: 'asc',
+  pageSize: 6, shown: 6, sel: null, compare: [], mapStyle: 'Satélite',
+};
+const SORTS = [
+  ['price', 'Precio', 'Menor a mayor'], ['price~desc', 'Precio (alto primero)', ''],
+  ['distance', 'Distancia', ''], ['saving', 'Descuento de marca', ''],
+  ['updated', 'Actualización reciente', ''], ['rating', 'Valoración', ''],
+];
+
+/* --- Datos visibles -------------------------------------------------------- */
+function baseList() { return PROTO.filterStations(PROTO.STATIONS, { province: state.province || null }); }
+function visible() {
+  let list = PROTO.filterStations(PROTO.STATIONS, {
+    province: state.province || null, locality: state.locality || null, fuel: state.fuel,
+    brands: state.brands, maxKm: state.maxKm || 0, favoritesOnly: state.favOnly, cheapOnly: state.cheapOnly, q: state.q,
+  });
+  const [key, dir] = state.sortKey.split('~');
+  return PROTO.sortStations(list, key, dir || 'asc', state.fuel);
+}
+
+/* --- Render principal ----------------------------------------------------- */
+function render() {
+  const list = visible();
+  const stats = PROTO.stats(list, state.fuel);
+  const shown = list.slice(0, state.shown);
+
+  document.getElementById('listTitle').textContent =
+    `${state.province || 'Todas las provincias'} · ${list.length} estacion${list.length === 1 ? '' : 'es'}`;
+  document.getElementById('listSub').textContent =
+    `${PROTO.fuelName(state.fuel)} · datos de hace 8 min` + (state.brands.length ? ` · ${state.brands.length} marca(s)` : '');
+
+  if (stats) {
+    document.getElementById('kpiSave').textContent = PROTO.money(stats.savings70, 2).replace(',00', '') + '';
+    document.getElementById('kpiMin').textContent = PROTO.money(stats.min, 3);
+    const cheapest = PROTO.sortStations(list, 'price', 'asc', state.fuel)[0];
+    document.getElementById('kpiMinName').textContent = cheapest ? cheapest.brand + ' · ' + PROTO.dist(PROTO.kmFromUser(cheapest)) : '—';
+    document.getElementById('kpiAvg').textContent = PROTO.money(stats.avg, 3);
+    document.getElementById('kpiSpread').textContent = `Diferencia ${PROTO.cents(stats.spread)} entre la más barata y la más cara`;
+    document.getElementById('legMin').textContent = PROTO.money(stats.lo, 3).replace(' €', '');
+    document.getElementById('legMax').textContent = PROTO.money(stats.hi, 3).replace(' €', '');
+  }
+
+  const host = document.getElementById('cardList');
+  host.innerHTML = shown.map(st => Proto.stationCard(st, {
+    fuel: state.fuel, stats, variant: 'card', selected: state.sel === st.id,
+    showDrive: true, showSpark: true,
+  })).join('') || emptyState();
+
+  document.getElementById('moreBtn').parentElement.classList.toggle('hide', state.shown >= list.length);
+  document.getElementById('loadHint').textContent = `Mostrando ${shown.length} de ${list.length}`;
+
+  renderChips(list, stats);
+  renderRanking(list);
+  if (map) { map.setStations(list); map.fit(list); }
+  renderCompare();
+}
+
+function emptyState() {
+  return `<div class="empty"><span class="e-icon"><span data-ico="search"></span></span>
+    <h3>Sin resultados</h3><p>Prueba a quitar la provincia, ampliar la distancia o borrar el texto de búsqueda.</p>
+    <button class="btn soft" onclick="document.getElementById('clearFilters').click()">Limpiar filtros</button></div>`;
+}
+
+/* --- Chips de filtros activos -------------------------------------------- */
+function renderChips(list, stats) {
+  const c = [];
+  c.push(chip('fuel', PROTO.fuelShort(state.fuel), '<span data-ico="droplet" class="ico xs"></span>'));
+  if (state.province) c.push(chip('province', state.province, '<span data-ico="map" class="ico xs"></span>'));
+  if (state.locality) c.push(chip('locality', state.locality, ''));
+  if (state.brands.length) c.push(chip('brands', state.brands.length === 1 ? state.brands[0] : state.brands.length + ' marcas', ''));
+  if (state.maxKm) c.push(chip('maxKm', '≤ ' + state.maxKm + ' km', ''));
+  if (state.favOnly) c.push(chip('favOnly', 'Favoritas', '<span data-ico="star" class="ico xs"></span>'));
+  if (state.cheapOnly) c.push(chip('cheapOnly', 'Con descuento', ''));
+  if (state.q) c.push(chip('q', '"' + state.q + '"', ''));
+  c.push(`<button class="chip dashed" id="chipAdd"><span data-ico="plus" class="ico xs"></span>Filtros</button>`);
+  document.getElementById('chips').innerHTML = c.join('');
+  Proto.hydrateIcons(document.getElementById('chips'));
+}
+
+function chip(key, label, pre) {
+  return `<span class="chip on" data-clear="${key}">${pre}<span>${Proto.esc(label)}</span><span class="x">✕</span></span>`;
+}
+
+/* --- Mapa ----------------------------------------------------------------- */
+const map = ProtoMap.create(document.getElementById('mapHost'), {
+  stations: PROTO.STATIONS, fuel: state.fuel, seed: 'madrid-v1', zoom: 1,
+});
+map.on('marker', (id) => { openDetail(id); });
+
+/* --- Detalle -------------------------------------------------------------- */
+const detail = Proto.sheet(document.getElementById('detailSheet'), { snaps: ['half', 'full'], start: 'half', peek: 150, half: .58, full: .94 });
+
+function openDetail(id) {
+  const st = PROTO.STATIONS.find(s => s.id === id); if (!st) return;
+  state.sel = id;
+  const price = PROTO.finalPrice(st, state.fuel);
+  const stats = PROTO.stats(visible(), state.fuel);
+  const s = PROTO.seriesStats(PROTO.series(st, state.fuel, 14));
+  const meta = PROTO.brandMeta(st.brand);
+  const save = PROTO.savingVsAvg(st, baseList(), state.fuel, 50);
+
+  document.getElementById('dHead').textContent = st.brand + ' · ' + PROTO.dist(PROTO.kmFromUser(st));
+  const favBtn = document.getElementById('dFav');
+  favBtn.classList.toggle('on', !!st.fav);
+  favBtn.innerHTML = Proto.icon(st.fav ? 'starFill' : 'star', st.fav ? 'fill' : '');
+
+  document.getElementById('detailBody').innerHTML = `
+    <div class="row top" style="gap:var(--s3)">
+      <span class="brandlogo lg" style="background:${meta.color};color:${meta.ink}">${st.brand.slice(0, 2)}</span>
+      <div class="grow">
+        <div class="bold">${Proto.esc(st.name)}</div>
+        <div class="tiny muted">${Proto.esc(st.address)} · ${Proto.esc(st.city)}</div>
+        <div class="row mt2" style="gap:6px"><span class="badge">${st.schedule === '24h' ? '24 h' : st.schedule}</span>
+        <span class="badge">★ ${st.rating} · ${st.reviews} opiniones</span>
+        <span class="badge warn">Actualizado ${PROTO.since(st.updatedMin)}</span></div>
+      </div>
+    </div>
+
+    <div class="card mt3" style="background:var(--bg-2)">
+      <div class="row between">
+        <div>
+          <div class="tiny muted">${PROTO.fuelName(state.fuel)}</div>
+          <div class="price p-xl ${stats ? PROTO.level(price, stats.lo, stats.hi) : 'mid'}">${price.toFixed(3).replace('.', ',').slice(0, -1)}<span class="p-dec">${price.toFixed(3).slice(-1)}</span><span class="p-unit">€/L</span></div>
+          <div class="row" style="gap:var(--s2)">
+            <span class="delta ${s.diff < 0 ? 'down' : 'up'}">
+              <span data-ico="${s.diff < 0 ? 'trendDown' : 'trendUp'}" class="ico xs"></span>${Math.abs(s.diff * 100).toFixed(1).replace('.', ',')} ¢ en 14 días</span>
+          </div>
+        </div>
+        <div class="col tr" style="gap:4px">
+          <div class="tiny muted">Con descuento de marca</div>
+          <div class="badge ok lg">${meta.discount ? '-' + meta.discount + ' ¢ ' + meta.program : 'Sin descuento'}</div>
+          <div class="tiny muted">Ahorro 50 L</div>
+          <div class="bold">${PROTO.money(save, 2)}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chartbox mt3"><canvas id="dChart" data-h="170"></canvas><div class="chart-tip"></div></div>
+    <div class="row between mt2">
+      <select class="select-native" id="dFuel" style="width:150px;min-height:38px">
+        ${PROTO.FUELS.filter(f => st.prices[f.id] != null).map(f => `<option value="${f.id}" ${f.id === state.fuel ? 'selected' : ''}>${f.name}</option>`).join('')}
+      </select>
+      <div class="chips" id="dDays" style="flex-wrap:wrap;justify-content:flex-end">
+        ${[7, 14, 21, 30, 60, 90, 180].map(d => `<button class="chip ${d === 14 ? 'on' : ''}" data-val="${d}">${d} d</button>`).join('')}
+      </div>
+    </div>
+
+    <div class="kpis mt4">
+      <div class="kpi"><div class="k-label">Mínimo</div><div class="k-val num">${s.min.toFixed(3).replace('.', ',')}</div><div class="k-sub">${s.minDate}</div></div>
+      <div class="kpi"><div class="k-label">Media</div><div class="k-val num">${s.avg.toFixed(3).replace('.', ',')}</div><div class="k-sub">${s.days} días</div></div>
+      <div class="kpi"><div class="k-label">Máximo</div><div class="k-val num">${s.max.toFixed(3).replace('.', ',')}</div><div class="k-sub">${s.maxDate}</div></div>
+    </div>
+
+    <div class="mt4">
+      <div class="small bold mb2">Todos los combustibles</div>
+      <div class="list">
+        ${PROTO.FUELS.filter(f => st.prices[f.id] != null).map(f => `
+          <div class="row-item"><div class="ri-main"><div class="ri-title">${f.name}</div>
+          <div class="ri-sub">${st.prices[f.id] === st.prices[f.id] ? 'Disponible · granel' : ''}</div></div>
+          <span class="price p-sm ${stats ? PROTO.level(PROTO.finalPrice(st, f.id), stats.lo, stats.hi) : ''}">${PROTO.money(PROTO.finalPrice(st, f.id), 3).replace(' €', '')}<span class="p-unit">€/L</span></span></div>`).join('')}
+      </div>
+    </div>
+
+    <div class="mt4">
+      <div class="small bold mb2">Servicios</div>
+      <div class="chips wrap">${st.services.map(sv => `<span class="chip">${sv}</span>`).join('')}${meta.program ? `<span class="chip soft">${meta.program}</span>` : ''}</div>
+    </div>
+  `;
+  Proto.hydrateIcons(document.getElementById('detailBody'));
+  drawDetailChart(id);
+
+  document.getElementById('dFuel').onchange = () => drawDetailChart(id);
+  document.getElementById('dDays').onclick = (e) => {
+    const b = e.target.closest('[data-val]'); if (!b) return;
+    document.querySelectorAll('#dDays .chip').forEach(c => c.classList.toggle('on', c === b));
+    drawDetailChart(id, +b.dataset.val);
+  };
+
+  document.getElementById('dRoute').onclick = () => Proto.toast('Abriendo navegación hacia ' + st.name, { iconName: 'navigate' });
+  document.getElementById('dShare').onclick = () => Proto.toast('Enlace copiado (mock)', { iconName: 'share' });
+  detail.open('half');
+  renderCompare();
+}
+
+function drawDetailChart(id, days = 14) {
+  const st = PROTO.STATIONS.find(s => s.id === id);
+  const fuelSel = document.getElementById('dFuel')?.value || state.fuel;
+  const canvas = document.getElementById('dChart'); if (!canvas || !st) return;
+  const own = PROTO.series(st, fuelSel, days);
+  const median = PROTO.sortStations(baseList(), 'price', 'asc', fuelSel);
+  const avgSeries = [];
+  const pool = median.slice(0, Math.min(6, median.length));
+  for (let i = 0; i < own.length; i++) {
+    const vals = pool.map(s2 => PROTO.series(s2, fuelSel, days)[i]?.price).filter(v => v != null);
+    avgSeries.push({ date: own[i].date, price: vals.reduce((a, b) => a + b, 0) / (vals.length || 1) });
+  }
+  const series = [
+    { label: 'Zona', color: ProtoChart.css('--brand'), data: avgSeries, dash: true, area: false },
+    { label: st.brand, color: ProtoChart.css('--mid'), data: own },
+  ];
+  const geom = ProtoChart.draw(canvas, { series, avg: false });
+  ProtoChart.tooltip(canvas, canvas.parentElement, geom, { live: true });
+  canvas.onpointermove = null;
+}
+
+/* --- Ranking (subidas/bajadas) ------------------------------------------- */
+function renderRanking(list) {
+  const rows = list.slice(0, 8).map(st => {
+    const s = PROTO.seriesStats(PROTO.series(st, state.fuel, 14));
+    return { st, s };
+  }).filter(r => r.s);
+  rows.sort((a, b) => a.s.diff - b.s.diff);
+  document.getElementById('rankingList').innerHTML = rows.slice(0, 6).map(({ st, s }) => `
+    <button class="row-item tap" data-id="${st.id}">
+      <span class="brandlogo sm" style="background:${PROTO.brandMeta(st.brand).color};color:${PROTO.brandMeta(st.brand).ink}">${st.brand.slice(0, 2)}</span>
+      <span class="ri-main"><span class="ri-title">${st.brand} <span class="muted tiny">${st.city}</span></span>
+      <span class="ri-sub">${s.min.toFixed(3).replace('.', ',')} – ${s.max.toFixed(3).replace('.', ',')} €/L</span></span>
+      <span class="col" style="align-items:flex-end">
+        <span class="delta ${s.diff < 0 ? 'down' : 'up'}"><span data-ico="${s.diff < 0 ? 'trendDown' : 'trendUp'}" class="ico xs"></span>${Math.abs(s.diff * 100).toFixed(1).replace('.', ',')} ¢</span>
+        <span style="color:var(--${s.diff < 0 ? 'lo' : 'hi'})">${ProtoChart.spark(PROTO.series(st, state.fuel, 14).map(x => x.price), { color: s.diff < 0 ? ProtoChart.css('--lo') : ProtoChart.css('--hi') })}</span>
+      </span>
+    </button>`).join('');
+  Proto.hydrateIcons(document.getElementById('rankingList'));
+  document.getElementById('rankingList').onclick = (e) => {
+    const b = e.target.closest('[data-id]'); if (b) openDetail(b.dataset.id);
+  };
+}
+
+/* --- Comparador ----------------------------------------------------------- */
+function toggleCompare(id) {
+  const i = state.compare.indexOf(id);
+  if (i >= 0) state.compare.splice(i, 1);
+  else { if (state.compare.length >= 3) state.compare.shift(); state.compare.push(id); }
+  renderCompare();
+  if (state.compare.length >= 2) openCompare();
+}
+function renderCompare() {
+  const bar = document.getElementById('compareBar');
+  bar.classList.toggle('on', state.compare.length > 0);
+  document.getElementById('cmpText').textContent = state.compare.length < 2 ? 'Selecciona otra para comparar' : `Comparar ${state.compare.length} estaciones`;
+  document.getElementById('cmpThumbs').innerHTML = state.compare.map(id => {
+    const st = PROTO.STATIONS.find(s => s.id === id), m = PROTO.brandMeta(st.brand);
+    return `<span class="brandlogo sm" style="background:${m.color};color:${m.ink}" title="${st.name}">${st.brand.slice(0, 2)}</span>`;
+  }).join('');
+}
+function openCompare() {
+  const list = state.compare.map(id => PROTO.STATIONS.find(s => s.id === id));
+  const stats = PROTO.stats(list, state.fuel);
+  const fuels = [...new Set(list.flatMap(st => PROTO.FUELS.filter(f => st.prices[f.id] != null).map(f => f.id)))];
+  document.getElementById('cfgHead').textContent = 'Comparativa';
+  document.getElementById('cfgBody').innerHTML = `
+    <div class="tablewrap" style="border:1px solid var(--line);border-radius:var(--r-md)">
+      <table class="data cmp-table">
+        <thead><tr><th>Estación</th>${list.map(st => `<th class="tr">${st.brand}</th>`).join('')}</tr></thead>
+        <tbody>
+        <tr><td class="dim">Distancia</td>${list.map(st => `<td class="num">${PROTO.dist(PROTO.kmFromUser(st))}</td>`).join('')}</tr>
+        ${fuels.map(f => `<tr><td>${PROTO.fuelName(f)}</td>${list.map(st => {
+          const v = PROTO.finalPrice(st, f);
+          return `<td class="num ${v === stats.min && f === state.fuel ? 'cmp-best' : ''}">${v == null ? '—' : v.toFixed(3).replace('.', ',')}</td>`;
+        }).join('')}</tr>`).join('')}
+        <tr><td class="dim">Descuento</td>${list.map(st => `<td class="num">${PROTO.brandMeta(st.brand).discount ? '-' + PROTO.brandMeta(st.brand).discount + ' ¢' : '—'}</td>`).join('')}</tr>
+        <tr><td class="dim">Horario</td>${list.map(st => `<td class="num">${st.schedule}</td>`).join('')}</tr>
+        <tr><td class="dim">Actualizado</td>${list.map(st => `<td class="num">${PROTO.since(st.updatedMin)}</td>`).join('')}</tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tiny dim mt2">El precio marcado en verde es el más bajo de la comparativa para el combustible activo.</p>
+    <div class="mt3"><div class="small bold mb2">Depósito de 50 L</div>
+      <div class="kpis">${list.map(st => { const v = PROTO.finalPrice(st, state.fuel); return `<div class="kpi"><div class="k-label">${st.brand}</div><div class="k-val num">${PROTO.money(v * 50, 2)}</div><div class="k-sub">${PROTO.brandMeta(st.brand).discount ? 'con descuento aplicado' : 'sin descuento'}</div></div>`; }).join('')}
+      </div>
+    </div>`;
+  cmpSheet.open('full');
+}
+
+/* --- Ajustes -------------------------------------------------------------- */
+const cfgSheet = Proto.sheet(document.getElementById('cfgSheet'), { snaps: ['half', 'full'], start: 'full', full: .94 });
+let iaFeat = null;
+function sheetOpen(id) { return document.getElementById(id)?.classList.contains('open'); }
+ProtoFeat.configPanel(document.getElementById('cfgFeat'), {
+  onDiscounts: () => {
+    render();
+    if (state.sel && sheetOpen('detailSheet')) openDetail(state.sel);
+    if (state.compare.length >= 2 && sheetOpen('cfgSheet')) openCompare();
+  },
+  onPageSize: (n) => { state.pageSize = n > 0 ? n : 30; state.shown = n > 0 ? n : 999; render(); },
+  getHiddenIa: () => (iaFeat ? iaFeat.hidden : []),
+  onIaTabs: (ids) => iaFeat && iaFeat.setHidden(ids),
+});
+/* --- IA ------------------------------------------------------------------- */
+iaFeat = ProtoFeat.iaPanel(document.getElementById('iaFeat'), {
+  list: () => visible(),
+  onOpenStation: (id) => openDetail(id),
+});
+
+/* --- Eventos globales ------------------------------------------------------ */
+document.getElementById('q').addEventListener('input', (e) => { state.q = e.target.value.trim(); state.shown = state.pageSize; render(); });
+document.getElementById('moreBtn').onclick = () => { state.shown += state.pageSize; render(); };
+document.getElementById('chips').addEventListener('click', (e) => {
+  const x = e.target.closest('[data-clear]');
+  if (x) { const k = x.dataset.clear; if (k === 'brands') state.brands = []; else if (['favOnly', 'cheapOnly'].includes(k)) state[k] = false; else if (k === 'maxKm') state.maxKm = 0; else state[k] = ''; render(); return; }
+  if (e.target.closest('#chipAdd')) openFilters();
+});
+document.getElementById('filterBtn').onclick = () => openFilters();
+document.getElementById('applyFilters').onclick = () => { filterSheet.close(); render(); };
+document.getElementById('clearFilters').onclick = () => {
+  Object.assign(state, { q: '', province: '', locality: '', brands: [], maxKm: 0, favOnly: false, cheapOnly: false, shown: state.pageSize });
+  document.getElementById('q').value = ''; document.getElementById('fProv').value = '';
+  document.getElementById('fKm').value = 0; render(); Proto.toast('Filtros restablecidos', { iconName: 'check' });
+};
+document.getElementById('favQuick').onclick = (e) => {
+  state.favOnly = !state.favOnly; state.shown = state.pageSize;
+  e.currentTarget.classList.toggle('on', state.favOnly); render();
+  Proto.toast(state.favOnly ? 'Mostrando solo favoritas' : 'Mostrando todas', { iconName: 'star' });
+};
+document.getElementById('bellQuick').onclick = () => { navBar.go('config'); };
+document.getElementById('micBtn').onclick = () => Proto.toast('Escuchando… (mock de voz)', { iconName: 'mic' });
+ProtoFeat.mapStyleSelect(document.getElementById('mapStyle'), { mapHost: document.getElementById('mapHost') });
+document.getElementById('mapToList').onclick = () => navBar.go('list');
+document.getElementById('sortBtn').onclick = () => { buildSortOptions(); sortSheet.open(); };
+document.getElementById('dFav').onclick = (e) => {
+  const st = PROTO.STATIONS.find(s => s.id === state.sel); if (!st) return;
+  st.fav = !st.fav; e.currentTarget.classList.toggle('on', st.fav);
+  e.currentTarget.innerHTML = Proto.icon(st.fav ? 'starFill' : 'star', st.fav ? 'fill' : '');
+  Proto.toast(st.fav ? st.name + ' en favoritos' : 'Quitada de favoritos', { iconName: 'star' });
+  render();
+};
+document.getElementById('cardList').addEventListener('click', (e) => {
+  const cmp = e.target.closest('[data-act="compare"]');
+  if (cmp) { toggleCompare(e.target.closest('.station').dataset.id); return; }
+  const r = e.target.closest('[data-act="route"]');
+  if (r) { Proto.toast('Abriendo navegación…', { iconName: 'navigate' }); return; }
+});
+Proto.bindCards(document.getElementById('cardList'), {
+  onOpen: (st) => openDetail(st.id),
+  onFav: (st) => { Proto.toast(st.fav ? st.name + ' en favoritos' : 'Quitada de favoritos', { iconName: 'star' }); },
+  onRoute: (st) => Proto.toast('Navegando a ' + st.brand, { iconName: 'navigate' }),
+  onCompare: (st) => toggleCompare(st.id),
+});
+
+document.getElementById('cmpOpen').onclick = () => openCompare();
+document.getElementById('cmpClear').onclick = () => { state.compare = []; renderCompare(); };
+
+/* --- Ajustes: sheets ------------------------------------------------------- */
+const filterSheet = Proto.sheet(document.getElementById('filterSheet'), { snaps: ['half', 'full'], start: 'full', full: .94 });
+const sortSheet = Proto.sheet(document.getElementById('sortSheet'), { snaps: ['auto'] });
+
+function openFilters() { buildFilterSheet(); filterSheet.open('full'); }
+
+function buildFilterSheet() {
+  document.getElementById('fuelChips').innerHTML = PROTO.FUELS.map(f =>
+    `<button class="chip ${state.fuel === f.id ? 'on' : ''}" data-fuel="${f.id}"><span data-ico="${f.icon}" class="ico xs"></span>${f.short}</button>`).join('');
+  document.getElementById('fProv').innerHTML = `<option value="">Todas las provincias</option>` +
+    PROTO.PROVINCES.slice(0, 20).map(p => `<option ${state.province === p.name ? 'selected' : ''}>${p.name}</option>`).join('');
+  const locs = [...new Set(PROTO.filterStations(PROTO.STATIONS, { province: state.province || null }).map(s => s.city))].sort();
+  document.getElementById('fLoc').innerHTML = `<option value="">Todas las localidades</option>` + locs.map(l => `<option ${state.locality === l ? 'selected' : ''}>${l}</option>`).join('');
+  const brands = PROTO.brandsOf(PROTO.filterStations(PROTO.STATIONS, { province: state.province || null }));
+  document.getElementById('brandList').innerHTML = brands.map(b => {
+    const m = PROTO.brandMeta(b);
+    return `<label class="check"><input type="checkbox" data-brand="${b}" ${state.brands.includes(b) ? 'checked' : ''}>
+      <span class="cb"><span data-ico="check" class="ico xs"></span></span>
+      <span class="brandlogo sm" style="background:${m.color};color:${m.ink};width:26px;height:26px;border-radius:8px;font-size:10px">${b.slice(0, 2)}</span>
+      <span class="grow">${b}</span>${m.discount ? `<span class="badge ok">-${m.discount} ¢</span>` : ''}</label>`;
+  }).join('');
+  document.getElementById('fKm').value = state.maxKm;
+  document.getElementById('kmLabel').textContent = state.maxKm ? state.maxKm + ' km' : 'sin límite';
+  document.getElementById('fFav').checked = state.favOnly;
+  document.getElementById('fCheap').checked = state.cheapOnly;
+  document.getElementById('fProv').value = state.province; document.getElementById('fLoc').value = state.locality;
+  Proto.hydrateIcons(document.getElementById('filterSheet'));
+  updateApplyCount();
+}
+function updateApplyCount() { document.getElementById('applyCount').textContent = visible().length; }
+
+document.getElementById('fuelChips').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-fuel]'); if (!b) return;
+  state.fuel = b.dataset.fuel; state.shown = state.pageSize;
+  document.querySelectorAll('#fuelChips .chip').forEach(x => x.classList.toggle('on', x === b));
+  map.setRadius?.(0); render(); updateApplyCount();
+});
+document.getElementById('fProv').onchange = (e) => { state.province = e.target.value; state.brands = []; state.locality = ''; state.shown = state.pageSize; buildFilterSheet(); render(); };
+document.getElementById('fLoc').onchange = (e) => { state.locality = e.target.value; state.shown = state.pageSize; render(); updateApplyCount(); };
+document.getElementById('fKm').oninput = (e) => { state.maxKm = +e.target.value; document.getElementById('kmLabel').textContent = state.maxKm ? state.maxKm + ' km' : 'sin límite'; state.shown = state.pageSize; render(); updateApplyCount(); map.setRadius(state.maxKm); };
+document.getElementById('brandList').onchange = (e) => {
+  const b = e.target.closest('[data-brand]'); if (!b) return;
+  const name = b.dataset.brand;
+  state.brands = b.checked ? [...state.brands, name] : state.brands.filter(x => x !== name);
+  state.shown = state.pageSize; render(); updateApplyCount();
+};
+document.getElementById('allBrands').onclick = () => { state.brands = []; buildFilterSheet(); render(); updateApplyCount(); };
+document.getElementById('fFav').onchange = (e) => { state.favOnly = e.target.checked; state.shown = state.pageSize; render(); updateApplyCount(); };
+document.getElementById('fCheap').onchange = (e) => { state.cheapOnly = e.target.checked; state.shown = state.pageSize; render(); updateApplyCount(); };
+document.querySelectorAll('#filterSheet [data-step]').forEach(b => b.onclick = () => {
+  const el = document.getElementById('ttlVal'); const v = Math.max(1, Math.min(48, parseInt(el.textContent) + (+b.dataset.step) * 6));
+  el.textContent = v + ' h';
+});
+
+function buildSortOptions() {
+  document.getElementById('sortOptions').innerHTML = SORTS.map(([k, label]) => `
+    <button class="row-item tap" data-sort="${k}" style="width:100%">
+      <span class="ri-main"><span class="ri-title">${label || k}</span></span>
+      ${state.sortKey === k ? '<span class="ico on" data-ico="check" style="color:var(--brand)"></span>' : ''}
+    </button>`).join('');
+  Proto.hydrateIcons(document.getElementById('sortOptions'));
+}
+document.getElementById('sortOptions').onclick = (e) => {
+  const b = e.target.closest('[data-sort]'); if (!b) return;
+  state.sortKey = b.dataset.sort === state.sortKey ? state.sortKey + '~desc' : b.dataset.sort;
+  document.getElementById('sortLabel').textContent = SORTS.find(s => s[0] === b.dataset.sort)[1];
+  sortSheet.close(); render();
+};
+
+/* --- Navegación ------------------------------------------------------------ */
+const navBar = Proto.nav(document.body, {
+  attr: 'data-nav-tab', store: 'proto_v1_pane', start: 'list',
+  onSwitch: (k) => {
+    document.body.dataset.mode = k;
+    if (k === 'map') setTimeout(() => window.dispatchEvent(new Event('resize')), 60);
+    if (k === 'history') drawHistory();
+  },
+});
+document.getElementById('histDays').onchange = drawHistory;
+function drawHistory() {
+  const list = visible().slice(0, 6);
+  const fuel = state.fuel;
+  const canvas = document.getElementById('histChart');
+  if (!list.length) { const c = canvas.getContext('2d'); c?.setTransform(1, 0, 0, 1, 0, 0); c?.clearRect(0, 0, canvas.width, canvas.height); return; }
+  const ref = PROTO.series(list[0], fuel, 14);
+  const avg = ref.map((d, i) => {
+    const vals = list.map(st => PROTO.series(st, fuel, 14)[i]?.price).filter(v => v != null);
+    return { date: d.date, price: vals.reduce((a, b) => a + b, 0) / (vals.length || 1) };
+  });
+  const sel = state.sel ? PROTO.STATIONS.find(s => s.id === state.sel) : list[0];
+  const own = PROTO.series(sel, fuel, 14);
+  const geom = ProtoChart.draw(canvas, {
+    series: [
+      { label: 'Media', color: ProtoChart.css('--brand'), data: avg },
+      { label: sel.brand, color: ProtoChart.css('--mid'), data: own, dash: true, area: false },
+    ], avg: false,
+  });
+  ProtoChart.tooltip(canvas, canvas.parentElement, geom, { live: true });
+}
+
+render();
+</script>
+</body>
+</html>
