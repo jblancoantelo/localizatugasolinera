@@ -1,35 +1,5 @@
 # Mejoras realizadas — Precios Gasolina España
 
-## 2026-10-18 — Prototipos Big_pickle: renombrado y toast que tapaba la navegación
-
-### Por qué hacía falta
-La carpeta de prototipos `prototipos_bigpickle/` no seguía el patrón de nombrado
-`prototipos_opencode_*` de las demás carpetas de prototipos, lo que dificultaba saber de
-quién era cada ronda. Además la auditoría de diseño del prototipo 6 marcaba **3 avisos de
-«navegación tapada» en móvil**: los puntos del indicador del carril quedaban cubiertos por
-etiquetas de descuento de las tarjetas de la hoja de lista.
-
-### La causa: un selector `.aviso` demasiado genérico
-- El toast de avisos se estilizaba con la **clase** `.aviso` (`position: fixed`,
-  `z-index: 200`), y las etiquetas de descuento de las tarjetas se pintaban como
-  `<span class="etiqueta aviso">`. Al compartir la clase, las etiquetas heredaban el
-  posicionamiento fijo: salían de su hoja (`overflow: hidden` no las retenía porque el
-  propio ancestro era `position: fixed`) y se superponían al indicador.
-- Corrección en los 3 prototipos que mezclan ambas clases (1, 6 y 7): el toast se
-  estiliza ahora por **id** (`#aviso`). Las etiquetas `.etiqueta.aviso` quedan intactas.
-
-### Renombrado de la carpeta
-- `prototipos_bigpickle/` → `prototipos_opencode_bigpickle/`, con todas sus referencias
-  (README, índice, scripts `capturar.mjs`/`auditar.mjs`, informes e interiores).
-
-### Tests
-- `node prototipos_opencode_bigpickle/auditar.mjs`: **0 avisos en móvil y PC en los 8**
-  (antes 3 en el 6). Capturas regeneradas, incluidas las 4 que faltaban del 6.
-- `node check-syntax.mjs`: 19/19 OK. Suite completa: **214 tests** (207 HTTP + 7 file://)
-  en verde. La app real no cambia.
-
----
-
 ## 2026-10-11 — Móvil apaisado, 5 columnas en vertical y PWA que se actualiza sola
 
 ### Por qué hacía falta

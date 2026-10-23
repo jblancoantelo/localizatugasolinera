@@ -112,7 +112,7 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 ```powershell
 npm install                # playwright + web-push
 
-npm test                   # 214 tests (207 HTTP + 7 file://) — suite completa
+npm test                   # 208 tests (201 HTTP + 7 file://) — suite completa
 node check-syntax.mjs      # sintaxis de todo el JS (incluye el <script> inline del HTML)
 npm run bump               # regenera ASSETS de sw.js + incrementa APP_VERSION y BUILD_TIME
 npm run sync-assets        # solo regenera la lista ASSETS de sw.js
@@ -162,7 +162,7 @@ npm run check-assets       # verifica ASSETS sin escribir (sale con 1 si no cuad
 | Notificaciones | Web Push API + Periodic Background Sync |
 | Service Worker | Cache-first + Network-first híbrido, precaché generado por script |
 | Chat IA | Pestaña **General** (misma pregunta a todos los proveedores visibles, en paralelo) + 7 proveedores (Groq, Mistral, OpenRouter, LLM7.io, NVIDIA vía Worker, Google Gemini, Chrome Built-in AI) |
-| Tests | Playwright (214 tests, servidor HTTP inline) |
+| Tests | Playwright (208 tests, servidor HTTP inline) |
 | Desarrollo | [OpenCode](https://opencode.ai) con modelos DeepSeek (libres) |
 
 ---

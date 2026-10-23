@@ -19,7 +19,7 @@ node docs/test/full_test.mjs
 ### Qué hace el script:
 - Inicia servidor HTTP en :8080 sirviendo desde la raíz del proyecto
 - Lanza Chromium headless
-- Ejecuta 214 tests: 207 contra HTTP + 7 contra `file://`
+- Ejecuta 208 tests: 201 contra HTTP + 7 contra `file://`
 - Empieza por la sección 17 (build), que lee ficheros del disco sin abrir el navegador
 - Cierra servidor y navegador automáticamente
 - Exit code 0 = todo OK, 1 = algún fallo
@@ -138,7 +138,7 @@ node docs/test/full_test.mjs
 
 ## Resultados actuales
 
-**214 tests — 214 ✅ 0 ❌**
+**208 tests — 208 ✅ 0 ❌**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
@@ -364,49 +364,3 @@ No automatizado en `full_test.mjs` (requiere el módulo real de IA). Verificado 
 | Logs vacíos tras F5 | La restauración usaba `window.API_LOG_RING` y las `const` de nivel superior no existen en `window` | Se referencian por identificador; test con 45 entradas sembradas y recorte a 30 |
 | `icons/icon-512.svg` fuera del precaché | El sync de assets solo leía `index.html`, y ese icono solo está en `manifest.json` | El sync lee también `manifest.json`; test que compara `ASSETS` con ambas fuentes |
 | Histórico del SW con fechas desordenadas | Su `sort()` de `dd-mm-aaaa` como texto y sin el unary `+` del año | `sortHistoryDates()` compartido en `js/history.js`, importado por el SW |
-
-## 18. Prototipos de rediseño (verificación manual de escritorio, fuera de la suite)
-
-Los prototipos de `prototipos_mimo/` y `prototipos_opencode_bigpickle/` **no son la app
-real**: son páginas estáticas con datos fake y sin red, así que **no entran en
-`full_test.mjs`**. Se verifican a parte antes de dar por cerrada una ronda de diseño:
-
-```powershell
-node prototipos_mimo/_test-prototipos.mjs     # carga de los 6 conceptos + galería
-node prototipos_mimo/_test-interaccion.mjs    # smoke-test de interacción
-
-node prototipos_opencode_bigpickle/capturar.mjs   # smoke test + capturas (8 prototipos)
-node prototipos_opencode_bigpickle/auditar.mjs    # auditoría de diseño → shared/informes/
-```
-
-### `prototipos_mimo/`
-
-- `_test-prototipos.mjs`: abre `index.html` de los 6 conceptos en **móvil
-  (390×844)** y **escritorio (1400×900)**, falla si hay `console.error` o
-  `pageerror`, y guarda capturas en `prototipos_mimo/_shots/`
-- `_test-interaccion.mjs`: comprueba con Playwright que el bottom sheet abre,
-  el filtro por combustible re-pinta la lista, el comparador de Radar despliega
-  su panel y el swipe de Gesture cambia de vista — todo sin errores JS
-
-Puntos de diseño que se revisan a ojo en las capturas (no automatizables):
-
-- Los **chips de combustible** se ven con su texto (en C6 el contenedor `.gs-chips`
-  colapsaba a 12 px y recortaba los chips: se fijó `flex: 0 0 auto` y `z-index` por
-  encima de `.gs-track`)
-- En escritorio, **Card Flow** no muestra el atajo `.map-fab` (es redundante con la
-  nav inferior + rail visibles) y la etiqueta "más barata" no se parte a dos líneas
-- En escritorio, **Cockpit** sí dispone las 3 columnas en fila (`.ck` necesita
-  `flex-direction: row` en el `@media ≥900px`, si no el mapa queda sin altura)
-
-### `prototipos_opencode_bigpickle/` (8 prototipos)
-
-- `capturar.mjs`: abre los 8 por `file://` en móvil (390×844, DPR 2) y PC (1440×900),
-  guarda las capturas en `shared/capturas/` y **falla si hay errores de consola**
-  (también los `[data-shot="detalle"]` y `[data-shot="vista"]`)
-- `auditar.mjs`: mide en móvil y PC desbordes, objetivos táctiles < 32 px, textos < 12 px,
-  contraste WCAG AA, frases rotas, navegación tapada y nº de destinos; escribe un informe
-  por prototipo en `shared/informes/`. **Objetivo: 0 avisos** — estado actual: 8/8 con 0
-- Bug ya corregido que ilustra la regla 6 (navegación tapada): el toast se estilizaba con
-  la clase `.aviso`, y las etiquetas de descuento `.etiqueta.aviso` de las tarjetas
-  heredaban su `position: fixed` y tapaban el indicador del carril en el prototipo 6. El
-  toast va ahora por id (`#aviso`) en los prototipos 1, 6 y 7
