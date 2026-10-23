@@ -65,7 +65,7 @@ const RAIL = 'file:///' + __dirname.replace(/\\/g, '/') + '/';
   await p.screenshot({ path: OUT + '_dbg-v3-movil-config.png' });
   /* Descuento Repsol al máximo */
   await p.evaluate(() => {
-    const r = document.querySelector('[data-disc="Repsol"]');
+    const r = document.querySelector('[data-disc="REPSOL"]');
     r.value = r.max; r.dispatchEvent(new Event('input', { bubbles: true }));
   });
   await p.waitForTimeout(400);

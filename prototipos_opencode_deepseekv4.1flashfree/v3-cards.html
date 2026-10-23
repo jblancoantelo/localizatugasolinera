@@ -230,7 +230,7 @@ const state = { sort: 'cost', prov: 'Madrid', q: '', pageSize: 8, shown: 8 };
 const baseList = () => PROTO.filterStations(PROTO.STATIONS, { province: state.prov, fuel: car.fuel, q: state.q });
 const cost100 = (st) => (PROTO.finalPrice(st, car.fuel) ?? 0) * car.cons;      // € por 100 km
 const tankCost = (st) => (PROTO.finalPrice(st, car.fuel) ?? 0) * car.liters;    // € el depósito
-const myAvg = () => PROTO.stats(baseList(), car.fuel).avg;
+const myAvg = () => { const s = PROTO.stats(baseList(), car.fuel); return s ? s.avg : 0; };
 
 function heroStation() {
   return PROTO.sortStations(baseList(), 'price', 'asc', car.fuel)[0];
