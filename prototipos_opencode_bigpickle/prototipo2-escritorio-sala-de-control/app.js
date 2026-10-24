@@ -237,8 +237,10 @@
 
   /** Precio con descuento de marca aplicado si está activo en Config. */
   function precioFinal(e) {
-    if (!estado.descuentosActivos) return precioBase(e);
-    return F.precioConDescuento(e, estado.combustible);
+    var p = precioBase(e);
+    if (p == null || !estado.descuentosActivos) return p;
+    var dto = estado.descuentos[e.marca] || 0;
+    return Math.round((p - dto) * 1000) / 1000;
   }
 
   /** ¿Cuántos filtros "secundarios" hay puestos? (badge del chip Filtros) */
@@ -340,8 +342,48 @@
     $('#btnPush').setAttribute('aria-pressed', estado.push.activo ? 'true' : 'false');
     $('#pushPunto').hidden = !estado.push.activo;
     $('#actualizado').textContent = (estado.cargando ? 'Actualizando…' : 'Actualizado ' + estado.actualizado);
-    $('#buscadorLimpiar').hidden = !estado.busqueda;
+    var limpiar = $('.buscador-limpiar');
+    if (limpiar) limpiar.hidden = !estado.busqueda;
     if ($('#buscador').value !== estado.busqueda) $('#buscador').value = estado.busqueda;
+  }
+
+  /** Oculta y vacía la lista de sugerencias del buscador global. */
+  function ocultarSugerencias() {
+    var caja = $('#sugerencias');
+    var inp = $('#buscador');
+    if (!caja) return;
+    caja.hidden = true;
+    caja.innerHTML = '';
+    if (inp) inp.setAttribute('aria-expanded', 'false');
+  }
+
+  /** Sugerencias de estaciones para lo que se está escribiendo en el buscador. */
+  function pintarSugerencias() {
+    var caja = $('#sugerencias');
+    var inp = $('#buscador');
+    if (!caja || !inp) return;
+    var q = norm(estado.busqueda).trim();
+    if (q.length < 2) { ocultarSugerencias(); return; }
+
+    var encontradas = F.estaciones.filter(function (e) {
+      return norm(e.nombre + ' ' + e.marca + ' ' + e.localidad + ' ' + e.direccion).indexOf(q) !== -1;
+    }).slice(0, 7);
+
+    if (!encontradas.length) {
+      caja.innerHTML = '<div class="sug-vacio">Ninguna estación coincide con “' +
+        esc(estado.busqueda) + '”.</div>';
+    } else {
+      caja.innerHTML = '<div class="sug-cab">Estaciones</div>' + encontradas.map(function (e) {
+        var p = F.precioDe(e, estado.combustible);
+        return '<button type="button" class="sug-item" data-accion="sugerencia" data-id="' + e.id + '">' +
+          '<span class="crece"><b>' + esc(e.marca) + '</b> ' + esc(e.nombre) +
+          '<br><span class="sug-sub">' + esc(e.localidad) + ' · ' + esc(F.provinciaNombre(e.prov)) + '</span></span>' +
+          (p == null ? '' : '<span class="sug-precio ' + claseColor(p) + '">' + p3(p) + ' €</span>') +
+          '</button>';
+      }).join('');
+    }
+    caja.hidden = false;
+    inp.setAttribute('aria-expanded', 'true');
   }
 
   /* ======================================================================
@@ -628,7 +670,8 @@
     if (!e) return;
     estado.sel = id;
     estado.detalleAbierto = true;
-    estado.histCombustible = precioBase(e) != null ? estado.combustible : primerCombustible(e);
+    estado.histCombustible = (estado.combustible && precioBase(e) != null)
+      ? estado.combustible : primerCombustible(e);
     pintarDetalle();
     pintarEscenario();
     sincronizarSeleccion(true);
@@ -659,9 +702,9 @@
     $('#detallePrecio').innerHTML =
       '<div><span class="dp-grande ' + claseColor(p) + '">' + p3(p) +
       '</span><span class="dp-unidad">€/L</span></div>' +
-      '<span class="dp-nota">' + esc(estado.combustible) + ' · ' +
-      (estado.descuentosActivos && F.descuentos[e.marca]
-        ? 'con descuento ' + esc(e.marca) + ' de −' + p3(F.descuentos[e.marca]) + ' €'
+      '<span class="dp-nota">' + esc(estado.combustible || 'el más barato') + ' · ' +
+      (estado.descuentosActivos && estado.descuentos[e.marca]
+        ? 'con descuento ' + esc(e.marca) + ' de −' + p3(estado.descuentos[e.marca]) + ' €'
         : 'sin descuento aplicado') + '</span>';
 
     $('#detalleAcciones').innerHTML =
@@ -757,6 +800,8 @@
     var W = Math.max(260, caja.clientWidth - 12);
     var H = 210;
     var svg = graficaSVG(serieDatos, combustible, W, H, caja);
+    var anterior = $('svg', caja);
+    if (anterior) caja.removeChild(anterior);
     caja.insertAdjacentHTML('afterbegin', svg);
   }
 
@@ -1679,16 +1724,17 @@
             break;
           case 'abrir-detalle':
           case 'marcador':
+            guardarFoco();
+            var disparador = t.closest ? t.closest('[data-fila], .marcador, .resumen-barata') : null;
+            if (disparador) lastFocus = disparador;
             abrirDetalle(t.getAttribute('data-id'));
             break;
           case 'favorito':
             var fid = t.getAttribute('data-id');
             if (fid) {
               estado.favoritos[fid] = !estado.favoritos[fid];
-              pintarCabecera(listaFiltrada());
-              pintarLista(listaFiltrada());
-              pintarTabla(listaFiltrada());
-              pintarDetalle();
+              renderDatos();
+              if (estado.detalleAbierto) pintarDetalle();
             }
             break;
           case 'ruta':
@@ -1714,7 +1760,6 @@
             pintarEscenario();
             break;
           case 'cerrar-detalle':
-            guardarFoco();
             cerrarDetalle();
             restaurarFoco();
             break;
@@ -1775,8 +1820,26 @@
           case 'limpiar-busqueda':
             estado.busqueda = '';
             $('#buscador').value = '';
+            estado.pagina = 1;
+            ocultarSugerencias();
             renderDatos();
             if ($('#buscador')) $('#buscador').focus();
+            break;
+          case 'sugerencia':
+            var sug = estacion(t.getAttribute('data-id'));
+            if (sug) {
+              estado.provincia = sug.prov;
+              estado.localidad = '';
+              estado.busqueda = sug.nombre;
+              estado.pagina = 1;
+              $('#buscador').value = estado.busqueda;
+              ocultarSugerencias();
+              cacheSerie = {};
+              renderDatos();
+              guardarFoco();
+              lastFocus = $('#buscador');
+              abrirDetalle(sug.id);
+            }
             break;
           case 'push-cambiar':
             var pcam = t.getAttribute('data-campo');
@@ -1841,6 +1904,24 @@
   /* Change events (inputs/checkboxes/selects con data-rol) */
   document.addEventListener('change', function (e) {
     var t = e.target;
+
+    /* Controles con id propio que no llevan data-rol */
+    if (t.id === 'mapaEstilo') {
+      estado.mapaEstilo = t.value || 'satelite';
+      pintarEscenario();
+      return;
+    }
+    if (t.id === 'ordenLista') {
+      var ov = String(t.value || 'precio-asc');
+      var partes = ov.split('-');
+      estado.orden.campo = partes[0];
+      estado.orden.dir = partes[1] === 'desc' ? 'desc' : 'asc';
+      estado.pagina = 1;
+      estado.indiceFoco = -1;
+      renderDatos();
+      return;
+    }
+
     var rol = t.getAttribute('data-rol');
     if (!rol) return;
     switch (rol) {
@@ -1930,28 +2011,52 @@
     }
   }, false);
 
-  /* Input (buscador y sugerencias) */
+  /* Input (buscador, slider de distancia y buscador de provincias) */
   var buscadorEl = $('#buscador');
   if (buscadorEl) {
     buscadorEl.addEventListener('input', function () {
       estado.busqueda = buscadorEl.value || '';
-      $('#buscadorLimpiar').hidden = !estado.busqueda;
-      // sugerencias simples opcionales (no hay UI compleja en HTML pero mantenemos)
+      estado.pagina = 1;
+      var limpiar = $('.buscador-limpiar');
+      if (limpiar) limpiar.hidden = !estado.busqueda;
       renderDatos();
+      pintarSugerencias();
     });
-    buscadorEl.addEventListener('focus', function () { $('#buscadorCaja').classList.add('focus'); });
-    buscadorEl.addEventListener('blur', function () { $('#buscadorCaja').classList.remove('focus'); });
+    buscadorEl.addEventListener('focus', function () {
+      $('#buscadorCaja').classList.add('focus');
+      pintarSugerencias();
+    });
+    buscadorEl.addEventListener('blur', function () {
+      $('#buscadorCaja').classList.remove('focus');
+      setTimeout(ocultarSugerencias, 150);
+    });
   }
+
+  /* Los desplegables se repintan mientras se escribe (no hay que esperar al change) */
+  document.addEventListener('input', function (e) {
+    var t = e.target;
+    if (!t || !t.getAttribute) return;
+    var rol = t.getAttribute('data-rol');
+    if (rol === 'despBuscar') {
+      despTexto = t.value || '';
+      refrescarListaProvincias();
+    } else if (rol === 'distanciaMax') {
+      estado.distanciaMax = parseInt(t.value || '0', 10) || 0;
+      var dv = $('#distanciaVal');
+      if (dv) dv.textContent = estado.distanciaMax ? estado.distanciaMax + ' km' : 'Sin límite';
+      renderDatos();
+    }
+  }, false);
 
   /* Teclado */
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
       if (estaDesplegado()) { cerrarDesplegable(); return; }
-      if (estado.detalleAbierto) { guardarFoco(); cerrarDetalle(); restaurarFoco(); return; }
+      if (estado.detalleAbierto) { cerrarDetalle(); restaurarFoco(); return; }
     }
     if (e.key === '/' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
       e.preventDefault();
-      if (buscadorEl) buscadorEl.focus();
+      if (buscadorEl) { buscadorEl.focus(); }
       return;
     }
     if (e.target && e.target.classList && e.target.classList.contains('panel-asa') && (e.key === 'Enter' || e.key === ' ')) {
@@ -1986,6 +2091,15 @@
       colocarDesplegable(despAncla, despTipo === 'filtros' ? 350 : 330);
     }
   }, false);
+
+  /* Cerrar desplegables al clicar fuera */
+  document.addEventListener('mousedown', function (e) {
+    var caja = $('#desplegable');
+    if (!caja || caja.hidden) return;
+    if (caja.contains(e.target)) return;
+    if (e.target.closest && e.target.closest('[data-accion="desplegable"]')) return;
+    cerrarDesplegable();
+  }, true);
 
   /* Chat IA */
   var iaForm = $('#iaForm');

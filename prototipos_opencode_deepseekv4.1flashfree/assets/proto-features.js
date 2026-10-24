@@ -66,6 +66,48 @@ const ProtoFeat = (() => {
       .pf-kv:last-child { border-bottom: 0; }
       [data-discval] { white-space: nowrap; min-width: 2.6em; text-align: right; }
       .pf-ia-empty { margin: auto; text-align: center; color: var(--fg-2); font-size: var(--t-xs); max-width: 36ch; }
+
+      /* --- Explorador de datos (paridad de filtros/lista/mapa/ficha) --- */
+      .pf-ex { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+      .pf-ex-tools { flex: 0 0 auto; display: flex; flex-direction: column; gap: 7px; padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--line); }
+      .pf-ex-search { display: flex; align-items: center; gap: 7px; min-height: 38px; padding: 0 11px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 999px; color: var(--fg-3); }
+      .pf-ex-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--fg); font: inherit; font-size: var(--t-sm); }
+      .pf-ex-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+      .pf-ex-line .select-native { width: auto; min-height: 34px; font-size: var(--t-xs); padding-block: 3px; padding-inline: 8px; }
+      .pf-ex-line .chip { min-height: 34px; font-size: var(--t-2xs); }
+      .pf-ex-line .chip.on { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
+      .pf-ex-filters { display: flex; flex-direction: column; gap: 7px; padding: 9px; border: 1px dashed var(--line-2); border-radius: 12px; background: var(--bg-2); }
+      .pf-ex-filters[hidden] { display: none; }
+      .pf-ex-fline { display: flex; gap: 7px; flex-wrap: wrap; }
+      .pf-ex-fline > * { flex: 1 1 128px; min-width: 0; }
+      .pf-ex-fline .select-native { width: 100%; min-height: 34px; font-size: var(--t-xs); }
+      .pf-ex-km { display: flex; align-items: center; gap: 8px; font-size: var(--t-2xs); color: var(--fg-2); }
+      .pf-ex-km input[type=range] { flex: 1; accent-color: var(--brand); }
+      .pf-ex-brands { display: flex; gap: 5px; flex-wrap: wrap; max-height: 96px; overflow-y: auto; }
+      .pf-ex-brands .chip { min-height: 28px; font-size: var(--t-3xs); padding: 0 9px; }
+      .pf-ex-mapbox { position: relative; height: 176px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--map-bg); }
+      .pf-ex-map { position: absolute; inset: 0; }
+      .pf-ex-maptools { position: absolute; top: 7px; right: 7px; z-index: 6; }
+      .pf-ex-maptools .select-native { min-height: 32px; max-width: 148px; font-size: var(--t-3xs); background: var(--surface); box-shadow: var(--sh-1); }
+      .pf-ex-summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: var(--t-2xs); color: var(--fg-2); }
+      .pf-ex-summary .pf-ex-total { font-weight: 700; }
+      .pf-ex-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+      .pf-ex-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; cursor: pointer; text-align: left; }
+      .pf-ex-item:hover, .pf-ex-item:focus-visible { border-color: var(--brand-line); }
+      .pf-ex-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+      .pf-ex-main b { font-size: var(--t-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .pf-ex-main small { color: var(--fg-3); font-size: var(--t-3xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .pf-ex-price { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+      .pf-ex-price .p-sm { font-size: var(--t-sm); }
+      .pf-ex-price small { font-size: var(--t-3xs); color: var(--fg-3); }
+      .pf-ex-fav { flex: 0 0 auto; }
+      .pf-ex-empty { padding: 18px 4px; }
+      .pf-ex-detail { z-index: 90; }
+      .pf-ex-detail-body { padding: 14px 16px 48px; }
+      @media (min-width: 900px) {
+        .pf-ex-mapbox { height: 210px; }
+        .pf-ex-list { padding-bottom: 20px; }
+      }
     `;
     document.head.appendChild(st);
   }
@@ -133,6 +175,8 @@ const ProtoFeat = (() => {
     return {
       slice(list) { return state.size ? list.slice(state.page * state.size, (state.page + 1) * state.size) : list; },
       set(n) { state.total = n; paint(); },
+      setPage(n) { state.page = Math.max(0, n | 0); paint(); },
+      setSize(n) { state.size = +n; state.page = 0; paint(); onChange?.(state.size, state.page); },
       get size() { return state.size; },
       get page() { return state.page; },
       el: host,
@@ -148,6 +192,280 @@ const ProtoFeat = (() => {
   }
   function empty(host, { icon = 'search', title = 'Sin resultados', text = 'Prueba a cambiar los filtros.' } = {}) {
     host.innerHTML = `<div class="empty"><div class="e-icon">${Proto.icon(icon)}</div><h3>${esc(title)}</h3><p>${esc(text)}</p></div>`;
+  }
+
+  /* === 3b. Explorador de datos completo ================================ */
+  /**
+   * explorer(host, {list, fuel, province, pageSize})
+   * Reúne en un solo componente la paridad de datos de la app real:
+   * búsqueda, combustible, provincia/localidad/marca/distancia, favoritos,
+   * orden, paginación, leyenda de precios, 10 estilos de mapa, mapa con pines
+   * y ficha de estación con histórico (Proto.stationDetail).
+   */
+  function explorer(host, opts = {}) {
+    injectCss();
+    const state = {
+      fuel: opts.fuel || 'diesel',
+      q: '',
+      province: opts.province || '',
+      locality: '',
+      brands: [],
+      maxKm: 0,
+      favorites: false,
+      cheap: false,
+      sort: 'price',
+      dir: 'asc',
+    };
+    const base = () => (opts.list ? opts.list() : PROTO.STATIONS).slice();
+    const byId = (id) => base().find(s => s.id === id) || PROTO.STATIONS.find(s => s.id === id);
+    const provinces = () => [...new Set(base().map(s => s.province))].sort((a, b) => a.localeCompare(b, 'es'));
+    const localities = () => [...new Set(base().filter(s => !state.province || s.province === state.province).map(s => s.city))].sort((a, b) => a.localeCompare(b, 'es'));
+    const brandList = () => PROTO.brandsOf(base().filter(s => !state.province || s.province === state.province));
+    const fuels = () => PROTO.FUELS.filter(f => base().some(s => s.prices[f.id] != null));
+
+    host.innerHTML = `
+      <div class="pf-ex">
+        <div class="pf-ex-tools">
+          <label class="pf-ex-search"><span class="ico sm" data-ico="search"></span>
+            <input data-opt-search type="search" placeholder="Marca, calle o localidad…" aria-label="Buscar estación" autocomplete="off">
+          </label>
+          <div class="pf-ex-line">
+            <select class="select-native" data-opt-fuel aria-label="Combustible"></select>
+            <button class="chip" data-opt-filters aria-expanded="false" aria-controls="pfExFilters">${Proto.icon('sliders', 'xs')} Filtros <span class="badge" data-opt-nfilter hidden>0</span></button>
+            <button class="chip" data-opt-favonly aria-pressed="false">${Proto.icon('star', 'xs')} Favoritos</button>
+            <select class="select-native" data-opt-sort aria-label="Ordenar por"></select>
+          </div>
+          <div class="pf-ex-filters" id="pfExFilters" data-opt-panel hidden>
+            <div class="pf-ex-fline">
+              <select class="select-native" data-opt-prov aria-label="Provincia"></select>
+              <select class="select-native" data-opt-loc aria-label="Localidad"></select>
+            </div>
+            <div class="pf-ex-brands" data-opt-brands aria-label="Marcas"></div>
+            <div class="pf-ex-km"><span class="ico xs" data-ico="route"></span>
+              <input type="range" data-opt-km min="0" max="60" step="1" value="0" aria-label="Distancia máxima">
+              <b data-opt-kmval>Sin límite</b>
+            </div>
+            <div class="pf-ex-fline">
+              <label class="row" style="gap:6px;font-size:var(--t-2xs);flex:0 0 auto"><input type="checkbox" data-opt-cheap> Solo con descuento</label>
+              <button class="btn sm ghost" data-opt-reset>${Proto.icon('refresh', 'xs')} Limpiar</button>
+            </div>
+          </div>
+          <div class="pf-ex-mapbox" data-opt-mapbox>
+            <div class="pf-ex-map" data-opt-map data-map-host></div>
+            <div class="pf-ex-maptools"><select class="select-native" data-opt-mapstyle aria-label="Vista del mapa"></select></div>
+          </div>
+          <div class="pf-ex-summary"><span class="pf-ex-total" data-opt-count>—</span><span data-opt-legend></span></div>
+        </div>
+        <div class="pf-ex-list" data-opt-list></div>
+        <div data-opt-pager></div>
+        <div class="pf-overlay pf-ex-detail" data-opt-detail-overlay role="dialog" aria-label="Ficha de la estación">
+          <header class="topbar">
+            <button class="iconbtn" data-opt-detail-close title="Cerrar"><span data-ico="close"></span></button>
+            <span class="topbar-title">Ficha de la estación</span>
+          </header>
+          <div class="pf-scroll pf-ex-detail-body" data-opt-detail-body></div>
+        </div>
+      </div>`;
+    Proto.hydrateIcons(host);
+
+    const $ = (s) => host.querySelector(s);
+    const qEl = $('[data-opt-search]');
+    const fuelEl = $('[data-opt-fuel]');
+    const sortEl = $('[data-opt-sort]');
+    const provEl = $('[data-opt-prov]');
+    const locEl = $('[data-opt-loc]');
+    const kmEl = $('[data-opt-km]');
+    const pagerCtl = pager($('[data-opt-pager]'), {
+      size: opts.pageSize ?? 10, total: 0, label: 'estaciones',
+      onChange: () => paintList(),
+    });
+
+    function filtered() {
+      return PROTO.sortStations(PROTO.filterStations(base(), {
+        province: state.province || undefined,
+        locality: state.locality || undefined,
+        fuel: state.fuel,
+        brands: state.brands,
+        maxKm: state.maxKm || 0,
+        favoritesOnly: state.favorites,
+        cheapOnly: state.cheap,
+        q: state.q || undefined,
+      }), state.sort, state.dir, state.fuel);
+    }
+
+    function activeFilters() {
+      return (state.province ? 1 : 0) + (state.locality ? 1 : 0) + state.brands.length +
+        (state.maxKm ? 1 : 0) + (state.favorites ? 1 : 0) + (state.cheap ? 1 : 0) + (state.q ? 1 : 0);
+    }
+
+    function paintSelectors() {
+      const fs = fuels();
+      if (!fs.some(f => f.id === state.fuel)) state.fuel = (fs[0] || PROTO.FUELS[0]).id;
+      fuelEl.innerHTML = fs.map(f => `<option value="${f.id}" ${f.id === state.fuel ? 'selected' : ''}>${esc(f.name)}</option>`).join('');
+      provEl.innerHTML = '<option value="">Todas las provincias</option>' +
+        provinces().map(p => `<option value="${esc(p)}" ${p === state.province ? 'selected' : ''}>${esc(p)}</option>`).join('');
+      locEl.innerHTML = '<option value="">Todas las localidades</option>' +
+        localities().map(c => `<option value="${esc(c)}" ${c === state.locality ? 'selected' : ''}>${esc(c)}</option>`).join('');
+      sortEl.innerHTML = [['price', 'Precio'], ['distance', 'Distancia'], ['rating', 'Valoración'], ['updated', 'Actualización'], ['saving', 'Descuento'], ['brand', 'Marca']]
+        .map(([v, l]) => `<option value="${v}" ${v === state.sort ? 'selected' : ''}>${l}</option>`).join('');
+      $('[data-opt-brands]').innerHTML = brandList().map(b => {
+        const m = PROTO.brandMeta(b);
+        return `<button class="chip ${state.brands.includes(b) ? 'on' : ''}" data-brand="${esc(b)}" aria-pressed="${state.brands.includes(b)}">
+          <i style="width:8px;height:8px;border-radius:50%;background:${m.color}"></i>${esc(b)}</button>`;
+      }).join('');
+      kmEl.value = state.maxKm || 0;
+      $('[data-opt-kmval]').textContent = state.maxKm ? state.maxKm + ' km' : 'Sin límite';
+      $('[data-opt-cheap]').checked = state.cheap;
+    }
+
+    function paintList(list = filtered()) {
+      const wrap = $('[data-opt-list]');
+      const page = pagerCtl.slice(list);
+      if (!page.length) {
+        empty(wrap, { title: 'Sin resultados', text: 'Ninguna estación coincide con la búsqueda o los filtros.' });
+        return;
+      }
+      const stats = PROTO.stats(list, state.fuel);
+      wrap.innerHTML = page.map(st => {
+        const price = PROTO.finalPrice(st, state.fuel);
+        const lvl = stats ? PROTO.level(price, stats.lo, stats.hi) : 'mid';
+        const meta = PROTO.brandMeta(st.brand);
+        const km = PROTO.kmFromUser(st);
+        return `<div class="pf-ex-item" data-opt-detail="${st.id}" role="button" tabindex="0" aria-label="${esc(st.name)}">
+          <span class="brandlogo sm" style="background:${meta.color};color:${meta.ink}">${esc(st.brand.slice(0, 2))}</span>
+          <span class="pf-ex-main"><b>${esc(st.name)}</b><small>${esc(st.address)} · ${esc(st.city)} · ${PROTO.dist(km)}</small></span>
+          <span class="pf-ex-price"><span class="price p-sm ${lvl}">${PROTO.money(price, 3).replace(' €', '')}<span class="p-unit">€/L</span></span>
+            <small>${meta.discount ? '-' + meta.discount + ' ¢' : esc(st.schedule)}</small></span>
+          <button class="iconbtn sm pf-ex-fav ${st.fav ? 'on' : ''}" data-opt-fav="${st.id}" title="Favorito" aria-pressed="${st.fav}">${Proto.icon(st.fav ? 'starFill' : 'star', st.fav ? 'sm fill' : 'sm')}</button>
+        </div>`;
+      }).join('');
+    }
+
+    function paint() {
+      const list = filtered();
+      pagerCtl.set(list.length);
+      paintList(list);
+      const stats = PROTO.stats(list, state.fuel);
+      $('[data-opt-count]').textContent = `${list.length} estaciones · ${PROTO.fuelShort(state.fuel)}`;
+      $('[data-opt-legend]').innerHTML = stats ? legend(stats) : '';
+      const n = activeFilters();
+      const badge = $('[data-opt-nfilter]');
+      badge.textContent = n;
+      badge.hidden = !n;
+      $('[data-opt-favonly]').classList.toggle('on', state.favorites);
+      $('[data-opt-favonly]').setAttribute('aria-pressed', String(state.favorites));
+      syncMap();
+    }
+
+    /* --- Mapa --------------------------------------------------------- */
+    let mapCtl = null, mapOpts = null;
+    function initMap() {
+      if (typeof ProtoMap === 'undefined') { $('[data-opt-mapbox]').hidden = true; return; }
+      mapOpts = { fuel: state.fuel, stations: filtered(), showLayers: false, zoom: 1.15 };
+      mapCtl = ProtoMap.create($('[data-opt-map]'), mapOpts);
+      mapCtl.on('marker', (id) => openDetail(id));
+      mapStyleSelect($('[data-opt-mapstyle]'), { mapHost: $('[data-opt-map]') });
+    }
+    function syncMap() {
+      if (!mapCtl) return;
+      mapOpts.fuel = state.fuel;
+      mapCtl.setStations(filtered());
+    }
+
+    /* --- Ficha de estación -------------------------------------------- */
+    let detailCtl = null;
+    function openDetail(id) {
+      const st = byId(id); if (!st) return;
+      const ov = $('[data-opt-detail-overlay]');
+      const body = $('[data-opt-detail-body]');
+      body.innerHTML = '';
+      detailCtl = Proto.stationDetail(body, st, {
+        fuel: state.fuel, days: 14, list: filtered(),
+        onFuel: (f) => { state.fuel = f; fuelEl.value = f; paint(); },
+      });
+      body.scrollTop = 0;
+      ov.classList.add('on');
+    }
+    function closeDetail() {
+      $('[data-opt-detail-overlay]').classList.remove('on');
+      detailCtl = null;
+    }
+
+    /* --- Eventos ------------------------------------------------------ */
+    qEl.addEventListener('input', () => { state.q = qEl.value.trim(); pagerCtl.setPage(0); paint(); });
+    fuelEl.addEventListener('change', () => { state.fuel = fuelEl.value; pagerCtl.setPage(0); paint(); });
+    sortEl.addEventListener('change', () => { state.sort = sortEl.value; pagerCtl.setPage(0); paint(); });
+    provEl.addEventListener('change', () => {
+      state.province = provEl.value; state.locality = ''; state.brands = [];
+      pagerCtl.setPage(0); paintSelectors(); paint();
+    });
+    locEl.addEventListener('change', () => { state.locality = locEl.value; pagerCtl.setPage(0); paint(); });
+    kmEl.addEventListener('input', () => {
+      state.maxKm = +kmEl.value;
+      $('[data-opt-kmval]').textContent = state.maxKm ? state.maxKm + ' km' : 'Sin límite';
+      pagerCtl.setPage(0); paint();
+    });
+    $('[data-opt-cheap]').addEventListener('change', (e) => { state.cheap = e.target.checked; pagerCtl.setPage(0); paint(); });
+    $('[data-opt-filters]').addEventListener('click', () => {
+      const panel = $('[data-opt-panel]');
+      panel.hidden = !panel.hidden;
+      $('[data-opt-filters]').setAttribute('aria-expanded', String(!panel.hidden));
+      $('[data-opt-filters]').classList.toggle('on', !panel.hidden);
+    });
+    $('[data-opt-favonly]').addEventListener('click', () => {
+      state.favorites = !state.favorites; pagerCtl.setPage(0); paint();
+    });
+    $('[data-opt-brands]').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-brand]'); if (!b) return;
+      const brand = b.dataset.brand;
+      const i = state.brands.indexOf(brand);
+      if (i >= 0) state.brands.splice(i, 1); else state.brands.push(brand);
+      pagerCtl.setPage(0); paintSelectors(); paint();
+    });
+    $('[data-opt-reset]').addEventListener('click', () => {
+      Object.assign(state, { q: '', province: '', locality: '', brands: [], maxKm: 0, favorites: false, cheap: false, sort: 'price' });
+      qEl.value = '';
+      pagerCtl.setPage(0); paintSelectors(); paint();
+    });
+    host.addEventListener('click', (e) => {
+      const fav = e.target.closest('[data-opt-fav]');
+      if (fav) {
+        e.stopPropagation();
+        const st = byId(fav.dataset.optFav);
+        if (!st) return;
+        st.fav = !st.fav;
+        Proto.toast(st.fav ? st.name + ' en favoritos' : 'Quitada de favoritos', { iconName: st.fav ? 'starFill' : 'star' });
+        paint();
+        if (state.favorites) { pagerCtl.setPage(0); paint(); }
+        return;
+      }
+      if (e.target.closest('[data-opt-detail-close]')) { closeDetail(); return; }
+      const item = e.target.closest('[data-opt-detail]');
+      if (item) openDetail(item.dataset.optDetail);
+    });
+    host.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        const item = e.target.closest('[data-opt-detail]');
+        if (item) { e.preventDefault(); openDetail(item.dataset.optDetail); }
+      }
+    });
+    detailCtl = null;
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && $('[data-opt-detail-overlay]').classList.contains('on')) closeDetail();
+    });
+    document.addEventListener('proto:theme', () => { if (detailCtl) detailCtl.redraw(); });
+
+    paintSelectors();
+    paint();
+    requestAnimationFrame(initMap);
+
+    return {
+      refresh: () => { paintSelectors(); paint(); },
+      get fuel() { return state.fuel; },
+      setFuel(f) { state.fuel = f; fuelEl.value = f; paint(); },
+      openDetail,
+      el: host,
+    };
   }
 
   /* === 4. Overlay a pantalla completa ================================== */
@@ -305,7 +623,7 @@ const ProtoFeat = (() => {
     function paintMsgs() {
       const chat = state.chats[state.active] || [];
       msgs.innerHTML = chat.map((m, i) => {
-        if (m.role === 'user') return `<div class="pf-msg user">${esc(m.text)}<button class="pf-edit" data-edit="${i}" title="Editar"><span class="ico xs" data-ico="edit"></span></button></div>`;
+        if (m.role === 'user') return `<div class="pf-msg user">${esc(m.text)}<button class="pf-edit" data-edit="${i}" title="Editar"><span class="ico xs" data-ico="pencil"></span></button></div>`;
         if (m.role === 'error') return `<div class="pf-msg error">${m.html}</div>`;
         return `<div class="pf-msg assistant">${m.label ? `<div class="tiny bold muted mb1">${esc(m.label)}</div>` : ''}${m.html}${m.meta ? `<div class="pf-meta">⏱ ${esc(m.meta)}</div>` : ''}</div>`;
       }).join('') + (state.thinking && (!state.thinkingFor || state.thinkingFor === state.active)
@@ -405,7 +723,7 @@ const ProtoFeat = (() => {
         const m = chat[i];
         input.value = m.text; input.focus();
         state.chats[state.active] = chat.slice(0, i);
-        paintMsgs(); Proto.toast('Mensaje recuperado; se recortó el hilo', { iconName: 'edit' });
+        paintMsgs(); Proto.toast('Mensaje recuperado; se recortó el hilo', { iconName: 'pencil' });
         return;
       }
       const cite = e.target.closest('[data-open]');
@@ -628,5 +946,5 @@ const ProtoFeat = (() => {
     return { el: host, pageSize: () => st.pageSize };
   }
 
-  return { injectCss, MAP_STYLES, mapStyleSelect, pager, legend, empty, overlay, iaPanel, configPanel, PROVIDERS };
+  return { injectCss, MAP_STYLES, mapStyleSelect, pager, legend, empty, overlay, explorer, iaPanel, configPanel, PROVIDERS };
 })();

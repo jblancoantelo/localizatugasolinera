@@ -1,0 +1,56 @@
+[
+  {
+    "file": "v8-plan.html",
+    "check": "datos fake",
+    "ok": true,
+    "note": "10 tarjetas · 31 precios"
+  },
+  {
+    "file": "v8-plan.html",
+    "check": "cambio de combustible",
+    "ok": true,
+    "note": "cambia (el precio antiguo sigue en pantalla)"
+  },
+  {
+    "file": "v8-plan.html",
+    "check": "búsqueda",
+    "ok": true,
+    "note": "1 resultados"
+  },
+  {
+    "file": "v8-plan.html",
+    "check": "favoritos",
+    "ok": true,
+    "note": "6 → 5 favoritos"
+  },
+  {
+    "file": "v8-plan.html",
+    "check": "detalle + histórico",
+    "ok": true,
+    "note": "ficha + histórico"
+  },
+  {
+    "file": "v8-plan.html",
+    "check": "chat IA",
+    "ok": true,
+    "note": "2 mensajes"
+  },
+  {
+    "file": "v8-plan.html",
+    "check": "config completa",
+    "ok": true,
+    "note": "8 tarjetas · precio 1.509 → 1.439"
+  },
+  {
+    "file": "v8-plan.html",
+    "check": "tema claro/oscuro",
+    "ok": true,
+    "note": "light → dark"
+  },
+  {
+    "file": "v8-plan.html",
+    "check": "sin errores de consola",
+    "ok": true,
+    "note": "0 errores"
+  }
+]

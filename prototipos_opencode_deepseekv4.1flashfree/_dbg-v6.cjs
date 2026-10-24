@@ -165,6 +165,74 @@ function startServer() {
     await ctx.close();
   }
 
+  /* ------------- Móvil 2 · paridad: IA, ajustes, búsqueda -------------- */
+  {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+    const page = await ctx.newPage();
+    page.on('pageerror', e => errors.push('[paridad pageerror] ' + e.message));
+    page.on('console', m => { if (m.type() === 'error') errors.push('[paridad console] ' + m.text()); });
+    await page.goto(URL_BASE + '?embed=1&theme=dark');
+    await page.waitForTimeout(500);
+
+    /* Más → IA */
+    await page.click('#moreBtn');
+    await page.waitForTimeout(500);
+    await shot(page, 'paridad-menu');
+    await page.click('#moreIa');
+    await page.waitForTimeout(600);
+    await shot(page, 'paridad-ia');
+    await page.click('.pf-ia-prompts .chip');
+    await page.waitForTimeout(2600);
+    await shot(page, 'paridad-ia-respuesta');
+    await page.click('.pf-cite');
+    await page.waitForTimeout(800);
+    await shot(page, 'paridad-detalle-desde-ia');
+    await page.click('#stationSheet [data-sheet-close]');
+    await page.waitForTimeout(400);
+
+    /* Más → Ajustes: descuento + ocultar groq */
+    await page.click('#moreBtn');
+    await page.waitForTimeout(500);
+    await page.click('#moreCfg');
+    await page.waitForTimeout(600);
+    await shot(page, 'paridad-ajustes');
+    await page.evaluate(() => {
+      const r = document.querySelector('[data-disc="REPSOL"]');
+      r.value = r.max; r.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.waitForTimeout(400);
+    await page.evaluate(() => { document.querySelector('[data-sec="iatabs"]').scrollIntoView({ block: 'center' }); });
+    await page.waitForTimeout(250);
+    await page.click('[data-iatab="groq"]');
+    await page.waitForTimeout(300);
+    await shot(page, 'paridad-ajustes-iatabs');
+    await page.click('.pf-overlay.on [data-pf-close]');
+    await page.waitForTimeout(400);
+
+    /* Buscar en "Todas las estaciones" */
+    await page.click('#moreBtn');
+    await page.waitForTimeout(500);
+    await page.click('#moreSheet [data-sheet-open="opts"]');
+    await page.waitForTimeout(700);
+    await page.fill('#optsQ', 'galp');
+    await page.waitForTimeout(400);
+    await shot(page, 'paridad-todas-busqueda');
+    await page.fill('#optsQ', 'zzz');
+    await page.waitForTimeout(400);
+    await shot(page, 'paridad-todas-vacia');
+    await page.click('#optsSheet [data-sheet-close]');
+    await page.waitForTimeout(400);
+
+    /* IA de nuevo: groq oculto */
+    await page.click('#moreBtn');
+    await page.waitForTimeout(400);
+    await page.click('#moreIa');
+    await page.waitForTimeout(600);
+    const tabs = await page.evaluate(() => [...document.querySelectorAll('.pf-ia-tabs .chip:not([hidden])')].map(c => c.dataset.p).join(', '));
+    errors.length === 0 && console.log('[check] v6 pestañas IA visibles tras ocultar groq:', tabs);
+    await ctx.close();
+  }
+
   await browser.close();
   srv.close();
   if (errors.length) {

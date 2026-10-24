@@ -51,8 +51,9 @@
   .hero-verdict .hv-note { font-size: var(--t-xs); color: var(--fg-2); }
 
   /* Tabla comparativa */
-  .cmp-wrap { overflow-x: auto; margin: 0 var(--s3) var(--s3); border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--surface); box-shadow: var(--sh-1); }
-  .cmp-table { width: 100%; min-width: 520px; border-collapse: separate; border-spacing: 0; font-size: var(--t-xs); }
+  .cmp-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 var(--s3) var(--s3); border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--surface); box-shadow: var(--sh-1); }
+  .cmp-scrollhint { display: none; align-items: center; gap: 6px; margin: 0 var(--s3) 6px; font-size: var(--t-2xs); color: var(--brand); font-weight: 700; }
+  .cmp-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--t-xs); }
   .cmp-table th, .cmp-table td { padding: 9px var(--s2); text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .cmp-table tbody tr:last-child td { border-bottom: 0; }
   .cmp-table th:first-child, .cmp-table td:first-child {
@@ -65,6 +66,17 @@
   .cmp-table tr.net td { border-top: 2px solid var(--line-2); font-weight: 800; font-size: var(--t-sm); }
   .cmp-table tr.net td:first-child { font-weight: 800; color: var(--fg); }
   .cmp-table .hint-dot { color: var(--fg-3); font-size: var(--t-3xs); font-weight: 500; }
+
+  /* En móvil la tabla se adapta: 2 estaciones caben sin scroll; con 3 se
+     avisa de que hay que deslizar (antes la tercera quedaba cortada sin pista). */
+  @media (max-width: 560px) {
+    .cmp-scrollhint { display: flex; }
+    .cmp-table { font-size: var(--t-2xs); }
+    .cmp-table th, .cmp-table td { padding: 7px 5px; }
+    .cmp-table th:first-child, .cmp-table td:first-child { min-width: 84px; max-width: 102px; white-space: normal; line-height: 1.25; }
+    .cmp-table .brandlogo.sm { width: 22px; height: 22px; font-size: 8px; }
+    .cmp-table .who { gap: 3px; }
+  }
 
   /* Insights de "por qué" */
   .insight { display: flex; gap: var(--s3); align-items: flex-start; padding: var(--s3); border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--line); }
@@ -103,9 +115,12 @@
   <header class="topbar">
     <span class="topbar-title"><span class="ico" data-ico="compare" style="color:var(--brand)"></span>Comparador</span>
     <div class="spacer"></div>
-    <button class="iconbtn" id="recalcBtn" title="Recalcular"><span data-ico="refresh"></span></button>
-    <button class="iconbtn" id="cfgBtn" title="Ajustes del coche"><span data-ico="gear"></span></button>
-    <button class="iconbtn" data-theme-toggle title="Tema"></button>
+    <button class="iconbtn" id="recalcBtn" title="Recalcular" aria-label="Recalcular el comparador"><span data-ico="refresh"></span></button>
+    <button class="iconbtn" id="dataBtn7" title="Todas las estaciones" aria-label="Abrir todas las estaciones"><span data-ico="list"></span></button>
+    <button class="iconbtn" id="iaBtn7" title="Copiloto IA" aria-label="Abrir el copiloto IA"><span data-ico="sparkles"></span></button>
+    <button class="iconbtn" id="cfgBtn" title="Ajustes del coche" aria-label="Ajustes del coche"><span data-ico="gear"></span></button>
+    <button class="iconbtn" id="cfgBtn7" title="Ajustes de la app" aria-label="Abrir los ajustes de la app"><span data-ico="sliders"></span></button>
+    <button class="iconbtn" data-theme-toggle title="Tema" aria-label="Cambiar entre tema claro y oscuro"></button>
   </header>
 
   <div class="pane on scroll" data-panel="comparar">
@@ -152,20 +167,20 @@
 <!-- ============ PANELES SECUNDARIOS ==================================== -->
 <div class="fullscreen-panel" id="sidePanel">
   <header class="topbar">
-    <button class="iconbtn" data-close-panel title="Cerrar"><span data-ico="arrowLeft"></span></button>
+    <button class="iconbtn" data-close-panel title="Cerrar" aria-label="Cerrar el panel"><span data-ico="arrowLeft"></span></button>
     <span class="topbar-title" id="sideTitle">Mapa</span>
     <div class="spacer"></div>
-    <button class="iconbtn" data-theme-toggle title="Tema"></button>
+    <button class="iconbtn" data-theme-toggle title="Tema" aria-label="Cambiar entre tema claro y oscuro"></button>
   </header>
   <div id="sideBody" style="flex:1;min-height:0;position:relative;display:flex;flex-direction:column"></div>
 </div>
 
 <div class="fullscreen-panel" id="detailPanel">
   <header class="topbar">
-    <button class="iconbtn" data-close-panel title="Cerrar"><span data-ico="arrowLeft"></span></button>
+    <button class="iconbtn" data-close-panel title="Cerrar" aria-label="Cerrar la ficha"><span data-ico="arrowLeft"></span></button>
     <span class="topbar-title" id="detailTitle">Detalle</span>
     <div class="spacer"></div>
-    <button class="iconbtn" id="detailCmpBtn" title="Comparar esta"><span data-ico="compare"></span></button>
+    <button class="iconbtn" id="detailCmpBtn" title="Comparar esta" aria-label="Añadir esta estación al comparador"><span data-ico="compare"></span></button>
   </header>
   <div class="pane on scroll"><div class="section" id="detailBody"></div></div>
 </div>
@@ -176,16 +191,16 @@
     <span class="sheet-grab"></span>
     <h2>Elegir estaciones</h2>
     <div class="spacer"></div>
-    <button class="iconbtn" data-sheet-close><span data-ico="close"></span></button>
+    <button class="iconbtn" data-sheet-close aria-label="Cerrar el selector"><span data-ico="close"></span></button>
   </div>
   <div class="sheet-body">
     <div class="row" style="gap:var(--s2)">
       <label class="dep-field" style="flex:1;display:flex;align-items:center;gap:var(--s2);background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:6px var(--s2)">
         <span class="ico sm dim" data-ico="search"></span>
-        <input id="pickSearch" placeholder="Marca, localidad o calle…" style="flex:1;background:none;border:0;outline:none;font-size:var(--t-md)">
+        <input id="pickSearch" placeholder="Marca, localidad o calle…" aria-label="Buscar estación" style="flex:1;background:none;border:0;outline:none;font-size:var(--t-md)">
       </label>
             <div class="segmented" id="pickOrder" style="font-size:var(--t-3xs)">
-        <button data-val="price" class="on">Precio</button><button data-val="dist">Cerca</button><button data-val="fav">☆</button>
+        <button data-val="price" class="on">Precio</button><button data-val="dist">Cerca</button><button data-val="fav" aria-label="Solo favoritas">☆</button>
       </div>
     </div>
     <div class="list mt3" id="pickList"></div>
@@ -199,6 +214,7 @@
 <script src="assets/proto-chart.js"></script>
 <script src="assets/proto-map.js"></script>
 <script src="assets/proto-ui.js"></script>
+<script src="assets/proto-features.js"></script>
 <script>
 Proto.boot();
 
@@ -359,8 +375,9 @@ function renderTable(m) {
     <th><div class="who"><span class="brandlogo sm" style="background:${PROTO.brandMeta(c.st.brand).color};color:${PROTO.brandMeta(c.st.brand).ink}">${c.st.brand.slice(0, 2)}</span>${c.rank}º</div></th>`).join('')}</tr>`;
 
   return `
+  ${cols.length > 2 ? `<div class="cmp-scrollhint">${Proto.icon('arrowRight', 'xs')}Desliza la tabla para ver las ${cols.length} estaciones</div>` : ''}
   <div class="cmp-wrap">
-    <table class="cmp-table">
+    <table class="cmp-table" style="min-width:${104 + cols.length * 122}px">
       <thead>${head}</thead>
       <tbody>
         ${row('Precio', 'Precio con descuentos de marca aplicados', priceVals, bestOf(priceVals, 'min'),
@@ -636,6 +653,54 @@ document.getElementById('pickOrder').addEventListener('click', (e) => {
   document.querySelectorAll('#pickOrder button').forEach(x => x.classList.toggle('on', x === b));
   renderPicker();
 });
+
+/* ==========================================================================
+   Paridad funcional: explorador de datos, copiloto IA y Config completa.
+   ========================================================================== */
+let dataFeat7 = null, iaFeat7 = null;
+
+const dataOverlay7 = ProtoFeat.overlay({
+  title: 'Todas las estaciones', icon: 'list',
+  render(body) {
+    body.classList.add('pf-scroll');
+    body.innerHTML = '<div id="dataFeat7" style="display:flex;flex:1;min-height:0"></div>';
+    dataFeat7 = ProtoFeat.explorer(document.getElementById('dataFeat7'), {
+      list: () => PROTO.STATIONS,
+      fuel: car.fuel,
+      province: 'Madrid',
+      pageSize: 10,
+    });
+  },
+});
+
+const iaOverlay7 = ProtoFeat.overlay({
+  title: 'Copiloto IA', icon: 'sparkles',
+  render(body) {
+    body.classList.add('pf-scroll');
+    body.innerHTML = '<div id="iaFeat7"></div>';
+    iaFeat7 = ProtoFeat.iaPanel(document.getElementById('iaFeat7'), {
+      list: () => baseList(),
+      onOpenStation: (id) => { iaOverlay7.close(); openDetail(id); },
+    });
+  },
+});
+
+const cfgOverlay7 = ProtoFeat.overlay({
+  title: 'Ajustes de la app', icon: 'gear',
+  render(body) {
+    body.classList.add('pf-scroll');
+    body.innerHTML = '<div id="cfgFeat7"></div>';
+    ProtoFeat.configPanel(document.getElementById('cfgFeat7'), {
+      onDiscounts: () => { refresh(); dataFeat7 && dataFeat7.refresh(); },
+      getHiddenIa: () => (iaFeat7 ? iaFeat7.hidden : []),
+      onIaTabs: (ids) => iaFeat7 && iaFeat7.setHidden(ids),
+    });
+  },
+});
+
+document.getElementById('dataBtn7').addEventListener('click', () => dataOverlay7.open());
+document.getElementById('iaBtn7').addEventListener('click', () => iaOverlay7.open());
+document.getElementById('cfgBtn7').addEventListener('click', () => cfgOverlay7.open());
 
 /* ==========================================================================
    Navegación inferior y refresco.

@@ -55,7 +55,9 @@ const ProtoChart = (() => {
     const all = series.flatMap(s => s.data.map(d => d.price));
     const { lo, hi } = niceRange(all);
     const base = series[0].data;
-    const n = base.length;
+    /* xCount permite superponer una previsión corta con offset (v8). Sin
+       opciones extra el comportamiento es el de siempre. */
+    const n = opts.xCount || Math.max(...series.map(s => (s.offset || 0) + s.data.length));
     const iw = W - PAD.l - PAD.r, ih = H - PAD.t - PAD.b;
     const x = (i) => PAD.l + (n === 1 ? iw / 2 : (i / (n - 1)) * iw);
     const y = (v) => PAD.t + (1 - (v - lo) / (hi - lo)) * ih;
@@ -72,10 +74,11 @@ const ProtoChart = (() => {
     }
 
     /* eje de fechas: 3 etiquetas como máximo */
-    const idxs = n <= 2 ? base.map((_, i) => i) : [...new Set([0, Math.floor((n - 1) / 2), n - 1])];
+    const dates = opts.dates || base.map(p => p.date);
+    const idxs = n <= 2 ? dates.map((_, i) => i) : [...new Set([0, Math.floor((n - 1) / 2), n - 1])];
     ctx.textAlign = 'center'; ctx.fillStyle = fg2;
     idxs.forEach(i => {
-      const d = base[i].date, short = d.slice(0, 5).replace('-', '/');
+      const d = dates[i] || dates[dates.length - 1], short = d.slice(0, 5).replace('-', '/');
       ctx.fillText(short, Math.min(Math.max(x(i), PAD.l + 12), W - PAD.r - 12), H - PAD.b / 2 - 1);
     });
 
@@ -83,16 +86,18 @@ const ProtoChart = (() => {
     series.forEach((s, si) => {
       const col = s.color || accent;
       const pts = s.data;
+      const off = s.offset || 0;
+      const at = (i) => x(off + i);
       const path = new Path2D();
-      pts.forEach((p, i) => { const px = x(i), py = y(p.price); i ? path.lineTo(px, py) : path.moveTo(px, py); });
+      pts.forEach((p, i) => { const px = at(i), py = y(p.price); i ? path.lineTo(px, py) : path.moveTo(px, py); });
 
       if (s.area !== false) {
         const grad = ctx.createLinearGradient(0, PAD.t, 0, H - PAD.b);
         grad.addColorStop(0, hexA(col, .28)); grad.addColorStop(1, hexA(col, .02));
         ctx.beginPath();
-        ctx.moveTo(x(0), y(pts[0].price));
-        pts.forEach((p, i) => ctx.lineTo(x(i), y(p.price)));
-        ctx.lineTo(x(pts.length - 1), H - PAD.b); ctx.lineTo(x(0), H - PAD.b); ctx.closePath();
+        ctx.moveTo(at(0), y(pts[0].price));
+        pts.forEach((p, i) => ctx.lineTo(at(i), y(p.price)));
+        ctx.lineTo(at(pts.length - 1), H - PAD.b); ctx.lineTo(at(0), H - PAD.b); ctx.closePath();
         ctx.fillStyle = grad; ctx.fill();
       }
       ctx.lineJoin = 'round'; ctx.lineCap = 'round';
@@ -106,7 +111,7 @@ const ProtoChart = (() => {
       pts.forEach((p, i) => {
         const extreme = p.price === Math.min(...pts.map(q => q.price)) || p.price === Math.max(...pts.map(q => q.price));
         if (!show && !extreme && i !== pts.length - 1) return;
-        ctx.beginPath(); ctx.arc(x(i), y(p.price), si === 0 ? 2.6 : 2, 0, 7);
+        ctx.beginPath(); ctx.arc(at(i), y(p.price), si === 0 ? 2.6 : 2, 0, 7);
         ctx.fillStyle = col; ctx.fill();
         ctx.strokeStyle = css('--surface', '#fff'); ctx.lineWidth = 1.4; ctx.stroke();
       });
@@ -115,13 +120,13 @@ const ProtoChart = (() => {
       if (si === 0 && pts.length > 3) {
         const vals = pts.map(p => p.price), mn = Math.min(...vals), mx = Math.max(...vals);
         const iMin = vals.indexOf(mn), iMax = vals.indexOf(mx);
-        label(ctx, 'min', x(iMin), y(mn), mn, fg2, css('--surface'), 1);
-        label(ctx, 'max', x(iMax), y(mx), mx, fg2, css('--surface'), -1);
+        label(ctx, 'min', at(iMin), y(mn), mn, fg2, css('--surface'), 1);
+        label(ctx, 'max', at(iMax), y(mx), mx, fg2, css('--surface'), -1);
       }
 
       /* último valor destacado */
       if (si === 0) {
-        const last = pts[pts.length - 1], lx = x(pts.length - 1), ly = y(last.price);
+        const last = pts[pts.length - 1], lx = at(pts.length - 1), ly = y(last.price);
         ctx.beginPath(); ctx.arc(lx, ly, 4.5, 0, 7); ctx.fillStyle = col; ctx.fill();
         ctx.strokeStyle = css('--surface', '#fff'); ctx.lineWidth = 2; ctx.stroke();
       }

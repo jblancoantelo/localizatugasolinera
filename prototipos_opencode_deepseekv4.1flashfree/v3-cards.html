@@ -90,6 +90,7 @@
     <div class="spacer"></div>
     <button class="iconbtn" data-toast="Sin cambios en tus 3 favoritos (mock)" data-toast-icon="bell" title="Avisos"><span data-ico="bell"></span><span class="dot-badge"></span></button>
     <button class="iconbtn" id="searchBtn" title="Buscar"><span data-ico="search"></span></button>
+    <button class="iconbtn" id="dataBtn3" title="Todas las estaciones"><span data-ico="list"></span></button>
     <button class="iconbtn" id="cfgBtn" title="Ajustes de depósito"><span data-ico="gear"></span></button>
     <button class="iconbtn" data-theme-toggle title="Tema"></button>
   </header>
@@ -487,6 +488,10 @@ function openSide(kind) {
         <div class="card-sub mt2">11 estaciones · 12 series históricas · 7 claves de localStorage · APP_VERSION 12</div>
         <button class="btn block mt3" data-toast="Caché vaciada (mock)">Vaciar caché</button>
       </div>
+      <div class="card pad-4 mt3"><div class="card-title">${Proto.icon('list', 'sm')} Todas las estaciones</div>
+        <p class="card-sub mt2">Explorador completo: provincia, localidad, marca, distancia, favoritos, orden, paginación, mapa con 10 estilos y ficha con histórico.</p>
+        <button class="btn block mt3" id="sideDataBtn">Abrir explorador</button>
+      </div>
       <div class="card pad-4 mt3"><div class="card-title">${Proto.icon('sparkles', 'sm')} Copiloto IA</div>
         <p class="card-sub mt2">Chat con tus estaciones, el histórico de precios y 7 proveedores, con citas clicables.</p>
         <button class="btn primary block mt3" id="sideIaBtn">Abrir chat IA</button>
@@ -504,6 +509,7 @@ function openSide(kind) {
       document.getElementById('cons').value = car.cons;
       refresh();
     }));
+    document.getElementById('sideDataBtn').addEventListener('click', () => { nav.go('hoy'); dataOverlay.open(); });
     document.getElementById('sideIaBtn').addEventListener('click', () => { nav.go('hoy'); iaOverlay.open(); });
     document.getElementById('sideCfgBtn').addEventListener('click', () => { nav.go('hoy'); cfgOverlay.open(); });
   }
@@ -582,6 +588,21 @@ const cfgOverlay = ProtoFeat.overlay({
     });
   },
 });
+let dataFeat3 = null;
+const dataOverlay = ProtoFeat.overlay({
+  title: 'Todas las estaciones', icon: 'list',
+  render(body) {
+    body.classList.add('pf-scroll');
+    body.innerHTML = '<div id="dataFeat3" style="display:flex;flex:1;min-height:0"></div>';
+    dataFeat3 = ProtoFeat.explorer(document.getElementById('dataFeat3'), {
+      list: () => PROTO.STATIONS,
+      fuel: car.fuel,
+      province: 'Madrid',
+      pageSize: 10,
+    });
+  },
+});
+document.getElementById('dataBtn3').addEventListener('click', () => dataOverlay.open());
 document.getElementById('cfgBtn').addEventListener('click', () => { nav.go('yo'); });
 document.getElementById('feed').addEventListener('click', (e) => {
   const card = e.target.closest('[data-id]'); if (!card) return;

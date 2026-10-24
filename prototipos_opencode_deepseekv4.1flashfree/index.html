@@ -17,6 +17,7 @@ header p{color:#55677a;margin:.4rem 0 1rem;font-size:.92rem;max-width:70ch;line-
 .t-base{background:#e3f7ee;color:#00875a}.t-map{background:#e7f0fd;color:#0b62d6}.t-dec{background:#f1eafe;color:#6d28d9}
 .t-desk{background:#e8edf3;color:#334155}.t-ia{background:#fff5e0;color:#b26a00}.t-drv{background:#fdeaea;color:#cf2b2b}
 .t-new{background:#0b62d6;color:#fff}
+.t-plan{background:#e7f0fd;color:#0b62d6}
 .card h2{font-size:1.12rem}.card p{font-size:.85rem;color:#55677a;line-height:1.5;flex:1}
 .card ul{font-size:.78rem;color:#27364a;line-height:1.7;padding-left:1rem}
 .card a{display:block;text-align:center;background:#0b62d6;color:#fff;font-weight:800;text-decoration:none;padding:.7rem;border-radius:12px;margin-top:.4rem}
@@ -66,6 +67,14 @@ header p{color:#55677a;margin:.4rem 0 1rem;font-size:.92rem;max-width:70ch;line-
 .mk-verd b.ok{position:absolute;left:18px;top:20px;color:#00875a;font-size:.78rem}
 .mk-verd i.bar{height:11px;border-radius:5px;background:#dbe4ee}
 .mk-verd i.bar.g{background:#b7e6cf}
+/* v8: planificador de repostaje */
+.mk-plan{background:linear-gradient(150deg,#fff,#eef6ff);padding:10px;display:grid;grid-template-columns:46px 1fr;gap:8px;align-items:center}
+.mk-plan .ring{position:static;width:46px;height:46px;border-radius:50%;border:6px solid #0b62d6;border-right-color:#dbe4ee;grid-row:span 2}
+.mk-plan .lvl{position:static;font-size:.82rem;font-weight:800;color:#0d1620;letter-spacing:-.02em}
+.mk-plan .days{display:flex;gap:3px;grid-column:2;align-items:flex-end;height:32px}
+.mk-plan .days i{flex:1;height:18px;border-radius:4px;background:#dbe4ee}
+.mk-plan .days i.on{background:#00875a;height:30px}
+.mk-plan .cta{grid-column:1/-1;height:13px;border-radius:7px;background:#0b62d6}
 footer{margin-top:26px;color:#55677a;font-size:.82rem;line-height:1.7;max-width:96ch}
 code{background:#e8edf3;padding:.1rem .35rem;border-radius:6px;color:#0b62d6}
 </style>
@@ -74,7 +83,7 @@ code{background:#e8edf3;padding:.1rem .35rem;border-radius:6px;color:#0b62d6}
 <div class="wrap">
 <header>
 <h1>&#9981; Prototipos OpenCode &mdash; DeepSeek V4.1 Flash &middot; nueva UX Gasolineras</h1>
-<p>7 dise&ntilde;os responsive navegables con <b>datos falsos</b> (29 estaciones, hist&oacute;rico sint&eacute;tico de 14 d&iacute;as). Abren con doble clic, sin servidor ni red.
+<p>8 dise&ntilde;os responsive navegables con <b>datos falsos</b> (29 estaciones, hist&oacute;rico sint&eacute;tico determinista). Abren con doble clic, sin servidor ni red.
 En m&oacute;vil se ven a pantalla completa; en PC cada uno adapta el layout (columnas, rail, inspector). Todos comparten el sistema de dise&ntilde;o <code>assets/proto.css</code> (Petrol UI 2.0) y los mismos datos (<code>assets/proto-data.js</code>),
 as&iacute; que las diferencias que notes son de <b>dise&ntilde;o</b>, no de datos.</p>
 </header>
@@ -115,17 +124,24 @@ as&iacute; que las diferencias que notes son de <b>dise&ntilde;o</b>, no de dato
 <p>La app en el soporte del coche: un paso = una decisi&oacute;n, todo pulsable en el tercio inferior, botones de 56&ndash;72 px y modo AMOLED para la noche.</p>
 <ul><li>Pasos guiados: repostar en 3 toques</li><li>Precios enormes, legibles de un vistazo</li><li>Decide con minutos de desv&iacute;o y &euro;/hora</li></ul>
 <a href="v6-drive.html">Abrir v6 &middot; Repostaje &rarr;</a></div>
-<div class="card new"><span class="tag t-new">v7 &middot; Nuevo &middot; comparador</span>
+<div class="card"><span class="tag t-plan">v7 &middot; Comparador</span>
 <div class="mk mk-verd"><i class="hero"></i><b class="ok">&#10003; Ahorro neto &middot; 4,20 &euro;</b><i class="bar g" style="width:44%"></i><i class="bar" style="width:78%"></i><i class="bar" style="width:60%"></i></div>
 <h2>v7 &middot; Comparador con veredicto</h2>
 <p>Elige 2&ndash;3 estaciones y la app dicta sentencia: ahorro NETO = diferencia de precio &times; litros &minus; coste del desv&iacute;o. Con tabla de rankings, gr&aacute;fica superpuesta y el &laquo;por qu&eacute; gana&raquo;.</p>
 <ul><li>Veredicto en &euro; netos, no solo precio</li><li>Desv&iacute;o contado con tu consumo real</li><li>Selector con b&uacute;squeda y orden</li></ul>
 <a href="v7-compare.html">Abrir v7 &middot; Comparador &rarr;</a></div>
+<div class="card new"><span class="tag t-new">v8 &middot; Nuevo &middot; planificador</span>
+<div class="mk mk-plan"><i class="ring"></i><b class="lvl">12,0 L &middot; 188 km</b><div class="days"><i></i><i></i><i></i><i class="on"></i><i></i><i></i><i></i></div><i class="cta"></i></div>
+<h2>v8 &middot; Planificador de repostaje</h2>
+<p>La app decide por ti <b>cu&aacute;ndo</b> repostar: cruza el nivel del dep&oacute;sito, tu consumo y la previsi&oacute;n de 7 d&iacute;as para se&ntilde;alar la ventana m&aacute;s barata, con presupuesto mensual y agenda.</p>
+<ul><li>&laquo;Reposta el mi&eacute;rcoles&raquo; en vez de una lista</li><li>Hist&oacute;rico + previsi&oacute;n en la misma gr&aacute;fica</li><li>Ahorro por dep&oacute;sito y por mes</li></ul>
+<a href="v8-plan.html">Abrir v8 &middot; Planificador &rarr;</a></div>
 </div>
 <footer>
 <b>C&oacute;mo validar cada prototipo (2 min):</b> 1) cambia de combustible (chips o desplegable) &rarr; precios y lista se recalculan &middot;
 2) abre una estaci&oacute;n &rarr; hist&oacute;rico con la gr&aacute;fica y el tooltip al pasar el rat&oacute;n &middot; 3) marca &#9734; en dos estaciones y activa &laquo;solo favoritas&raquo; &middot;
-4) prueba el tema claro/oscuro y los descuentos por marca en Ajustes &middot; 5) en v7 elige 2&ndash;3 estaciones y mueve litros/consumo para ver cambiar el veredicto.<br>
+4) prueba el tema claro/oscuro y los descuentos por marca en Ajustes &middot; 5) en v7 elige 2&ndash;3 estaciones y mueve litros/consumo para ver cambiar el veredicto &middot;
+6) en v8 baja el nivel del dep&oacute;sito y cambia el presupuesto: la fecha recomendada, la agenda y el ahorro se recalculan.<br>
 Validaci&oacute;n autom&aacute;tica (Playwright): <code>node prototipos_opencode_deepseekv4.1flashfree/_validar.mjs</code> &rarr; capturas e <code>informe.json</code> en <code>capturas/</code>, sin errores de consola.<br>
 Carpeta <code>prototipos_opencode_deepseekv4.1flashfree/</code> &middot; independiente de la app (no toca <code>sw.js</code>, tests ni <code>ASSETS</code>).
 </footer>

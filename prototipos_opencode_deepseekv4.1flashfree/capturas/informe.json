@@ -4,5 +4,47 @@
     "vp": "movil",
     "errors": [],
     "scrollX": 0
+  },
+  {
+    "file": "v3-cards.html",
+    "vp": "escritorio",
+    "errors": [],
+    "scrollX": 0
+  },
+  {
+    "file": "v4-desktop.html",
+    "vp": "movil",
+    "errors": [],
+    "scrollX": 0
+  },
+  {
+    "file": "v4-desktop.html",
+    "vp": "escritorio",
+    "errors": [],
+    "scrollX": 0
+  },
+  {
+    "file": "v6-drive.html",
+    "vp": "movil",
+    "errors": [],
+    "scrollX": 0
+  },
+  {
+    "file": "v6-drive.html",
+    "vp": "escritorio",
+    "errors": [],
+    "scrollX": 0
+  },
+  {
+    "file": "v7-compare.html",
+    "vp": "movil",
+    "errors": [],
+    "scrollX": 0
+  },
+  {
+    "file": "v7-compare.html",
+    "vp": "escritorio",
+    "errors": [],
+    "scrollX": 0
   }
 ]

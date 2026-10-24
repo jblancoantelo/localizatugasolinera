@@ -247,7 +247,10 @@
             <h1 class="v6-q">Elige dónde parar</h1>
             <p class="v6-hint mt1">Ordenadas por lo que te cuesta el viaje, no solo por precio.</p>
 
-            <div class="minimap mt3" id="whereMap"><div class="pm" data-map-host></div></div>
+            <div class="minimap mt3" id="whereMap">
+              <div class="pm" data-map-host></div>
+              <select class="select-native" id="mapStyle6" aria-label="Vista del mapa" style="position:absolute;z-index:6;top:8px;right:8px;width:auto;max-width:150px;min-height:32px;font-size:var(--t-3xs)"></select>
+            </div>
 
             <div class="optgrid mt3" id="optGrid"></div>
 
@@ -399,6 +402,12 @@
       <button class="row-item tap" data-sheet-open="opts"><span class="brandlogo sm" style="background:var(--surface-3);color:var(--fg-2)"><span class="ico sm" data-ico="list"></span></span>
         <span class="ri-main"><span class="ri-title">Todas las estaciones</span><span class="ri-sub">11 con diésel en Madrid, ordenadas por precio</span></span>
         <span class="ico sm dim" data-ico="chevronRight"></span></button>
+      <button class="row-item tap" id="moreIa"><span class="brandlogo sm" style="background:var(--brand-soft);color:var(--brand)"><span class="ico sm" data-ico="sparkles"></span></span>
+        <span class="ri-main"><span class="ri-title">Copiloto IA</span><span class="ri-sub">Precios, histórico y ahorro con citas clicables</span></span>
+        <span class="ico sm dim" data-ico="chevronRight"></span></button>
+      <button class="row-item tap" id="moreCfg"><span class="brandlogo sm" style="background:var(--surface-3);color:var(--fg-2)"><span class="ico sm" data-ico="gear"></span></span>
+        <span class="ri-main"><span class="ri-title">Ajustes de la app</span><span class="ri-sub">Descuentos, caché, paginación, logs, push y claves</span></span>
+        <span class="ico sm dim" data-ico="chevronRight"></span></button>
       <button class="row-item tap" data-toast="Avísame si el precio baja 2 ¢ en 24 h (mock)" data-toast-icon="bell"><span class="brandlogo sm" style="background:var(--surface-3);color:var(--fg-2)"><span class="ico sm" data-ico="bell"></span></span>
         <span class="ri-main"><span class="ri-title">Aviso de precio</span><span class="ri-sub">Notificación push en este móvil</span></span>
         <span class="ico sm dim" data-ico="chevronRight"></span></button>
@@ -416,7 +425,24 @@
     <button class="iconbtn" data-sheet-close><span data-ico="close"></span></button>
   </div>
   <div class="sheet-body">
+    <div class="field pill mb2" style="margin:0 0 var(--s2)"><span class="ico" data-ico="search"></span><input id="optsQ" data-opt-search type="search" placeholder="Marca, calle o localidad…" aria-label="Buscar"></div>
+    <div class="chips wrap" id="optsBrands" style="padding:0 0 var(--s2)"></div>
+    <div class="row between" style="gap:8px;margin-bottom:2px">
+      <span class="tiny muted">Distancia máx.</span>
+      <span class="badge brand" id="optsKmLabel">Sin límite</span>
+    </div>
+    <input type="range" id="optsKm" min="0" max="30" step="1" value="0" aria-label="Distancia máxima en kilómetros" style="width:100%;accent-color:var(--brand);margin-bottom:var(--s2)">
+    <div class="segmented mb2" id="optsSort" style="font-size:var(--t-3xs);margin-bottom:var(--s2)">
+      <button data-opt-sort="price" class="on">Precio</button>
+      <button data-opt-sort="distance">Cerca</button>
+      <button data-opt-sort="saving">Ahorro</button>
+    </div>
+    <div class="row between mb2" style="gap:8px">
+      <span class="tiny muted" id="optsCount">—</span>
+      <span id="optsLegend"></span>
+    </div>
     <div class="list" id="optsList"></div>
+    <div id="optsPager"></div>
   </div>
 </div>
 
@@ -477,6 +503,7 @@
 <script src="assets/proto-chart.js"></script>
 <script src="assets/proto-map.js"></script>
 <script src="assets/proto-ui.js"></script>
+<script src="assets/proto-features.js"></script>
 <script>
 Proto.boot();
 /* El coche de noche: por defecto oscuro, salvo que la galería pida otra cosa. */
@@ -495,9 +522,17 @@ const state = {
   liters: null,          // litros finales
   amoled: true, big: false, voice: true, warnMin: 10, pref: 'price',
   saved: null,           // último repostaje guardado
+  q: '',                 // búsqueda de "Todas las estaciones"
+  maxKm: 0,              // filtro de distancia de la lista completa (0 = sin límite)
+  brands: [],            // marcas activas de la lista completa
+  sort: 'price',         // price | distance | saving
+  pageSize: 10,          // 0 = todas (Ajustes de la app)
 };
 
-const LIST = () => PROTO.filterStations(PROTO.STATIONS, { province: 'Madrid', fuel: state.fuel });
+const LIST = () => PROTO.filterStations(PROTO.STATIONS, { province: 'Madrid', fuel: state.fuel, q: state.q });
+/* El filtro de distancia se aplica a la lista completa, no a las 3 opciones
+   del surtidor: si acotas la búsqueda, no desaparece la estación de al lado. */
+const OPTS_LIST = () => PROTO.filterStations(LIST(), { maxKm: state.maxKm, brands: state.brands });
 const stats = () => PROTO.stats(LIST(), state.fuel);
 const byId = (id) => PROTO.STATIONS.find(s => s.id === id);
 const priceOf = (st, f) => PROTO.finalPrice(st, f || state.fuel);
@@ -666,6 +701,10 @@ function renderWhere() {
     stations: LIST(), fuel: state.fuel, seed: 'v6-where',
     fit: 'stations', padding: 40, showUser: true, showLayers: false, showCtrl: true,
   });
+  if (!window._v6MapStyle) {
+    ProtoFeat.mapStyleSelect(document.getElementById('mapStyle6'), { mapHost: host });
+    window._v6MapStyle = true;
+  }
   if (state.stId) whereMap.select(state.stId);
   renderCta();
 }
@@ -943,22 +982,120 @@ function stopVoice() {
 }
 
 /* --- Más opciones (lista completa) --- */
+const optsPager = ProtoFeat.pager(document.getElementById('optsPager'), {
+  size: state.pageSize, total: 0, label: 'estaciones',
+  onChange: () => renderOpts(),
+});
+
+function renderOptsBrands() {
+  const host = document.getElementById('optsBrands');
+  const brands = [...new Set(LIST().map(s => s.brand))].sort((a, b) => a.localeCompare(b, 'es'));
+  host.innerHTML = `<button class="chip ${state.brands.length ? '' : 'on'}" data-opt-brand="">Todas</button>` +
+    brands.map(b => `<button class="chip ${state.brands.includes(b) ? 'on' : ''}" data-opt-brand="${b}">${Proto.esc(Proto.titleCase(b))}</button>`).join('');
+}
 function renderOpts() {
-  const stt = stats();
-  document.getElementById('optsList').innerHTML = PROTO.sortStations(LIST(), 'price', 'asc', state.fuel).map(st => {
+  renderOptsBrands();
+  document.querySelectorAll('#optsSort [data-opt-sort]').forEach(x => x.classList.toggle('on', x.dataset.optSort === state.sort));
+  const base = OPTS_LIST();
+  const stt = PROTO.stats(base, state.fuel) || { lo: 0, hi: 0 };
+  const all = PROTO.sortStations(base, state.sort, 'asc', state.fuel);
+  optsPager.set(all.length);
+  const list = optsPager.slice(all);
+  const host = document.getElementById('optsList');
+  document.getElementById('optsCount').textContent = `${all.length} estaciones · ${PROTO.fuelShort(state.fuel)}` +
+    (state.maxKm ? ` · ≤ ${state.maxKm} km` : '') +
+    (state.brands.length ? ` · ${state.brands.length} marca${state.brands.length === 1 ? '' : 's'}` : '');
+  document.getElementById('optsLegend').innerHTML = ProtoFeat.legend(PROTO.stats(base, state.fuel));
+  if (!list.length) {
+    ProtoFeat.empty(host, { title: 'Sin resultados', text: 'Ninguna estación coincide con la búsqueda.' });
+    return;
+  }
+  host.innerHTML = list.map(st => {
     const km = PROTO.kmFromUser(st);
     const L = litersFor(st), save = saveFor(st, L);
-    return `<button class="row-item tap" data-pick="${st.id}">
+    return `<div class="row-item tap" data-opt-detail="${st.id}" role="button" tabindex="0">
       <span class="brandlogo sm" style="background:${PROTO.brandMeta(st.brand).color};color:${PROTO.brandMeta(st.brand).ink}">${st.brand.slice(0, 2)}</span>
       <span class="ri-main">
         <span class="ri-title">${Proto.esc(Proto.shortName(st))}</span>
         <span class="ri-sub">${PROTO.dist(km)} · ${mins(km)} min · ${save > 0.05 ? 'ahorras ' + eur(save) : 'en la media'}</span>
       </span>
       <span class="price p-sm ${PROTO.level(priceOf(st), stt.lo, stt.hi)}">${perL(priceOf(st))}<span class="p-unit">€/L</span></span>
-    </button>`;
+      <button class="iconbtn sm ${st.fav ? 'on' : ''}" data-opt-fav="${st.id}" title="Favorito" aria-pressed="${st.fav}">${Proto.icon(st.fav ? 'starFill' : 'star', st.fav ? 'sm fill' : 'sm')}</button>
+    </div>`;
   }).join('');
   Proto.hydrateIcons(document.getElementById('optsList'));
 }
+document.getElementById('optsQ').addEventListener('input', (e) => {
+  state.q = e.target.value.trim();
+  optsPager.setPage(0);
+  renderOpts();
+});
+document.getElementById('optsKm').addEventListener('input', (e) => {
+  state.maxKm = +e.target.value;
+  document.getElementById('optsKmLabel').textContent = state.maxKm ? `≤ ${state.maxKm} km` : 'Sin límite';
+  optsPager.setPage(0);
+  renderOpts();
+});
+document.getElementById('optsBrands').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-opt-brand]'); if (!b) return;
+  const v = b.dataset.optBrand;
+  if (!v) state.brands = [];
+  else state.brands = state.brands.includes(v) ? state.brands.filter(x => x !== v) : [...state.brands, v];
+  optsPager.setPage(0);
+  renderOpts();
+});
+document.getElementById('optsSort').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-opt-sort]'); if (!b) return;
+  state.sort = b.dataset.optSort;
+  optsPager.setPage(0);
+  renderOpts();
+});
+document.getElementById('optsList').addEventListener('click', (e) => {
+  const fav = e.target.closest('[data-opt-fav]');
+  if (fav) {
+    e.stopPropagation();
+    const st = byId(fav.dataset.optFav);
+    if (st) {
+      st.fav = !st.fav;
+      Proto.toast(st.fav ? st.name + ' en favoritos' : 'Quitada de favoritos', { iconName: st.fav ? 'starFill' : 'star' });
+      renderOpts();
+    }
+    return;
+  }
+  const item = e.target.closest('[data-opt-detail]');
+  if (item) openStation(item.dataset.optDetail);
+});
+
+/* --- Paridad: chat IA y ajustes (capa compartida) --- */
+let iaFeat = null, cfgFeat = null;
+const reRender6 = () => { renderFuel(); renderCta(); renderWhere(); if (document.getElementById('optsSheet').classList.contains('open')) renderOpts(); };
+const iaOverlay6 = ProtoFeat.overlay({
+  title: 'Copiloto IA', icon: 'sparkles',
+  render(body) {
+    body.classList.add('pf-scroll');
+    body.innerHTML = '<div id="iaFeat"></div>';
+    iaFeat = ProtoFeat.iaPanel(document.getElementById('iaFeat'), {
+      list: () => LIST(),
+      onOpenStation: (id) => { iaOverlay6.close(); openStation(id); },
+    });
+  },
+});
+const cfgOverlay6 = ProtoFeat.overlay({
+  title: 'Ajustes', icon: 'gear',
+  render(body) {
+    body.classList.add('pf-scroll');
+    body.innerHTML = '<div id="cfgFeat"></div>';
+    cfgFeat = ProtoFeat.configPanel(document.getElementById('cfgFeat'), {
+      pageSize: state.pageSize,
+      onDiscounts: () => reRender6(),
+      onPageSize: (n) => { state.pageSize = n; optsPager.setSize(n); renderOpts(); },
+      getHiddenIa: () => (iaFeat ? iaFeat.hidden : []),
+      onIaTabs: (ids) => iaFeat && iaFeat.setHidden(ids),
+    });
+  },
+});
+document.getElementById('moreIa').addEventListener('click', () => { sheets.more.close(); iaOverlay6.open(); });
+document.getElementById('moreCfg').addEventListener('click', () => { sheets.more.close(); cfgOverlay6.open(); });
 
 /* --- Delegación de eventos --- */
 document.addEventListener('click', (e) => {
@@ -1019,7 +1156,7 @@ document.addEventListener('click', (e) => {
     if (k === 'set') renderSet();
     /* Un menú se cierra al entrar en su destino: al volver no reaparece encima. */
     Object.values(sheets).forEach(s => s.close());
-    sheets[k] && sheets[k].open(k === 'log' || k === 'set' || k === 'opts' ? 'full' : 'half');
+    sheets[k] && sheets[k].open(k === 'log' || k === 'set' || k === 'opts' || k === 'more' ? 'full' : 'half');
     return;
   }
 
@@ -1043,7 +1180,7 @@ document.addEventListener('click', (e) => {
 
 /* --- Botones --- */
 document.getElementById('moreBtn').addEventListener('click', () => sheets.more.open('half'));
-document.getElementById('voiceBtn').addEventListener('click', () => { stopVoice(); sheets.voice.open('half'); setTimeout(startVoice, 260); });
+document.getElementById('voiceBtn').addEventListener('click', () => { stopVoice(); sheets.voice.open('full'); setTimeout(startVoice, 260); });
 document.getElementById('sideNew').addEventListener('click', () => go('fuel'));
 document.getElementById('moreOpts').addEventListener('click', () => { renderOpts(); sheets.opts.open('full'); });
 document.getElementById('voiceUse').addEventListener('click', (e) => {

@@ -312,10 +312,22 @@
       </header>
       <div class="side-scroll" id="setBody"></div>
     </section>
+
+    <!-- ============ Panel: datos (paridad funcional) =========== -->
+    <section class="pane side-pane" data-panel="datos">
+      <header class="topbar">
+        <span class="topbar-title">Datos</span>
+        <div class="spacer"></div>
+        <button class="iconbtn" data-tab="chat" title="Volver al copiloto"><span data-ico="sparkles"></span></button>
+        <button class="iconbtn" data-theme-toggle title="Tema"></button>
+      </header>
+      <div id="dataBody5" style="flex:1;min-height:0;display:flex"></div>
+    </section>
   </div>
 
   <nav class="bottomnav" id="nav" data-nav="v5">
     <button class="nav-btn on" data-tab="chat"><span class="ico" data-ico="sparkles"></span>Copiloto</button>
+    <button class="nav-btn" data-tab="datos"><span class="ico" data-ico="list"></span>Datos</button>
     <button class="nav-btn" data-tab="ctx"><span class="ico" data-ico="layers"></span>Contexto</button>
     <button class="nav-btn" data-tab="cmp"><span class="ico" data-ico="compare"></span>Comparar</button>
     <button class="nav-btn" data-tab="set"><span class="ico" data-ico="gear"></span>Ajustes</button>
@@ -386,6 +398,7 @@
 <script src="assets/proto-chart.js"></script>
 <script src="assets/proto-map.js"></script>
 <script src="assets/proto-ui.js"></script>
+<script src="assets/proto-features.js"></script>
 <script>
 Proto.boot();
 
@@ -1141,6 +1154,12 @@ function renderSet() {
     </div>
 
     <div class="card">
+      <div class="card-title">${Proto.icon('gear', 'sm')}Configuración de la app</div>
+      <p class="tiny dim mt2">Descuentos por marca, caché IndexedDB/localStorage, paginación, registro API/Push, notificaciones, claves de IA, pestañas visibles y actualización.</p>
+      <button class="btn primary block mt3" id="cfgBtn5">${Proto.icon('gear', 'sm')} Abrir Config completa</button>
+    </div>
+
+    <div class="card">
       <div class="card-title">${Proto.icon('trash', 'sm')}Conversaciones guardadas</div>
       <div class="mt2">
         ${provs.map(p => `<div class="kv">
@@ -1400,11 +1419,36 @@ document.addEventListener('proto:theme', () => {
   if (detailCtl && stationSheet.snap) detailCtl.redraw();
 });
 
+/* ============================================================================
+   Paridad funcional: explorador de datos y Config completa
+   ========================================================================== */
+const dataFeat5 = ProtoFeat.explorer(document.getElementById('dataBody5'), {
+  list: () => PROTO.STATIONS,
+  fuel: state.fuel,
+  pageSize: 8,
+});
+
+const cfgOverlay5 = ProtoFeat.overlay({
+  title: 'Ajustes de la app', icon: 'gear',
+  render(body) {
+    body.classList.add('pf-scroll');
+    body.innerHTML = '<div id="cfgFeat5"></div>';
+    ProtoFeat.configPanel(document.getElementById('cfgFeat5'), {
+      onDiscounts: () => { dataFeat5.refresh(); renderCtx(); },
+      getHiddenIa: () => [],
+      onIaTabs: () => {},
+    });
+  },
+});
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#cfgBtn5')) cfgOverlay5.open();
+});
+
 /* Enlaces cruzados */
 const crossLinks = document.createElement('div');
 crossLinks.className = 'card flat mt3';
 crossLinks.innerHTML = `<div class="card-title">Otros prototipos</div><div class="chips wrap mt2">` +
-  [['v1-sheet.html', 'v1 · Sheet + pestañas'], ['v2-map.html', 'v2 · Mapa primero'], ['v3-cards.html', 'v3 · Feed de ahorro'], ['v4-desktop.html', 'v4 · Consola escritorio'], ['v6-drive.html', 'v6 · Una mano'], ['styleguide.html', 'Estilo y componentes'], ['index.html', '← Galería']]
+  [['v1-sheet.html', 'v1 · Sheet + pestañas'], ['v2-map.html', 'v2 · Mapa primero'], ['v3-cards.html', 'v3 · Feed de ahorro'], ['v4-desktop.html', 'v4 · Consola escritorio'], ['v6-drive.html', 'v6 · Una mano'], ['v7-compare.html', 'v7 · Comparador'], ['v8-plan.html', 'v8 · Planificador'], ['styleguide.html', 'Estilo y componentes'], ['index.html', '← Galería']]
   .map(([f, l]) => `<a class="chip" href="${f}">${Proto.icon('arrowRight', 'xs')}${l}</a>`).join('') + '</div>';
 document.getElementById('setBody').appendChild(crossLinks);
 

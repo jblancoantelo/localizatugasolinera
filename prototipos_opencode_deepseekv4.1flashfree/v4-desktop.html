@@ -40,6 +40,8 @@
   .split { display: flex; min-height: 0; flex: 1; }
   .split > .tablewrap { flex: 1 1 auto; }
   .split > .mappane { position: relative; flex: 0 0 44%; border-left: 1px solid var(--line); min-height: 0; }
+.mappane .map-hud { position: absolute; top: 10px; right: 10px; z-index: 6; }
+.mappane .map-hud select { min-height: 34px; padding: 0 8px; font-size: var(--t-xs); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--sh-1); }
   .tablewrap.full { flex: 1; }
   /* En "Ambos" la tabla comparte espacio: se quedan las columnas imprescindibles
      (favorito · marca · precio · distancia) y el resto se consulta en "Tabla". */
@@ -122,8 +124,9 @@
     </div>
     <button class="btn sm ghost" id="railBtn" title="Filtros"><span data-ico="sliders"></span>Filtros</button>
     <button class="iconbtn" id="inspBtn" title="Inspector"><span data-ico="info"></span></button>
+    <button class="iconbtn" id="iaBtn4" title="Copiloto IA"><span data-ico="sparkles"></span></button>
     <button class="iconbtn" data-theme-toggle title="Tema"></button>
-    <button class="iconbtn" data-toast="Ajustes: caché, IA, push y claves (mock)" data-toast-icon="gear" title="Ajustes"><span data-ico="gear"></span></button>
+    <button class="iconbtn" id="cfgBtn4" title="Ajustes"><span data-ico="gear"></span></button>
   </header>
 
   <div class="shell">
@@ -180,6 +183,7 @@
         <div class="kpi-mini"><div class="k-label">Más cara</div><div class="k-val" id="kMax" style="color:var(--hi)">—</div></div>
         <div class="kpi-mini"><div class="k-label">Diferencia</div><div class="k-val" id="kSpread">—</div></div>
         <div class="kpi-mini"><div class="k-label">Ahorro 50 L</div><div class="k-val" id="kSave" style="color:var(--ok)">—</div></div>
+        <div class="kpi-mini" style="min-width:0"><div class="k-label">Leyenda</div><div id="legend4" style="margin-top:4px"></div></div>
         <div class="spacer"></div>
         <div class="col" style="gap:4px;align-items:flex-end">
           <span class="qlabel" id="cacheLine">Caché hace 8 min · 12 series históricas</span>
@@ -222,7 +226,9 @@
             <tbody></tbody>
           </table>
         </div>
-        <div class="mappane hide" id="mappane"><div id="mapHost" style="position:absolute;inset:0"></div></div>
+        <div class="mappane hide" id="mappane"><div id="mapHost" style="position:absolute;inset:0"></div>
+          <div class="map-hud"><select class="select-native" id="mapStyle4" aria-label="Vista del mapa"></select></div>
+        </div>
       </div>
     </section>
 
@@ -266,6 +272,7 @@
 <script src="assets/proto-chart.js"></script>
 <script src="assets/proto-map.js"></script>
 <script src="assets/proto-ui.js"></script>
+<script src="assets/proto-features.js"></script>
 <script>
 Proto.boot();
 
@@ -274,7 +281,7 @@ Proto.boot();
    ========================================================================== */
 const state = {
   prov: 'Madrid', loc: '', fuel: 'diesel', brands: [], maxKm: 0,
-  fav: false, cheap: false, only24: false, noStale: false, q: '',
+  fav: false, cheap: false, only24: false, noStale: false, q: '', pageSize: 0,
   sort: 'price', dir: 'asc', view: 'table', tab: 'st', sel: null, compare: [],
 };
 const baseList = () => PROTO.filterStations(PROTO.STATIONS, { province: state.prov });
@@ -324,7 +331,7 @@ document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('clic
    Tabla
    ========================================================================== */
 function renderTable() {
-  const list = sorted();
+  const list = state.pageSize > 0 ? sorted().slice(0, state.pageSize) : sorted();
   const stats = PROTO.stats(visible(), state.fuel);
   const tbody = document.querySelector('#table tbody');
   tbody.innerHTML = list.map(st => {
@@ -382,6 +389,7 @@ function renderKpis() {
   document.getElementById('kMax').textContent = stats ? stats.max.toFixed(3).replace('.', ',') : '—';
   document.getElementById('kSpread').textContent = stats ? (stats.spread * 100).toFixed(1).replace('.', ',') + ' ¢' : '—';
   document.getElementById('kSave').textContent = stats ? PROTO.money((stats.avg - stats.min) * 50, 2) : '—';
+  document.getElementById('legend4').innerHTML = ProtoFeat.legend(stats);
   document.getElementById('cacheCount').textContent = baseList().length;
   const chips = [];
   const push = (k, label) => chips.push(`<button class="chip" data-clear="${k}">${Proto.esc(label)}<span class="x">✕</span></button>`);
@@ -553,6 +561,7 @@ function syncMap() {
   map.setStations(visible());
   if (state.sel) map.select(state.sel); else map.select(null);
 }
+ProtoFeat.mapStyleSelect(document.getElementById('mapStyle4'), { mapHost: document.getElementById('mapHost') });
 
 /* ==========================================================================
    Vistas (tabla / mapa / ambos)
@@ -572,6 +581,44 @@ function setView(v) {
   if (v !== 'table') { ensureMap(); map && map.fit(visible(), { padding: 50 }); }
   try { localStorage.setItem('proto_v4_view', v); } catch (e) {}
 }
+
+/* ==========================================================================
+   Paridad: chat IA y ajustes (capa compartida)
+   ========================================================================== */
+function selectStation(id) {
+  state.sel = id;
+  renderTable(); renderInspector(); syncMap();
+  if (map) map.focus(id);
+  document.getElementById('inspector').classList.add('on');
+}
+let iaFeat = null, cfgFeat = null;
+const iaOverlay4 = ProtoFeat.overlay({
+  title: 'Copiloto IA', icon: 'sparkles',
+  render(body) {
+    body.classList.add('pf-scroll');
+    body.innerHTML = '<div id="iaFeat"></div>';
+    iaFeat = ProtoFeat.iaPanel(document.getElementById('iaFeat'), {
+      list: () => visible(),
+      onOpenStation: (id) => { iaOverlay4.close(); selectStation(id); },
+    });
+  },
+});
+const cfgOverlay4 = ProtoFeat.overlay({
+  title: 'Ajustes', icon: 'gear',
+  render(body) {
+    body.classList.add('pf-scroll');
+    body.innerHTML = '<div id="cfgFeat"></div>';
+    cfgFeat = ProtoFeat.configPanel(document.getElementById('cfgFeat'), {
+      pageSize: state.pageSize,
+      onDiscounts: () => refresh(),
+      onPageSize: (n) => { state.pageSize = n; renderTable(); },
+      getHiddenIa: () => (iaFeat ? iaFeat.hidden : []),
+      onIaTabs: (ids) => iaFeat && iaFeat.setHidden(ids),
+    });
+  },
+});
+document.getElementById('iaBtn4').addEventListener('click', () => iaOverlay4.open());
+document.getElementById('cfgBtn4').addEventListener('click', () => cfgOverlay4.open());
 
 /* ==========================================================================
    Command palette
@@ -597,7 +644,8 @@ function buildCmdk(q) {
     { kind: 'Acción', label: 'Solo con descuento de marca', run: () => { state.cheap = true; document.getElementById('fCheap').checked = true; refresh(); } },
     { kind: 'Acción', label: 'Actualizar datos de la API', run: () => Proto.toast('Consultando la API del Ministerio… (mock)', { iconName: 'refresh' }) },
     { kind: 'Acción', label: 'Vaciar caché', run: () => Proto.toast('Caché vaciada (mock)', { iconName: 'trash' }) },
-    { kind: 'Acción', label: 'Abrir ajustes', run: () => Proto.toast('Ajustes (mock)', { iconName: 'gear' }) },
+    { kind: 'Acción', label: 'Abrir ajustes', run: () => cfgOverlay4.open() },
+    { kind: 'Acción', label: 'Abrir chat IA (copiloto)', run: () => iaOverlay4.open() },
     { kind: 'Cambio', label: 'Cambiar a Gasolina 95', run: () => { state.fuel = 'g95'; fillFilters(); refresh(); } },
     { kind: 'Cambio', label: 'Cambiar a Gasóleo A', run: () => { state.fuel = 'diesel'; fillFilters(); refresh(); } },
     { kind: 'Cambio', label: 'Cambiar a Gasolina 98', run: () => { state.fuel = 'g98'; fillFilters(); refresh(); } },
