@@ -15,7 +15,7 @@
   .app { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
   .shell { display: grid; grid-template-columns: 264px minmax(0, 1fr) 384px; min-height: 0; }
   .rail { border-right: 1px solid var(--line); background: var(--surface); overflow-y: auto; min-height: 0; }
-  .center { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--bg); }
+  .center { display: flex; flex-direction: column; align-items: stretch; min-width: 0; min-height: 0; background: var(--bg); }
   .inspector { border-left: 1px solid var(--line); background: var(--surface); overflow-y: auto; min-height: 0; }
   .statusbar2 {
     display: flex; align-items: center; gap: var(--s3); padding: 5px var(--s3);
@@ -26,8 +26,8 @@
   .fgroup { border-bottom: 1px solid var(--line); padding: var(--s3) var(--s4); }
   .fgroup h3 { font-size: var(--t-3xs); font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--fg-3); margin-bottom: var(--s2); }
   .rail .check { min-height: 34px; font-size: var(--t-sm); }
-  .kpi-strip { display: flex; gap: var(--s5); align-items: center; padding: var(--s3) var(--s4); background: var(--surface); border-bottom: 1px solid var(--line); }
-  .kpi-mini { min-width: 96px; }
+  .kpi-strip { display: flex; gap: var(--s4); align-items: center; padding: var(--s3) var(--s4); background: var(--surface); border-bottom: 1px solid var(--line); overflow: hidden; }
+  .kpi-mini { min-width: 82px; flex: 0 0 auto; }
   .kpi-mini .k-label { font-size: var(--t-3xs); text-transform: uppercase; letter-spacing: .05em; color: var(--fg-3); font-weight: 700; white-space: nowrap; }
   .kpi-mini .k-val { font-size: var(--t-xl); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
   .filter-strip { display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s4); background: var(--surface); border-bottom: 1px solid var(--line); }
@@ -40,8 +40,12 @@
   .split { display: flex; min-height: 0; flex: 1; }
   .split > .tablewrap { flex: 1 1 auto; }
   .split > .mappane { position: relative; flex: 0 0 44%; border-left: 1px solid var(--line); min-height: 0; }
-.mappane .map-hud { position: absolute; top: 10px; right: 10px; z-index: 6; }
+  body[data-view="map"] .split > .mappane { flex: 1 1 auto; border-left: 0; }
+.mappane .map-hud { position: absolute; top: 10px; right: 10px; z-index: 6; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .mappane .map-hud select { min-height: 34px; padding: 0 8px; font-size: var(--t-xs); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--sh-1); }
+.mappane .map-hud #legend4 .chip { background: var(--surface); border-color: var(--line); box-shadow: var(--sh-1); font-size: var(--t-3xs); min-height: 28px; }
+/* La marca de prototipo, arriba a la derecha, tapaba los iconos de la topbar. */
+.proto-tag { top: auto; right: 12px; bottom: 40px; }
   .tablewrap.full { flex: 1; }
   /* En "Ambos" la tabla comparte espacio: se quedan las columnas imprescindibles
      (favorito · marca · precio · distancia) y el resto se consulta en "Tabla". */
@@ -183,7 +187,6 @@
         <div class="kpi-mini"><div class="k-label">Más cara</div><div class="k-val" id="kMax" style="color:var(--hi)">—</div></div>
         <div class="kpi-mini"><div class="k-label">Diferencia</div><div class="k-val" id="kSpread">—</div></div>
         <div class="kpi-mini"><div class="k-label">Ahorro 50 L</div><div class="k-val" id="kSave" style="color:var(--ok)">—</div></div>
-        <div class="kpi-mini" style="min-width:0"><div class="k-label">Leyenda</div><div id="legend4" style="margin-top:4px"></div></div>
         <div class="spacer"></div>
         <div class="col" style="gap:4px;align-items:flex-end">
           <span class="qlabel" id="cacheLine">Caché hace 8 min · 12 series históricas</span>
@@ -227,7 +230,10 @@
           </table>
         </div>
         <div class="mappane hide" id="mappane"><div id="mapHost" style="position:absolute;inset:0"></div>
-          <div class="map-hud"><select class="select-native" id="mapStyle4" aria-label="Vista del mapa"></select></div>
+          <div class="map-hud">
+            <select class="select-native" id="mapStyle4" aria-label="Vista del mapa"></select>
+            <div id="legend4"></div>
+          </div>
         </div>
       </div>
     </section>

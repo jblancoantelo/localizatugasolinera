@@ -54,6 +54,9 @@ const ProtoFeat = (() => {
       .pf-ia-form { flex: 0 0 auto; display: flex; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--line); background: var(--surface); }
       .pf-overlay { position: fixed; inset: 0; z-index: 80; background: var(--bg); display: none; flex-direction: column; }
       .pf-overlay.on { display: flex; }
+      /* El proto-tag es fixed con z-index 200: se oculta mientras hay un overlay
+         a pantalla completa, si no se pinta encima de la cabecera. */
+      body:has(.pf-overlay.on) .proto-tag { opacity: 0; pointer-events: none; }
       .pf-overlay-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
       .pf-scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; }
       .pf-pager { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 12px; }
@@ -68,8 +71,8 @@ const ProtoFeat = (() => {
       .pf-ia-empty { margin: auto; text-align: center; color: var(--fg-2); font-size: var(--t-xs); max-width: 36ch; }
 
       /* --- Explorador de datos (paridad de filtros/lista/mapa/ficha) --- */
-      .pf-ex { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-      .pf-ex-tools { flex: 0 0 auto; display: flex; flex-direction: column; gap: 7px; padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--line); }
+      .pf-ex { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; width: 100%; }
+      .pf-ex-tools { flex: 0 0 auto; display: flex; flex-direction: column; gap: 7px; padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--line); min-width: 0; }
       .pf-ex-search { display: flex; align-items: center; gap: 7px; min-height: 38px; padding: 0 11px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 999px; color: var(--fg-3); }
       .pf-ex-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--fg); font: inherit; font-size: var(--t-sm); }
       .pf-ex-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
@@ -91,7 +94,7 @@ const ProtoFeat = (() => {
       .pf-ex-maptools .select-native { min-height: 32px; max-width: 148px; font-size: var(--t-3xs); background: var(--surface); box-shadow: var(--sh-1); }
       .pf-ex-summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: var(--t-2xs); color: var(--fg-2); }
       .pf-ex-summary .pf-ex-total { font-weight: 700; }
-      .pf-ex-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+      .pf-ex-list { flex: 1 1 auto; min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 12px 14px; display: flex; flex-direction: column; gap: 6px; }
       .pf-ex-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; cursor: pointer; text-align: left; }
       .pf-ex-item:hover, .pf-ex-item:focus-visible { border-color: var(--brand-line); }
       .pf-ex-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
