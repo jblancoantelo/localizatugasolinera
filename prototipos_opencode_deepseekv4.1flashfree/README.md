@@ -39,6 +39,28 @@ Abre cualquier `.html` con doble clic (funciona con `file://`, sin servidor ni r
 
 Todos los prototipos incorporan la capa de paridad: además de su diseño propio, permiten abrir el **explorador de datos**, el **copiloto IA** y la **Config completa** desde sus ajustes o su barra superior. Así se comparan de igual a igual con las funciones de la app real.
 
+## Paridad con la app real
+
+`_cobertura.mjs` mide dos cosas por separado, para no penalizar a un diseño por no usar patrones que la app real tampoco tiene:
+
+- **Funciones de la app real (25)**: filtros (provincia/localidad, combustible, marca, distancia, búsqueda), favoritos, orden, paginación, mapa sintético con estilos y leyenda, estado vacío, detalle con histórico, las 9 tarjetas de Config y el panel de IA con sus proveedores.
+- **Patrones extra (7)**: comparador, tema claro/oscuro, persistencia en `localStorage`, deep links, toasts, sheets arrastrables y `aria-label`.
+
+Resultado actual (los 8 prototipos verificados):
+
+| Prototipo | App real | Extras |
+|-----------|----------|--------|
+| `v1-sheet.html` | 25/25 | 5/7 |
+| `v2-map.html` | 25/25 | 4/7 |
+| `v3-cards.html` | 25/25 | 4/7 |
+| `v4-desktop.html` | 25/25 | 5/7 |
+| `v5-ia.html` | 25/25 | 5/7 |
+| `v6-drive.html` | 25/25 | 5/7 |
+| `v7-compare.html` | 25/25 | 5/7 |
+| `v8-plan.html` | 25/25 | 4/7 |
+
+Los extras que faltan son elecciones de diseño, no carencias: v2/v3/v6/v8 no llevan comparador porque su flujo no lo pide, v1/v2/v6/v8 no guardan estado porque cada uno propone un flujo lineal, y los que no tienen deep link priorizan el atajo de teclado o la navegación interna.
+
 ## Validación automática
 
 Playwright ya está instalado en el repo:
@@ -51,7 +73,7 @@ node prototipos_opencode_deepseekv4.1flashfree/_validar.mjs
 node prototipos_opencode_deepseekv4.1flashfree/_validar.mjs v8
 node prototipos_opencode_deepseekv4.1flashfree/_validar.mjs --movil
 
-# Matriz estática de funcionalidades (32 filas × 8 prototipos)
+# Matriz estática de funcionalidades (25 funciones de la app real + 7 patrones extra × 8 prototipos)
 node prototipos_opencode_deepseekv4.1flashfree/_cobertura.mjs
 
 # Auditoría interactiva: datos, combustible, búsqueda, favoritos, ficha,
@@ -60,9 +82,9 @@ node prototipos_opencode_deepseekv4.1flashfree/_auditar.cjs
 node prototipos_opencode_deepseekv4.1flashfree/_auditar.cjs v8
 ```
 
-`_validar.mjs` recorre cada página, comprueba la sintaxis de los `<script>` inline, recoge errores de consola y excepciones, pulsa la navegación principal y guarda capturas + `informe.json` en `capturas/`. `_cobertura.mjs` escribe `cobertura.json` y `_auditar.cjs`, `auditoria.json`. Los tres salen con código 1 si algo falla. `index.html` queda excluido de la validación (no es un prototipo).
+`_validar.mjs` recorre cada página, comprueba la sintaxis de los `<script>` inline, recoge errores de consola y excepciones, pulsa la navegación principal y guarda capturas + `informe.json` en `capturas/`. `_cobertura.mjs` escribe `cobertura.json` (con `app`, `extra`, `faltanApp` y `faltanExtra` por prototipo) y `_auditar.cjs`, `auditoria.json` con 72 comprobaciones (9 por prototipo). Los tres salen con código 1 si algo falla. `index.html` queda excluido de la validación (no es un prototipo).
 
-Depuración visual puntual (capturas sueltas de vistas concretas): `_dbg-map.cjs`, `_dbg-v4.cjs`, `_dbg-v5.cjs`, `_dbg-v5d.cjs`, `_dbg-v6.cjs`, `_dbg-v7.cjs`. Ejemplo: `node prototipos_opencode_deepseekv4.1flashfree/_dbg-v7.cjs`.
+Depuración visual puntual (capturas sueltas de vistas concretas): `_dbg-map.cjs`, `_dbg-v3.cjs`, `_dbg-v4.cjs`, `_dbg-v5.cjs`, `_dbg-v5d.cjs`, `_dbg-v6.cjs`, `_dbg-v7.cjs`, `_dbg-v8.cjs`, `_dbg-voice.cjs`, `_dbg-err.cjs`. Ejemplo: `node prototipos_opencode_deepseekv4.1flashfree/_dbg-v7.cjs`.
 
 ## Convenciones de diseño aplicadas
 

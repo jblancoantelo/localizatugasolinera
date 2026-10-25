@@ -12,9 +12,10 @@
   {
     "f": "v2-map.html",
     "app": "25/25",
-    "extra": "5/7",
+    "extra": "4/7",
     "faltanApp": [],
     "faltanExtra": [
+      "Comparador",
       "Persistencia (localStorage)",
       "Deep links / pantalla"
     ]
@@ -43,18 +44,20 @@
   {
     "f": "v5-ia.html",
     "app": "25/25",
-    "extra": "6/7",
+    "extra": "5/7",
     "faltanApp": [],
     "faltanExtra": [
+      "Comparador",
       "Deep links / pantalla"
     ]
   },
   {
     "f": "v6-drive.html",
     "app": "25/25",
-    "extra": "6/7",
+    "extra": "5/7",
     "faltanApp": [],
     "faltanExtra": [
+      "Comparador",
       "Persistencia (localStorage)"
     ]
   },
@@ -71,9 +74,10 @@
   {
     "f": "v8-plan.html",
     "app": "25/25",
-    "extra": "5/7",
+    "extra": "4/7",
     "faltanApp": [],
     "faltanExtra": [
+      "Comparador",
       "Deep links / pantalla",
       "Sheets arrastrables"
     ]

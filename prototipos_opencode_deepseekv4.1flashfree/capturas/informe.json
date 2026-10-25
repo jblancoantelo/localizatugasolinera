@@ -1,5 +1,29 @@
 [
   {
+    "file": "v1-sheet.html",
+    "vp": "movil",
+    "errors": [],
+    "scrollX": 0
+  },
+  {
+    "file": "v1-sheet.html",
+    "vp": "escritorio",
+    "errors": [],
+    "scrollX": 0
+  },
+  {
+    "file": "v2-map.html",
+    "vp": "movil",
+    "errors": [],
+    "scrollX": 0
+  },
+  {
+    "file": "v2-map.html",
+    "vp": "escritorio",
+    "errors": [],
+    "scrollX": 0
+  },
+  {
     "file": "v3-cards.html",
     "vp": "movil",
     "errors": [],
@@ -24,6 +48,18 @@
     "scrollX": 0
   },
   {
+    "file": "v5-ia.html",
+    "vp": "movil",
+    "errors": [],
+    "scrollX": 0
+  },
+  {
+    "file": "v5-ia.html",
+    "vp": "escritorio",
+    "errors": [],
+    "scrollX": 0
+  },
+  {
     "file": "v6-drive.html",
     "vp": "movil",
     "errors": [],
@@ -43,6 +79,18 @@
   },
   {
     "file": "v7-compare.html",
+    "vp": "escritorio",
+    "errors": [],
+    "scrollX": 0
+  },
+  {
+    "file": "v8-plan.html",
+    "vp": "movil",
+    "errors": [],
+    "scrollX": 0
+  },
+  {
+    "file": "v8-plan.html",
     "vp": "escritorio",
     "errors": [],
     "scrollX": 0
