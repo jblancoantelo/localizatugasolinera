@@ -31,11 +31,12 @@
   --acento: #1a73e8;
   --acento-osc: #1557b0;
   --acento-suave: #e8f0fe;
-  /* Semántica de precio (misma que FAKE.colorPrecio) */
-  --verde: #1e8e3e;      --verde-bg: #e6f4ea;
-  --naranja: #e8710a;    --naranja-bg: #fdf0e3;
-  --rojo: #d93025;       --rojo-bg: #fce9e7;
-  --gris: #8a97a4;       --gris-bg: #eef1f5;
+  /* Semántica de precio (misma que FAKE.colorPrecio). Tonos oscurecidos para
+     que el texto de precio cumpla AA sobre blanco y sobre su propio tinte */
+  --verde: #146b3c;      --verde-bg: #e6f4ea;
+  --naranja: #9a4b00;    --naranja-bg: #fdf0e3;
+  --rojo: #c5221f;       --rojo-bg: #fce9e7;
+  --gris: #5a6b7c;       --gris-bg: #eef1f5;
   --estrella: #f4a300;
   /* Radios y sombras */
   --r: 14px;
@@ -50,6 +51,10 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* El `<small>` nativo cae a 11,67 px con la base de 14 px: lo fijamos en 12 px
+   para respetar el mínimo tipográfico del proyecto. */
+small { font-size: 0.75rem; }
 
 html, body { height: 100%; }
 
@@ -97,7 +102,7 @@ body {
 *::-webkit-scrollbar-track { background: transparent; }
 
 kbd {
-  font: inherit; font-size: 0.6875rem; padding: 1px 5px; border-radius: 5px;
+  font: inherit; font-size: 0.75rem; padding: 1px 5px; border-radius: 5px;
   border: 1px solid var(--borde-fuerte); background: #fff; color: var(--texto-2);
   box-shadow: 0 1px 0 var(--borde); margin: 0 1px;
 }
@@ -142,7 +147,7 @@ kbd {
 .icono-btn-mini { width: 34px; height: 34px; border-radius: 10px; }
 .icono-btn-badge {
   position: absolute; top: 2px; right: 2px; min-width: 17px; height: 17px; padding: 0 4px;
-  border-radius: 9px; background: var(--estrella); color: #fff; font-size: 0.6875rem;
+  border-radius: 9px; background: var(--estrella); color: #3d2a00; font-size: 0.75rem;
   font-weight: 700; line-height: 17px; text-align: center;
 }
 .icono-btn-badge[data-cero="1"] { background: var(--borde-fuerte); }
@@ -239,8 +244,8 @@ mark { background: #fff2b8; color: inherit; border-radius: 3px; padding: 0 1px; 
 .chip-val { font-weight: 600; white-space: nowrap; }
 .chip-flecha { color: var(--texto-3); }
 .chip-badge {
-  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--acento);
-  color: #fff; font-size: 0.6875rem; font-weight: 700; line-height: 18px; text-align: center;
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--acento-osc);
+  color: #fff; font-size: 0.75rem; font-weight: 700; line-height: 18px; text-align: center;
 }
 
 /* --- Leyenda de precios --- */
@@ -342,14 +347,16 @@ mark { background: #fff2b8; color: inherit; border-radius: 3px; padding: 0 1px; 
 .marcador:hover { z-index: 6; transform: translate(-50%, -100%) scale(1.06); }
 .marcador-pastilla {
   display: inline-flex; align-items: center; gap: 3px;
-  padding: 3px 8px; border-radius: 999px; border: 2px solid #fff;
+  padding: 5px 8px; border-radius: 999px; border: 2px solid #fff;
   color: #fff; font-size: 12px; font-weight: 700; line-height: 1.2;
   box-shadow: 0 2px 6px rgba(10, 22, 38, .35); white-space: nowrap;
 }
-.marcador.m-verde .marcador-pastilla { background: var(--verde); }
-.marcador.m-naranja .marcador-pastilla { background: var(--naranja); }
-.marcador.m-rojo .marcador-pastilla { background: var(--rojo); }
-.marcador.m-gris .marcador-pastilla { background: var(--gris); }
+/* Tintes propios del marcador: más oscuros que los semánticos de texto para
+   que el precio en blanco cumpla AA sobre el color (≥ 4.5:1) */
+.marcador.m-verde .marcador-pastilla { background: #157a35; }
+.marcador.m-naranja .marcador-pastilla { background: #a04a00; }
+.marcador.m-rojo .marcador-pastilla { background: #b3261e; }
+.marcador.m-gris .marcador-pastilla { background: #5a6b7c; }
 .marcador-pata {
   width: 0; height: 0; margin-top: -2px;
   border-left: 5px solid transparent; border-right: 5px solid transparent;
@@ -469,11 +476,11 @@ mark { background: #fff2b8; color: inherit; border-radius: 3px; padding: 0 1px; 
 .tarjeta.sel .tarjeta-titulo { color: var(--acento-osc); }
 .tarjeta-precio { display: flex; flex-direction: column; align-items: flex-start; min-width: 72px; }
 .tarjeta-precio b { font-size: 1.3rem; line-height: 1.05; letter-spacing: -.02em; }
-.tarjeta-precio span { font-size: 0.6875rem; color: var(--texto-3); }
+.tarjeta-precio > span:not(.precio-dto) { font-size: 0.75rem; color: var(--texto-3); }
 .p-verde { color: var(--verde); } .p-naranja { color: var(--naranja); }
 .p-rojo { color: var(--rojo); }   .p-gris { color: var(--gris); }
 .precio-dto {
-  font-size: 0.6875rem; font-weight: 600; color: var(--verde);
+  font-size: 0.75rem; font-weight: 600; color: var(--verde);
   background: var(--verde-bg); border-radius: 5px; padding: 0 4px; margin-top: 2px;
 }
 .tarjeta-cuerpo { min-width: 0; }
@@ -487,7 +494,8 @@ mark { background: #fff2b8; color: inherit; border-radius: 3px; padding: 0 1px; 
 }
 .tarjeta-meta .sep { color: var(--borde-fuerte); }
 .fav-btn {
-  border: none; background: none; cursor: pointer; padding: 2px; line-height: 0;
+  border: none; background: none; cursor: pointer; padding: 0;
+  min-width: 32px; min-height: 32px; display: grid; place-items: center;
   color: var(--texto-3); border-radius: 6px; transition: color var(--t), transform var(--t);
 }
 .fav-btn:hover { color: var(--estrella); transform: scale(1.12); }
@@ -496,7 +504,7 @@ mark { background: #fff2b8; color: inherit; border-radius: 3px; padding: 0 1px; 
 .fav-btn.on .icono { fill: var(--estrella); stroke: var(--estrella); }
 .tarjeta-spark { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .spark { display: block; }
-.spark-tend { font-size: 0.6875rem; font-weight: 600; white-space: nowrap; }
+.spark-tend { font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
 .t-verde { color: var(--verde); } .t-rojo { color: var(--rojo); } .t-gris { color: var(--texto-3); }
 
 .vacio {
@@ -547,7 +555,7 @@ mark { background: #fff2b8; color: inherit; border-radius: 3px; padding: 0 1px; 
 .tabla-scroll tbody tr.foco-fila td { box-shadow: 0 -1px 0 var(--acento), 0 1px 0 var(--acento); }
 .insignia-barata {
   display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 4px;
-  background: var(--verde); color: #fff; font-size: 0.6875rem; font-weight: 700;
+  background: #157a35; color: #fff; font-size: 0.75rem; font-weight: 700;
 }
 
 /* --- Panel de detalle (tercera columna) --- */
@@ -629,7 +637,7 @@ mark { background: #fff2b8; color: inherit; border-radius: 3px; padding: 0 1px; 
 .hist-dato { background: var(--panel-2); border-radius: var(--r-xs); padding: 8px 10px; }
 .hist-dato span { font-size: 0.75rem; color: var(--texto-3); display: block; }
 .hist-dato b { font-size: 0.9375rem; }
-.hist-dato small { display: block; font-size: 0.6875rem; color: var(--texto-3); }
+.hist-dato small { display: block; font-size: 0.75rem; color: var(--texto-3); }
 
 /* === 6. Vista IA ======================================================== */
 .ia-caja { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--panel); }
@@ -686,9 +694,9 @@ mark { background: #fff2b8; color: inherit; border-radius: 3px; padding: 0 1px; 
 .ia-msg.pensando { align-self: flex-start; color: var(--texto-3); font-style: italic; background: #fff; border: 1px dashed var(--borde-fuerte); }
 .ia-msg-meta {
   display: block; margin-top: 7px; padding-top: 5px; border-top: 1px dashed var(--borde);
-  font-size: 0.6875rem; color: var(--texto-3); text-align: right;
+  font-size: 0.75rem; color: var(--texto-3); text-align: right;
 }
-.ia-quien { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--texto-3); margin-bottom: 5px; }
+.ia-quien { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--texto-3); margin-bottom: 5px; }
 .puntos-pensando::after { content: '…'; animation: puntos 1.1s steps(4, end) infinite; }
 @keyframes puntos { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
 
@@ -767,11 +775,11 @@ input.campo:focus, select.campo:focus { outline: none; border-color: var(--acent
 .fila-lista .crece { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fila-lista code { font-size: 0.75rem; color: var(--texto-2); }
 .chip-estado {
-  padding: 1px 7px; border-radius: 999px; font-size: 0.6875rem; font-weight: 700; white-space: nowrap;
+  padding: 1px 7px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; white-space: nowrap;
 }
-.chip-estado.ok { background: var(--verde-bg); color: var(--verde); }
-.chip-estado.warn { background: var(--naranja-bg); color: var(--naranja); }
-.chip-estado.err { background: var(--rojo-bg); color: var(--rojo); }
+.chip-estado.ok { background: var(--verde-bg); color: #146b3c; }
+.chip-estado.warn { background: var(--naranja-bg); color: #8a5200; }
+.chip-estado.err { background: var(--rojo-bg); color: #a0201a; }
 .chip-estado.neutro { background: var(--panel-3); color: var(--texto-2); }
 .cuadricula-check { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px; }
 .prompt-fila { display: flex; align-items: center; gap: 8px; }
@@ -796,7 +804,7 @@ input.campo:focus, select.campo:focus { outline: none; border-color: var(--acent
   color: var(--texto-3); padding: 2px 4px 8px;
 }
 .desp-buscar { width: 100%; margin-bottom: 6px; }
-.desp-grupo { font-size: 0.6875rem; font-weight: 700; color: var(--texto-3); text-transform: uppercase; letter-spacing: .04em; padding: 8px 6px 4px; }
+.desp-grupo { font-size: 0.75rem; font-weight: 700; color: var(--texto-3); text-transform: uppercase; letter-spacing: .04em; padding: 8px 6px 4px; }
 .desp-opcion {
   display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; padding: 9px 8px;
   border: none; background: none; border-radius: var(--r-xs); cursor: pointer; font: inherit;
@@ -848,7 +856,8 @@ input.campo:focus, select.campo:focus { outline: none; border-color: var(--acent
 .estado-barata .precio { font-weight: 700; color: var(--verde); font-size: 0.9375rem; }
 .paginacion { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .paginacion button {
-  width: 32px; height: 32px; border-radius: var(--r-xs); border: 1px solid var(--borde-fuerte);
+  width: 32px; height: 32px; min-width: 32px; flex: 0 0 auto;
+  border-radius: var(--r-xs); border: 1px solid var(--borde-fuerte);
   background: #fff; color: var(--texto-2); cursor: pointer; transition: background var(--t), color var(--t);
 }
 .paginacion button:hover:not(:disabled) { background: var(--acento-suave); color: var(--acento-osc); border-color: #c3dafc; }
