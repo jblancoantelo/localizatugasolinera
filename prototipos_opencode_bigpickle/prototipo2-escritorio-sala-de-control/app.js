@@ -509,7 +509,7 @@
   /** Color de la sparkline: verde si baja, rojo si sube, gris si plano. */
   function colorTendencia(v) { return v < -0.05 ? '#1e8e3e' : v > 0.05 ? '#d93025' : '#8a97a4'; }
 
-  function tarjetaHTML(e) {
+  function tarjetaHTML(e, i) {
     var p = precioFinal(e);
     var base = precioBase(e);
     var serieDatos = serie(e.id, estado.combustible, 7);
@@ -519,7 +519,7 @@
     var dto = (base != null && p != null && base - p > 0.0005)
       ? '<span class="precio-dto">con descuento ' + p3(p) + ' €</span>' : '';
     return '<article class="tarjeta' + sel + '" data-fila="' + e.id + '" data-accion="abrir-detalle"' +
-      ' data-id="' + e.id + '" tabindex="0" role="button"' +
+      ' data-id="' + e.id + '"' + (i === 0 ? ' data-shot="detalle"' : '') + ' tabindex="0" role="button"' +
       ' aria-label="' + esc(e.nombre + ', ' + eur(p) + ', ' + km(e.dist)) + '">' +
       '<div class="tarjeta-precio">' +
       '<b class="' + claseColor(p) + '">' + p3(p) + ' €</b>' +
