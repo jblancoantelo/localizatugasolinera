@@ -623,6 +623,14 @@
 
   function abrirHoja(hoja) {
     hoja.hidden = false;
+    /* El toast flota por encima de la hoja y se comía los toques en las
+       opciones del borde inferior: al abrir una hoja lo retiramos. */
+    var aviso = $('#aviso');
+    if (aviso && !aviso.hidden) {
+      clearTimeout(aviso._t);
+      aviso.classList.remove('visible');
+      aviso.hidden = true;
+    }
     if (esEscritorio()) { hoja.classList.add('abierta'); return; }
     if (hoja.id !== 'hojaLista') {
       var v = $('#velo');
@@ -657,6 +665,9 @@
           '" value="' + (seleccion || CFG_SLIDER_NEUTRO(cfg)) + '" id="opcSlider" style="width:100%;margin-top:10px"></label>';
         $('#opcSlider').addEventListener('input', function (ev) {
           seleccion = Number(ev.target.value);
+          /* El valor que se aplica al cerrar la hoja sale de cuerpo._valor:
+             sin esta línea el filtro de distancia no llegaba a aplicarse. */
+          cuerpo._valor = seleccion;
           $('#opcValor').textContent = (seleccion === 0 ? 'Sin límite' : seleccion + ' km');
         });
       } else {
@@ -997,7 +1008,7 @@
       aplicar: 'Ver resultados'
     });
     $('#opcCuerpo')._aplicar = function (valor, limpiar) {
-      estado.marcas = limpiar ? new Set() : valor;
+      estado.marcas = limpiar ? new Set() : new Set(valor);
       estado.pagina = 1; render();
     };
   }

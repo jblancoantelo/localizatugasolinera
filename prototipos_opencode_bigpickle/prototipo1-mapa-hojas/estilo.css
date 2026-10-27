@@ -729,6 +729,8 @@ button { cursor: pointer; background: none; border: none; }
   font-size: 13.5px; box-shadow: var(--sombra-2);
   opacity: 0; transition: opacity .2s, transform .2s;
   max-width: min(90vw, 420px); text-align: center;
+  /* Nunca intercepta toques: flota sobre hojas y botones. */
+  pointer-events: none;
 }
 #aviso.visible { opacity: 1; transform: translate(-50%, 0); }
 #aviso[hidden] { display: none; }

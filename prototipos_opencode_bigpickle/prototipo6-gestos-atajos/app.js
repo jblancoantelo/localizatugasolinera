@@ -413,6 +413,13 @@
 
   function abrirHoja(hoja) {
     hoja.hidden = false;
+    /* Retira el toast: flota por encima de la hoja y bloqueaba toques. */
+    var aviso = $('#aviso');
+    if (aviso && !aviso.hidden) {
+      clearTimeout(avisoTimer);
+      aviso.classList.remove('visible');
+      aviso.hidden = true;
+    }
     if (esEscritorio()) return;
     if (hoja.id !== 'hojaLista') {
       var v = $('#velo');

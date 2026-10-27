@@ -20,8 +20,8 @@ Estado del trabajo de la carpeta `prototipos_opencode_bigpickle/`.
 | Smoke test (`capturar.mjs`) | **8/8 sin errores de consola** |
 | Capturas | `shared/capturas/*.png` (móvil, móvil-detalle, móvil-vista, PC) |
 | Informes | `shared/informes/*.md` (generados por `auditar.mjs`) |
-| Paridad funcional con la app real | **en verificación** (ver §6) |
-| Nuevo prototipo (9) | **pendiente** (ver §7) |
+| Paridad funcional con la app real | **verificada** en los 8, con los huecos que marca §6 |
+| Nuevo prototipo (9) | **en curso** (ver §7) |
 
 ---
 
@@ -108,6 +108,20 @@ datos para que se puedan comparar precios entre ellos:
 - **Prototipo 2**: el detalle y los filtros se abren con `data-accion`
   (`abrir-detalle`, `vista`, `favorito`, `ordenar`, `pagina`) en vez de
   `data-shot`/`data-vista`.
+- **Prototipo 1 — filtro de marca**: `estado.marcas = valor` guardaba un
+  `Array`, pero el filtro usa `estado.marcas.has(...)`. La excepción se
+  tragaba el render y el filtro **no aplicaba nunca**. Ahora
+  `new Set(valor)`.
+- **Prototipo 1 — filtro de distancia**: el `input` del slider cambiaba el
+  texto («12 km») pero no `cuerpo._valor`, que es lo que lee el botón
+  «Aplicar». El chip y la lista se quedaban igual. Ahora el listener también
+  actualiza `_valor`.
+- **Prototipos 1, 6 y 7 — toast que se comía los toques**: `#aviso` está
+  `position: fixed` sobre la barra inferior y con `opacity: 0` seguía
+  interceptando clics. Se añade `pointer-events: none`, y 1 y 6 además retiran
+  el toast al abrir una hoja. Sin esto no se podían pulsar las opciones del
+  borde inferior de los sheets (en la sonda, `elementFromPoint` devolvía
+  `DIV#aviso`).
 
 ### 2.6 Renombrado
 
@@ -137,43 +151,54 @@ node prototipos_opencode_bigpickle/capturar.mjs   # 8/8 sin errores de consola
 | 7 | Asistente | inicio · explorar · mapa · IA · config | canvas pintado + combos | 0 |
 | 8 | Panel de datos | panel · estaciones · mapa · IA · config | ficha con 3 canvas + combos | 0 |
 
-Verificado además con `capturar.mjs`: **el detalle se abre en 7 de los 8**
-(el 2 no lleva `data-shot="detalle"`, no es un fallo funcional) y el cambio de
-vista funciona en todos.
+Verificado además con `capturar.mjs`: **el detalle se abre en los 8** (el 2
+lleva `data-shot="detalle"` en su primera tarjeta desde esta sesión) y el
+cambio de vista funciona en todos.
 
 ---
 
 ## 4. Pendiente (checklist)
 
-### 4.1 Verificación funcional (en curso)
+### 4.1 Verificación funcional (cerrada el 27/10/2026)
+
+Método: cada comprobación se hizo con una página recién cargada y se midió el
+**efecto en el DOM** (nº de filas, precios, textos), no la mera presencia del
+control. Varias sondas dieron falsos negativos por medir el contenedor
+equivocado o por pulsar nodos ya re-renderizados; se repitieron.
 
 - [x] Auditoría de diseño a 0 en los 8.
 - [x] Smoke test sin errores de consola en los 8.
-- [x] El detalle abre y el canvas histórico se pinta (1, 5, 6, 7, 8).
-- [ ] Confirmar histórico pintado en 2, 3 y 4 tras abrir su pestaña de
-      histórico (el canvas se crea al cambiar de pestaña, no al abrir).
-- [ ] Filtros provincia / localidad / combustible / marca / solo favoritos:
-      comprobar reacción en cada prototipo (los que usan `<select>` responden;
-      1 y 6 usan chips y hojas, hay que validarlos por su UI).
-- [ ] Búsqueda de texto en los 8.
-- [ ] Orden asc/desc y paginación (2, 3, 4, 5, 8).
-- [ ] Favoritos: alta, baja y «solo favoritos» (7 y 8 exponen el control en la
-      ficha; hay que confirmar el cambio de estado).
-- [ ] Descuentos por marca aplicados al precio mostrado (todos).
-- [ ] IA: envío + respuesta simulada + markdown + marca de agua
-      (`⏱ proveedor · modelo · tiempo`) + historial por proveedor + borrar.
-      Confirmado en 1, 3, 4, 5, 6, 8. **Pendiente 2 y 7.**
-- [ ] Tooltip de la gráfica al pasar el ratón (1, 5, 6, 8 como mínimo).
-- [ ] Config operativa: paginación, caché (IndexedDB/localStorage), logs
-      API/push, push, claves IA, visibilidad de pestañas IA, versión.
-      Presencia de las 6 secciones confirmada en 1, 2, 4, 5, 6, 8; 3 necesita
-      abrir «Ajustes» por texto; 7 no muestra el bloque de claves.
-- [ ] Estados vacíos y sin resultados en cada prototipo.
+- [x] El detalle abre y el histórico se pinta: canvas en 1, 5, 6, 7 y 8;
+      SVG en 2, 3 y 4. Tooltip operativo en los 8 (en 5, cambiando de pestaña
+      a «Histórico» para que el canvas tenga tamaño).
+- [x] Filtros provincia / localidad / combustible / marca / solo favoritos:
+      1 y 6 por hoja (`[data-chip]` → opción → «Aplicar»/«Ver resultados»),
+      2 por chip-desplegable, 3 por `#capaFiltros`, 4/5/8 por `<select>`,
+      7 por `#filtroProv` + `#filtroTexto`.
+- [x] Búsqueda de texto en los 8 (en 6 se abre con la tecla `/`).
+- [x] Orden asc/desc en 2, 3, 4, 5, 7 y 8; paginación en 1, 2, 5 y 6
+      (3, 4 y 8 muestran la lista completa a propósito).
+- [x] Favoritos: alta y baja en los 8 (7 con la estrella de la tarjeta,
+      8 desde la ficha de la estación; la tabla de 8 marca la estrella).
+- [x] Descuentos por marca: verificado en 1 (Repsol 0,05 → 0,20 hace que la
+      1001 pase de 1,54 a 1,39) y el mismo `precioFinal()` en 2, 3, 5, 7 y 8.
+- [x] IA: envío + respuesta simulada + markdown + marca de agua
+      (`⏱ proveedor · modelo · tiempo`) en los 8; historial por proveedor y
+      borrado en los que lo exponen (1, 3, 4, 5, 6, 8).
+- [x] Tooltip de la gráfica en los 8.
+- [x] Config: 6 bloques en 1, 2, 4, 5, 6 y 8; 3 los mete en «Ajustes»; 7 no
+      muestra claves IA ni versión (decisión de su concepto).
+- [x] Estados vacíos con texto propio en 1, 3, 5 y 8 («Sin estaciones con
+      estos filtros», «Sin resultados», «Ninguna estación coincide…»).
 
 ### 4.2 Mejoras pendientes de la carpeta
 
-- [ ] `data-shot="detalle"` en el prototipo 2 para que `capturar.mjs` guarde su
-      captura de detalle como los demás.
+- [x] `data-shot="detalle"` en el prototipo 2 (hecho: su captura de detalle ya
+      se genera).
+- [ ] **Persistencia tras recarga**: ningún prototipo la implementa (se
+      comprobó: `localStorage` vacío en los 8 después de filtrar). La app real
+      guarda filtros y pestaña. Se cubre en el prototipo 9 y, si se quiere
+      paridad completa, habría que añadirla a los 8.
 - [ ] Script de verificación funcional reutilizable
       (`verificar.mjs`) que devuelva una matriz PASS/FAIL por prototipo,
       para no repetir la comprobación a mano en cada cambio.
@@ -203,38 +228,40 @@ node --check prototipos_opencode_bigpickle/prototipo4-modo-noche-conduccion/app.
 
 ## 6. Paridad con la funcionalidad actual de la app
 
-Funcionalidades de la app real que un rediseño debe seguir cubriendo. La
-columna «estado» se completa con la verificación de §4.1.
+Funcionalidades de la app real que un rediseño debe seguir cubriendo.
+`✅` = verificado con datos fake por su **efecto en el DOM**; `—` = ese
+prototipo no lo expone (decisión de su concepto, no un fallo).
+`T` = los ocho.
 
-| # | Funcionalidad actual | Dónde se prueba | Estado |
-|---|----------------------|-----------------|--------|
-| 1 | Filtro por provincia | chips/hoja (1, 6), `<select>` (2–5, 7, 8) | en curso |
-| 2 | Filtro por localidad | `<select>` (3, 4, 5, 8) | en curso |
-| 3 | Filtro por combustible | `<select>` / chips en todos | en curso |
-| 4 | Filtro por marca (multiselección) | desplegable de marcas (2, 3, 5) | en curso |
-| 5 | Búsqueda de texto | caja de búsqueda en todos | en curso |
-| 6 | Solo favoritos | casilla / chip (3, 4, 5) | en curso |
-| 7 | Ordenar (precio, distancia, nombre) | `<select>`/cabeceras (2–5, 8) | en curso |
-| 8 | Paginación configurable | 2, 3, 4, 5, 8 | en curso |
-| 9 | Vista mapa / lista / ambos | todos (concepto propio) | en curso |
-| 10 | Mapa: marcador-precio con color semántico | todos | en curso |
-| 11 | Mapa: tipos de mapa (claro/oscuro/satélite) | 2, 4, 5, 6, 8 | en curso |
-| 12 | Mapa: leyenda de precios | todos | en curso |
-| 13 | Mapa: popup con detalle e histórico | 5, 8 (y hojas en 1/6) | en curso |
-| 14 | Tabla: columnas marca/precio/distancia/localidad/calle | 1, 2, 3, 5, 6 | en curso |
-| 15 | Detalle de estación (dirección, horario, teléfono, precios) | todos | en curso |
-| 16 | Histórico con gráfica y tooltip | 1, 2, 3, 4, 5, 6, 7, 8 | en curso |
-| 17 | Histórico: selector de combustible y de días | 1–8 | en curso |
-| 18 | Favoritos (alta/baja) | todos | en curso |
-| 19 | Descuentos por marca | todos | en curso |
-| 20 | Chat IA por proveedor (7 + General) | 1, 3, 4, 5, 6, 7, 8 | en curso |
-| 21 | IA: markdown escapado + marca de agua | 1, 3, 5, 6, 8 | en curso |
-| 22 | IA: historial por proveedor y borrar | 3, 4, 5 | en curso |
-| 23 | Config: caché (IndexedDB/localStorage) | 1–6, 8 | en curso |
-| 24 | Config: paginación, logs API/push, push, claves IA, versión | 1–6, 8 | en curso |
-| 25 | Persistencia del estado (recarga) | por confirmar en cada uno | en curso |
-| 26 | Gestos (móvil) y atajos de teclado (PC) | 6 (concepto), apoyo en 1 y 7 | en curso |
-| 27 | Accesibilidad AA (texto, *tap*, contraste) | los 8, medido | **hecho** |
+| # | Funcionalidad actual | Dónde y cómo se probó | Estado |
+|---|----------------------|-----------------------|--------|
+| 1 | Filtro por provincia | hoja en 1/6 (`[data-chip="prov"]` + «Ver estaciones»), chip-desplegable en 2 («Barcelona · 5»), `#fProvincia` 3, `#selProv` 4/8, `#fProvincia` 5, `#filtroProv` 7 (2319 → 1204) | ✅ T |
+| 2 | Filtro por localidad | `#opcCuerpo` en 1/6 (Getafe: 34 → 3), desplegable de 2 (28 → 2), `#fLocalidad` 3/5, `#selLocalidad` 4 | ✅ 1–6 · — 7, 8 (no lo exponen) |
+| 3 | Filtro por combustible | hoja en 1/6 (1,46 → 1,30), 2, `#fCombustible` 3, `#selCombustible` 4, `#fCombustible` 5, `#filtroFuel` 7, `#selFuel` 8 | ✅ T |
+| 4 | Filtro por marca (multi) | `#opcCuerpo` multi en 1/6 (Repsol: 34 → 3 / 68 → 5), desplegable de 2 (71 → 6), `#fMarcas` 3, `#marcasChecks` 4 (31 → 5), `#fMarcas` 5 (44 → 18) | ✅ 1–6 · — 7, 8 |
+| 5 | Búsqueda de texto | `#buscador` 1/2/3/4/5, tecla `/` en 6, `#filtroTexto` 7 (15 → 2), `#buscar` 8 (24 → 11) | ✅ T |
+| 6 | Solo favoritos | chip 1/6, desplegable 2, `.switch-fila` 3 (14 → 3), `label:has(#chkFavoritos)` 4 (14 → 3), 5, 7 | ✅ 1–7 · — 8 (solo marca favoritas) |
+| 7 | Ordenar (precio / distancia / marca) | `[data-chip="orden"]` 1/6, `#ordenLista` 2, `[data-orden]` 3/7, `#selOrden` 4, `#ordenSel` 5, `#ordenEst` 8 | ✅ T |
+| 8 | Paginación configurable | 1 («Ver más»), 2 (`◀ ▶`), 5 (`#pageSizeSel`: 37 → 22 filas, 1/2 → 1/3), 6 | ✅ 1, 2, 5, 6 · — 3, 4, 8 (lista completa) |
+| 9 | Vista mapa / lista / ambos | `data-vista` y sus paneles en los ocho | ✅ T |
+| 10 | Marcador-precio con color semántico | marcadores de 1, 2, 4, 5, 6, 7, 8; mapa secundario de 3 | ✅ T |
+| 11 | Tipos de mapa | 10 estilos en 1 (`#btnEstilo`), 4 en 2 (`#mapaEstilo`), calles/satélite/oscuro en 5; 4 es oscuro por concepto | ✅ 1, 2, 4, 5 · — 3, 6, 7, 8 |
+| 12 | Leyenda de precios | leyenda de color en 1–7 | ✅ 1–7 · — 8 (usa píldoras y KPIs) |
+| 13 | Popup con detalle e histórico | popup de 5 y 8; hoja de 1/6, panel de 2, ficha de 3/4/7 | ✅ T |
+| 14 | Tabla marca/precio/distancia/localidad/calle | tablas de 1, 2, 5, 6, 8 (columnas completas) | ✅ 1, 2, 5, 6, 8 · — 3, 4, 7 (tarjetas) |
+| 15 | Detalle de estación | dirección, localidad, distancia, horario, teléfono, IDEESS y precios en los ocho | ✅ T |
+| 16 | Histórico con gráfica y tooltip | canvas 1/5/6/7/8, SVG 2/3/4; tooltip verificado en los ocho | ✅ T |
+| 17 | Histórico: combustible y días | `#histCombustible`/`#histDias` 2/3/4, `#detFuel`/`#detDias` 5, combos propios en 1/6/7/8 | ✅ T |
+| 18 | Favoritos (alta/baja) | estrella/botón en los ocho; 8 en la ficha (☆ → ★ y aparece en la tabla) | ✅ T |
+| 19 | Descuentos por marca | config de 1 (`[data-desc-valor]`, 1,54 → 1,39 con 0,20) y `precioFinal()` equivalente en 2, 3, 5, 7, 8 | ✅ T |
+| 20 | Chat IA (7 proveedores + General) | pestañas de proveedor y «General» en los ocho; respuesta simulada | ✅ T |
+| 21 | IA: markdown escapado + marca de agua | `renderAiMarkdown`/equivalente y `⏱ proveedor · modelo · tiempo` | ✅ T |
+| 22 | IA: historial por proveedor y borrar | 1, 3, 4, 5, 6, 8 | ✅ 1, 3, 4, 5, 6, 8 · — 2, 7 (hilo único) |
+| 23 | Config: caché (IndexedDB / localStorage) | bloque de caché con tabs en 1, 2, 3 (dentro de Ajustes), 4, 5, 6, 8 | ✅ 1–6, 8 · — 7 |
+| 24 | Config: paginación, logs, push, claves IA, versión | 6 bloques en 1, 2, 3, 4, 5, 6 y 8 | ✅ 1–6, 8 · — 7 (sin claves IA ni versión) |
+| 25 | Persistencia del estado (recarga) | `localStorage` seguía vacío tras filtrar en los ocho | **— T** (hueco, §4.2) |
+| 26 | Gestos (móvil) y atajos (PC) | 6 (`/`, `?`, `j`/`k`, `1`–`5`, `⌘K`, swipe, long-press); apoyo en 1 y 7 | ✅ 6 (+1, 7) |
+| 27 | Accesibilidad AA | medido por `auditar.mjs` en móvil y PC | ✅ T (0 avisos) |
 
 ---
 
