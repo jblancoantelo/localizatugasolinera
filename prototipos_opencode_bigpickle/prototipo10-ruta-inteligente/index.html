@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Prototipo 10 · Ruta inteligente — Gasolineras</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<div class="marco">
+  <header class="cabecera">
+    <div class="cab-fila">
+      <button class="vol" id="btnVolver" aria-label="Atrás" hidden>←</button>
+      <div class="tit">
+        <h1>Ruta inteligente</h1>
+        <p>Encuentra el mejor sitio para repostar en tu trayecto</p>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button class="tab activa" data-tab="ruta">Ruta</button>
+      <button class="tab" data-tab="mapa">Mapa</button>
+      <button class="tab" data-tab="lista">Lista</button>
+      <button class="tab" data-tab="ia">IA</button>
+      <button class="tab" data-tab="ajustes">Ajustes</button>
+    </nav>
+  </header>
+
+  <main class="main">
+    <!-- RUTA -->
+    <section class="panel activa" id="panel-ruta">
+      <section class="tarjeta">
+        <h2>Planifica tu viaje</h2>
+        <div class="campo">
+          <label for="origen">Origen</label>
+          <input id="origen" placeholder="Ej. Madrid centro" autocomplete="off">
+        </div>
+        <div class="campo">
+          <label for="destino">Destino</label>
+          <input id="destino" placeholder="Ej. Toledo" autocomplete="off">
+        </div>
+        <div class="fila2">
+          <div class="campo">
+            <label for="combustible">Combustible</label>
+            <select id="combustible"></select>
+          </div>
+          <div class="campo">
+            <label for="litros">Litros a repostar</label>
+            <input id="litros" type="number" min="5" max="150" step="5" value="40">
+          </div>
+        </div>
+        <div class="fila2">
+          <div class="campo">
+            <label for="consumo">Consumo L/100 km</label>
+            <input id="consumo" type="number" min="3" max="12" step="0.1" value="5.5">
+          </div>
+          <div class="campo">
+            <label for="desvio">Desvío máx. (km)</label>
+            <input id="desvio" type="number" min="0" max="15" step="1" value="3">
+          </div>
+        </div>
+        <div class="fila-acc">
+          <button class="primario" id="btnCalcular">Calcular ruta óptima</button>
+          <button id="btnLimpiarRuta">Limpiar</button>
+        </div>
+        <p class="pista">Usa datos fake: origen/destino crean un itinerario simulado entre estaciones.</p>
+      </section>
+
+      <section class="tarjeta" id="resumenRuta" hidden>
+        <div class="res-cab">
+          <div>
+            <h2>Itinerario</h2>
+            <p id="rutaInfo">—</p>
+          </div>
+          <div class="res-kpis">
+            <div class="kpi"><span>Distancia</span><strong id="kDist">—</strong></div>
+            <div class="kpi"><span>Tiempo aprox.</span><strong id="kTiempo">—</strong></div>
+            <div class="kpi"><span>Consumo est.</span><strong id="kCons">—</strong></div>
+          </div>
+        </div>
+        <div class="recomendado" id="recomendado">
+          <div class="rec-cab">
+            <div class="rec-badge">MEJOR PARA TU VIAJE</div>
+            <h3 id="recNombre">—</h3>
+            <p id="recDir">—</p>
+          </div>
+          <div class="rec-grid">
+            <div class="rec-item"><span>Precio/L</span><strong id="recPrecio">—</strong></div>
+            <div class="rec-item"><span>Coste repostaje</span><strong id="recCosteRep">—</strong></div>
+            <div class="rec-item"><span>Coste combustible viaje</span><strong id="recCosteViaje">—</strong></div>
+            <div class="rec-item"><span>Coste total</span><strong id="recTotal">—</strong></div>
+          </div>
+          <div class="rec-razon" id="recRazon">—</div>
+          <div class="rec-acc">
+            <button id="recVerMapa">Ver en mapa</button>
+            <button id="recDetalle">Ver detalle</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="tarjeta" id="listaRuta" hidden>
+        <div class="lista-cab">
+          <h2>Alternativas en ruta</h2>
+          <span id="listaRutaCnt">—</span>
+        </div>
+        <div class="lista-ruta" id="listaRutaBody"></div>
+      </section>
+    </section>
+
+    <!-- MAPA -->
+    <section class="panel" id="panel-mapa">
+      <section class="tarjeta mapa-tarjeta">
+        <div class="mapa-cab">
+          <h2>Mapa de ruta</h2>
+          <div class="mapa-ctrl">
+            <button data-est="calles" class="activo">Calles</button>
+            <button data-est="oscuro">Oscuro</button>
+            <button data-est="satelite">Satélite</button>
+          </div>
+        </div>
+        <div class="mapa-wrap">
+          <svg id="mapaSvg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"></svg>
+          <div class="mapa-marcadores" id="mapaMarc"></div>
+          <div class="mapa-ruta" id="mapaRuta"></div>
+        </div>
+        <div class="mapa-leyenda">
+          <span><i class="p p-verde"></i> Mejor opción</span>
+          <span><i class="p p-naranja"></i> Alternativa</span>
+          <span><i class="p p-gris"></i> Más lejos/desvío</span>
+          <span><i class="p p-azul"></i> Tu ruta</span>
+        </div>
+      </section>
+    </section>
+
+    <!-- LISTA -->
+    <section class="panel" id="panel-lista">
+      <section class="tarjeta">
+        <div class="lista-cab">
+          <h2>Todas las opciones</h2>
+          <select id="ordLista">
+            <option value="total">Mejor para ruta</option>
+            <option value="precio">Precio/L</option>
+            <option value="dist">Distancia a ruta</option>
+            <option value="marca">Marca</option>
+          </select>
+        </div>
+        <div class="tabla-wrap">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th>Estación</th>
+                <th>Marca</th>
+                <th>Precio/L</th>
+                <th>A ruta</th>
+                <th>Desvío</th>
+                <th>Coste rep.</th>
+                <th>Total viaje</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tablaBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <!-- IA -->
+    <section class="panel" id="panel-ia">
+      <section class="tarjeta">
+        <div class="ia-cab">
+          <h2>Asistente de ruta</h2>
+          <select id="iaProv">
+            <option value="general">General</option>
+            <option value="groq">Groq</option>
+            <option value="mistral">Mistral</option>
+            <option value="openrouter">OpenRouter</option>
+            <option value="google">Google</option>
+          </select>
+        </div>
+        <div class="ia-mensajes" id="iaMsgs"></div>
+        <form class="ia-form" id="iaForm">
+          <input id="iaInput" placeholder="¿Cuándo me compensa desviarme para repostar?" autocomplete="off">
+          <button>Enviar</button>
+        </form>
+      </section>
+    </section>
+
+    <!-- AJUSTES -->
+    <section class="panel" id="panel-ajustes">
+      <section class="tarjeta">
+        <h2>Ajustes de ruta</h2>
+        <div class="aj-fila">
+          <div>
+            <strong>Incluir ida/vuelta</strong>
+            <p>Calcular combustible para vuelta también</p>
+          </div>
+          <label class="sw"><input type="checkbox" id="idaVuelta"><span></span></label>
+        </div>
+        <div class="aj-fila">
+          <div>
+            <strong>Priorizar ahorro total</strong>
+            <p>Equilibra precio + desvío (recomendado)</p>
+          </div>
+          <label class="sw"><input type="checkbox" id="prioAhorro" checked><span></span></label>
+        </div>
+        <div class="campo">
+          <label for="radio">Radio máximo desde ruta (km)</label>
+          <input id="radio" type="range" min="1" max="10" step="1" value="3">
+          <div class="rango"><span>1</span><span id="radioVal">3 km</span><span>10</span></div>
+        </div>
+        <div class="campo">
+          <label for="prov">Provincia por defecto</label>
+          <select id="prov"></select>
+        </div>
+      </section>
+
+      <section class="tarjeta">
+        <h2>Datos</h2>
+        <p class="pista">Usando FAKE compartido. Sin APIs reales.</p>
+        <div class="info-grid">
+          <div class="info"><span>Estaciones</span><strong id="infoEst">—</strong></div>
+          <div class="info"><span>Provincias</span><strong id="infoProv">—</strong></div>
+          <div class="info"><span>Combustibles</span><strong id="infoComb">—</strong></div>
+        </div>
+      </section>
+    </section>
+  </main>
+</div>
+
+<div class="ficha" id="ficha" hidden>
+  <div class="ficha-velo" id="fichaVelo"></div>
+  <div class="ficha-panel">
+    <header class="ficha-cab">
+      <div>
+        <div class="ficha-marca" id="fMarca">—</div>
+        <h3 id="fNombre">—</h3>
+        <p id="fDir">—</p>
+      </div>
+      <button id="fCerrar">✕</button>
+    </header>
+    <div class="ficha-body">
+      <div class="f-kpis">
+        <div class="fk"><span>Precio/L</span><strong id="fPrecio">—</strong></div>
+        <div class="fk"><span>A ruta</span><strong id="fARuta">—</strong></div>
+        <div class="fk"><span>Desvío</span><strong id="fDesvio">—</strong></div>
+        <div class="fk"><span>Coste rep.</span><strong id="fCosteRep">—</strong></div>
+      </div>
+      <div class="f-seccion">
+        <h4>Precios por combustible</h4>
+        <div class="f-precios" id="fPrecios"></div>
+      </div>
+      <div class="f-seccion">
+        <h4>Razón de recomendación</h4>
+        <p id="fRazon">—</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="../shared/datos-fake.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
