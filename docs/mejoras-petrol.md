@@ -1,5 +1,67 @@
 # Mejoras realizadas — Precios Gasolina España
 
+## 2026-10-17 — Seis prototipos de rediseño para decidir la próxima UI
+
+### Por qué hacía falta
+
+La app actual funciona bien pero su interfaz es heredera de un diseño de tabla +
+mapa pensado para escritorio: en móvil hay que alternar entre pestañas, el
+histórico se abre en un modal y el espacio del mapa queda muy competido. Antes
+de tocar la app real hicieron falta **prototipos que se puedan ver y tocar** con
+datos fake, para decidir con evidencia en qué dirección va la interfaz.
+
+### Qué es exactamente
+
+Una carpeta nueva `prototipos_opencode_mimov2.6flashfree/`, **fuera del alcance de la app real** (no
+carga `js/`, ni `sw.js`, ni la API del Ministerio): páginas estáticas que abren
+con doble clic y navegan con 14 estaciones falsas deterministas. Seis conceptos
+que se pueden mezclar, no seis apps:
+
+| Concepto | Idea central | Lo que aporta al UX |
+|----------|--------------|---------------------|
+| **c1-flow** | Mobile-first con tarjetas | Un flujo vertical único con bottom nav y bottom sheet con snaps (peek/half/full). En escritorio despliega 3 paneles (rail + lista + mapa) |
+| **c2-atlas** | Mapa-héroe tipo Uber | El mapa ocupa la pantalla entero y la hoja inferior sube a 3 alturas. Mínima fricción para "dónde hay cerca" |
+| **c3-nocturne** | Tema oscuro | Alto contraste para conducir de noche, targets XXL y acentos cálidos. Sirve como tema, no como app |
+| **c4-radar** | Comparador | KPIs, recomendación "¿repostar hoy?", ranking con barras relativas, ahorro por tanque y comparador multi-estación con gráfica |
+| **c5-cockpit** | Escritorio-primero | 3 columnas (filtros · mapa · detalle) + IA lateral. La contraparte para quien usa la app en el portátil |
+| **c6-gesture** | Experimental | Swipe horizontal entre vistas, tarjetas apiladas y pull-to-refresh. Para medir los límites de los gestos |
+
+### Bugs de diseño que salieron al revisar las capturas
+
+El smoke-test automatizado no ve lo que "se ve mal", así que la revisión a ojo
+de las capturas fue lo que encontró estos problemas, todos corregidos:
+
+- **C5 no disponía las columnas en fila**: `.ck` era `flex-direction: column` y
+  nunca cambiaba a `row` en escritorio, así que rail, centro y detalle se
+  apilaban verticalmente y el mapa central quedaba sin altura. Añadido
+  `flex-direction: row` en el `@media ≥900px` y `.ck-map > .mf-wrap` con
+  `position: absolute; inset: 0` para no depender de la cadena de alturas
+- **C6 recortaba los chips de combustible**: `.gs-chips` colapsaba a 12 px y
+  `.gs-track` (sus páginas) quedaba por encima y los tapaba. El doble
+  `#gsChips` que había en el HTML también hacía que el JS poblara el contenedor
+  equivocado. Fijado `flex: 0 0 auto` + `z-index: 21` y eliminado el duplicado
+- **C1 en escritorio** mostraba el atajo `.map-fab` (redundante con la nav
+  inferior + rail) y la etiqueta "más barata" se partía a dos líneas: oculto el
+  fab y `white-space: nowrap` en el chip
+- La **galería** tapaba la nav inferior de las previsualizaciones con la
+  etiqueta "previsualización viva": movida al borde superior
+
+### Verificación
+
+- `node prototipos_opencode_mimov2.6flashfree/_test-prototipos.mjs`: los 6 conceptos + galería cargan
+  **sin `console.error` ni `pageerror`** en móvil (390×844) y escritorio
+  (1400×900), con capturas en `prototipos_opencode_mimov2.6flashfree/_shots/`
+- `node prototipos_opencode_mimov2.6flashfree/_test-interaccion.mjs`: smoke-test de interacción con
+  Playwright — el bottom sheet abre, el filtro por combustible re-pinta, el
+  comparador despliega y el swipe cambia de vista, todo sin errores JS
+- Ambos scripts viven junto a los prototipos y **no forman parte de la suite**
+  `full_test.mjs`, que sigue intacta en 208 tests
+
+### Siguiente paso
+
+Elegir de qué conceptos se combinan piezas para la nueva UI real y sólo entonces
+tocar `index.html`, `css/styles.css` y `js/`.
+
 ## 2026-10-11 — Móvil apaisado, 5 columnas en vertical y PWA que se actualiza sola
 
 ### Por qué hacía falta
