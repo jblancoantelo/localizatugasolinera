@@ -13,21 +13,21 @@ Estado del trabajo de la carpeta `prototipos_opencode_bigpickle/`.
 
 | Dato | Valor |
 |------|-------|
-| Prototipos | **8** (7 conceptos + variantes de interacción) |
+| Prototipos | **9** (8 conceptos + el nuevo «coste real») |
 | Ficheros por prototipo | `index.html`, `estilo.css`, `app.js` (sin build, sin CDN, `file://`) |
 | Datos | `shared/datos-fake.js` → `window.FAKE` (determinista) |
-| Auditoría de diseño | **0 avisos** en móvil 390×844 y PC 1440×900 en los 8 |
-| Smoke test (`capturar.mjs`) | **8/8 sin errores de consola** |
+| Auditoría de diseño | **0 avisos** en móvil 390×844 y PC 1440×900 en los 9 |
+| Smoke test (`capturar.mjs`) | **9/9 sin errores de consola** |
 | Capturas | `shared/capturas/*.png` (móvil, móvil-detalle, móvil-vista, PC) |
 | Informes | `shared/informes/*.md` (generados por `auditar.mjs`) |
-| Paridad funcional con la app real | **verificada** en los 8, con los huecos que marca §6 |
-| Nuevo prototipo (9) | **en curso** (ver §7) |
+| Paridad funcional con la app real | **verificada** en los 8 y en el 9, con los huecos que marca §6 |
+| Nuevo prototipo (9) | **implementado** (ver §7) |
 
 ---
 
 ## 2. Qué se ha hecho
 
-### 2.1 Los 8 prototipos
+### 2.1 Los 9 prototipos
 
 Cada uno explora una dirección de diseño distinta, con el mismo contrato de
 datos para que se puedan comparar precios entre ellos:
@@ -42,6 +42,7 @@ datos para que se puedan comparar precios entre ellos:
 | 6 | `prototipo6-gestos-atajos/` | **Gestos y atajos** | Sin chrome: swipe entre vistas, deslizar tarjeta, long-press, pull-to-refresh; en PC paleta de comandos (⌘K) y atajos `j`/`k`, `/`, `?`, `1`–`5`. |
 | 7 | `prototipo7-asistente-decisiones/` | **Asistente por decisiones** | Una decisión por pantalla: «¿Qué necesitas?» → repostar barato / ahorrar en ruta / vigilar estación, con recomendación accionable. |
 | 8 | `prototipo8-panel-de-datos/` | **Panel de datos** | KPIs, evolución de la media, mapa de calor, histograma, ranking de marcas, comparador y «¿cuándo repostar?». |
+| 9 | `prototipo9-coste-real/` | **Coste real** | Decisión por el coste total del repostaje (litros × precio + desvío ida/vuelta), no por €/L. Héroe razonado, alternativas por total, barras, lista con columna «Total», mapa, IA y ajustes. Único con **persistencia** en `localStorage`. |
 
 ### 2.2 Datos fake compartidos
 
@@ -122,6 +123,31 @@ datos para que se puedan comparar precios entre ellos:
   el toast al abrir una hoja. Sin esto no se podían pulsar las opciones del
   borde inferior de los sheets (en la sonda, `elementFromPoint` devolvía
   `DIV#aviso`).
+- **Prototipo 9 — repaso de la primera versión** (detectado con sonda propia):
+  - `renderLista` mostraba «coste desde» con `lista[0].total`, que solo es el
+    mínimo si el orden activo es «coste». Ahora calcula el mínimo real.
+  - Residuo `S.favoritos`: se rellenaba con **todas** las estaciones en
+    `cargarEstado()` y no se usaba. Eliminado (los favoritos viven en el mapa
+    `favoritos`).
+  - Los descuentos se escribían en los `<input type="number">` con coma
+    (`0,05`), que el campo numérico considera inválido. Ahora `toFixed(2)`.
+  - Al restaurar `S.texto` tras F5 la fila de búsqueda seguía cerrada; ahora se
+    reabre. «Limpiar filtros» la vuelve a cerrar.
+  - La marca de agua de la IA se añadía al DOM después del render, así que se
+    perdía al cambiar de pestaña o recargar. Ahora viaja en el propio mensaje
+    (`meta`) y se pinta con él.
+  - «Borrar datos guardados» cancelaba nada: el *debounce* de guardado podía
+    reescribir el estado justo después. Ahora cancela el timer, pone
+    `listo = false`, borra y recarga. Además el arranque ya no guarda por sí
+    solo: la primera escritura la provoca un cambio real, así el borrado deja
+    `localStorage` limpio.
+  - «Limpiar caché» no hacía nada visible; ahora vacía el bloque IndexedDB
+    simulado y lo explica.
+  - El aviso educativo solo aparecía cuando la más barata por litro perdía, y
+    con los datos de Madrid a 50 L nunca se veía. Ahora hay dos variantes
+    siempre presentes: verde si coincide, ámbar explicando el desvío si no.
+  - Tooltip de la gráfica: se posicionaba con coordenadas del canvas como si
+    fueran del marco. Ahora suma el `offset` del canvas.
 
 ### 2.6 Renombrado
 
@@ -137,7 +163,7 @@ Comandos ejecutados y resultado real:
 
 ```powershell
 node prototipos_opencode_bigpickle/auditar.mjs    # 0 avisos totales
-node prototipos_opencode_bigpickle/capturar.mjs   # 8/8 sin errores de consola
+node prototipos_opencode_bigpickle/capturar.mjs   # 9/9 sin errores de consola
 ```
 
 | # | Prototipo | Vistas principales | Detalle con histórico | Auditoría |
@@ -150,8 +176,9 @@ node prototipos_opencode_bigpickle/capturar.mjs   # 8/8 sin errores de consola
 | 6 | Gestos y atajos | mapa · lista · ambos · IA · config + paleta | canvas pintado + combos | 0 |
 | 7 | Asistente | inicio · explorar · mapa · IA · config | canvas pintado + combos | 0 |
 | 8 | Panel de datos | panel · estaciones · mapa · IA · config | ficha con 3 canvas + combos | 0 |
+| 9 | Coste real | decisión · lista · mapa · IA · ajustes | ficha con canvas + tooltip y combos | 0 |
 
-Verificado además con `capturar.mjs`: **el detalle se abre en los 8** (el 2
+Verificado además con `capturar.mjs`: **el detalle se abre en los 9** (el 2
 lleva `data-shot="detalle"` en su primera tarjeta desde esta sesión) y el
 cambio de vista funciona en todos.
 
@@ -166,42 +193,57 @@ Método: cada comprobación se hizo con una página recién cargada y se midió 
 control. Varias sondas dieron falsos negativos por medir el contenedor
 equivocado o por pulsar nodos ya re-renderizados; se repitieron.
 
-- [x] Auditoría de diseño a 0 en los 8.
-- [x] Smoke test sin errores de consola en los 8.
-- [x] El detalle abre y el histórico se pinta: canvas en 1, 5, 6, 7 y 8;
-      SVG en 2, 3 y 4. Tooltip operativo en los 8 (en 5, cambiando de pestaña
+- [x] Auditoría de diseño a 0 en los 9.
+- [x] Smoke test sin errores de consola en los 9.
+- [x] El detalle abre y el histórico se pinta: canvas en 1, 5, 6, 7, 8 y 9;
+      SVG en 2, 3 y 4. Tooltip operativo en los 9 (en 5, cambiando de pestaña
       a «Histórico» para que el canvas tenga tamaño).
 - [x] Filtros provincia / localidad / combustible / marca / solo favoritos:
       1 y 6 por hoja (`[data-chip]` → opción → «Aplicar»/«Ver resultados»),
-      2 por chip-desplegable, 3 por `#capaFiltros`, 4/5/8 por `<select>`,
+      2 por chip-desplegable, 3 por `#capaFiltros`, 4/5/8/9 por `<select>` o
+      desplegable (9: `#selProv`, `#selLocalidad`, `#selFuel`, `#btnMarcas`),
       7 por `#filtroProv` + `#filtroTexto`.
-- [x] Búsqueda de texto en los 8 (en 6 se abre con la tecla `/`).
-- [x] Orden asc/desc en 2, 3, 4, 5, 7 y 8; paginación en 1, 2, 5 y 6
-      (3, 4 y 8 muestran la lista completa a propósito).
-- [x] Favoritos: alta y baja en los 8 (7 con la estrella de la tarjeta,
-      8 desde la ficha de la estación; la tabla de 8 marca la estrella).
+- [x] Búsqueda de texto en los 9 (en 6 se abre con la tecla `/`; en 9 con 🔍 o
+      `/`, y se reabre sola si el texto venía restaurado).
+- [x] Orden asc/desc en 2, 3, 4, 5, 7, 8 y 9; paginación en 1, 2, 5, 6 y 9
+      (9: 5 filas → 1/3 de 14; «Todas» la desactiva). 3, 4 y 8 muestran la
+      lista completa a propósito.
+- [x] Favoritos: alta y baja en los 9 (7 con la estrella de la tarjeta,
+      8 y 9 desde la ficha de la estación; la tabla marca la estrella).
 - [x] Descuentos por marca: verificado en 1 (Repsol 0,05 → 0,20 hace que la
-      1001 pase de 1,54 a 1,39) y el mismo `precioFinal()` en 2, 3, 5, 7 y 8.
+      1001 pase de 1,54 a 1,39) y el mismo `precioFinal()` en 2, 3, 5, 7, 8 y
+      9 (allí con `data-desc="Repsol"`, y el total del héroe baja con él).
 - [x] IA: envío + respuesta simulada + markdown + marca de agua
-      (`⏱ proveedor · modelo · tiempo`) en los 8; historial por proveedor y
-      borrado en los que lo exponen (1, 3, 4, 5, 6, 8).
-- [x] Tooltip de la gráfica en los 8.
+      (`⏱ proveedor · modelo · tiempo`) en los 9; historial por proveedor y
+      borrado en los que lo exponen (1, 3, 4, 5, 6, 8, 9).
+- [x] Tooltip de la gráfica en los 9.
 - [x] Config: 6 bloques en 1, 2, 4, 5, 6 y 8; 3 los mete en «Ajustes»; 7 no
-      muestra claves IA ni versión (decisión de su concepto).
-- [x] Estados vacíos con texto propio en 1, 3, 5 y 8 («Sin estaciones con
+      muestra claves IA ni versión (decisión de su concepto); 9 tiene 8
+      tarjetas (incluye persistencia y paginación).
+- [x] Estados vacíos con texto propio en 1, 3, 5, 8 y 9 («Sin estaciones con
       estos filtros», «Sin resultados», «Ninguna estación coincide…»).
+- [x] **Prototipo 9 — sonda completa (39 comprobaciones, 0 fallos):** provincia,
+      localidad, combustible, marcas (14 → 2), búsqueda y estado vacío,
+      favoritas, radio, orden (coste ≠ precio), paginación 5/10, stepper de
+      litros (74,69 → 81,99 €), ficha + canvas + tooltip + favorito + 90 días,
+      8 pestañas de IA con marca de agua, descuentos con punto decimal y su
+      efecto en el héroe, 8 bloques de ajustes, **persistencia tras F5**
+      (provincia, búsqueda, litros, descuentos, chat y marca de agua) y
+      «Borrar datos guardados» → estado de fábrica con `localStorage` limpio.
 
 ### 4.2 Mejoras pendientes de la carpeta
 
 - [x] `data-shot="detalle"` en el prototipo 2 (hecho: su captura de detalle ya
       se genera).
-- [ ] **Persistencia tras recarga**: ningún prototipo la implementa (se
-      comprobó: `localStorage` vacío en los 8 después de filtrar). La app real
-      guarda filtros y pestaña. Se cubre en el prototipo 9 y, si se quiere
-      paridad completa, habría que añadirla a los 8.
+- [x] **Persistencia tras recarga**: cubierta en el prototipo 9
+      (`gasolineras_proto9_estado` y `gasolineras_proto9_ia_<proveedor>`).
+      Comprobado antes que **ninguno** de los 1–8 persistía (`localStorage`
+      vacío tras filtrar). Si se quiere paridad completa, habría que añadirla a
+      los 8; hoy es una diferencia deliberada para comparar.
 - [ ] Script de verificación funcional reutilizable
       (`verificar.mjs`) que devuelva una matriz PASS/FAIL por prototipo,
-      para no repetir la comprobación a mano en cada cambio.
+      para no repetir la comprobación a mano en cada cambio. La sonda del 9
+      (`_p9probe.mjs`, 39 checks) sirve de base, pero no se ha versionado.
 - [ ] Actualizar `shared/informes/*.md` y `shared/capturas/*.png` tras cada
       cambio (ya se regeneran con los dos comandos de §3).
 
@@ -231,12 +273,12 @@ node --check prototipos_opencode_bigpickle/prototipo4-modo-noche-conduccion/app.
 Funcionalidades de la app real que un rediseño debe seguir cubriendo.
 `✅` = verificado con datos fake por su **efecto en el DOM**; `—` = ese
 prototipo no lo expone (decisión de su concepto, no un fallo).
-`T` = los ocho.
+`T` = los nueve.
 
 | # | Funcionalidad actual | Dónde y cómo se probó | Estado |
 |---|----------------------|-----------------------|--------|
 | 1 | Filtro por provincia | hoja en 1/6 (`[data-chip="prov"]` + «Ver estaciones»), chip-desplegable en 2 («Barcelona · 5»), `#fProvincia` 3, `#selProv` 4/8, `#fProvincia` 5, `#filtroProv` 7 (2319 → 1204) | ✅ T |
-| 2 | Filtro por localidad | `#opcCuerpo` en 1/6 (Getafe: 34 → 3), desplegable de 2 (28 → 2), `#fLocalidad` 3/5, `#selLocalidad` 4 | ✅ 1–6 · — 7, 8 (no lo exponen) |
+| 2 | Filtro por localidad | `#opcCuerpo` en 1/6 (Getafe: 34 → 3), desplegable de 2 (28 → 2), `#fLocalidad` 3/5, `#selLocalidad` 4/9 (5 opciones en Barcelona) | ✅ 1–6, 9 · — 7, 8 (no lo exponen) |
 | 3 | Filtro por combustible | hoja en 1/6 (1,46 → 1,30), 2, `#fCombustible` 3, `#selCombustible` 4, `#fCombustible` 5, `#filtroFuel` 7, `#selFuel` 8 | ✅ T |
 | 4 | Filtro por marca (multi) | `#opcCuerpo` multi en 1/6 (Repsol: 34 → 3 / 68 → 5), desplegable de 2 (71 → 6), `#fMarcas` 3, `#marcasChecks` 4 (31 → 5), `#fMarcas` 5 (44 → 18) | ✅ 1–6 · — 7, 8 |
 | 5 | Búsqueda de texto | `#buscador` 1/2/3/4/5, tecla `/` en 6, `#filtroTexto` 7 (15 → 2), `#buscar` 8 (24 → 11) | ✅ T |
@@ -259,21 +301,99 @@ prototipo no lo expone (decisión de su concepto, no un fallo).
 | 22 | IA: historial por proveedor y borrar | 1, 3, 4, 5, 6, 8 | ✅ 1, 3, 4, 5, 6, 8 · — 2, 7 (hilo único) |
 | 23 | Config: caché (IndexedDB / localStorage) | bloque de caché con tabs en 1, 2, 3 (dentro de Ajustes), 4, 5, 6, 8 | ✅ 1–6, 8 · — 7 |
 | 24 | Config: paginación, logs, push, claves IA, versión | 6 bloques en 1, 2, 3, 4, 5, 6 y 8 | ✅ 1–6, 8 · — 7 (sin claves IA ni versión) |
-| 25 | Persistencia del estado (recarga) | `localStorage` seguía vacío tras filtrar en los ocho | **— T** (hueco, §4.2) |
+| 25 | Persistencia del estado (recarga) | `gasolineras_proto9_estado` + chats: F5 conserva provincia, búsqueda, litros, descuentos, vista, favoritos e IA. En 1–8 `localStorage` seguía vacío | ✅ 9 · **— 1–8** (hueco deliberado, §4.2) |
 | 26 | Gestos (móvil) y atajos (PC) | 6 (`/`, `?`, `j`/`k`, `1`–`5`, `⌘K`, swipe, long-press); apoyo en 1 y 7 | ✅ 6 (+1, 7) |
 | 27 | Accesibilidad AA | medido por `auditar.mjs` en móvil y PC | ✅ T (0 avisos) |
+| 28 | Coste total del repostaje | 9: litros × precio + desvío (ida/vuelta) y orden por total. A 5–20 L gana una cercana; a 50 L gana E.Leclerc Getafe, la más barata por litro | ✅ 9 · — 1–8 (concepto nuevo) |
 
 ---
 
-## 7. Prototipo 9 (propuesta nueva)
+## 7. Prototipo 9 · «Coste real» (implementado)
 
-Pendiente de implementar. La idea es cubrir el hueco que no exploran los 8
-actuales: **un único lienzo con la decisión delante** — el usuario no elige
-entre «mapa» o «lista», sino que ve **una recomendación razonada** (la mejor
-opción ahora mismo, con el porqué y el ahorro estimado) y, debajo, la
-alternativa siguiente; el mapa y la tabla quedan como *capas* del mismo
-lienzo. Se detallará en `prototipo9-.../` y se enlazará desde `index.html` y
-este README.
+Carpeta: `prototipo9-coste-real/` (`index.html` + `estilo.css` + `app.js`).
+Enlazado desde `prototipos_opencode_bigpickle/index.html` y el `README.md`.
+
+### 7.1 La idea
+
+Los ocho anteriores ordenan (o muestran) por **€/L**. Pero lo que el usuario
+paga es el **total del repostaje**, y ahí entra el combustible que gasta para
+llegar. El 9 cambia la pregunta: no «¿dónde está más barato el litro?» sino
+**«¿dónde me cuesta menos repostar estos litros?»**.
+
+```
+coste total = litros × precio_final_€/L  +  trayecto_km × (consumo/100) × precio_final_€/L
+trayecto_km = distancia × (ida y vuelta ? 2 : 1)
+precio_final = precio − descuento de la marca
+```
+
+Con los datos fake de Madrid se ve el fenómeno sin tocar nada:
+
+| Litros | Gana | Por qué |
+|--------|------|---------|
+| 5 | Repsol Avenida de América | el desvío a Getafe (9,2 km) pesa más que el ahorro por litro |
+| 10 | Repsol Avenida de América | igual, aún con poco depósito |
+| 20 | Ballenoil Villaverde | ya compensa acercarse, pero no hasta Getafe |
+| 50 | E.Leclerc Getafe | 1,459 €/L con descuento: gana por litro y por total |
+| 100 | E.Leclerc Getafe | el ahorro por litro crece con los litros |
+
+Por eso el héroe lleva un **aviso educativo** con dos variantes: ámbar cuando
+la más barata por litro pierde («el desvío se come el ahorro») y verde cuando
+coinciden («con estos litros el desvío no le quita el primer puesto»).
+
+### 7.2 Qué incluye (paridad con la app)
+
+- **Decisión:** calculadora (litros con stepper, consumo L/100 km, ida y vuelta,
+  radio máximo), héroe con total + precio/L + repostaje + desvío + ahorro neto
+  frente a la media provincial + tendencia 14 días + razones, alternativas 2–5
+  con delta, barras comparativas y botón «Ver las N estaciones».
+- **Lista:** tabla con Marca · Precio · **Total** · Distancia · Localidad ·
+  Calle, orden por coste / precio ↑↓ / distancia / marca, paginación
+  configurable (5/10/15/30/50/Todas) y «coste desde» real.
+- **Mapa:** SVG propio con 4 estilos (calles, satélite, oscuro, relieve),
+  marcadores-precio con color semántico y ★ de favorita, leyenda y ficha al
+  tocar.
+- **Ficha:** datos completos (dirección, localidad, distancia, horario,
+  teléfono, IDEESS, coste total, actualizado), precios por combustible con
+  descuento, favorito, histórico en canvas con tooltip y combos de combustible
+  y días (7–180), resumen mín/máx/media/tendencia/actual.
+- **IA:** 8 pestañas (General + 7 proveedores), envío con respuesta simulada,
+  markdown escapado, prompts, borrado y marca de agua `⏱ proveedor · modelo ·
+  tiempo` guardada con el mensaje.
+- **Ajustes:** persistencia (con borrado), descuentos por marca, caché
+  IndexedDB/localStorage, paginación, registro API/push, push, claves IA
+  (simuladas) y actualización de la app.
+- **Estados vacíos** con acción para quitar filtros.
+
+### 7.3 Persistencia (lo que no hace ningún otro)
+
+`localStorage['gasolineras_proto9_estado']` guarda provincia, combustible,
+localidad, marcas, texto, solo favoritas, orden, vista, página, filas por
+página, litros, radio, consumo, ida/vuelta, descuentos, favoritos, estilo de
+mapa, combustible/días de la ficha, proveedor de IA, tabs de caché/log, TTL,
+push y el propio interruptor de persistencia. Los chats van por proveedor en
+`gasolineras_proto9_ia_<id>` (máx. 100 mensajes, con su `meta`).
+
+- Se guarda con *debounce* de 160 ms al cambiar algo (no en el arranque).
+- Se restaura **antes** del primer render; si había texto, la fila de búsqueda
+  se reabre.
+- «Borrar datos guardados» cancela el guardado pendiente, borra todas las
+  claves `gasolineras_proto9*` y recarga: la maqueta vuelve a fábrica y
+  `localStorage` queda limpio hasta el siguiente cambio.
+- El interruptor de persistencia permite comparar el comportamiento con y sin
+  memoria.
+
+### 7.4 Validación
+
+```powershell
+node --check prototipos_opencode_bigpickle/prototipo9-coste-real/app.js
+node prototipos_opencode_bigpickle/auditar.mjs 9     # 0 avisos móvil y PC
+node prototipos_opencode_bigpickle/capturar.mjs 9    # 0 errores de consola
+```
+
+Sonda funcional propia (no versionada): **39 comprobaciones, 0 fallos**, con
+medida del efecto real en el DOM, incluida la persistencia tras F5 y el borrado
+de datos. Resultado del auditor: 0 *taps* pequeños, 0 textos < 12 px, 0
+contrastes y 0 solapamientos en móvil (390×844) y PC (1440×900).
 
 ---
 

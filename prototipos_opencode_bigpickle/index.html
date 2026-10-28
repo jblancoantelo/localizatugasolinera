@@ -114,13 +114,13 @@
     <span class="pastilla">Big_pickle · prototipos</span>
     <h1>Rediseño responsive de la app de gasolineras</h1>
     <p class="entradilla">
-      Ocho maquetas interactivas con datos simulados para mejorar la experiencia
+      Nueve maquetas interactivas con datos simulados para mejorar la experiencia
       <strong>sobre todo en móvil</strong> sin perder nada de la app actual, y para
       <strong>aprovechar de verdad las pantallas grandes</strong> en PC. Todo funciona
       abriendo los HTML directamente: sin servidor, sin CDN y sin dependencias.
     </p>
     <ul class="resumen">
-      <li><b>8</b><span>conceptos de diseño</span></li>
+      <li><b>9</b><span>conceptos de diseño</span></li>
       <li><b>37</b><span>estaciones fake · 16 provincias</span></li>
       <li><b>0</b><span>avisos de auditoría (móvil y PC)</span></li>
       <li><b>100 %</b><span>funcional y navegable</span></li>
@@ -274,6 +274,24 @@
       </div>
     </article>
 
+    <article class="tarjeta">
+      <div class="tarjeta-cab">
+        <div class="num">9</div>
+        <div><h3>Coste real</h3><div class="etq">Decidir por el total · persistencia</div></div>
+      </div>
+      <div class="muestra"><img src="shared/capturas/prototipo9-coste-real-pc.png" alt="Prototipo 9 en PC" loading="lazy" onerror="this.parentNode.classList.add('sin-imagen'); this.remove();"></div>
+      <div class="cuerpo">
+        <p>La recomendación no se ordena por €/L sino por el <strong>coste total del repostaje</strong>: litros × precio + el combustible del desvío ida/vuelta. Enseña por qué la más barata por litro no siempre gana.</p>
+        <ul>
+          <li>¿Decidir por coste total convence más que por €/L?</li>
+          <li>¿Se entiende el desvío cuando cambias litros o radio?</li>
+          <li>¿Recordar filtros y litros tras F5 se agradece?</li>
+        </ul>
+        <div class="chips"><span class="chip movil">Móvil</span><span class="chip">Coste total</span><span class="chip">Persistencia</span></div>
+        <div class="acciones"><a class="boton primario" href="prototipo9-coste-real/index.html">Abrir prototipo</a></div>
+      </div>
+    </article>
+
   </div>
 
   <h2 class="seccion">Cómo se valida</h2>
@@ -298,6 +316,7 @@ node prototipos_opencode_bigpickle/auditar.mjs    # auditoría de diseño → sh
       <li><b>Pasada 4 — nuevos paradigmas:</b> asistente por decisiones (7) y panel de datos (8).</li>
       <li><b>Pasada 5 — depurado cruzado:</b> auditoría de los ocho y corrección de todo lo detectado.</li>
       <li><b>Pasada 6 — renombrado y colisión de selectores:</b> carpeta <code>prototipos_opencode_bigpickle</code> y fix del toast <code>.aviso</code> vs <code>.etiqueta.aviso</code> (0 avisos en los 8).</li>
+      <li><b>Pasada 7 — un paradigma nuevo:</b> <em>coste real</em> del repostaje (prototipo 9), con persistencia del estado y aviso educativo cuando la más barata por litro pierde por el desvío.</li>
     </ol>
     <p style="margin-top:12px">Detalle completo en <code>README.md</code>.</p>
   </div>

@@ -39,10 +39,19 @@ antes de tocar la app real.
 | 6 | `prototipo6-gestos-atajos/` | **Gestos y atajos** | Navegación sin chrome: en móvil con gestos (swipe entre vistas, deslizar tarjeta, long-press, pull-to-refresh) y en PC con paleta de comandos (⌘K) y atajos de teclado (`j`/`k`, `/`, `?`, `1`–`5`). |
 | 7 | `prototipo7-asistente-decisiones/` | **Asistente por decisiones** | Móvil primero, una decisión por pantalla: «¿Qué necesitas?» → *Repostar barato ahora* / *Ahorrar en mi ruta* / *Vigilar una estación*, con recomendación final accionable. |
 | 8 | `prototipo8-panel-de-datos/` | **Panel de datos / analítica** | Escritorio: KPIs, evolución de la media provincial, mapa de calor por provincia, histograma de precios, ranking de marcas, comparador y «¿cuándo repostar?». Para entender el mercado. |
+| 9 | `prototipo9-coste-real/` | **Coste real del repostaje** | Ordena por el **coste total** (litros + desvío ida/vuelta) en vez de por €/L, con una recomendación razonada y el aviso de cuándo la más barata por litro pierde. Único prototipo que **persiste** filtros, litros, favoritos y descuentos tras F5. |
 
 Cada prototipo es **funcional de verdad** con datos fake: filtrar, ordenar,
 buscar, abrir detalle con histórico (canvas/SVG con tooltip), chat IA por
 proveedor con markdown, favoritos, comparador y configuración operativa.
+
+El **9** añade dos cosas que no tiene ninguno de los otros: cálculo del coste
+total (litros × precio + combustible del desvío) y **persistencia** del estado
+en `localStorage` (filtros, litros, radio, consumo, favoritos, descuentos, vista
+y conversaciones). Su caso de ejemplo es la prueba del concepto: con 5–20 L
+gana una estación cercana aunque no sea la más barata por litro; a partir de
+~50 L gana E.Leclerc Getafe, que sí es la más barata. El héroe cambia de aviso
+según el caso.
 
 ---
 
@@ -73,6 +82,13 @@ proveedor con markdown, favoritos, comparador y configuración operativa.
   indicador del carril. El toast ahora se estiliza por id (`#aviso`) en los
   tres prototipos que mezclan ambas clases (1, 6 y 7). Auditoría final:
   **0 avisos en móvil y PC en los 8**.
+- **Pasada 7 — coste real (prototipo 9).** Un enfoque que no estaba: la
+  decisión se toma por **lo que pagas de verdad**, no por €/L. Incluye
+  calculadora de litros/consumo/ida-vuelta, radio máximo, héroe con el porqué
+  del resultado, alternativas ordenadas por total, barras comparativas, lista
+  paginada con columna «Total», mapa con 4 estilos, IA con 8 pestañas, ajustes
+  completos y **persistencia** en `localStorage`. Auditoría: **0 avisos** en
+  móvil y PC; smoke test sin errores. Con eso la carpeta queda en **9/9**.
 
 ---
 
@@ -100,6 +116,10 @@ proveedor con markdown, favoritos, comparador y configuración operativa.
   resultado final da confianza?
 - **8 · Panel de datos:** ¿los gráficos aportan o abruman? ¿qué KPIs se usan de
   verdad? ¿el móvil soporta tanta densidad?
+- **9 · Coste real:** ¿decidir por coste total convence más que por €/L? ¿se
+  entiende el desvío al cambiar litros, consumo o radio? ¿el aviso de «la más
+  barata por litro pierde» enseña algo o confunde? ¿recordar el estado tras F5
+  se agradece o sorprende?
 
 ---
 
@@ -109,19 +129,19 @@ proveedor con markdown, favoritos, comparador y configuración operativa.
 prototipos_opencode_bigpickle/
 ├─ index.html              ← índice visual con capturas y enlaces
 ├─ README.md               ← este documento
-├─ shared/datos-fake.js    ← contrato de datos común a los 8 prototipos
+├─ shared/datos-fake.js    ← contrato de datos común a los 9 prototipos
 ├─ capturar.mjs            ← smoke test + capturas (móvil y PC)
 ├─ auditar.mjs             ← auditoría de diseño → shared/informes/*.md
 ├─ shared/
 │  ├─ datos-fake.js        ← 37 estaciones, 16 provincias, histórico, chats, logs…
 │  ├─ capturas/            ← PNG generados por capturar.mjs
 │  └─ informes/            ← informes Markdown de auditar.mjs
-└─ prototipo1..8-…/        ← cada prototipo (index.html + estilo.css + app.js)
+└─ prototipo1..9-…/        ← cada prototipo (index.html + estilo.css + app.js)
 ```
 
 ### Datos compartidos (`shared/datos-fake.js`)
 
-Un único script clásico expone `window.FAKE` como **contrato común** para los 8
+Un único script clásico expone `window.FAKE` como **contrato común** para los 9
 prototipos, de modo que todos muestran exactamente los mismos precios:
 
 - `FAKE.estaciones` — 37 estaciones en 16 provincias (Madrid 14, Barcelona 5,
@@ -196,6 +216,10 @@ hay errores de consola**; además usa los marcadores de captura:
   respetando `devicePixelRatio`.
 - **Chat IA con markdown mínimo** que escapa HTML antes de pintar y añade la
   marca de agua `⏱ modelo · tiempo` en cada respuesta.
+- **Persistencia solo en el 9** (`gasolineras_proto9_estado` +
+  `gasolineras_proto9_ia_<proveedor>`): guarda con *debounce* al cambiar algo,
+  restaura antes del primer render y ofrece «Borrar datos guardados» con
+  recarga. Los otros ocho no persisten a propósito, para comparar.
 
 ---
 

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#0b5a8c">
+<meta name="description" content="Prototipo 9 · Coste real: decide dónde repostar por el coste total del repostaje, no solo por el precio por litro.">
+<title>Prototipo 9 · Coste real — Gasolineras</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<!-- =============================================================================
+     Prototipo 9 · «Coste real» — maqueta interactiva
+     -----------------------------------------------------------------------------
+     No forma parte de la app real: usa datos simulados (../shared/datos-fake.js).
+
+     Concepto distinto a los otros ocho: la lista NO se ordena por €/L, sino por
+     el COSTE TOTAL de un repostaje concreto (litros × precio + combustible del
+     desvío ida/vuelta). El usuario decide «cuánto me cuesta de verdad llenar el
+     depósito aquí», que es lo que paga, y entiende por qué la estación más
+     barata por litro no siempre gana.
+
+     Además es el único prototipo que PERSISTE el estado (filtros, litros,
+     radio, favoritos, descuentos y vista) en localStorage al recargar.
+     ========================================================================== -->
+
+<p class="cinta">Prototipo 9 · <b>Coste real</b> — maqueta con datos simulados, sin conexión con la API del Ministerio.</p>
+
+<header class="cabecera">
+  <div class="cabecera-fila">
+    <div class="marca-app">
+      <span class="marca-icono" aria-hidden="true">⛽</span>
+      <div class="marca-texto">
+        <strong>Coste real</strong>
+        <span>Repostar bien, no solo barato</span>
+      </div>
+    </div>
+    <div class="cabecera-acciones">
+      <span class="version-chip" id="versionChip">v47</span>
+      <button type="button" class="btn-icono" data-vista="config" aria-label="Abrir ajustes" title="Ajustes">⚙</button>
+    </div>
+  </div>
+  <nav class="nav-pc" role="tablist" aria-label="Vistas principales">
+    <button type="button" role="tab" data-vista="decision" aria-selected="true">Decisión</button>
+    <button type="button" role="tab" data-vista="lista" aria-selected="false">Lista</button>
+    <button type="button" role="tab" data-vista="mapa" aria-selected="false">Mapa</button>
+    <button type="button" role="tab" data-vista="ia" aria-selected="false">IA</button>
+    <button type="button" role="tab" data-vista="config" aria-selected="false">Ajustes</button>
+  </nav>
+</header>
+
+<div class="toolbar">
+  <div class="filtros-fila">
+    <label class="campo-filtro">
+      <span class="etq">Provincia</span>
+      <select id="selProv" aria-label="Provincia"></select>
+    </label>
+    <label class="campo-filtro">
+      <span class="etq">Combustible</span>
+      <select id="selFuel" aria-label="Combustible"></select>
+    </label>
+  </div>
+  <div class="filtros-fila">
+    <label class="campo-filtro">
+      <span class="etq">Localidad</span>
+      <select id="selLocalidad" aria-label="Localidad"></select>
+    </label>
+    <div class="marcas-caja">
+      <button type="button" class="btn-filtro" id="btnMarcas" aria-haspopup="true" aria-expanded="false">
+        Marca <span class="contador" id="marcasCuenta" hidden>0</span> <span aria-hidden="true">▾</span>
+      </button>
+      <div class="pop-marcas" id="marcasPop" role="dialog" aria-label="Filtrar por marca" hidden>
+        <div class="pop-cab">
+          <strong>Marcas</strong>
+          <span class="pista" id="marcasPista"></span>
+        </div>
+        <div class="marcas-lista" id="marcasLista"></div>
+        <div class="pop-pie">
+          <button type="button" class="btn-mini" id="marcaTodas">Todas</button>
+          <button type="button" class="btn-mini" id="marcaNinguna">Ninguna</button>
+          <button type="button" class="btn-primario btn-mini" id="marcaAplicar">Aplicar</button>
+        </div>
+      </div>
+    </div>
+    <button type="button" class="btn-icono" id="btnBuscar" aria-label="Buscar por texto" aria-expanded="false" title="Buscar">🔍</button>
+    <label class="chip-check" for="chkFav">
+      <input type="checkbox" id="chkFav">
+      <span class="caja" aria-hidden="true"></span>
+      <span>Favoritas</span>
+    </label>
+    <button type="button" class="btn-mini btn-limpiar" id="btnLimpiar" hidden>✕ Limpiar</button>
+  </div>
+  <div class="buscador-fila" id="buscadorFila" hidden>
+    <label class="campo-filtro crece">
+      <span class="etq">Buscar</span>
+      <input type="search" id="buscar" placeholder="Marca, localidad, calle…" autocomplete="off">
+    </label>
+  </div>
+</div>
+
+<main class="contenido">
+  <!-- ====================== DECISIÓN ====================== -->
+  <section class="panel" data-panel="decision" aria-labelledby="tituloDecision">
+    <h1 class="visualmente-oculto" id="tituloDecision">¿Dónde te sale más barato repostar?</h1>
+
+    <div class="calc tarjeta">
+      <div class="calc-fila">
+        <div class="campo-litros">
+          <span class="etq-calc">Litros</span>
+          <div class="stepper">
+            <button type="button" class="btn-paso" data-paso="-5" aria-label="Quitar 5 litros">−</button>
+            <input id="litros" type="number" inputmode="numeric" min="5" max="120" step="1" value="50" aria-label="Litros a repostar">
+            <button type="button" class="btn-paso" data-paso="5" aria-label="Añadir 5 litros">+</button>
+          </div>
+        </div>
+        <label class="campo-num">
+          <span class="etq-calc">Consumo <small>L/100 km</small></span>
+          <input id="consumo" type="number" inputmode="decimal" min="3" max="15" step="0.1" value="6.5">
+        </label>
+        <label class="check" for="idaVuelta">
+          <input type="checkbox" id="idaVuelta" checked>
+          <span class="caja" aria-hidden="true"></span>
+          <span>Ida y vuelta</span>
+        </label>
+      </div>
+      <label class="campo-radio" for="radio">
+        <span class="etq-calc">Radio máximo <b id="radioVal">sin límite</b></span>
+        <input id="radio" type="range" min="0" max="40" step="1" value="0">
+      </label>
+      <p class="pista">El coste total suma el repostaje y la gasolina que gastas para llegar. Cambia los litros y mira cómo cambia la ganadora.</p>
+    </div>
+
+    <div id="decisionContenido"></div>
+  </section>
+
+  <!-- ====================== LISTA ====================== -->
+  <section class="panel" data-panel="lista" hidden aria-labelledby="tituloLista">
+    <div class="lista-cab">
+      <div>
+        <h1 id="tituloLista">Estaciones</h1>
+        <p class="pista" id="listaSub"></p>
+      </div>
+      <label class="campo-inline">
+        <span>Ordenar</span>
+        <select id="ordenSel">
+          <option value="coste">Coste total ↑</option>
+          <option value="precio">Precio/L ↑</option>
+          <option value="precio-desc">Precio/L ↓</option>
+          <option value="dist">Distancia ↑</option>
+          <option value="marca">Marca A-Z</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="tabla-envoltorio">
+      <table class="tabla" id="tablaEst">
+        <thead>
+          <tr>
+            <th scope="col">Marca</th>
+            <th scope="col">Precio</th>
+            <th scope="col">Total</th>
+            <th scope="col">Distancia</th>
+            <th scope="col">Localidad</th>
+            <th scope="col">Calle</th>
+            <th scope="col"><span class="visualmente-oculto">Ficha</span></th>
+          </tr>
+        </thead>
+        <tbody id="tablaCuerpo"></tbody>
+      </table>
+    </div>
+
+    <div class="paginacion">
+      <label class="campo-inline">
+        <span>Filas</span>
+        <select id="pageSizeSel"></select>
+      </label>
+      <button type="button" class="btn-mini" id="pagPrev" aria-label="Página anterior">◀</button>
+      <span class="pag-info" id="pagInfo"></span>
+      <button type="button" class="btn-mini" id="pagNext" aria-label="Página siguiente">▶</button>
+    </div>
+  </section>
+
+  <!-- ====================== MAPA ====================== -->
+  <section class="panel" data-panel="mapa" hidden aria-labelledby="tituloMapa">
+    <div class="mapa-cab">
+      <div>
+        <h1 id="tituloMapa">Mapa</h1>
+        <p class="pista" id="mapaSub"></p>
+      </div>
+      <label class="campo-inline">
+        <span>Estilo</span>
+        <select id="mapaEstilo">
+          <option value="calles">Calles</option>
+          <option value="satelite">Satélite</option>
+          <option value="oscuro">Oscuro</option>
+          <option value="relieve">Relieve</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="mapa-caja" id="mapaCaja" data-estilo="calles">
+      <div class="mapa-svg" id="mapaSvg" aria-hidden="true"></div>
+      <div class="mapa-yo" aria-hidden="true"><span class="yo-punto"></span>Tu ubicación</div>
+      <div class="marcadores" id="marcadores"></div>
+    </div>
+
+    <div class="leyenda" aria-label="Leyenda de precios">
+      <span class="leyenda-item"><i class="punto verde"></i> menos de 1,50 €</span>
+      <span class="leyenda-item"><i class="punto naranja"></i> 1,50 – 1,70 €</span>
+      <span class="leyenda-item"><i class="punto rojo"></i> más de 1,70 €</span>
+      <span class="leyenda-item"><i class="punto gris"></i> sin precio</span>
+    </div>
+    <p class="pista" id="mapaPista"></p>
+  </section>
+
+  <!-- ====================== IA ====================== -->
+  <section class="panel" data-panel="ia" hidden aria-labelledby="tituloIa">
+    <div class="ia-cab">
+      <div>
+        <h1 id="tituloIa">Pregunta a la IA</h1>
+        <p class="pista" id="iaEstado"></p>
+      </div>
+      <button type="button" class="btn-mini" id="iaBorrar">🗑 Borrar conversación</button>
+    </div>
+
+    <div class="ia-pills" id="iaPills" role="tablist" aria-label="Proveedor de IA"></div>
+
+    <div class="ia-caja">
+      <div class="ia-mensajes" id="iaMensajes" aria-live="polite"></div>
+      <form class="ia-form" id="iaForm">
+        <input type="text" id="iaInput" placeholder="¿Dónde reposto con 50 € esta semana?" autocomplete="off" aria-label="Mensaje para la IA">
+        <button type="submit" class="btn-primario" id="iaEnviar">Enviar</button>
+      </form>
+      <div class="ia-prompts" id="iaPrompts"></div>
+      <p class="pista">Respuestas simuladas con los datos de la maqueta. La marca de agua indica proveedor, modelo y tiempo.</p>
+    </div>
+  </section>
+
+  <!-- ====================== CONFIG ====================== -->
+  <section class="panel" data-panel="config" hidden aria-labelledby="tituloConfig">
+    <h1 id="tituloConfig">Ajustes</h1>
+    <div class="ajustes">
+
+      <section class="tarjeta">
+        <h2>Persistencia</h2>
+        <label class="check" for="cfgPersistir">
+          <input type="checkbox" id="cfgPersistir" checked>
+          <span class="caja" aria-hidden="true"></span>
+          <span>Recordar filtros, litros y favoritos al recargar</span>
+        </label>
+        <p class="pista">Este prototipo es el único que conserva el estado tras pulsar F5 (localStorage).</p>
+        <button type="button" class="btn-sec" id="btnOlvidar">Borrar datos guardados</button>
+      </section>
+
+      <section class="tarjeta">
+        <h2>Descuentos por marca</h2>
+        <p class="pista">Se restan del precio por litro en todas las vistas y en el coste total.</p>
+        <div class="desc-lista" id="descLista"></div>
+        <button type="button" class="btn-sec" id="btnDescReset">Restablecer descuentos</button>
+      </section>
+
+      <section class="tarjeta">
+        <h2>Caché de datos</h2>
+        <div class="tabs" role="tablist" aria-label="Tipo de caché">
+          <button type="button" role="tab" class="tab-cache activo" data-cache="idb" aria-selected="true">IndexedDB</button>
+          <button type="button" role="tab" class="tab-cache" data-cache="ls" aria-selected="false">localStorage</button>
+        </div>
+        <div id="cacheIdb" class="tab-panel"></div>
+        <div id="cacheLs" class="tab-panel" hidden></div>
+        <div class="fila-campos">
+          <label class="campo-inline">
+            <span>TTL (horas)</span>
+            <input id="cacheTtl" type="number" min="1" max="72" step="1" value="12">
+          </label>
+          <button type="button" class="btn-sec" id="btnLimpiarCache">Limpiar caché</button>
+        </div>
+      </section>
+
+      <section class="tarjeta">
+        <h2>Paginación</h2>
+        <label class="campo-inline">
+          <span>Filas por página</span>
+          <select id="pageSizeCfg"></select>
+        </label>
+        <p class="pista">Se aplica en la vista Lista. «Todas» desactiva la paginación.</p>
+      </section>
+
+      <section class="tarjeta">
+        <h2>Registro de actividad</h2>
+        <div class="tabs" role="tablist" aria-label="Registro">
+          <button type="button" role="tab" class="tab-log activo" data-log="api" aria-selected="true">API</button>
+          <button type="button" role="tab" class="tab-log" data-log="push" aria-selected="false">Push</button>
+        </div>
+        <div id="logCuerpo" class="log-lista"></div>
+        <button type="button" class="btn-sec" id="btnLimpiarLog">Vaciar registro</button>
+      </section>
+
+      <section class="tarjeta">
+        <h2>Notificaciones push</h2>
+        <label class="check" for="pushOn">
+          <input type="checkbox" id="pushOn" checked>
+          <span class="caja" aria-hidden="true"></span>
+          <span>Avisarme cuando baje el precio de mis favoritas</span>
+        </label>
+        <div class="fila-campos">
+          <label class="campo-inline">
+            <span>Cada</span>
+            <select id="pushIntervalo">
+              <option value="1">1 h</option>
+              <option value="4">4 h</option>
+              <option value="8" selected>8 h</option>
+              <option value="12">12 h</option>
+              <option value="24">24 h</option>
+            </select>
+          </label>
+          <label class="campo-inline">
+            <span>Caída mínima en</span>
+            <select id="pushDias">
+              <option value="1">1 día</option>
+              <option value="3" selected>3 días</option>
+              <option value="7">7 días</option>
+              <option value="14">14 días</option>
+            </select>
+          </label>
+        </div>
+        <button type="button" class="btn-sec" id="pushProbar">Probar comprobación</button>
+      </section>
+
+      <section class="tarjeta">
+        <h2>Claves API · IA</h2>
+        <p class="pista">Las claves reales se guardan cifradas. Aquí la comprobación es simulada: introduce 6 caracteres cualesquiera.</p>
+        <div class="fila-campos">
+          <input id="clavesPass" type="password" placeholder="Contraseña de 6 caracteres" aria-label="Contraseña de las claves" autocomplete="off">
+          <button type="button" class="btn-primario" id="btnCargarClaves">Cargar claves</button>
+        </div>
+        <p class="pista" id="clavesEstado"></p>
+        <div class="claves-lista" id="clavesLista"></div>
+      </section>
+
+      <section class="tarjeta">
+        <h2>Actualización de la app</h2>
+        <p class="pista" id="versionTexto"></p>
+        <button type="button" class="btn-sec" id="btnActualizar">Comprobar actualizaciones</button>
+      </section>
+
+    </div>
+  </section>
+</main>
+
+<nav class="nav-movil" role="tablist" aria-label="Vistas principales">
+  <button type="button" role="tab" data-vista="decision" aria-selected="true"><span aria-hidden="true">🎯</span>Decisión</button>
+  <button type="button" role="tab" data-vista="lista" aria-selected="false"><span aria-hidden="true">📋</span>Lista</button>
+  <button type="button" role="tab" data-vista="mapa" aria-selected="false"><span aria-hidden="true">🗺</span>Mapa</button>
+  <button type="button" role="tab" data-vista="ia" aria-selected="false"><span aria-hidden="true">✨</span>IA</button>
+  <button type="button" role="tab" data-vista="config" aria-selected="false"><span aria-hidden="true">⚙</span>Ajustes</button>
+</nav>
+
+<div class="velo" id="velo" hidden></div>
+
+<aside class="ficha" id="ficha" role="dialog" aria-modal="true" aria-labelledby="fichaNombre" hidden>
+  <header class="ficha-cab">
+    <div>
+      <span class="ficha-marca" id="fichaMarca"></span>
+      <h2 id="fichaNombre"></h2>
+    </div>
+    <button type="button" class="btn-icono" id="fichaCerrar" aria-label="Cerrar ficha">✕</button>
+  </header>
+  <div class="ficha-cuerpo">
+    <div class="ficha-precio" id="fichaPrecio"></div>
+    <div class="ficha-acciones">
+      <button type="button" class="btn-sec" id="fichaFav">☆ Favorita</button>
+      <button type="button" class="btn-sec" id="fichaIr">🧭 Cómo llegar</button>
+    </div>
+    <dl class="ficha-datos" id="fichaDatos"></dl>
+    <h3 class="ficha-h3">Precios por combustible</h3>
+    <div class="ficha-precios" id="fichaPrecios"></div>
+    <h3 class="ficha-h3">Histórico de precios</h3>
+    <div class="ficha-controles">
+      <label class="campo-inline">
+        <span>Combustible</span>
+        <select id="fichaFuel" aria-label="Combustible de la gráfica"></select>
+      </label>
+      <label class="campo-inline">
+        <span>Periodo</span>
+        <select id="fichaDias" aria-label="Periodo de la gráfica"></select>
+      </label>
+    </div>
+    <div class="grafica-caja">
+      <canvas id="grafica" width="560" height="210" aria-label="Evolución del precio" role="img"></canvas>
+      <div class="grafica-tip" id="graficaTip" hidden></div>
+    </div>
+    <dl class="ficha-resumen" id="fichaResumen"></dl>
+  </div>
+</aside>
+
+<p class="aviso" id="aviso" role="status" aria-live="polite"></p>
+
+<script src="../shared/datos-fake.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
