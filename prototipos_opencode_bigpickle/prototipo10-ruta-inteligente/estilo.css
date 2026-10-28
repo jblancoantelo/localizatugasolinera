@@ -3,10 +3,10 @@
   --bg:#0b1026;
   --card:#121a2e;
   --sup:#18223a;
-  --txt:#e6ebf5;
-  --txt2:#b7c0d6;
-  --txt3:#8b97b8;
-  --line:#243055;
+  --txt:#f7f9fc;
+  --txt2:#d7deee;
+  --txt3:#a9b4d6;
+  --line:#2a355a;
   --azul:#4f9bff;
   --verde:#22c55e;
   --naranja:#f59e0b;
@@ -26,11 +26,11 @@ body{
 .cabecera{position:sticky;top:0;z-index:5;background:linear-gradient(180deg,rgba(11,16,38,.98) 0%,rgba(11,16,38,.9) 100%);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .cab-fila{display:flex;align-items:center;gap:10px;padding:10px 12px}
 .vol{border:1px solid var(--line);background:var(--sup);color:var(--txt);border-radius:10px;padding:6px 10px}
-.tit h1{margin:0;font-size:16px}
-.tit p{margin:0;color:var(--txt3);font-size:12px}
+.tit h1{margin:0;font-size:16px;color:#f8fafc}
+.tit p{margin:0;color:#cbd5f5;font-size:12px}
 .tabs{display:flex;gap:6px;padding:0 12px 10px;overflow:auto}
-.tab{border:1px solid var(--line);background:transparent;color:var(--txt2);border-radius:999px;padding:6px 12px;white-space:nowrap}
-.tab.activa{background:linear-gradient(90deg,rgba(79,155,255,.25),transparent);color:var(--txt);border-color:rgba(79,155,255,.8)}
+.tab{border:1px solid var(--line);background:var(--sup);color:var(--txt2);border-radius:999px;padding:6px 12px;white-space:nowrap}
+.tab.activa{background:linear-gradient(90deg,rgba(59,130,246,.45),rgba(34,211,238,.18));color:#f8fafc;border-color:#93c5fd}
 .main{flex:1;display:flex;flex-direction:column;gap:12px;padding:12px}
 .panel{display:none;flex-direction:column;gap:12px}
 .panel.activa{display:flex}
@@ -42,7 +42,7 @@ body{
 .fila2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .fila-acc{display:flex;gap:8px;padding:12px 14px}
 button{font:inherit}
-.primario{border:none;background:linear-gradient(90deg,#4f9bff,#22d3ee);color:#061022;border-radius:12px;padding:9px 14px;font-weight:600}
+.primario{border:none;background:linear-gradient(90deg,#3b82f6,#22d3ee);color:#ffffff;border-radius:12px;padding:9px 14px;font-weight:600}
 #btnLimpiarRuta{border:1px solid var(--line);background:var(--sup);color:var(--txt);border-radius:12px;padding:9px 12px}
 .pista{margin:0;padding:0 14px 12px;color:var(--txt3);font-size:12px}
 .res-cab{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:10px;padding:12px 14px 0}
