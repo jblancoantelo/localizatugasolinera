@@ -4,7 +4,7 @@ Generado por `prototipos_opencode_bigpickle/auditar.mjs`.
 
 ## Móvil 390×844
 
-- Página: 390×2050 px · 22 controles · 84 nodos de texto
+- Página: 390×2121 px · 22 controles · 85 nodos de texto
 - Desbordamiento horizontal: no
 - Objetivos táctiles < 32 px: 0
 - Textos < 12 px: 0
@@ -15,7 +15,7 @@ Generado por `prototipos_opencode_bigpickle/auditar.mjs`.
 
 ## PC 1440×900
 
-- Página: 1440×1070 px · 22 controles · 84 nodos de texto
+- Página: 1440×1070 px · 22 controles · 85 nodos de texto
 - Desbordamiento horizontal: no
 - Objetivos táctiles < 32 px: 0
 - Textos < 12 px: 0
