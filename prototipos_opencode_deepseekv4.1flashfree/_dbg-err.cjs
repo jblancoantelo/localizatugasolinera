@@ -1,0 +1,27 @@
+const { chromium } = require('playwright');
+const path = require('path');
+const RAIL = 'file:///' + __dirname.replace(/\\/g, '/') + '/';
+(async () => {
+  const b = await chromium.launch({ headless: true });
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const p = await ctx.newPage();
+  p.on('pageerror', e => console.log('[pageerror]', e.message, '\n', e.stack));
+  await p.goto(RAIL + 'v1-sheet.html?embed=1');
+  await p.waitForTimeout(600);
+  await p.click('.bottomnav [data-nav-tab="ia"]');
+  await p.waitForTimeout(300);
+  await p.click('.pf-ia-prompts .chip');
+  await p.waitForTimeout(2600);
+  await p.click('.pf-ia-tabs .chip[data-p="groq"]');
+  await p.waitForTimeout(200);
+  await p.fill('.pf-input', '¿me compensa desviarme 4 km?');
+  await p.click('.pf-send');
+  await p.waitForTimeout(2400);
+  await p.click('.bottomnav [data-nav-tab="config"]');
+  await p.waitForTimeout(400);
+  await p.evaluate(() => { document.querySelector('[data-sec="disc"]').scrollIntoView({ block: 'center' }); });
+  await p.fill('[data-disc="BALLENOIL"]', '5');
+  await p.dispatchEvent('[data-disc="BALLENOIL"]', 'change');
+  await p.waitForTimeout(600);
+  await ctx.close(); await b.close();
+})();

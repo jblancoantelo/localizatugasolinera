@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Prototipo 5 · Split sincronizado + comparador · Gasolineras</title>
+<meta name="description" content="Prototipo de rediseño: lienzo partido sincronizado (mapa + lista) con comparador de estaciones, chat IA y ajustes.">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+
+<div class="app" id="app" data-destino="mapa" data-detalle="cerrado" data-peek="cerrado">
+
+  <!-- ======================= CABECERA / FILTROS ======================= -->
+  <header class="cabecera">
+    <div class="cabecera-fila cabecera-titulo">
+      <div class="marca-app">
+        <span class="marca-icono" aria-hidden="true">⛽</span>
+        <div class="marca-texto">
+          <h1>Gasolineras</h1>
+          <p>Split sincronizado + comparador</p>
+        </div>
+      </div>
+
+      <div class="cabecera-acciones">
+        <!-- Presets del lienzo partido (solo escritorio/tablet) -->
+        <div class="presets" role="group" aria-label="Reparto del lienzo">
+          <button class="preset" id="btnPresetMapa" data-preset="mapa" aria-pressed="false">Solo mapa</button>
+          <button class="preset activo" id="btnPresetSplit" data-preset="split" aria-pressed="true">50/50</button>
+          <button class="preset" id="btnPresetLista" data-preset="lista" aria-pressed="false">Solo lista</button>
+        </div>
+        <button class="btn-icono" id="btnFavoritos" aria-pressed="false" aria-label="Mostrar solo estaciones favoritas" title="Solo favoritas (f)">☆</button>
+        <button class="btn-icono" id="btnPush" aria-label="Activar notificaciones de bajada de precio" title="Notificaciones push">🔔</button>
+        <button class="btn-icono" id="btnAjustesRapido" aria-label="Ir a ajustes" title="Ajustes">⚙️</button>
+      </div>
+    </div>
+
+    <div class="cabecera-fila cabecera-filtros">
+      <label class="campo">
+        <span class="campo-etq">Provincia</span>
+        <select id="fProvincia"></select>
+      </label>
+      <label class="campo">
+        <span class="campo-etq">Localidad</span>
+        <select id="fLocalidad"></select>
+      </label>
+      <label class="campo">
+        <span class="campo-etq">Combustible</span>
+        <select id="fCombustible"></select>
+      </label>
+      <div class="campo">
+        <span class="campo-etq">Marca</span>
+        <button class="btn btn-secundario" id="fMarcas" aria-haspopup="true" aria-expanded="false">Todas <span class="caret" aria-hidden="true">▾</span></button>
+      </div>
+      <label class="campo campo-km">
+        <span class="campo-etq">Dist. máx.</span>
+        <input type="number" id="fDistancia" min="1" max="500" step="1" placeholder="km" inputmode="numeric">
+      </label>
+      <button class="btn btn-secundario" id="btnLimpiar" title="Limpiar todos los filtros">✕ Limpiar</button>
+
+      <div class="leyenda" aria-label="Leyenda de precios">
+        <span><i class="punto verde"></i> &lt; 1,50 €</span>
+        <span><i class="punto naranja"></i> 1,50–1,70 €</span>
+        <span><i class="punto rojo"></i> &gt; 1,70 €</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======================= ZONA DE TRABAJO ======================= -->
+  <main class="zona" id="zona">
+
+    <!-- ---------- Lienzo partido (destino «Mapa») ---------- -->
+    <div class="lienzo" id="lienzo">
+
+      <!-- Panel izquierdo: mapa fake en SVG/CSS -->
+      <section class="panel panel-mapa" id="panelMapa" aria-label="Mapa de estaciones">
+        <div class="peek-agarre" id="peekAgarre">
+          <span class="peek-barra" aria-hidden="true"></span>
+          <span class="peek-texto">Arrastra hacia abajo para ampliar el mapa</span>
+        </div>
+
+        <div class="panel-cabecera">
+          <label class="campo campo-mini">
+            <span class="sr">Estilo del mapa</span>
+            <select id="mapaEstilo" aria-label="Estilo del mapa">
+              <option value="calles">Calles</option>
+              <option value="satelite">Satélite</option>
+              <option value="oscuro">Oscuro</option>
+              <option value="relieve">Relieve</option>
+            </select>
+          </label>
+          <button class="btn-icono" id="btnSeguirHover" aria-pressed="true"
+                  aria-label="Centrar el mapa al pasar el ratón por una fila" title="Seguir el hover / foco">🎯</button>
+          <div class="zoom-grupo" role="group" aria-label="Zoom del mapa">
+            <button class="btn-icono" id="btnZoomMas" aria-label="Acercar">+</button>
+            <button class="btn-icono" id="btnZoomMenos" aria-label="Alejar">−</button>
+            <button class="btn-icono" id="btnZoomReset" aria-label="Restablecer la vista">⟲</button>
+          </div>
+          <button class="btn btn-secundario btn-compacto" id="btnVerMapa">⤢ Ver mapa</button>
+        </div>
+
+        <div class="mapa-caja" id="mapaCaja">
+          <div class="mapa-capa" id="mapaCapa"></div>
+          <div class="mapa-popup" id="mapaPopup" hidden></div>
+          <div class="mapa-hint" id="mapaHint">Pasa el ratón por una fila y el mapa la seguirá</div>
+          <div class="mapa-pie" aria-hidden="true">
+            <span id="mapaContador">—</span>
+            <span class="mapa-pie-nota">mapa esquemático</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Divisor arrastrable -->
+      <div class="divisor" id="divisor" role="separator" aria-orientation="vertical"
+           aria-label="Redimensionar mapa y lista" title="Arrastra para redimensionar · doble clic para 50/50" tabindex="0"></div>
+
+      <!-- Panel derecho: lista + tabla de datos -->
+      <section class="panel panel-lista" id="panelLista" aria-label="Lista de estaciones">
+        <div class="lista-cabecera">
+          <div class="lista-busqueda">
+            <span class="icono-buscar" aria-hidden="true">🔍</span>
+            <input type="search" id="buscar" placeholder="Buscar localidad, calle o marca…"
+                   aria-label="Buscar estaciones" autocomplete="off">
+            <button class="btn-icono" id="btnLimpiarBusqueda" aria-label="Limpiar la búsqueda">✕</button>
+          </div>
+
+          <div class="chips" id="chips" aria-label="Filtros activos"></div>
+
+          <div class="lista-resumen">
+            <span class="contador" id="contador" aria-live="polite">—</span>
+            <label class="campo campo-mini">
+              <span class="sr">Ordenar por</span>
+              <select id="ordenSel" aria-label="Ordenar por">
+                <option value="precio:asc">Precio ↑</option>
+                <option value="precio:desc">Precio ↓</option>
+                <option value="dist:asc">Distancia ↑</option>
+                <option value="dist:desc">Distancia ↓</option>
+                <option value="marca:asc">Marca A-Z</option>
+                <option value="localidad:asc">Localidad A-Z</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="lista-scroll" id="listaScroll">
+          <table class="tabla-estaciones" id="tabla">
+            <caption class="sr">Estaciones de servicio filtradas</caption>
+            <thead>
+              <tr>
+                <th class="col-check" scope="col"><span class="sr">Comparar</span></th>
+                <th class="col-fav" scope="col"><span class="sr">Favorita</span></th>
+                <th scope="col"><button class="th-btn" data-orden="marca:asc">Marca <span class="flecha" aria-hidden="true"></span></button></th>
+                <th class="col-precio" scope="col"><button class="th-btn" data-orden="precio:asc">Precio <span class="flecha" aria-hidden="true"></span></button></th>
+                <th scope="col"><button class="th-btn" data-orden="dist:asc">Dist. <span class="flecha" aria-hidden="true"></span></button></th>
+                <th scope="col"><button class="th-btn" data-orden="localidad:asc">Localidad <span class="flecha" aria-hidden="true"></span></button></th>
+                <th scope="col">Calle</th>
+                <th class="col-abrir" scope="col"><span class="sr">Abrir detalle</span></th>
+              </tr>
+            </thead>
+            <tbody id="cuerpoTabla"></tbody>
+          </table>
+
+          <div class="estado-vacio" id="estadoVacio" hidden>
+            <span class="ev-icono" aria-hidden="true">🔍</span>
+            <h2>Sin estaciones con estos filtros</h2>
+            <p>Prueba a ampliar la distancia máxima o a quitar alguna marca.</p>
+            <button class="btn btn-primario" id="evLimpiar">Quitar todos los filtros</button>
+          </div>
+
+          <div class="cargando" id="cargandoLista" hidden>
+            <span class="spinner" aria-hidden="true"></span> Cargando precios…
+          </div>
+        </div>
+
+        <div class="lista-pie">
+          <div class="paginacion" id="paginacion"></div>
+          <div class="atajos" id="atajos"></div>
+        </div>
+      </section>
+
+      <!-- Tercer panel: detalle (empuja el contenido en ≥1280 px) -->
+      <aside class="panel panel-detalle" id="panelDetalle" aria-label="Detalle de la estación">
+        <div class="detalle-cabecera">
+          <div class="detalle-titulo">
+            <h2 id="detTitulo">Estación</h2>
+            <p id="detSub"></p>
+          </div>
+          <button class="btn-icono" id="detCerrar" aria-label="Cerrar el detalle">✕</button>
+        </div>
+
+        <div class="det-tabs" role="tablist" aria-label="Secciones del detalle">
+          <button class="det-tab activo" id="detTabInfo" role="tab" aria-selected="true" aria-controls="detPanelInfo" data-dtab="info">Información</button>
+          <button class="det-tab" id="detTabHist" role="tab" aria-selected="false" aria-controls="detPanelHist" data-dtab="hist">Histórico</button>
+        </div>
+
+        <div class="detalle-cuerpo">
+          <div class="det-panel" id="detPanelInfo" role="tabpanel" aria-labelledby="detTabInfo"></div>
+
+          <div class="det-panel" id="detPanelHist" role="tabpanel" aria-labelledby="detTabHist" hidden>
+            <div class="det-hist-controles">
+              <label class="campo campo-mini">
+                <span class="sr">Combustible</span>
+                <select id="detFuel" aria-label="Combustible del histórico"></select>
+              </label>
+              <label class="campo campo-mini">
+                <span class="sr">Días</span>
+                <select id="detDias" aria-label="Días del histórico">
+                  <option value="7">7 días</option>
+                  <option value="14">14 días</option>
+                  <option value="21">21 días</option>
+                  <option value="30" selected>30 días</option>
+                  <option value="60">60 días</option>
+                  <option value="90">90 días</option>
+                  <option value="180">180 días</option>
+                </select>
+              </label>
+            </div>
+            <div class="grafica-caja">
+              <canvas id="detGrafica" role="img" aria-label="Gráfica de la evolución del precio"></canvas>
+              <div class="grafica-cargando" id="detCargando" hidden>Cargando histórico…</div>
+            </div>
+            <div class="det-resumen" id="detResumen"></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ---------- Chat IA ---------- -->
+    <section class="zona-ia" id="zonaIA" aria-label="Asistente de IA"></section>
+
+    <!-- ---------- Ajustes ---------- -->
+    <section class="zona-ajustes" id="zonaAjustes" aria-label="Ajustes"></section>
+  </main>
+
+  <!-- ======================= BARRA DEL COMPARADOR ======================= -->
+  <div class="barra-comparar" id="barraComparar" hidden>
+    <div class="bc-info">
+      <span class="bc-texto" id="bcTexto">0 estaciones</span>
+      <span class="bc-hint" id="bcHint">Marca entre 2 y 4 para comparar</span>
+    </div>
+    <div class="bc-miniaturas" id="bcMiniaturas"></div>
+    <div class="bc-acciones">
+      <button class="btn btn-secundario" id="bcQuitar">Quitar todas</button>
+      <button class="btn btn-primario" id="bcComparar" disabled>Comparar</button>
+    </div>
+  </div>
+
+  <!-- ======================= NAVEGACIÓN INFERIOR ======================= -->
+  <nav class="nav-inferior" id="navInferior" aria-label="Navegación principal">
+    <button class="nav-btn activo" data-destino="mapa"><span class="nav-icono" aria-hidden="true">🗺️</span>Mapa</button>
+    <button class="nav-btn" data-destino="lista" data-shot="vista"><span class="nav-icono" aria-hidden="true">☰</span>Lista</button>
+    <button class="nav-btn" data-destino="ia"><span class="nav-icono" aria-hidden="true">🤖</span>IA</button>
+    <button class="nav-btn" data-destino="favoritas"><span class="nav-icono" aria-hidden="true">★</span>Favoritas</button>
+    <button class="nav-btn" data-destino="ajustes"><span class="nav-icono" aria-hidden="true">⚙️</span>Ajustes</button>
+  </nav>
+</div>
+
+<!-- Popover de marcas (position:fixed para no pelear con el flex del toolbar) -->
+<div class="popover" id="popoverMarcas" hidden>
+  <input type="search" class="popover-buscar" id="popoverBuscar" placeholder="Filtrar marcas…" aria-label="Filtrar la lista de marcas">
+  <div class="popover-lista" id="popoverListaMarcas"></div>
+  <div class="popover-pie">
+    <button class="btn btn-secundario btn-mini" id="popoverTodas">Todas</button>
+    <button class="btn btn-secundario btn-mini" id="popoverNinguna">Ninguna</button>
+    <button class="btn btn-primario btn-mini" id="popoverAplicar">Aplicar</button>
+  </div>
+</div>
+
+<!-- Hoja inferior / diálogo (comparador y hojas móviles) -->
+<div class="hoja-fondo" id="hojaFondo" hidden></div>
+<section class="hoja" id="hoja" role="dialog" aria-modal="true" aria-labelledby="hojaTitulo" hidden>
+  <div class="hoja-cabecera">
+    <span class="hoja-agarre" aria-hidden="true"></span>
+    <h2 id="hojaTitulo">Panel</h2>
+    <button class="btn-icono" id="hojaCerrar" aria-label="Cerrar el panel">✕</button>
+  </div>
+  <div class="hoja-cuerpo" id="hojaCuerpo"></div>
+</section>
+
+<!-- Avisos efímeros (aria-live) -->
+<div class="avisos" id="avisos" aria-live="polite" aria-atomic="false"></div>
+
+<script src="../shared/datos-fake.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

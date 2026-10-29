@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>P6 · Trayecto — dónde repostar de camino</title>
+<style>
+:root{
+  --sand:#f6f1e7;--paper:#fffdf8;--ink:#232019;--mut:#7c7466;--line:#e6ddcc;
+  --green:#1f6b46;--green2:#2f8f60;--lime:#d8f3c4;--amber:#b45309;--red:#b3261e;
+  --sat:env(safe-area-inset-bottom);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--sand);color:var(--ink);min-height:100vh}
+button,input,select{font:inherit}
+.app{max-width:1180px;margin:0 auto;min-height:100vh;padding-bottom:calc(88px + var(--sat))}
+/* header */
+.top{position:sticky;top:0;z-index:40;background:rgba(246,241,231,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:.6rem .8rem .5rem}
+.trow{display:flex;align-items:center;gap:.5rem}
+.trow h1{font-size:1rem;letter-spacing:-.02em;flex:1}
+.trow h1 small{display:block;font-size:.68rem;color:var(--mut);font-weight:500;letter-spacing:0}
+.ibtn{border:1px solid var(--line);background:var(--paper);border-radius:12px;min-width:44px;min-height:44px;cursor:pointer;font-size:1rem}
+.routeform{display:grid;grid-template-columns:1fr auto;gap:.4rem;margin-top:.55rem;align-items:center}
+.routeform .fields{display:flex;flex-direction:column;gap:.3rem;position:relative}
+.routeform .fields::before{content:"";position:absolute;left:15px;top:22px;bottom:22px;width:2px;background:repeating-linear-gradient(var(--green2) 0 4px,transparent 4px 7px)}
+.field{display:flex;align-items:center;gap:.5rem;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:.45rem .6rem;min-height:48px}
+.field i{width:18px;text-align:center;font-style:normal;z-index:1;background:var(--paper)}
+.field input{border:none;background:none;flex:1;min-width:0;font-size:.9rem;outline:none}
+.field small{color:var(--mut);font-size:.68rem}
+.swap{width:44px;height:88px;border-radius:12px;border:1px solid var(--line);background:var(--paper);cursor:pointer;font-size:1rem}
+/* vehicle */
+.veh{display:flex;gap:.4rem;overflow-x:auto;padding:.55rem 0 .1rem;scrollbar-width:none}
+.veh::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;border:1px solid var(--line);background:var(--paper);border-radius:99px;padding:.45rem .75rem;font-size:.76rem;cursor:pointer;min-height:40px;color:var(--ink)}
+.chip.on{background:var(--green);border-color:var(--green);color:#fff;font-weight:800}
+/* autonomy banner */
+.aut{background:var(--lime);border:1px solid #b8e09a;color:#1c4a2f;border-radius:14px;padding:.55rem .7rem;font-size:.78rem;line-height:1.4;margin:.5rem .8rem 0}
+.aut b{font-weight:800}
+/* layout */
+.main{padding:.6rem .8rem 0;display:grid;grid-template-columns:1fr;gap:.6rem}
+.section{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:.7rem}
+.section h2{font-size:.86rem;display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem}
+.section .hint{font-size:.72rem;color:var(--mut);margin-bottom:.5rem}
+.sortrow{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.5rem}
+/* timeline */
+.tl{position:relative;padding-left:26px}
+.tl::before{content:"";position:absolute;left:9px;top:8px;bottom:8px;width:2px;background:var(--line)}
+.stop{position:relative;margin-bottom:.55rem}
+.stop::before{content:"";position:absolute;left:-22px;top:20px;width:12px;height:12px;border-radius:50%;background:var(--paper);border:3px solid var(--line)}
+.stop.best::before{border-color:var(--green);background:var(--green)}
+.stop.sel::before{border-color:var(--amber);background:var(--amber)}
+.km{font-size:.66rem;color:var(--mut);font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.scard{width:100%;text-align:left;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:.6rem .7rem;cursor:pointer;font:inherit;margin-top:.2rem}
+.scard.best{border-color:var(--green);box-shadow:0 0 0 1px var(--green) inset}
+.scard.sel{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber) inset}
+.srow{display:flex;gap:.5rem;align-items:flex-start}
+.srow .who{flex:1;min-width:0}
+.who b{font-size:.92rem}
+.who .sub{font-size:.74rem;color:var(--mut);margin-top:.05rem}
+.who .tags{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.35rem}
+.tag{font-size:.63rem;font-weight:800;border-radius:99px;padding:.14rem .45rem;background:#eef1ea;color:#4b5a45}
+.tag.detour{background:#fff3e0;color:#9a5b00}
+.tag.bestT{background:var(--green);color:#fff}
+.tag.save{background:var(--lime);color:#1c4a2f}
+.pp{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pp b{font-size:1.22rem}
+.pp .net{font-size:.72rem;font-weight:800;margin-top:.1rem}
+.net.plus{color:var(--green)}.net.minus{color:var(--red)}
+.actions{display:flex;gap:.35rem;margin-top:.45rem;flex-wrap:wrap}
+.actions button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:.4rem .6rem;font-size:.74rem;cursor:pointer;min-height:40px}
+.actions button.primary{background:var(--green);border-color:var(--green);color:#fff;font-weight:800}
+.actions button.primary.on{background:var(--amber);border-color:var(--amber)}
+/* route svg */
+.svgal{display:none}
+.svgal svg{width:100%;height:auto;display:block;border-radius:12px;background:#f3efe4}
+/* summary */
+.sum{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--paper);border-top:1px solid var(--line);box-shadow:0 -10px 30px rgba(35,32,25,.12);padding:.55rem .8rem calc(.6rem + var(--sat))}
+.sum .in{max-width:1180px;margin:0 auto;display:flex;gap:.6rem;align-items:center}
+.sum .who{flex:1;min-width:0;font-size:.74rem;color:var(--mut)}
+.sum .who b{display:block;font-size:.9rem;color:var(--ink)}
+.sum .val{text-align:right;font-size:.7rem;color:var(--mut)}
+.sum .val b{display:block;font-size:1.15rem;color:var(--green);font-variant-numeric:tabular-nums}
+.sum button{background:var(--green);color:#fff;border:none;border-radius:12px;min-height:48px;padding:0 .9rem;font-weight:800;cursor:pointer;white-space:nowrap}
+.sum button.saved{background:var(--amber)}
+/* detail sheet */
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:70;background:var(--paper);border-radius:22px 22px 0 0;max-width:680px;margin:0 auto;transform:translateY(110%);transition:.25s;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 -12px 40px rgba(0,0,0,.25)}
+.sheet.open{transform:none}
+.grab{width:44px;height:5px;background:var(--line);border-radius:99px;margin:.55rem auto .2rem}
+.sheet header{display:flex;gap:.5rem;padding:.2rem .9rem .4rem}
+.sheet header div{flex:1}
+.sheet h3{font-size:1rem}.sheet .addr{font-size:.76rem;color:var(--mut)}
+.x{border:none;background:#f1ece1;border-radius:50%;width:38px;height:38px;cursor:pointer;font-size:1rem}
+.dbody{padding:.4rem .9rem calc(1rem + var(--sat));overflow:auto}
+.fuels{display:grid;grid-template-columns:1fr auto;gap:.3rem .8rem;font-size:.85rem;margin:.4rem 0 .6rem}
+.fuels b{font-variant-numeric:tabular-nums}
+.hrow{display:flex;gap:.4rem;margin:.4rem 0}
+.hrow select{flex:1;border:1px solid var(--line);border-radius:10px;padding:.5rem;min-height:44px;background:#fff}
+canvas{width:100%;height:170px;background:#f7f3ea;border:1px solid var(--line);border-radius:12px}
+.note{font-size:.72rem;color:var(--mut);line-height:1.45;margin-top:.4rem}
+/* toast */
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:#232019;color:#fff;padding:.6rem 1rem;border-radius:99px;font-size:.8rem;opacity:0;transition:.2s;z-index:200;max-width:92vw;text-align:center}
+.toast.show{opacity:1}
+/* desktop */
+@media(min-width:980px){
+  .main{grid-template-columns:1.05fr .95fr;align-items:start;padding-bottom:1rem}
+  .col-a,.col-b{display:flex;flex-direction:column;gap:.6rem;min-width:0}
+  .col-b{position:sticky;top:150px}
+  .svgal{display:block}
+  .sum{position:static;background:none;border:none;box-shadow:none;padding:0}
+  .sum .in{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:.7rem}
+  .app{padding-bottom:0}
+  .tl{max-height:none}
+}
+@media(max-width:400px){.pp b{font-size:1.1rem}}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="top">
+  <div class="trow"><h1>🧭 Trayecto <small>Reposta camino al destino · datos simulados</small></h1><button class="ibtn" id="helpBtn" title="Cómo funciona">?</button></div>
+  <div class="routeform">
+    <div class="fields">
+      <label class="field"><i>●</i><input id="from" value="Madrid" aria-label="Origen"><small>origen</small></label>
+      <label class="field"><i>◉</i><input id="to" value="Valencia" aria-label="Destino"><small>destino · 355 km</small></label>
+    </div>
+    <button class="swap" id="swap" title="Invertir">⇅</button>
+  </div>
+  <div class="veh" id="veh"></div>
+</div>
+
+<div class="aut" id="aut"></div>
+
+<div class="main">
+  <div class="col-a">
+    <div class="section">
+      <h2>⚙️ Tu depósito</h2>
+      <p class="hint">Ajusta litros a repostar y consumo: el ahorro neto se recalcula.</p>
+      <div class="veh" style="padding:0">
+        <span class="chip" style="cursor:default">🛢️ Quedan <b id="left">20</b> L</span>
+        <span class="chip" style="cursor:default">⛽ Repostar <b id="buy">30</b> L</span>
+        <span class="chip" style="cursor:default">📉 <b id="cons">6,5</b> L/100</span>
+        <span class="chip" style="cursor:default">🔄 <b id="rtTxt">Solo ida</b></span>
+      </div>
+      <div class="actions" style="margin-top:.5rem">
+        <button data-step="left:-5">−5 L quedan</button><button data-step="left:5">+5 L</button>
+        <button data-step="buy:-5">−5 L repostar</button><button data-step="buy:5">+5 L</button>
+        <button data-step="cons:-0.5">−0,5 cons.</button><button data-step="cons:0.5">+0,5 cons.</button>
+        <button id="rt">🔄 Ida y vuelta</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>🛣️ Paradas en la ruta</h2>
+      <p class="hint" id="stHint">Ordenadas por ahorro neto: precio × litros menos el desvío.</p>
+      <div class="sortrow">
+        <button class="chip on" data-sort="net">Ahorro neto</button>
+        <button class="chip" data-sort="precio">Precio</button>
+        <button class="chip" data-sort="km">Km</button>
+        <button class="chip" data-sort="detour">Menos desvío</button>
+      </div>
+      <div class="tl" id="tl"></div>
+    </div>
+  </div>
+
+  <div class="col-b">
+    <div class="section svgal" id="svgal"></div>
+    <div class="section">
+      <h2>💡 Por qué esta parada</h2>
+      <div id="why" class="note"></div>
+    </div>
+  </div>
+</div>
+
+<div class="sum"><div class="in">
+  <div class="who" id="sumWho">—</div>
+  <div class="val">Ahorro neto<b id="sumVal">—</b></div>
+  <button id="sumBtn">Guardar ruta</button>
+</div></div>
+</div>
+
+<div class="sheet" id="sheet"><div class="grab"></div>
+  <header><div><h3 id="dB">—</h3><div class="addr" id="dA">—</div></div><button class="x" id="dX">✕</button></header>
+  <div class="dbody">
+    <div class="fuels" id="dF"></div>
+    <p class="note" id="dCalc"></p>
+    <div class="hrow"><select id="hF"><option>Gasolina 95</option><option>Gasóleo A</option></select><select id="hD"><option value="7">7 días</option><option value="14" selected>14 días</option><option value="30">30 días</option></select></div>
+    <canvas id="ch" width="620" height="170"></canvas>
+    <p class="note" id="hT"></p>
+    <div class="actions"><button class="primary" id="dPick">Elegir esta parada</button><button onclick="toast('🧭 Navegación simulada')">🧭 Ir</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================== DATOS FAKE ================== */
+const ROUTE={from:"Madrid",to:"Valencia",km:355};
+const FUELS=[["Gasolina 95","p95"],["Gasóleo A","da"]];
+const STOPS=[
+ {id:1,km:38, marca:"Repsol",loc:"Aranjuez",calle:"A-4 salida 47",p95:1.589,da:1.519,detourMin:0,detourKm:0},
+ {id:2,km:95, marca:"Ballenoil",loc:"Ocaña",calle:"N-301 km 62",p95:1.429,da:1.359,detourMin:6,detourKm:2.4},
+ {id:3,km:150,marca:"Plenergy",loc:"La Roda",calle:"A-31 km 12",p95:1.439,da:1.369,detourMin:4,detourKm:1.6},
+ {id:4,km:210,marca:"Cepsa",loc:"Albacete",calle:"Av. Castilla-La Mancha",p95:1.569,da:1.499,detourMin:2,detourKm:.8},
+ {id:5,km:280,marca:"Ballenoil",loc:"Requena",calle:"A-3 km 285",p95:1.459,da:1.389,detourMin:8,detourKm:3.2},
+ {id:6,km:325,marca:"Shell",loc:"Valencia",calle:"Av. del Puerto 210",p95:1.629,da:1.559,detourMin:0,detourKm:0}
+];
+/* coste del desvío: combustible extra + tiempo (0,15 €/min) */
+const MIN_EUR=.15, CONSUMPTION_DEFAULT=6.5;
+let fuel=FUELS[0][0],left=20,buy=30,cons=CONSUMPTION_DEFAULT,roundTrip=false,sortK="net",picked=null,sel=null;
+const $=id=>document.getElementById(id);
+function toast(t){const e=$("toast");e.textContent=t;e.classList.add("show");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("show"),1900)}
+function price(s,f){f=f||fuel;return s[FUELS.find(x=>x[0]==f)[1]]}
+function tripKm(){return ROUTE.km*(roundTrip?2:1)}
+function litersForTrip(){return tripKm()*cons/100}
+function detourCost(s){return s.detourKm*2*cons/100*price(s)+s.detourMin*MIN_EUR}
+function refPrice(){const ps=STOPS.map(s=>price(s));return ps.reduce((a,b)=>a+b,0)/ps.length}
+function saving(s){return (refPrice()-price(s))*buy-detourCost(s)}
+function fmt(n){return n.toFixed(3).replace(".",",")}
+/* ================== RENDER ================== */
+$("veh").innerHTML=FUELS.map((f,i)=>`<button class="chip${i==0?" on":""}" data-f="${f[0]}">${f[0]}</button>`).join("");
+document.querySelectorAll("#veh .chip").forEach(c=>c.onclick=()=>{document.querySelectorAll("#veh .chip").forEach(x=>x.classList.remove("on"));c.classList.add("on");fuel=c.dataset.f;render()});
+function autonomy(){
+  const range=left/cons*100, dest=tripKm();
+  $("left").textContent=left;$("buy").textContent=buy;$("cons").textContent=String(cons).replace(".",",");
+  $("rtTxt").textContent=roundTrip?"Ida y vuelta":"Solo ida";
+  const need=litersForTrip();
+  $("aut").innerHTML = range>=dest
+    ? `✅ Con <b>${left} L</b> llegas al destino (${Math.round(range)} km de autonomía para ${dest} km). Repostar es opcional: la parada elegida es la que más ahorra.`
+    : `⚠️ Con <b>${left} L</b> te quedan <b>${Math.round(range)} km</b> y el destino está a <b>${dest} km</b>. Tienes que parar antes del <b>km ${Math.round(range)}</b>. Para el trayecto necesitas ~<b>${need.toFixed(0)} L</b>.`;
+}
+function render(){
+  autonomy();
+  let arr=STOPS.slice();
+  if(sortK=="net")arr.sort((a,b)=>saving(b)-saving(a));
+  if(sortK=="precio")arr.sort((a,b)=>price(a)-price(b));
+  if(sortK=="km")arr.sort((a,b)=>a.km-b.km);
+  if(sortK=="detour")arr.sort((a,b)=>a.detourMin-b.detourMin);
+  const best=STOPS.slice().sort((a,b)=>saving(b)-saving(a))[0];
+  const chosen=picked?STOPS.find(s=>s.id==picked):best;
+  $("tl").innerHTML=arr.map(s=>{
+    const net=saving(s),isBest=s.id==best.id,isSel=s.id==picked;
+    return `<div class="stop${isBest?" best":""}${isSel?" sel":""}">
+      <div class="km">km ${s.km} · ${s.loc}</div>
+      <button class="scard${isBest?" best":""}${isSel?" sel":""}" data-id="${s.id}">
+        <div class="srow">
+          <div class="who"><b>${s.marca}</b><div class="sub">${s.calle}</div>
+          <div class="tags">${isBest?'<span class="tag bestT">Mejor parada</span>':""}<span class="tag detour">${s.detourMin?s.detourMin+" min · "+String(s.detourKm).replace(".",",")+" km de desvío":"en ruta"}</span><span class="tag save">${net>=0?"Ahorras":"Cuesta"}</span></div></div>
+          <div class="pp"><b>${fmt(price(s))} €</b><div class="net ${net>=0?"plus":"minus"}">${net>=0?"+":""}${net.toFixed(2)} €</div></div>
+        </div>
+      </button>
+      <div class="actions"><button data-pick="${s.id}" class="${isSel?"primary on":"primary"}">${isSel?"✓ Elegida":"Elegir parada"}</button><button data-info="${s.id}">Ver ficha</button></div>
+    </div>`}).join("");
+  document.querySelectorAll(".scard").forEach(c=>c.onclick=()=>detail(+c.dataset.id));
+  document.querySelectorAll("[data-info]").forEach(b=>b.onclick=()=>detail(+b.dataset.info));
+  document.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>pick(+b.dataset.pick));
+  $("sumWho").innerHTML=`<b>${chosen.marca} · km ${chosen.km}</b>${chosen.loc} · ${chosen.detourMin?chosen.detourMin+" min de desvío":"sin desvío"} · repostar ${buy} L`;
+  $("sumVal").textContent=(saving(chosen)>=0?"+":"")+saving(chosen).toFixed(2)+" €";
+  $("sumBtn").textContent=picked?"✓ Ruta guardada":"Guardar ruta";
+  $("sumBtn").classList.toggle("saved",!!picked);
+  $("why").innerHTML=`La media de la ruta es <b>${fmt(refPrice())} €</b>. En <b>${chosen.marca}</b> cuesta <b>${fmt(price(chosen))} €</b>: con ${buy} L son <b>${((refPrice()-price(chosen))*buy).toFixed(2)} €</b> de diferencia. El desvío cuesta <b>${detourCost(chosen).toFixed(2)} €</b> (${chosen.detourMin} min + ${String(chosen.detourKm).replace(".",",")} km), así que el ahorro neto queda en <b>${saving(chosen).toFixed(2)} €</b>. ${chosen.detourMin?"Si vas con prisa, la de km 38 no desvía y aun así ahorra "+saving(STOPS[0]).toFixed(2)+" €.":"Está en la propia ruta: sin desvío."}`;
+  drawMap(best,chosen);
+}
+function pick(id){picked=picked==id?null:id;render();if(picked)toast("Parada guardada en la ruta")}
+function drawMap(best,chosen){
+  const el=$("svgal");if(!el)return;
+  const W=520,H=300,pad=40;
+  const X=km=>pad+km/ROUTE.km*(W-pad*2);
+  const Y=i=>70+i*38;
+  el.innerHTML=`<h2>🗺️ Ruta simulada</h2><p class="hint">${ROUTE.from} → ${ROUTE.to} · ${tripKm()} km</p>
+  <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ruta con paradas">
+    <path d="M${pad} ${Y(0)-20} C ${W*.25} 120, ${W*.3} 200, ${W*.55} 170 S ${W*.85} 90, ${W-pad} 70" fill="none" stroke="#c9bfa9" stroke-width="10" stroke-linecap="round"/>
+    <path d="M${pad} ${Y(0)-20} C ${W*.25} 120, ${W*.3} 200, ${W*.55} 170 S ${W*.85} 90, ${W-pad} 70" fill="none" stroke="#2f8f60" stroke-width="4" stroke-dasharray="10 8"/>
+    ${STOPS.map((s,i)=>{const x=X(s.km),y=70+i*0;const t=s.km/ROUTE.km;const yy=110-40*t+ (i%2?18:-8);
+      const c=s.id==chosen.id?"#b45309":s.id==best.id?"#1f6b46":"#8b8272";
+      return `<circle cx="${X(s.km)}" cy="${yy}" r="${s.id==chosen.id?9:6}" fill="${c}" stroke="#fffdf8" stroke-width="3"><title>${s.marca} · km ${s.km}</title></circle>
+      <text x="${X(s.km)}" y="${yy-14}" font-size="9" fill="#7c7466" text-anchor="middle">${s.marca}</text>`}).join("")}
+    <circle cx="${pad}" cy="${Y(0)-20}" r="5" fill="#232019"/><text x="${pad}" y="${Y(0)-30}" font-size="10" fill="#232019">${ROUTE.from}</text>
+    <circle cx="${W-pad}" cy="70" r="5" fill="#232019"/><text x="${W-pad}" y="58" font-size="10" fill="#232019" text-anchor="end">${ROUTE.to}</text>
+  </svg>`;
+}
+/* ================== INTERACCIÓN ================== */
+document.querySelectorAll("[data-step]").forEach(b=>b.onclick=()=>{const [k,d]=b.dataset.step.split(":");if(k=="left")left=Math.max(0,Math.min(60,left+ +d));if(k=="buy")buy=Math.max(5,Math.min(60,buy+ +d));if(k=="cons")cons=Math.max(4,Math.min(12,cons+ +d));render()});
+$("rt").onclick=()=>{roundTrip=!roundTrip;render()};
+document.querySelectorAll("[data-sort]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-sort]").forEach(x=>x.classList.remove("on"));b.classList.add("on");sortK=b.dataset.sort;render()});
+$("swap").onclick=()=>{const a=$("from").value;$("from").value=$("to").value;$("to").value=a;toast("Origen y destino invertidos")};
+$("sumBtn").onclick=()=>{picked=picked||STOPS.slice().sort((a,b)=>saving(b)-saving(a))[0].id;render();toast("Ruta guardada: avisaremos si cambia el precio")};
+$("helpBtn").onclick=()=>toast("Elige la parada con mejor ahorro neto: precio × litros menos desvío");
+$("from").onchange=$("to").onchange=()=>toast("Ruta simulada: los datos no cambian");
+/* ficha */
+function detail(id){sel=id;const s=STOPS.find(x=>x.id==id);
+  $("dB").textContent=s.marca;$("dA").textContent=`km ${s.km} · ${s.loc} · ${s.calle}`;
+  $("dF").innerHTML=FUELS.map(f=>`<span>${f[0]}</span><b>${fmt(price(s,f[0]))} €</b>`).join("");
+  $("dCalc").innerHTML=`Desvío: <b>${s.detourMin} min</b> y <b>${String(s.detourKm).replace(".",",")} km</b> → coste ${detourCost(s).toFixed(2)} €.<br>Con ${buy} L ahorras <b>${saving(s).toFixed(2)} €</b> netos frente a la media de la ruta.`;
+  $("sheet").classList.add("open");drawChart(s,14);$("hD").onchange=e=>drawChart(s,+e.target.value);$("hF").onchange=()=>drawChart(s,+$("hD").value);
+  $("dPick").onclick=()=>{pick(id);$("sheet").classList.remove("open")};
+  $("sheet").dataset.id=id;
+}
+$("dX").onclick=()=>$("sheet").classList.remove("open");
+function drawChart(s,days){
+  const f=$("hF").value,base=price(s,f);let p=base+.04,pts=[];
+  for(let i=days-1;i>=0;i--){p+=(Math.sin(i*2.1+s.id)-.45)*.008;pts.push(p)}pts.push(base);
+  const c=$("ch"),x=c.getContext("2d"),W=c.width,H=c.height;x.clearRect(0,0,W,H);
+  const mn=Math.min(...pts)-.004,mx=Math.max(...pts)+.004,X=i=>28+i*(W-44)/(pts.length-1),Y=v=>H-20-(v-mn)/(mx-mn)*(H-42);
+  x.strokeStyle="#e6ddcc";x.beginPath();for(let g=0;g<3;g++){x.moveTo(28,12+g*(H-34)/2);x.lineTo(W-16,12+g*(H-34)/2)}x.stroke();
+  x.beginPath();pts.forEach((v,i)=>i?x.lineTo(X(i),Y(v)):x.moveTo(X(i),Y(v)));x.strokeStyle="#1f6b46";x.lineWidth=3;x.stroke();
+  const mi=pts.indexOf(Math.min(...pts)),ma=pts.indexOf(Math.max(...pts));
+  x.fillStyle="#1f6b46";x.beginPath();x.arc(X(mi),Y(pts[mi]),5,0,7);x.fill();
+  x.fillStyle="#b3261e";x.beginPath();x.arc(X(ma),Y(pts[ma]),5,0,7);x.fill();
+  $("hT").textContent=`${f}: mín ${fmt(Math.min(...pts))} € · máx ${fmt(Math.max(...pts))} € · ${days} días (simulado). La serie acaba en el precio de hoy.`;
+}
+/* init */
+render();
+</script>
+</body>
+</html>

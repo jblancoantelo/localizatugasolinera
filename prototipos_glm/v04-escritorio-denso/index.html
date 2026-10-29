@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>v04 · Escritorio denso — 3 columnas en PC, apilado en móvil</title>
+<style>
+:root{
+  --fondo:#f3f4f6; --panel:#fff; --tinta:#1b2430; --sub:#6a7482; --linea:#e2e5ea;
+  --pri:#0f6bff; --pri-suave:#e8f0ff; --verde:#0a8a3c; --rojo:#c62828;
+  --baja:#0a8a3c; --media:#c07a00; --alta:#c62828;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:var(--tinta);overflow:hidden}
+button{font-family:inherit}
+select,input{font-family:inherit}
+
+/* ===== barra superior ===== */
+.bar{height:52px;background:var(--panel);border-bottom:1px solid var(--linea);display:flex;align-items:center;
+  gap:10px;padding:0 14px;flex-shrink:0}
+.bar .logo{font-weight:800;font-size:.98rem;display:flex;align-items:center;gap:8px}
+.bar .logo i{width:26px;height:26px;border-radius:8px;background:var(--pri);color:#fff;display:grid;place-items:center;font-size:.8rem;font-style:normal}
+.bar .esp{flex:1}
+.bar .cnt{font-size:.78rem;color:var(--sub);background:var(--fondo);border:1px solid var(--linea);
+  border-radius:999px;padding:5px 12px;white-space:nowrap}
+.bar .brr{border:1px solid var(--linea);background:#fff;border-radius:10px;padding:8px 12px;font-size:.8rem;font-weight:600;cursor:pointer}
+.bar .brr.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+
+.espaciado{height:100%;display:flex;flex-direction:column}
+.prin{flex:1;display:flex;min-height:0}
+
+/* ===== sidebar filtros ===== */
+.side{width:288px;background:var(--panel);border-right:1px solid var(--linea);overflow-y:auto;padding:14px;flex-shrink:0;display:flex;flex-direction:column;gap:16px}
+@media (max-width:900px){ .side{position:fixed;z-index:80;inset:0 22% 0 0;border-radius:0 20px 20px 0;transform:translateX(-102%);transition:.25s;width:78%} .side.abierto{transform:none;box-shadow:0 0 40px rgba(0,0,0,.25)} }
+.grupo{border:1px solid var(--linea);border-radius:14px;padding:12px;background:#fcfdfe}
+.grupo h5{margin:0 0 10px;font-size:.76rem;text-transform:uppercase;letter-spacing:.8px;color:var(--sub)}
+.grupo select{width:100%;border:1px solid var(--linea);border-radius:10px;padding:9px;background:#fff;font-size:.86rem;color:var(--tinta)}
+.fgas{display:flex;flex-wrap:wrap;gap:6px}
+.fgas button{border:1px solid var(--linea);background:#fff;border-radius:9px;padding:6px 10px;font-size:.74rem;font-weight:700;cursor:pointer;color:var(--tinta)}
+.fgas button.act{background:var(--pri);border-color:var(--pri);color:#fff}
+.desplegar{display:flex;flex-direction:column;gap:7px;max-height:190px;overflow-y:auto}
+.desplegar label{display:flex;align-items:center;gap:8px;font-size:.82rem;cursor:pointer;padding:3px 2px;border-radius:6px}
+.desplegar label:hover{background:var(--pri-suave)}
+.desplegar input{width:34px;height:21px}
+.desplegar .ct{color:var(--sub);font-size:.72rem;margin-left:auto}
+.swfil{display:flex;align-items:center;justify-content:space-between;font-size:.84rem;background:var(--fondo);border-radius:10px;padding:9px 11px;cursor:pointer}
+.bus2{position:relative}
+.bus2 input{width:100%;border:1px solid var(--linea);border-radius:10px;padding:9px 10px 9px 32px;font-size:.86rem;background:#fff;color:var(--tinta)}
+.bus2::before{content:'🔍';position:absolute;left:9px;top:8px;font-size:.8rem;pointer-events:none}
+
+/* ===== lista densa ===== */
+.lda{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--fondo)}
+@media (max-width:900px){ .lda{width:100%} }
+.cabezal{display:grid;grid-template-columns:44px 1.35fr 96px 88px 1.4fr 84px;gap:6px;padding:9px 12px;background:var(--panel);
+  border-bottom:1px solid var(--linea);font-size:.72rem;font-weight:700;color:var(--sub);position:sticky;top:0;z-index:5}
+.cabezal .ordn{cursor:pointer;display:flex;align-items:center;gap:4px;user-select:none}
+.cabezal .ordn.flecha-a::after{content:'▲';font-size:.55rem;color:var(--pri)}
+.cabezal .ordn.flecha-d::after{content:'▼';font-size:.55rem;color:var(--pri)}
+.fila{display:grid;grid-template-columns:44px 1.35fr 96px 88px 1.4fr 84px;gap:6px;align-items:center;padding:0 12px;
+  height:46px;background:var(--panel);border-bottom:1px solid #eef0f3;cursor:pointer;font-size:.84rem;transition:background .12s}
+.fila:hover{background:var(--pri-suave)}
+.fila.act{background:var(--pri-suave);box-shadow:inset 3px 0 0 var(--pri)}
+.fila .lm{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:.7rem}
+.fila .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fila .dir{color:var(--sub);font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fila .lc{color:var(--sub);font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fila .pre{font-weight:800;font-size:.95rem;text-align:right;letter-spacing:-.4px}
+.fila .dst{color:var(--sub);font-size:.78rem;text-align:right}
+.fila .st{background:none;border:none;font-size:1rem;cursor:pointer;color:#c3cad3}
+.fila .st.on{color:#f5a623}
+@media (max-width:900px){
+  .cabezal,.fila{grid-template-columns:38px 1.3fr 86px 30px}
+  .fila .dir,.fila .dst,.cabezal .oculta{display:none}
+  .cabezal{padding:8px 10px}.fila{height:52px;padding:0 10px}
+  .fila .pre{font-size:1rem}
+}
+.pagin{background:var(--panel);border-top:1px solid var(--linea);padding:8px 12px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.pagin button{border:1px solid var(--linea);background:#fff;border-radius:9px;padding:7px 13px;font-size:.8rem;font-weight:600;cursor:pointer}
+.pagin button:disabled{opacity:.4}
+.pagin .pg{font-size:.8rem;color:var(--sub);flex:1;text-align:center}
+.pagin select{border:1px solid var(--linea);border-radius:9px;padding:6px;font-size:.78rem;background:#fff}
+
+/* ===== panel derecho ===== */
+.dercha{width:340px;background:var(--panel);border-left:1px solid var(--linea);display:flex;flex-direction:column;min-height:0}
+@media (max-width:1128px){ .dercha{display:none} }
+.dmapa{height:46%;position:relative;border-bottom:1px solid var(--linea);flex-shrink:0}
+.pin{position:absolute;transform:translate(-50%,-100%);border:none;border-radius:12px 12px 12px 3px;font-weight:800;font-size:.68rem;
+  padding:4px 7px;color:#fff;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.pin.nivel-baja{background:var(--baja)}.pin.nivel-media{background:var(--media)}.pin.nivel-alta{background:var(--alta)}
+.pin.pin-sel{outline:3px solid #fff;transform:translate(-50%,-120%) scale(1.2)}
+.pin.pin-fav::after{content:' ★'}
+.ddetalle{flex:1;overflow-y:auto;padding:14px}
+.ddetalle h4{margin:0 0 2px;font-size:1rem}
+.ddetalle .dirr{font-size:.78rem;color:var(--sub);margin-bottom:10px}
+.dnube{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.dcelda{border:1px solid var(--linea);border-radius:12px;padding:9px 11px;cursor:pointer;background:#fff}
+.dcelda.act{border-color:var(--pri);background:var(--pri-suave)}
+.dcelda .ct{font-size:.66rem;color:var(--sub);font-weight:600}
+.dcelda .vl{font-size:1.02rem;font-weight:800;margin-top:2px}
+.dgraf{border:1px solid var(--linea);border-radius:12px;padding:9px 7px 3px;margin-top:4px}
+.lm-line{stroke:#e6eaef}.lm-num{font-size:8px;fill:#8b96a3}
+.dacc{display:flex;gap:7px;margin-top:12px}
+.dacc button{flex:1;border:1px solid var(--linea);background:#fff;border-radius:10px;padding:9px 4px;font-size:.78rem;font-weight:700;cursor:pointer}
+.dacc .pri{background:var(--pri);color:#fff;border-color:var(--pri)}
+.dacc .al{color:var(--rojo)}
+.estadistica{font-size:.76rem;color:var(--sub);background:var(--fondo);border-radius:10px;padding:9px 11px;margin-top:12px;line-height:1.5}
+
+/* ===== móvil: pestañas inferior ===== */
+.mtabs{display:none}
+@media (max-width:900px){
+  .mtabs{display:flex;background:var(--panel);border-top:1px solid var(--linea);padding:6px 6px calc(6px + env(safe-area-inset-bottom));position:relative;z-index:40;flex-shrink:0}
+  .mtabs button{flex:1;border:none;background:none;font-size:.68rem;font-weight:700;color:var(--sub);padding:6px 0;cursor:pointer}
+  .mtabs button.act{color:var(--pri)}
+  .mtabs .ic{display:block;font-size:1.1rem}
+  .dercha{position:fixed;z-index:70;inset:0;transform:translateY(102%);transition:.28s;border-radius:20px 20px 0 0;width:100%;border-left:none}
+  .dercha.abierto{transform:none}
+  .dmapa{height:34%}
+}
+/* FAB filtros móvil */
+.fabfil{display:none}
+@media (max-width:900px){ .fabfil{display:grid;place-items:center;position:fixed;right:14px;bottom:calc(70px + env(safe-area-inset-bottom));z-index:60;
+  width:50px;height:50px;border-radius:16px;border:none;background:var(--pri);color:#fff;font-size:1.2rem;box-shadow:0 6px 16px rgba(15,107,255,.35)}
+  .dercha.abierto ~ .fabfil{display:none} }
+
+/* overlay ficha móvil cerrar */
+.cerrard{position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:999px;border:none;background:var(--fondo);
+  font-size:.9rem;cursor:pointer;z-index:5;color:var(--tinta)}
+@media (max-width:900px){
+  .dercha.solo-mapa .ddetalle{display:none}
+  .dercha.solo-mapa .dmapa{height:auto;flex:1}
+  .dercha.abierto{overflow:hidden}
+}
+
+.snack{position:fixed;left:50%;bottom:calc(74px + env(safe-area-inset-bottom));transform:translate(-50%,12px);z-index:99;
+  background:#1b2430;color:#fff;font-size:.8rem;padding:9px 15px;border-radius:999px;opacity:0;pointer-events:none;transition:.25s}
+.snack-vis{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div class="espaciado">
+  <div class="bar">
+    <span class="logo"><i>⛽</i> Precios · panel denso</span>
+    <button class="brr" id="bFiltM" style="display:none">≡ Filtros</button>
+    <div class="esp"></div>
+    <span class="cnt" id="bCont">38 estaciones · G.95 · Madrid</span>
+    <button class="brr" id="bExp">⬇ CSV</button>
+    <button class="brr pri" id="bAct">↻ Actualizar</button>
+  </div>
+
+  <div class="prin">
+    <aside class="side" id="side">
+      <div class="bus2"><input id="qq" placeholder="Calle, marca o localidad…"></div>
+      <div class="grupo">
+        <h5>Provincia</h5>
+        <select id="sProv"></select>
+      </div>
+      <div class="grupo">
+        <h5>Localidad</h5>
+        <select id="sLoc"><option value="Todas">Todas</option></select>
+      </div>
+      <div class="grupo">
+        <h5>Combustible</h5>
+        <div class="fgas" id="gComb"></div>
+      </div>
+      <div class="grupo">
+        <h5>Marca</h5>
+        <div class="desplegar" id="gMarcas"></div>
+      </div>
+      <div class="grupo">
+        <h5>Otros</h5>
+        <div class="swfil" id="swFav">⭐ Solo favoritas <b style="color:var(--sub)" id="swFavV">no</b></div>
+        <div class="swfil" id="swOrd" style="margin-top:8px">↓ Ordenar por precio</div>
+      </div>
+      <button class="brr" id="bReset" style="margin-top:auto;border:1px solid #f0d3d3;color:var(--rojo);background:#fff">✕ Limpiar filtros</button>
+    </aside>
+
+    <section class="lda">
+      <div class="cabezal">
+        <span></span>
+        <span class="ordn flecha-a" data-c="marca" style="user-select:none">Marca</span>
+        <span class="ordn" data-c="precio">Precio €/L</span>
+        <span class="ordn oculta" data-c="dist">Distancia</span>
+        <span class="oculta" style="user-select:none">Calle</span>
+        <span style="text-align:right">⭐</span>
+      </div>
+      <div style="flex:1;overflow-y:auto" id="filas"></div>
+      <div class="pagin">
+        <button id="pPrev">◀</button><span class="pg" id="pTxt">1/2</span><button id="pNext">▶</button>
+        <select id="pTam"><option>15</option><option selected>30</option><option>50</option><option>All</option></select>
+      </div>
+    </section>
+
+    <section class="dercha" id="derch">
+      <div class="dmapa" id="mD"> </div>
+      <div class="ddetalle" id="dDet"><p style="color:var(--sub);font-size:.86rem">Toca una fila o un pin para ver aquí
+        los precios, el histórico y las acciones de la estación sin cambiar de vista.</p></div>
+      <button class="cerrard" id="dCierra">✕</button>
+    </section>
+  </div>
+
+  <nav class="mtabs">
+    <button data-v="lista" class="act"><span class="ic">☰</span>Lista</button>
+    <button data-v="mapa"><span class="ic">🗺️</span>Mapa</button>
+    <button data-v="favoritas"><span class="ic">★</span>Favoritas</button>
+    <button data-v="detalle"><span class="ic">▣</span>Detalle</button>
+  </nav>
+</div>
+<button class="fabfil" id="fabFil">≡</button>
+<div class="snack" id="snk"></div>
+
+<script src="../_lib/mock.js"></script>
+<script>
+(function(){
+'use strict';
+var ST={prov:'Madrid',loc:'Todas',comb:'Gasolina 95 E5',marcas:[],soloFav:false,
+  ord:{c:'precio',d:'asc'},q:'',pag:1,tam:30,sel:null,vista:'lista',favoritos:{}};
+GLM.de('Madrid').forEach(function(e){ST.favoritos[e.id]=!!e.fav});
+var mmD=GLM.miniMapa(document.getElementById('mD'),{onpin:function(est){abreD(est.id,true)}});
+
+function snack(m){var s=document.getElementById('snk');s.textContent=m;s.classList.add('snack-vis');
+  clearTimeout(s._t);s._t=setTimeout(function(){s.classList.remove('snack-vis')},2200)}
+
+/* ---------- sidebar ---------- */
+document.getElementById('sProv').innerHTML=GLM.PROVINCIAS.map(function(p){
+  return '<option'+(p===ST.prov?' selected':'')+'>'+p+'</option>';
+}).join('');
+document.getElementById('sProv').addEventListener('change',function(){
+  ST.prov=this.value;ST.loc='Todas';ST.pag=1;renderTodo();snack('Provincia: '+ST.prov);
+});
+function pintaComb(){
+  document.getElementById('gComb').innerHTML=GLM.COMBUSTIBLES.slice(0,6).map(function(c){
+    return '<button'+(ST.comb===c?' class="act"':'')+' data-g="'+c+'">'+GLM.COMBUSTIBLES_CORTOS[c]+'</button>';
+  }).join('');
+}
+document.getElementById('gComb').addEventListener('click',function(e){
+  var b=e.target.closest('[data-g]');if(!b)return;
+  ST.comb=b.dataset.g;ST.pag=1;renderTodo();
+});
+function pintaMarcas(){
+  document.getElementById('gMarcas').innerHTML=GLM.MARCAS.map(function(m){
+    var ct=GLM.de(ST.prov).filter(function(e){return e.marca===m.n}).length;
+    return '<label><input type="checkbox" data-m="'+m.n+'"'+(ST.marcas.indexOf(m.n)>=0?' checked':'')+'>'+m.n+'<span class="ct">'+ct+'</span></label>';
+  }).join('');
+}
+document.getElementById('gMarcas').addEventListener('change',function(e){
+  var cb=e.target.closest('[data-m]');if(!cb)return;
+  var m=cb.dataset.m,i=ST.marcas.indexOf(m);
+  if(cb.checked&&i<0)ST.marcas.push(m);
+  if(!cb.checked&&i>=0)ST.marcas.splice(i,1);
+  ST.pag=1;renderTodo();
+});
+document.getElementById('sLoc').addEventListener('change',function(){ST.loc=this.value;ST.pag=1;renderTodo()});
+document.getElementById('swFav').addEventListener('click',function(){
+  ST.soloFav=!ST.soloFav;
+  document.getElementById('swFavV').textContent=ST.soloFav?'sí':'no';
+  renderTodo();
+});
+document.getElementById('bReset').addEventListener('click',function(){
+  ST={prov:ST.prov,loc:'Todas',comb:'Gasolina 95 E5',marcas:[],soloFav:false,
+    ord:{c:'precio',d:'asc'},q:'',pag:1,tam:ST.tam,sel:null,vista:ST.vista,favoritos:ST.favoritos};
+  document.getElementById('qq').value='';
+  renderTodo();snack('Filtros limpiados');
+});
+document.getElementById('qq').addEventListener('input',function(){ST.q=this.value;ST.pag=1;renderTodo()});
+
+/* ---------- cómputo ---------- */
+function filtradas(){
+  var l=GLM.de(ST.prov,{loc:ST.loc,marcas:ST.marcas});
+  if(ST.soloFav||ST.vista==='favoritas')l=l.filter(function(e){return ST.favoritos[e.id]});
+  if(ST.q){var q=ST.q.toLowerCase();
+    l=l.filter(function(e){return (e.marca+' '+e.direccion+' '+e.localidad).toLowerCase().indexOf(q)>=0});}
+  var c=ST.ord.c,d=ST.ord.d==='asc'?1:-1;
+  var con=l.filter(function(e){return e.precios[ST.comb]!=null}),
+      sin=l.filter(function(e){return e.precios[ST.comb]==null});
+  con.sort(function(a,b){
+    if(c==='marca')return d*a.marca.localeCompare(b.marca,'es');
+    if(c==='dist')return d*(a.dist-b.dist);
+    return d*(GLM.precioFinal(a,ST.comb)-GLM.precioFinal(b,ST.comb));
+  });
+  return con.concat(sin);
+}
+function est(id){
+  return filtradas().filter(function(x){return x.id===id})[0];
+}
+function mediaProv(){
+  var l=filtradas();
+  return l.reduce(function(t,e){return t+GLM.precioFinal(e,ST.comb)},0)/(l.length||1);
+}
+
+/* ---------- render lista ---------- */
+function fila(e){
+  var fin=e.precios[ST.comb]==null?null:GLM.precioFinal(e,ST.comb);
+  return '<div class="fila'+(ST.sel===e.id?' act':'')+'" data-id="'+e.id+'">'+
+    '<span class="lm" style="background:'+GLM.colorMarca(e.marca)+'">'+e.marca.slice(0,2)+'</span>'+
+    '<span class="nm">'+e.marca+'</span>'+
+    '<span class="pre nivel-'+(fin==null?'media':GLM.nivel(fin))+'">'+(fin==null?'—':GLM.fmt(fin))+'</span>'+
+    '<span class="dst">'+GLM.fmt2(e.dist)+' km</span>'+
+    '<span class="dir">'+e.direccion+' · '+e.localidad+'</span>'+
+    '<button class="st'+(ST.favoritos[e.id]?' on':'')+'" data-fav="'+e.id+'" title="Favorita">'+(ST.favoritos[e.id]?'★':'☆')+'</button></div>';
+}
+function render(){
+  var l=filtradas(), tam=ST.tam,
+      pgs=Math.max(1,Math.ceil(l.length/tam));
+  if(ST.pag>pgs)ST.pag=pgs;
+  var vis=tam?l.slice((ST.pag-1)*tam,ST.pag*tam):l;
+  document.getElementById('filas').innerHTML=vis.map(fila).join('')||
+    '<p style="text-align:center;color:var(--sub);padding:40px 12px">Sin resultados. Limpia algún filtro.</p>';
+  document.getElementById('pTxt').textContent=l.length+' '+(tam?'· pág '+ST.pag+'/'+pgs:'');
+  document.getElementById('pPrev').disabled=ST.pag<=1;
+  document.getElementById('pNext').disabled=ST.pag>=pgs;
+  document.getElementById('bCont').textContent=l.length+' est. · '+GLM.COMBUSTIBLES_CORTOS[ST.comb]+' · '+
+    ST.prov+(ST.soloFav?' · ⭐':'');
+  var op=document.querySelector('.cabezal .ordn.act');
+  document.querySelectorAll('.cabezal .ordn').forEach(function(o){
+    o.classList.remove('act','flecha-a','flecha-d');
+    if(o.dataset.c===ST.ord.c) o.classList.add('act',ST.ord.d==='asc'?'flecha-a':'flecha-d');
+  });
+  var selEst=ST.sel?est(ST.sel):null;
+  mmD.pines(l,selEst,ST.comb);
+}
+document.getElementById('filas').addEventListener('click',function(e){
+  var fv=e.target.closest('[data-fav]');
+  if(fv){var id=fv.dataset.fav;
+    ST.favoritos[id]=!ST.favoritos[id];
+    snack(ST.favoritos[id]?'⭐ Añadida a favoritas':'Quitada de favoritas');
+    render(); if(ST.sel===id)abreD(id,false); return;}
+  var f=e.target.closest('[data-id]');
+  if(f)abreD(f.dataset.id,true);
+});
+document.getElementById('pPrev').addEventListener('click',function(){if(ST.pag>1){ST.pag--;render()}});
+document.getElementById('pNext').addEventListener('click',function(){ST.pag++;render()});
+document.getElementById('pTam').innerHTML='<option>15</option><option selected>30</option><option>50</option><option value="0">Todas</option>';
+document.getElementById('pTam').addEventListener('change',function(){
+  ST.tam=+this.value;ST.pag=1;
+  snack(ST.tam?'Mostrando '+ST.tam+' por página':'Todas las estaciones sin paginar');
+});
+document.querySelector('.cabezal').addEventListener('click',function(e){
+  var o=e.target.closest('[data-c]');if(!o)return;
+  var c=o.dataset.c;
+  ST.ord=c===ST.ord.c?{c:c,d:ST.ord.d==='asc'?'desc':'asc'}:{c:c,d:'asc'};
+  render();
+});
+
+/* ---------- panel derecho ---------- */
+function abreD(id,conPin){
+  ST.sel=id;
+  var e=est(id);if(!e)return;
+  render();
+  var celdas=Object.keys(e.precios).map(function(c){
+    var pp=GLM.precioFinal(e,c);
+    return '<div class="dcelda'+(c===ST.comb?' act':'')+'"><div class="ct">'+GLM.COMBUSTIBLES_CORTOS[c]+'</div>'+
+      '<div class="vl nivel-'+GLM.nivel(pp)+'">'+GLM.fmt(pp)+'</div></div>';
+  }).join('');
+  var r=GLM.resumen(GLM.historico(e,ST.comb,14));
+  document.getElementById('dDet').innerHTML='<h4>'+e.marca+'</h4>'+
+    '<div class="dirr">'+e.direccion+' · '+e.localidad+' · '+GLM.fmt2(e.dist)+' km</div>'+
+    '<div class="dnube">'+celdas+'</div>'+
+    '<b style="font-size:.78rem">Histórico · 14 días ('+GLM.COMBUSTIBLES_CORTOS[ST.comb]+')</b>'+
+    '<div class="dgraf">'+GLM.chart(GLM.historico(e,ST.comb,14),{w:330,h:140})+'</div>'+
+    '<p style="font-size:.74rem;color:var(--sub);margin:6px 2px">Mín '+GLM.fmt(r.min)+' ('+
+    r.minFecha+') · Máx '+GLM.fmt(r.max)+' ('+r.maxFecha+') · media '+GLM.fmt(r.media)+' — hoy '+
+    (r.delta<0?'▼':'▲')+GLM.fmt(Math.abs(r.delta))+' €/L</p>'+
+    '<div class="dacc"><button class="pri" id="dRuta">🧭 Cómo llegar</button>'+
+    '<button id="dFavA">'+(ST.favoritos[e.id]?'★ Favorita':'☆ Añadir')+'</button>'+
+    '<button id="dAv">🔔 Avisar si baja</button></div>'+
+    '<div class="estadistica">💡 Comparativa en pantalla: la media de la provincia es '+
+    GLM.fmt(mediaProv())+' €/L y esta estación '+(GLM.precioFinal(e,ST.comb)<mediaProv()?'queda por debajo.':'queda por encima.')+'</div>';
+  document.getElementById('dRuta').addEventListener('click',function(){snack('Maqueta: abriría las rutas del móvil')});
+  document.getElementById('dAv').addEventListener('click',function(){snack('🔔 Aviso activado para '+e.marca)});
+  document.getElementById('dFavA').addEventListener('click',function(){
+    ST.favoritos[e.id]=!ST.favoritos[e.id];
+    snack(ST.favoritos[e.id]?'⭐ Añadida':'Quitada');
+    abreD(e.id,false);
+  });
+  // en desktop el panel derecho es permanente; en móvil se abre como hoja
+  document.getElementById('derch').classList.remove('solo-mapa');
+}
+document.getElementById('dCierra').addEventListener('click',function(){
+  document.getElementById('derch').classList.remove('abierto');
+  if(ST.vista==='detalle')go('lista');
+});
+
+/* ---------- pestañas móviles ---------- */
+function go(v){
+  ST.vista=v;
+  document.querySelectorAll('.mtabs button').forEach(function(b){b.classList.toggle('act',b.dataset.v===v)});
+  var der=document.getElementById('derch');
+  if(v==='mapa'||v==='detalle'){
+    der.classList.add('abierto');
+    der.classList.toggle('solo-mapa',v==='mapa');   // solo mapa, sin detalle
+    if(ST.vista==='mapa'){render();document.getElementById('mD').innerHTML='';mmD=GLM.miniMapa(document.getElementById('mD'),{onpin:function(est){abreD(est.id,true)}});mmD.pines(filtradas(),null,ST.comb);}
+  } else {
+    der.classList.remove('abierto','solo-mapa');
+  }
+  render();
+}
+document.querySelector('.mtabs').addEventListener('click',function(e){
+  var b=e.target.closest('[data-v]');if(!b)return;go(b.dataset.v);
+});
+
+/* ---------- fab filtros móvil ---------- */
+document.getElementById('fabFil').addEventListener('click',function(){
+  document.getElementById('side').classList.add('abierto');
+});
+document.getElementById('side').addEventListener('click',function(e){
+  if(window.innerWidth<=900&&e.target===document.getElementById('side'))
+    document.getElementById('side').classList.remove('abierto');
+});
+
+/* ---------- barra ---------- */
+document.getElementById('bFiltM').addEventListener('click',function(){
+  document.getElementById('side').classList.add('abierto');
+});
+document.getElementById('bExp').addEventListener('click',function(){snack('Maqueta: exporta CSV de la lista filtrada')});
+document.getElementById('bAct').addEventListener('click',function(){snack('↻ Actualizado del Ministerio en 0,8 s')});
+
+/* ---------- responsive ---------- */
+function resp(){
+  var mw=window.innerWidth<=900;
+  document.getElementById('bFiltM').style.display=mw?'':'none';
+  document.getElementById('fabFil').style.display=mw?'grid':'none';
+  if(!mw){
+    document.getElementById('side').classList.remove('abierto');
+    document.querySelector('.mtabs button[data-v="lista"]').click && go('lista');
+  }
+  render();
+}
+window.addEventListener('resize',function(){
+  var isM=window.innerWidth<=900;
+  document.getElementById('bFiltM').style.display=isM?'':'none';
+  document.getElementById('fabFil').style.display=isM?'grid':'none';
+});
+
+function renderTodo(){
+  pintaComb();pintaMarcas();pintaLoc();render();
+}
+function pintaLoc(){
+  document.getElementById('sLoc').innerHTML='<option value="Todas">Todas</option>'+
+    GLM.localidades(ST.prov).map(function(lo){
+      return '<option'+(ST.loc===lo?' selected':'')+'>'+lo+'</option>';
+    }).join('');
+}
+
+/* arranque */
+renderTodo();resp();
+window.PT_VALID='v04';
+})();
+</script>
+</body>
+</html>

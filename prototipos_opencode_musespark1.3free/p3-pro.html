@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>P3 · Consola Pro — Gasolineras</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:ui-monospace,SFMono-Regular,Menlo,system-ui,sans-serif;background:#eef1f5;color:#111827}
+.app{display:grid;grid-template-columns:290px 1fr 340px;grid-template-rows:56px auto 1fr;height:100vh}
+/* topbar */
+.top{grid-column:1/-1;background:#111827;color:#fff;display:flex;align-items:center;gap:.7rem;padding:0 1rem}
+.top b{font-size:.95rem}.top small{color:#9ca3af}
+.top input{margin-left:auto;background:#1f2937;border:1px solid #374151;color:#fff;border-radius:10px;padding:.55rem .8rem;width:min(360px,40vw);min-height:44px}
+/* side */
+.side{background:#fff;border-right:1px solid #e5e7eb;padding:.9rem;overflow:auto}
+.side h4{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin:.9rem 0 .4rem}
+.side select,.side input[type=text]{width:100%;border:1px solid #d1d5db;border-radius:8px;padding:.55rem;min-height:44px;margin-bottom:.35rem}
+.chiprow{display:flex;gap:.3rem;flex-wrap:wrap}
+.chip{border:1px solid #d1d5db;background:#fff;border-radius:99px;padding:.4rem .7rem;font-size:.75rem;cursor:pointer;min-height:38px}
+.chip.on{background:#111827;color:#fff;border-color:#111827}
+.kpis{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-top:.6rem}
+.kpi{background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:.45rem .55rem}
+.kpi span{font-size:.62rem;color:#6b7280;text-transform:uppercase;font-weight:700}
+.kpi b{display:block;font-size:.95rem;font-variant-numeric:tabular-nums}
+/* main */
+.main{overflow:auto;padding:.9rem;display:flex;flex-direction:column;gap:.7rem;min-width:0}
+.map{background:#0b1220;color:#cbd5e1;border-radius:14px;min-height:230px;position:relative;overflow:hidden;padding:.8rem}
+@media(min-width:1080px){.main .map{min-height:300px}}.pin{position:absolute;width:24px;height:24px;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);border:2px solid #fff;cursor:pointer}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;font-size:.82rem}
+th,td{padding:.55rem .5rem;border-bottom:1px solid #f3f4f6;text-align:left;white-space:nowrap}
+th{background:#111827;color:#fff;font-size:.66rem;text-transform:uppercase;cursor:pointer}
+tr:hover td{background:#f9fafb}tr.sel td{background:#dbeafe}
+/* drawer */
+.drawer{background:#fff;border-left:1px solid #e5e7eb;overflow:auto;padding:1rem}
+.drawer h2{font-size:1rem}.mut{color:#6b7280;font-size:.78rem}
+canvas{width:100%;height:180px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px}
+.tabs{display:flex;gap:.3rem;margin:.7rem 0}
+.tabs button{flex:1;border:1px solid #e5e7eb;background:#f9fafb;border-radius:8px;padding:.55rem;cursor:pointer;font-weight:700;min-height:44px}
+.tabs button.on{background:#111827;color:#fff}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:.55rem 1rem;border-radius:99px;font-size:.8rem;display:none}
+.mnav{display:none}
+@media(max-width:1080px){.app{grid-template-columns:250px 1fr}.drawer{position:fixed;right:0;top:0;bottom:0;width:min(380px,94vw);z-index:60;transform:translateX(105%);transition:.25s;box-shadow:-12px 0 40px rgba(0,0,0,.2)}.drawer.open{transform:none}}
+@media(max-width:760px){
+.app{grid-template-columns:1fr;grid-template-rows:56px 1fr 64px}.side{position:fixed;left:0;top:0;bottom:0;width:min(320px,90vw);z-index:70;transform:translateX(-105%);transition:.25s}.side.open{transform:none}
+.main{padding:.6rem}.top input{width:40vw}
+.mnav{display:flex;background:#fff;border-top:1px solid #e5e7eb}.mnav button{flex:1;border:none;background:none;padding:.5rem;font-size:.66rem;color:#6b7280;min-height:60px}.mnav button.on{color:#111827;font-weight:800}
+.drawer{top:auto;max-height:82vh;border-radius:18px 18px 0 0;width:100%}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="top"><b>⛽ Consola Pro</b><small>Madrid · 12 est. · datos simulados</small><input id="q" placeholder="Buscar… ( / )"><button class="chip" id="menuB" style="background:#374151;color:#fff;border:none">☰</button></div>
+<aside class="side" id="side">
+<h4>Combustible</h4><div class="chiprow" id="chips"></div>
+<h4>Provincia / localidad / marca</h4>
+<select id="prov"><option>Madrid</option><option>Barcelona</option></select>
+<select id="loc"><option value="">Todas las localidades</option></select>
+<select id="brand"><option value="">Todas las marcas</option></select>
+<h4>Opciones</h4>
+<label style="font-size:.8rem"><input type="checkbox" id="favOnly"> Solo favoritas</label><br><br>
+<label style="font-size:.8rem">Orden</label>
+<select id="sort"><option value="precio">Precio ↑</option><option value="dist">Distancia ↑</option><option value="marca">Marca A–Z</option></select>
+<div class="kpis"><div class="kpi"><span>Mín</span><b id="kMin">—</b></div><div class="kpi"><span>Media</span><b id="kAvg">—</b></div><div class="kpi"><span>Nº</span><b id="kN">—</b></div></div>
+<h4>Vista IA / Config (simuladas)</h4>
+<div class="chiprow"><button class="chip" id="iaB">🤖 Preguntar a la IA</button><button class="chip" id="cfgB">⚙️ Alertas + caché</button></div>
+<div id="extra" style="font-size:.78rem;color:#374151;margin-top:.5rem;line-height:1.5"></div>
+</aside>
+<div class="main">
+<div class="map" id="map"><b>Mapa · boceto</b> <span class="mut">pines proporcionales al precio · clic para abrir drawer</span><div id="pins"></div></div>
+<table><thead><tr><th data-s="marca">Marca ↕</th><th data-s="precio">Precio ↕</th><th data-s="dist">Dist ↕</th><th>Localidad</th><th>Calle</th><th>☆</th></tr></thead><tbody id="tb"></tbody></table>
+<p class="mut" id="count"></p>
+</div>
+<div class="drawer" id="drawer"><p class="mut">Selecciona una estación de la tabla o del mapa.</p></div>
+<nav class="mnav"><button id="mSide" class="on">🎛️<br>Filtros</button><button id="mList">☰<br>Lista</button><button id="mIa">🤖<br>IA</button><button id="mCfg">⚙️<br>Config</button></nav>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const S=[{id:1,marca:"Ballenoil",loc:"Alcobendas",calle:"Av. Valdelaparra 12",p:1.429,d:1.359,dist:1.2,x:15,y:20},{id:2,marca:"Plenergy",loc:"Madrid",calle:"Bravo Murillo 180",p:1.449,d:1.379,dist:.6,x:45,y:45},{id:3,marca:"Avia",loc:"Getafe",calle:"Av. España 44",p:1.469,d:1.399,dist:3.1,x:60,y:65},{id:4,marca:"Galp",loc:"Madrid",calle:"Castellana 210",p:1.519,d:1.449,dist:2.4,x:52,y:32},{id:5,marca:"BP",loc:"Leganés",calle:"Av. Fuenlabrada 58",p:1.549,d:1.479,dist:4.8,x:30,y:70},{id:6,marca:"Cepsa",loc:"Madrid",calle:"Alcalá 320",p:1.569,d:1.499,dist:3.6,x:68,y:48},{id:7,marca:"Repsol",loc:"Madrid",calle:"Goya 89",p:1.589,d:1.519,dist:2.9,x:58,y:55},{id:8,marca:"Shell",loc:"Alcalá",calle:"Vía Complutense 120",p:1.599,d:1.529,dist:8.5,x:82,y:25},{id:9,marca:"Ballenoil",loc:"Madrid",calle:"Vallecas 77",p:1.439,d:1.369,dist:5.2,x:63,y:60},{id:10,marca:"Cepsa",loc:"Getafe",calle:"Madrid 101",p:1.579,d:1.509,dist:6.1,x:38,y:78},{id:11,marca:"Repsol",loc:"Alcobendas",calle:"Real 5",p:1.619,d:1.549,dist:1.8,x:24,y:14},{id:12,marca:"BP",loc:"Madrid",calle:"Av. América 45",p:1.659,d:1.589,dist:4.2,x:74,y:58}];
+const FUELS=["Gasolina 95","Gasóleo A","Gasolina 98","GLP"];let fuel=FUELS[0],favs=new Set([1,9]),sel=null,sortK="precio";
+const $=id=>document.getElementById(id);
+function toast(t){const e=$("toast");e.textContent=t;e.style.display="block";clearTimeout(e._t);e._t=setTimeout(()=>e.style.display="none",1600)}
+function price(s){return fuel.includes("Gasóleo")?s.d:s.p}
+function col(v){return v<1.5?"#22c55e":v<1.6?"#f59e0b":"#ef4444"}
+$("chips").innerHTML=FUELS.map((f,i)=>`<button class="chip${i==0?" on":""}" data-f="${f}">${f}</button>`).join("");
+document.querySelectorAll("#chips .chip").forEach(c=>c.onclick=()=>{document.querySelectorAll("#chips .chip").forEach(x=>x.classList.remove("on"));c.classList.add("on");fuel=c.dataset.f;render()});
+[...new Set(S.map(s=>s.loc))].forEach(l=>$("loc").innerHTML+=`<option>${l}</option>`);
+[...new Set(S.map(s=>s.marca))].forEach(b=>$("brand").innerHTML+=`<option>${b}</option>`);
+function filt(){let a=S.filter(s=>(!$("loc").value||s.loc==$("loc").value)&&(!$("brand").value||s.marca==$("brand").value)&&(!$("favOnly").checked||favs.has(s.id))&&(s.marca+s.calle+s.loc).toLowerCase().includes($("q").value.toLowerCase()));
+a.sort((x,y)=>sortK=="precio"?price(x)-price(y):sortK=="dist"?x.dist-y.dist:x.marca.localeCompare(y.marca));return a}
+function render(){const a=filt();$("kN").textContent=a.length;$("count").textContent=a.length+" de "+S.length+" · orden: "+sortK+" · "+fuel;
+if(a.length){$("kMin").textContent=price(a[0]).toFixed(3);$("kAvg").textContent=(a.reduce((t,s)=>t+price(s),0)/a.length).toFixed(3)}
+$("tb").innerHTML=a.map(s=>`<tr data-id="${s.id}" class="${sel==s.id?"sel":""}"><td>${s.marca}</td><td><b>${price(s).toFixed(3)} €</b></td><td>${s.dist.toFixed(1)} km</td><td>${s.loc}</td><td>${s.calle}</td><td><button data-f="${s.id}" style="border:none;background:none;cursor:pointer;font-size:1rem">${favs.has(s.id)?"★":"☆"}</button></td></tr>`).join("");
+document.querySelectorAll("#tb tr").forEach(r=>r.onclick=e=>{if(e.target.dataset.f){const id=+e.target.dataset.f;favs.has(id)?favs.delete(id):favs.add(id);render();return}open(+r.dataset.id)});
+document.querySelectorAll("[data-f]").forEach(b=>b.onclick=e=>{e.stopPropagation();const id=+b.dataset.f;favs.has(id)?favs.delete(id):favs.add(id);render()});
+$("pins").innerHTML=a.map(s=>`<div class="pin${sel==s.id?" sel":""}" data-id="${s.id}" title="${s.marca}" style="left:${s.x}%;top:${s.y}%;background:${col(price(s))}"></div>`).join("");
+document.querySelectorAll(".pin").forEach(p=>p.onclick=()=>open(+p.dataset.id));
+if(sel)open(sel,true);else idle()}
+function idle(){const a=filt().slice(0,3);if(!a.length)return;
+$("drawer").innerHTML=`<h2 style="font-size:1rem">Resumen</h2><p class="mut" style="margin-bottom:.6rem">3 más baratas · ${fuel}</p>${a.map((s,i)=>`<button data-quick="${s.id}" style="display:flex;justify-content:space-between;gap:.5rem;width:100%;text-align:left;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:.55rem;margin-bottom:.4rem;cursor:pointer;font:inherit"><span><b>${i+1}. ${s.marca}</b><br><span class="mut">${s.loc} · ${s.dist} km</span></span><b style="font-variant-numeric:tabular-nums">${price(s).toFixed(3)} €</b></button>`).join("")}<p class="mut" style="margin-top:.5rem">Selecciona una fila, un pin o una tarjeta para ver la ficha completa.</p>`;
+document.querySelectorAll("[data-quick]").forEach(b=>b.onclick=()=>open(+b.dataset.quick))}
+function open(id,keep){sel=id;const s=S.find(x=>x.id==id);const v=price(s);
+$("drawer").innerHTML=`<div style="display:flex;gap:.5rem;align-items:flex-start"><div style="flex:1"><h2>${favs.has(id)?"★ ":""}${s.marca}</h2><p class="mut">${s.loc} · ${s.calle} · ${s.dist} km · <b style="color:#111;font-size:1rem">${v.toFixed(3)} €</b> ${fuel}</p></div><button class="chip" onclick="document.getElementById('drawer').classList.remove('open')">✕</button></div>
+<div class="tabs"><button class="on" data-t="i">Info</button><button data-t="h">Histórico</button><button data-t="ia">IA</button></div>
+<div id="db"></div>`;
+$("drawer").classList.add("open");dtab("i");
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("on"));b.classList.add("on");dtab(b.dataset.t)});
+function dtab(t){const db=$("db");
+if(t=="i")db.innerHTML=`<table><tr><th>Combustible</th><th>Precio</th></tr><tr><td>Gasolina 95</td><td><b>${s.p.toFixed(3)} €</b></td></tr><tr><td>Gasóleo A</td><td><b>${s.d.toFixed(3)} €</b></td></tr><tr><td>Gasolina 98</td><td><b>${(s.p+.09).toFixed(3)} €</b></td></tr></table><br><div class="chiprow"><button class="chip" onclick="tgl(${id})">${favs.has(id)?"★ Quitar":"☆ Guardar"}</button><button class="chip" onclick="toast('Aviso creado')">🔔 Avisar si baja</button><button class="chip" onclick="toast('Navegación simulada')">🧭 Cómo llegar</button></div>`;
+if(t=="h")db.innerHTML=`<div style="display:flex;gap:.4rem;margin-bottom:.4rem"><select id="hd" style="flex:1;border:1px solid #d1d5db;border-radius:8px;padding:.5rem"><option value="7">7 días</option><option value="14" selected>14 días</option><option value="30">30 días</option><option value="90">90 días</option></select></div><canvas id="ch" width="600" height="180"></canvas><p class="mut" id="ht"></p>`;
+if(t=="h")drawH(s,14),$("hd").onchange=e=>drawH(s,+e.target.value);
+if(t=="ia")db.innerHTML=`<p style="font-size:.82rem;line-height:1.55">Con el histórico de esta estación (simulado): hoy a <b>${v.toFixed(3)} €</b>, mínimo de 14 días <b>${(v-.04).toFixed(3)} €</b>. Si repostas 40 L aquí en vez de en la más cara (${1.659} €) ahorras ~<b>${((1.659-v)*40).toFixed(2)} €</b>.</p>`}
+window.tgl=id=>{favs.has(id)?favs.delete(id):favs.add(id);render()};window.toast=toast}
+function drawH(s,days){const c=$("ch"),x=c.getContext("2d"),W=c.width,H=c.height;x.clearRect(0,0,W,H);let p=price(s)+.05,pts=[];for(let i=days-1;i>=0;i--){p+=(Math.sin(i*2.2+s.id)-.45)*.009;pts.push(p)}pts.push(price(s));
+const mn=Math.min(...pts)-.004,mx=Math.max(...pts)+.004,X=i=>14+i*(W-28)/(pts.length-1),Y=v=>H-16-(v-mn)/(mx-mn)*(H-32);
+x.beginPath();pts.forEach((v,i)=>i?x.lineTo(X(i),Y(v)):x.moveTo(X(i),Y(v)));x.strokeStyle="#111827";x.lineWidth=2.5;x.stroke();
+$("ht").textContent=`Mín ${Math.min(...pts).toFixed(3)} € · máx ${Math.max(...pts).toFixed(3)} € · ${days} días (simulado)`}
+$("q").oninput=render;$("loc").onchange=render;$("brand").onchange=render;$("favOnly").onchange=render;$("sort").onchange=e=>{sortK=e.target.value;render()};
+document.querySelectorAll("th[data-s]").forEach(th=>th.onclick=()=>{sortK=th.dataset.s;render()});
+$("iaB").onclick=()=>$("extra").innerHTML=`<b>🤖 IA:</b> hoy repostaría en <b>${filt()[0]?.marca}</b> (${filt()[0]?price(filt()[0]).toFixed(3):"—"} €). Tendencia estable a la baja en tu zona.`;
+$("cfgB").onclick=()=>$("extra").innerHTML=`<b>⚙️ Config:</b> alertas ON · TTL 12 h · paginación 30 · claves IA guardadas (simulado).`;
+$("menuB").onclick=()=>$("side").classList.toggle("open");
+$("mSide").onclick=()=>$("side").classList.add("open");$("mList").onclick=()=>{$("side").classList.remove("open");$("drawer").classList.remove("open")};
+$("mIa").onclick=()=>{open(filt()[0]?.id||1);document.querySelector('.tabs button[data-t="ia"]')?.click()};$("mCfg").onclick=()=>{toast("Config simulada en el lateral")};
+document.addEventListener("keydown",e=>{if(e.key=="/"){$("q").focus();e.preventDefault()}});
+render();
+</script>
+</body>
+</html>

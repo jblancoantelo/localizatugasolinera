@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>C4 · Radar — Prototipo</title>
+<link rel="stylesheet" href="../comun/base.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="rad" id="rad">
+
+  <!-- Cabecera -->
+  <header class="rd-top">
+    <div class="rd-top-row">
+      <div>
+        <div class="rd-kicker">Radar de precios · Madrid</div>
+        <h1 class="rd-title">Gasolina 95 <span class="rd-chev">▾</span></h1>
+      </div>
+      <button class="rd-map" id="rdMapBtn">🗺️</button>
+    </div>
+  </header>
+
+  <main class="rd-main">
+    <!-- KPIs -->
+    <div class="rd-kpis" id="rdKpis"></div>
+
+    <!-- "¿Repostar hoy?" -->
+    <div class="rd-when" id="rdWhen"></div>
+
+    <!-- Ranking -->
+    <div class="rd-sect-head">
+      <span>Ranking por precio</span>
+      <button class="rd-sort" id="rdSort">Menor primero ▲</button>
+    </div>
+    <div class="rd-rank" id="rdRank"></div>
+
+    <!-- Comparador (aparece al elegir ≥1) -->
+    <div class="rd-compare" id="rdCompare">
+      <div class="rd-cmp-head"><span>Comparador (<b id="rdCmpN">0</b>/3)</span><button id="rdCmpClear">Limpiar</button></div>
+      <div class="rd-cmp-chips" id="rdCmpChips"></div>
+      <div class="rd-cmp-chart" id="rdCmpChart"></div>
+    </div>
+  </main>
+
+  <!-- Vista mapa (overlay) -->
+  <div class="rd-mapview" id="rdMapView">
+    <div class="rd-map-holder" id="rdMapHolder"></div>
+    <button class="rd-map-close" id="rdMapClose">✕ Ver ranking</button>
+  </div>
+
+  <!-- Nav inferior -->
+  <nav class="rd-nav">
+    <button class="rd-n active" data-rv="radar">🎯<span>Radar</span></button>
+    <button class="rd-n" data-rv="favs">★<span>Favoritas</span></button>
+    <button class="rd-n" data-rv="ia">🤖<span>IA</span></button>
+  </nav>
+
+  <!-- Sheet detalle -->
+  <div class="rd-backdrop" id="rdBackdrop"></div>
+  <div class="rd-sheet" id="rdSheet" data-open="no">
+    <div class="rd-grab"><span></span></div>
+    <button class="rd-close" id="rdClose">✕</button>
+    <div class="rd-sheet-body scroll-y" id="rdSheetBody"></div>
+  </div>
+</div>
+
+<script src="../comun/datos.js"></script>
+<script src="../comun/ui.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

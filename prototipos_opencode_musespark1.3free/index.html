@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prototipos — Gasolineras · MuseSpark</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;padding:24px 16px 60px}
+.wrap{max-width:1060px;margin:0 auto}
+header h1{font-size:1.5rem;letter-spacing:-.02em}
+header p{color:#94a3b8;margin:.4rem 0 1rem;font-size:.92rem;max-width:62ch;line-height:1.5}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));margin-top:16px}
+.card{background:#1e293b;border:1px solid #334155;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:.6rem}
+.card .tag{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:.2rem .55rem;border-radius:99px;width:fit-content}
+.t1{background:#dcfce7;color:#166534}.t2{background:#1e1b4b;color:#a5b4fc}.t3{background:#fef9c3;color:#854d0e}.t4{background:#ffe4e6;color:#9f1239}
+.card h2{font-size:1.12rem}.card p{font-size:.85rem;color:#94a3b8;line-height:1.5;flex:1}
+.card ul{font-size:.78rem;color:#cbd5e1;line-height:1.7;padding-left:1rem}
+.card a{display:block;text-align:center;background:#38bdf8;color:#082f49;font-weight:800;text-decoration:none;padding:.7rem;border-radius:12px;margin-top:.4rem}
+.card a:hover{filter:brightness(1.1)}
+.mock{border-radius:12px;height:120px;position:relative;overflow:hidden;border:1px solid #334155}
+.m1{background:linear-gradient(135deg,#ecfdf5,#dbeafe)} .m1 i{position:absolute;background:#fff;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+.m2{background:#0b1220 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60"><path d="M0 30h60M30 0v60" stroke="%231e293b" stroke-width="3"/></svg>')}
+.m2 i{position:absolute;width:14px;height:14px;border-radius:50%;border:3px solid #fff}
+.m3{background:#f8fafc;display:grid;grid-template-columns:70px 1fr 90px;gap:4px;padding:10px}
+.m3 span{background:#e2e8f0;border-radius:6px;height:14px}
+.m4{background:#18181b;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px}
+.m4 b{font-size:2rem;color:#4ade80}
+footer{margin-top:26px;color:#64748b;font-size:.8rem;line-height:1.6}
+code{background:#1e293b;padding:.1rem .35rem;border-radius:6px;color:#7dd3fc}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<h1>⛽ Prototipos MuseSpark — nueva UX Gasolineras</h1>
+<p>6 prototipos responsive navegables con <b>datos falsos</b> (12 estaciones de Madrid + una ruta Madrid-Valencia). Abren con doble clic, sin servidor.
+En móvil se ven a pantalla completa; en PC cada uno adapta el layout (2 columnas, panel lateral o dashboard).
+Valida: filtrar → lista/mapa → detalle → histórico → favoritos → IA → config → planificar ruta.</p>
+</header>
+<div class="grid">
+<div class="card"><span class="tag t2">P6 · Nuevo</span>
+<div class="mock m2" style="background:#f6f1e7;display:block;padding:10px">
+<svg viewBox="0 0 260 100" style="width:100%;height:100%"><path d="M20 70 C 70 90, 90 30, 150 45 S 220 55, 245 25" fill="none" stroke="#c9bfa9" stroke-width="8" stroke-linecap="round"/><path d="M20 70 C 70 90, 90 30, 150 45 S 220 55, 245 25" fill="none" stroke="#2f8f60" stroke-width="3" stroke-dasharray="7 6"/><circle cx="20" cy="70" r="5" fill="#232019"/><circle cx="245" cy="25" r="5" fill="#232019"/><circle cx="92" cy="52" r="6" fill="#1f6b46" stroke="#fff" stroke-width="2"/><circle cx="150" cy="45" r="9" fill="#b45309" stroke="#fff" stroke-width="3"/></svg></div>
+<h2>Trayecto — repostar de camino</h2>
+<p>Distribución nueva: no lista estaciones alrededor, planifica un viaje. Origen/destino, depósito y consumo; cada parada muestra el <b>ahorro neto</b> (precio × litros − coste del desvío). En PC, mapa de ruta + panel de decisión.</p>
+<ul><li>Autonomía: "para antes del km 307"</li><li>Ida y vuelta + litros a repostar</li><li>Timeline móvil / mapa PC</li></ul>
+<a href="p6-trayecto.html">Abrir P6 · Trayecto →</a></div>
+<div class="card"><span class="tag t1">P5 · Validación</span>
+<div class="mock m1"><i style="left:12px;top:14px;right:12px;height:22px"></i><i style="left:12px;top:44px;width:32%;height:52px"></i><i style="left:38%;top:44px;width:30%;height:52px"></i><i style="left:71%;top:44px;right:12px;height:52px"></i></div>
+<h2>P5 Completo — paridad funcional</h2>
+<p>El diseño P1 con TODAS las funciones de la app real: marcas multi-selección, km + GPS, 10 estilos de mapa, paginación, orden asc/desc, descuentos que mueven precios, histórico de 7 rangos con tooltip, IA de 8 pestañas con editar/cancelar/paralelo, y Config completa (push, caché, logs, claves, visibilidad, prompts, update).</p>
+<ul><li>Para validar de verdad, no para elegir estilo</li><li>10 estilos de mapa · orden asc/desc · punto manual · Todas/Ninguna en marcas</li><li>Claves por proveedor · proxy con ↺/🔎 · LS con ✕ por clave · prompts solo en General</li></ul>
+<a href="p5-completo.html">Abrir P5 · Completo →</a></div>
+<div class="card"><span class="tag t1">P1 · Recomendado</span>
+<div class="mock m1"><i style="left:12px;top:14px;right:12px;height:22px"></i><i style="left:12px;top:44px;width:32%;height:52px"></i><i style="left:38%;top:44px;width:30%;height:52px"></i><i style="left:71%;top:44px;right:12px;height:52px"></i></div>
+<h2>Pulso — cards + bottom-sheet</h2>
+<p>Mobile-first Material You. Buscador sticky, chips de combustible, cards grandes con precio y bottom-sheet de detalle.</p>
+<ul><li>Ideal conductor: pulgar, una mano</li><li>PC: lista + mapa sticky</li><li>Tabla → cards ordenables</li></ul>
+<a href="p1-pulso.html">Abrir P1 · Pulso →</a></div>
+<div class="card"><span class="tag t2">P2 · Mapa</span>
+<div class="mock m2"><i style="left:20%;top:30px;background:#22c55e"></i><i style="left:55%;top:55px;background:#f59e0b"></i><i style="left:75%;top:25px;background:#ef4444"></i><i style="left:40%;top:75px;background:#22c55e"></i></div>
+<h2>Mapa Vivo — fullscreen + carrusel</h2>
+<p>Mapa a pantalla completa, chips flotantes y carrusel inferior con snap. Pin y tarjeta sincronizados.</p>
+<ul><li>Explorar conduciendo / a pie</li><li>PC: panel lista a la izquierda</li><li>FABs: GPS + solo favoritas</li></ul>
+<a href="p2-mapa.html">Abrir P2 · Mapa Vivo →</a></div>
+<div class="card"><span class="tag t3">P3 · Pro / PC</span>
+<div class="mock m3"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+<h2>Consola Pro — dashboard</h2>
+<p>Diseño denso que aprovecha pantalla grande: sidebar de filtros, KPIs (mín/media/nº), mapa + tabla, drawer de detalle.</p>
+<ul><li>Uso intensivo / comparador</li><li>Móvil: sidebar → drawer</li><li>Ordenación y paginación reales</li></ul>
+<a href="p3-pro.html">Abrir P3 · Consola Pro →</a></div>
+<div class="card"><span class="tag t4">P4 · Accesible</span>
+<div class="mock m4"><b>1,429 €</b><span style="font-size:.75rem;color:#a1a1aa">la más barata · a 1,2 km</span></div>
+<h2>Volante — conducción + contraste</h2>
+<p>Targets de 56&nbsp;px, hero gigante "más barata cerca", alto contraste y modo oscuro. Pensado para usar parado en el coche.</p>
+<ul><li>Mayores / sol / guantes táctiles</li><li>Botón Navegar + Avisar si baja</li><li>IA en lenguaje simple</li></ul>
+<a href="p4-volante.html">Abrir P4 · Volante →</a></div>
+</div>
+<footer>
+<b>Cómo validar cada prototipo (2 min):</b> 1) cambia combustible a Gasóleo → precios y KPIs se recalculan ·
+2) pulsa ☆ en 2 estaciones y activa "Solo ☆" · 3) abre una estación → Histórico → cambia 7/30/180, la gráfica y el tooltip se redibujan ·
+4) IA, envía "¿dónde reposto?" (respuesta simulada) · 5) en Config mueve TTL y paginación · 6) en P6 cambia litros y mira cómo cambia la parada recomendada.<br>
+Los prototipos comparten las mismas 12 estaciones y precios base, así las diferencias que notes son de <b>diseño</b>, no de datos. P6 usa además una ruta Madrid-Valencia simulada.
+Carpeta: <code>prototipos_opencode_musespark1.3free/</code> · independiente de la app (no toca <code>sw.js</code>, tests ni <code>ASSETS</code>). Estado y cobertura en <code>INFORME_CAMBIOS.md</code>; port a la app en <code>PLAN.md</code>.
+</footer>
+</div>
+</body>
+</html>
