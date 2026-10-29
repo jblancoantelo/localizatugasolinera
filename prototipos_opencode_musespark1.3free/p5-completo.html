@@ -20,6 +20,11 @@ button,input,select{font:inherit}
 .ibtn.pri{background:var(--pri);color:#fff;border-color:var(--pri)}
 .km{width:64px;border:1px solid var(--line);border-radius:12px;padding:.4rem;min-height:46px;text-align:center}
 .search{flex:1;border:1px solid var(--line);border-radius:12px;padding:.6rem .7rem;min-height:46px;min-width:0}
+#fBtn{position:relative;font-size:1rem}
+#fDot{position:absolute;top:4px;right:6px;font-size:.5rem;color:#dc2626}
+.adv.hide{display:none}
+@media(min-width:960px){.adv.hide{display:flex}}
+@media(min-width:960px){#v-tabla .list{display:none}}
 .frow{display:flex;gap:.4rem;padding:0 .7rem .5rem;flex-wrap:wrap;align-items:center}
 .frow select{border:1px solid var(--line);border-radius:10px;padding:.5rem;min-height:44px;background:#fff;max-width:150px}
 .chips{display:flex;gap:.35rem;overflow-x:auto;padding:0 .7rem .5rem;scrollbar-width:none}
@@ -140,9 +145,9 @@ canvas.chart{width:100%;height:190px;background:#f8fafc;border:1px solid var(--l
 <input class="km" id="bKm" type="number" min="1" max="100" placeholder="km" title="Distancia máxima">
 <h1>⛽ P5 Completo <small id="hSub">Madrid · simulado</small></h1>
 </div>
-<div class="trow"><input class="search" id="q" placeholder="🔍 Buscar marca, calle, localidad… (toggle como en la app)"></div>
+<div class="trow"><input class="search" id="q" placeholder="🔍 Buscar marca, calle, localidad…"><button class="ibtn" id="fBtn" title="Más filtros">⚙️<span id="fDot" style="display:none">●</span></button></div>
 <div class="chips" id="chips"></div>
-<div class="frow">
+<div class="frow adv hide" id="adv">
 <select id="prov"><option value="">Sin provincia</option><option selected>Madrid</option><option>Barcelona</option><option>Valencia</option></select>
 <select id="loc"><option value="">Todas localidades</option></select>
 <div class="dd"><button class="chip" id="brandBtn">🏷️ Marcas: todas ▾</button>
@@ -275,6 +280,8 @@ let a=S.filter(s=>(!$("loc").value||s.loc==$("loc").value)&&brands.has(s.marca)&
 a.sort((x,y)=>sortC=="marca"?x.marca.localeCompare(y.marca):sortC=="dist"?(x.dist-y.dist)*sortD:(price(x)-price(y))*sortD);return a}
 /* render */
 function render(){const a=filt(),empty=!$("prov").value;
+const allB=[...new Set(S.map(s=>s.marca))];
+$("fDot").style.display=($("loc").value||brands.size!=allB.length||$("bKm").value)?'inline':'none';
 $("empty").style.display=empty?"":"none";["v-tabla","v-mapa","v-ambos"].forEach(v=>$(v).style.visibility=empty?"hidden":"");
 if(empty)return;
 $("hSub").textContent=`${$("prov").value} · ${a.length} est. · simulado`;
@@ -296,13 +303,14 @@ const th=document.querySelector(`th[data-c="${sortC}"] .ar`);if(th)th.textConten
 [["pins","map"],["pins2","map2"]].forEach(([pid,mid])=>{const el=$(pid);if(!el)return;el.innerHTML=a.map(s=>`<div class="pin${sel==s.id?" sel":""}" data-id="${s.id}" style="left:${s.x}%;top:${s.y}%;background:${col(price(s))}"></div>`).join("");
 el.querySelectorAll(".pin").forEach(p=>p.onclick=()=>mid=="map"?pop(+p.dataset.id):open(+p.dataset.id))});
 /* clicks */
-document.querySelectorAll("[data-id]").forEach(e=>e.onclick=ev=>{if(ev.target.dataset.f){tgl(+ev.target.dataset.f);ev.stopPropagation();return}open(+e.dataset.id)});
+document.querySelectorAll(".card[data-id],#tb tr[data-id]").forEach(e=>e.onclick=ev=>{if(ev.target.dataset.f){tgl(+ev.target.dataset.f);ev.stopPropagation();return}open(+e.dataset.id)});
 document.querySelectorAll("[data-f]").forEach(e=>e.onclick=ev=>{tgl(+e.dataset.f);ev.stopPropagation()});
 }
 function tgl(id){favs.has(id)?favs.delete(id):favs.add(id);log(0,(favs.has(id)?"☆ fav +":"☆ fav −")+" "+S.find(s=>s.id==id).marca);render();if(sel==id)open(id)}
 ["q","loc","prov"].forEach(id=>$(id).addEventListener("input",()=>{page=1;render()}));
 $("prov").onchange=()=>{page=1;log(1,`GET prov_${$("prov").value||"—"} 200 · 140ms`);render()};
 $("bKm").oninput=()=>{page=1;render()};
+$("fBtn").onclick=()=>{$("adv").classList.toggle("hide")};
 $("sort").onchange=e=>{const v=e.target.value;sortD=v.endsWith("D")?-1:1;sortC=v.replace(/D$/,"");page=1;render()};
 document.querySelectorAll("th[data-c]").forEach(th=>th.onclick=()=>{const c=th.dataset.c;if(sortC==c)sortD*=-1;else{sortC=c;sortD=1}$("sort").value=c+(sortD<0?"D":"");page=1;render()});
 $("pgSize").onchange=()=>{page=1;render()};$("prev").onclick=()=>{page--;render()};$("next").onclick=()=>{page++;render()};

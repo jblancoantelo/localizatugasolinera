@@ -25,13 +25,14 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#0b1220;color:#e2
 .map{flex:1;position:relative;overflow:hidden;background:#0b1220 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><path d="M0 60h120M60 0v120" stroke="%23162633" stroke-width="5"/><path d="M0 20h120M20 0v120M0 100h120M100 0v120" stroke="%2311202e" stroke-width="2"/></svg>');}
 .map .road{position:absolute;background:#16263a;border-radius:99px}
 .pin{position:absolute;width:34px;height:34px;border-radius:50% 50% 50% 6px;transform:rotate(-45deg) translate(-4px,-4px);border:3px solid #fff;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center}
-.pin b{transform:rotate(45deg);font-size:.62rem;color:#fff}
+.pin b{transform:rotate(45deg);font-size:.52rem;color:#fff;font-weight:800}
 .pin.sel{outline:3px solid #38bdf8;z-index:6}
 .me{position:absolute;width:18px;height:18px;background:#38bdf8;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 10px rgba(56,189,248,.25)}
-.fabs{position:absolute;right:.7rem;top:5.2rem;display:flex;flex-direction:column;gap:.5rem;z-index:20}
+.fabs{position:absolute;right:.7rem;bottom:calc(196px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:.5rem;z-index:20}
 .fab{width:52px;height:52px;border-radius:50%;border:1px solid #263349;background:rgba(15,23,42,.94);color:#fff;font-size:1.25rem;cursor:pointer}
 .fab.on{background:#fbbf24;border-color:#fbbf24}
 .legend{position:absolute;left:.7rem;top:5.2rem;z-index:20;background:rgba(15,23,42,.9);border:1px solid #263349;border-radius:12px;padding:.4rem .6rem;font-size:.68rem;display:flex;gap:.5rem}
+.legend.inline{position:static;background:none;border:none;padding:0;margin:0 0 0 .2rem;color:#94a3b8;flex-wrap:wrap}
 /* carousel */
 .car{position:absolute;left:0;right:0;bottom:0;z-index:25;display:flex;gap:.55rem;overflow-x:auto;padding:.6rem .7rem calc(.7rem + env(safe-area-inset-bottom));scroll-snap-type:x mandatory}
 .ccard{scroll-snap-align:center;flex:0 0 78%;max-width:340px;background:#f8fafc;color:#0f172a;border-radius:18px;padding:.7rem .8rem;cursor:pointer;border:3px solid transparent}
@@ -77,8 +78,9 @@ th,td{padding:.55rem .45rem;border-bottom:1px solid #f1f5f9;text-align:left}th{b
 <div class="top">
 <div class="pill"><span>🔍</span><input id="q" placeholder="Madrid · busca marca, calle…"><button id="gps">📍</button></div>
 <div class="chips" id="chips"></div>
+<div class="legend inline"><span><i class="dot" style="background:#22c55e"></i> &lt;1,50</span><span><i class="dot" style="background:#f59e0b"></i> 1,50–1,60</span><span><i class="dot" style="background:#ef4444"></i> &gt;1,60</span><span id="resN" style="margin-left:auto"></span></div>
 </div>
-<div class="legend"><span><i class="dot" style="background:#22c55e"></i> &lt;1,50</span><span><i class="dot" style="background:#f59e0b"></i> 1,50–1,60</span><span><i class="dot" style="background:#ef4444"></i> &gt;1,60</span></div>
+<div class="legend" style="display:none"></div>
 <div class="fabs"><button class="fab" id="favF" title="Solo favoritas">☆</button><button class="fab" id="listF" title="Tabla">☰</button></div>
 <div id="pins"></div>
 <div class="car" id="car"></div>
@@ -103,7 +105,9 @@ document.querySelectorAll("#chips .chip").forEach(c=>c.onclick=()=>{document.que
 [...new Set(S.map(s=>s.marca))].forEach(b=>$("brandS").innerHTML+=`<option>${b}</option>`);
 function filt(){return S.filter(s=>(!$("locS").value||s.loc==$("locS").value)&&(!$("brandS").value||s.marca==$("brandS").value)&&(!favOnly||favs.has(s.id))&&(s.marca+s.calle+s.loc).toLowerCase().includes($("q").value.toLowerCase())).sort((a,b)=>price(a)-price(b))}
 function render(){const a=filt();$("favN").textContent=favs.size;
-$("pins").innerHTML=a.map(s=>`<div class="pin${sel==s.id?" sel":""}" data-id="${s.id}" style="left:${s.x}%;top:${s.y}%;background:${col(price(s))}"><b>${price(s).toFixed(2).slice(2)}</b></div>`).join("");
+$("resN").textContent=a.length+" estaciones";
+
+$("pins").innerHTML=a.map(s=>`<div class="pin${sel==s.id?" sel":""}" data-id="${s.id}" style="left:${s.x}%;top:${s.y}%;background:${col(price(s))}"><b>${price(s).toFixed(2)}</b></div>`).join("");
 document.querySelectorAll(".pin").forEach(p=>p.onclick=()=>{select(+p.dataset.id);document.querySelector(`[data-card="${p.dataset.id}"]`)?.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"})});
 $("car").innerHTML=a.map(s=>`<div class="ccard${sel==s.id?" sel":""}" data-card="${s.id}"><div class="r1"><b>${favs.has(s.id)?"★":"☆"} ${s.marca}</b><span class="dot" style="background:${col(price(s))}"></span></div><b class="price">${price(s).toFixed(3)} €</b><div style="font-size:.74rem;color:#475569">${s.loc} · ${s.calle} · ${s.dist.toFixed(1)} km</div></div>`).join("")||`<div class="ccard">Sin resultados</div>`;
 document.querySelectorAll("[data-card]").forEach(c=>c.onclick=()=>select(+c.dataset.card));

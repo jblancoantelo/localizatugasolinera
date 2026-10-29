@@ -26,7 +26,7 @@ body{font-family:ui-monospace,SFMono-Regular,Menlo,system-ui,sans-serif;backgrou
 /* main */
 .main{overflow:auto;padding:.9rem;display:flex;flex-direction:column;gap:.7rem;min-width:0}
 .map{background:#0b1220;color:#cbd5e1;border-radius:14px;min-height:230px;position:relative;overflow:hidden;padding:.8rem}
-.pin{position:absolute;width:24px;height:24px;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);border:2px solid #fff;cursor:pointer}
+@media(min-width:1080px){.main .map{min-height:300px}}.pin{position:absolute;width:24px;height:24px;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);border:2px solid #fff;cursor:pointer}
 table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;font-size:.82rem}
 th,td{padding:.55rem .5rem;border-bottom:1px solid #f3f4f6;text-align:left;white-space:nowrap}
 th{background:#111827;color:#fff;font-size:.66rem;text-transform:uppercase;cursor:pointer}
@@ -96,7 +96,10 @@ document.querySelectorAll("#tb tr").forEach(r=>r.onclick=e=>{if(e.target.dataset
 document.querySelectorAll("[data-f]").forEach(b=>b.onclick=e=>{e.stopPropagation();const id=+b.dataset.f;favs.has(id)?favs.delete(id):favs.add(id);render()});
 $("pins").innerHTML=a.map(s=>`<div class="pin${sel==s.id?" sel":""}" data-id="${s.id}" title="${s.marca}" style="left:${s.x}%;top:${s.y}%;background:${col(price(s))}"></div>`).join("");
 document.querySelectorAll(".pin").forEach(p=>p.onclick=()=>open(+p.dataset.id));
-if(sel)open(sel,true)}
+if(sel)open(sel,true);else idle()}
+function idle(){const a=filt().slice(0,3);if(!a.length)return;
+$("drawer").innerHTML=`<h2 style="font-size:1rem">Resumen</h2><p class="mut" style="margin-bottom:.6rem">3 más baratas · ${fuel}</p>${a.map((s,i)=>`<button data-quick="${s.id}" style="display:flex;justify-content:space-between;gap:.5rem;width:100%;text-align:left;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:.55rem;margin-bottom:.4rem;cursor:pointer;font:inherit"><span><b>${i+1}. ${s.marca}</b><br><span class="mut">${s.loc} · ${s.dist} km</span></span><b style="font-variant-numeric:tabular-nums">${price(s).toFixed(3)} €</b></button>`).join("")}<p class="mut" style="margin-top:.5rem">Selecciona una fila, un pin o una tarjeta para ver la ficha completa.</p>`;
+document.querySelectorAll("[data-quick]").forEach(b=>b.onclick=()=>open(+b.dataset.quick))}
 function open(id,keep){sel=id;const s=S.find(x=>x.id==id);const v=price(s);
 $("drawer").innerHTML=`<div style="display:flex;gap:.5rem;align-items:flex-start"><div style="flex:1"><h2>${favs.has(id)?"★ ":""}${s.marca}</h2><p class="mut">${s.loc} · ${s.calle} · ${s.dist} km · <b style="color:#111;font-size:1rem">${v.toFixed(3)} €</b> ${fuel}</p></div><button class="chip" onclick="document.getElementById('drawer').classList.remove('open')">✕</button></div>
 <div class="tabs"><button class="on" data-t="i">Info</button><button data-t="h">Histórico</button><button data-t="ia">IA</button></div>
