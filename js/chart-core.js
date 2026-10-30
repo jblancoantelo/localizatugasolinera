@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Juan Blanco Antelo — Localiza tu Gasolinera
+
 /* Minimal shared chart primitives */
 function chartSetupCanvas(canvas) {
   const ctx = canvas.getContext('2d');

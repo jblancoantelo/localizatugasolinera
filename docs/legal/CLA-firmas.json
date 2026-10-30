@@ -1,0 +1,16 @@
+{
+  "$comentario": "Registro de firmas del CLA v1.0 del Proyecto. Para firmar, añade tu entrada mediante un pull request y escribe en el cuerpo: 'Acepto el CLA v1.0 del Proyecto.' Ver docs/legal/CLA.md (sección 12).",
+  "version": 1,
+  "cla": "1.0",
+  "firmas": [
+    {
+      "github": "jblancoantelo",
+      "nombre": "Juan Blanco Antelo",
+      "email": "jblancoantelo@gmail.com",
+      "tipo": "individual",
+      "fecha": "2026-10-29",
+      "cla": "1.0",
+      "nota": "Titular del proyecto y autor del código original"
+    }
+  ]
+}

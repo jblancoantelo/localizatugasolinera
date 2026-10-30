@@ -1,7 +1,7 @@
 {
   "name": "petrol",
   "version": "1.0.0",
-  "description": "",
+  "description": "PWA para consultar precios de carburantes en estaciones de servicio de España con datos del Geoportal de Hidrocarburos",
   "main": "sw.js",
   "directories": {
     "test": "test"
@@ -10,15 +10,22 @@
     "test": "node docs/test/full_test.mjs",
     "bump": "node scripts/bump-version.mjs",
     "sync-assets": "node scripts/sync-sw-assets.mjs",
-    "check-assets": "node scripts/sync-sw-assets.mjs --check"
+    "check-assets": "node scripts/sync-sw-assets.mjs --check",
+    "check-cla": "node scripts/check-cla.mjs"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jblancoantelo/localizatugasolinera.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "gasolineras",
+    "carburantes",
+    "precios",
+    "pwa",
+    "leaflet"
+  ],
+  "author": "Juan Blanco Antelo",
+  "license": "AGPL-3.0-only",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/jblancoantelo/localizatugasolinera/issues"

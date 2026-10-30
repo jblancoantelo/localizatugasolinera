@@ -1,5 +1,47 @@
 # Mejoras realizadas — Precios Gasolina España
 
+## 2026-10-30 — Licencia AGPLv3 y CLA para poder vender el proyecto
+
+### Por qué hacía falta
+El `package.json` declaraba `ISC`, pero no había fichero `LICENSE`, ni aviso de
+copyright, ni ninguna vía para que terceros aportaran código. Con un proyecto
+que se quiere poder **vender** en el futuro eso es un problema doble: sin
+licencia explícita nadie sabe qué puede hacer con el código, y sin CLA cualquier
+aportación externa quedaría atada a la licencia pública, de modo que una edición
+comercial futura tendría que excluirla o pedir permiso a cada contribuyente.
+
+### AGPLv3 y no MIT
+La app se sirve por red, así que la AGPL es la licencia que encaja: obliga a
+quien la modifique y la ofrezca como servicio a publicar su código, y a la vez
+**permite cobrar** por el software, el alojamiento o el soporte. Se fija como
+`AGPL-3.0-only` (no `or-later`) para no ceder el control sobre versiones futuras
+de la licencia.
+
+### El CLA, en una frase
+El contribuyente **conserva su copyright** y concede al titular una licencia
+**no exclusiva, perpetua, irrevocable y transferible** con derecho a
+**relicenciar** —incluida una licencia propietaria—. Es el modelo de doble
+licencia de MySQL, Qt o Grafana. Se descartó la cesión de copyright: en España
+la cesión en exclusiva tiene límites (art. 46 TRLPI) y espanta a los
+contribuyentes y a sus empresas, sin aportar nada extra para poder vender.
+
+### Lo que se añadió
+- `LICENSE` (texto literal de la AGPLv3), `NOTICE` y cabecera **SPDX** en los 26
+  ficheros fuente: el copyright queda claro fichero a fichero.
+- `docs/legal/CLA.md` con anexos individual y corporativo, y
+  `docs/legal/CLA-firmas.json` como registro de firmas.
+- `scripts/check-cla.mjs` + workflow `cla.yml`: el bot avisa en la PR si falta la
+  firma. Se ejecuta con `pull_request_target` **sin hacer checkout del código de
+  la PR**, así el token de escritura nunca ejecuta código de un fork.
+- `docs/legal/README.md` con los escenarios de venta (SaaS, venta del repo,
+  edición «Pro» cerrada) y el checklist previo a vender, incluida la cláusula 13
+  de la AGPL, que en una PWA exige ofrecer el código fuente a los usuarios.
+- Enlace **«Código fuente (AGPLv3)»** en Config → Actualización de la app, para
+  cumplir esa cláusula 13 sin depender de que el usuario busque el repositorio.
+
+### Pendiente recomendado
+- Registrar la marca en la OEPM: la licencia no concede derechos de marca.
+
 ## 2026-10-11 — Móvil apaisado, 5 columnas en vertical y PWA que se actualiza sola
 
 ### Por qué hacía falta

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Juan Blanco Antelo — Localiza tu Gasolinera
+
 // Histórico de precios: fuente ÚNICA de verdad, compartida por la página y el
 // Service Worker (sw.js la carga con importScripts). Antes estas funciones
 // estaban duplicadas en api.js y sw.js, con dos comparadores de fechas

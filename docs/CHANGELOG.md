@@ -1,5 +1,30 @@
 # CHANGELOG
 
+## [2026-10-30] — Licencia AGPLv3 + CLA: el proyecto se puede vender y aceptar contribuciones
+
+| Cambio | Detalle |
+|--------|---------|
+| `LICENSE` | **Nuevo**. Texto íntegro de la **GNU AGPLv3** (copia literal de gnu.org, 661 líneas, sin modificar) |
+| `NOTICE` | **Nuevo**. Copyright, cómo obtener el código fuente y licencias de los terceros (Leaflet, teselas, datos del Ministerio, proveedores de IA) |
+| `docs/legal/CLA.md` | **Nuevo**. CLA v1.0: licencia **no exclusiva, perpetua, irrevocable y transferible** + derecho expreso de **relicenciamiento** (incluida licencia propietaria) + patentes + derechos morales. Anexos individual y corporativo |
+| `docs/legal/README.md` | **Nuevo**. Qué permite y qué no la AGPL, escenarios de venta, cláusula 13 en una PWA y checklist previo a vender |
+| `docs/legal/CLA-firmas.json` | **Nuevo**. Registro de firmas del CLA (una entrada por login de GitHub) |
+| `CONTRIBUTING.md` | **Nuevo**. Entorno, reglas que no se pueden romper, estilo, PRs y proceso de firma del CLA |
+| `scripts/check-cla.mjs` | **Nuevo**. `node scripts/check-cla.mjs <login>` (0 firmado / 1 sin firmar) y `--list`. Añadido a `check-syntax.mjs` |
+| `.github/workflows/cla.yml` | **Nuevo**. En PRs de forks: comenta y falla si el autor no ha firmado. Usa `pull_request_target` **sin hacer checkout del código del PR** (solo descarga el JSON de firmas como dato) |
+| `package.json` | `license` de `ISC` a **`AGPL-3.0-only`**; autor, descripción y keywords; script `check-cla` |
+| 26 ficheros fuente | Cabecera **SPDX** `AGPL-3.0-only` + copyright (`js/*.js`, `sw.js`, `css/styles.css`, `index.html`, `offline.html`, `workers/`, `scripts/`, `docs/test/`) |
+| `index.html` + `css/styles.css` | **Enlace «Código fuente (AGPLv3)»** en Config → Actualización de la app: la app se usa por red, así que la cláusula 13 obliga a ofrecer el fuente a los usuarios |
+| `README.md` | Badges de licencia y CLA, tabla de documentación ampliada, sección **Contribuir** y sección **Licencia** reescrita (antes decía ISC) |
+
+### Verificación
+
+- `node check-syntax.mjs`: 20/20 ficheros OK
+- Suite completa: **214 tests** (207 HTTP + 7 file://)
+- `node scripts/check-cla.mjs --list`: 1 firma (titular)
+
+---
+
 ## [2026-10-11] — Móvil: modo apaisado, 5 columnas en vertical y PWA que se actualiza sola
 
 | Cambio | Detalle |

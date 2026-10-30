@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Juan Blanco Antelo — Localiza tu Gasolinera
+
 // Servidor estático mínimo para depuración manual (fichero auxiliar de docs).
 // La suite oficial NO lo usa: `docs/test/full_test.mjs` levanta su propio servidor.
 //   node docs/test/server.js   ->  http://localhost:8080

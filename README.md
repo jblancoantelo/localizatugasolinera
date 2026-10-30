@@ -2,6 +2,9 @@
 
 Aplicación web progresiva (PWA) para consultar **precios de carburantes en estaciones de servicio de España** en tiempo real, usando datos oficiales del [Geoportal de Hidrocarburos](https://geoportalgasolineras.es/) del Ministerio para la Transición Ecológica.
 
+[![Licencia: AGPL-3.0-only](https://img.shields.io/badge/licencia-AGPL--3.0--only-blue)](./LICENSE)
+[![Contribuciones: CLA v1.0](https://img.shields.io/badge/contribuciones-CLA%20v1.0-green)](./docs/legal/CLA.md)
+
 > 🧪 Este proyecto ha sido desarrollado íntegramente con **[OpenCode](https://opencode.ai)** usando modelos de lenguaje libres (DeepSeek), sin depender de APIs de pago ni modelos propietarios.
 
 ---
@@ -112,7 +115,7 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 ```powershell
 npm install                # playwright + web-push
 
-npm test                   # 208 tests (201 HTTP + 7 file://) — suite completa
+npm test                   # 214 tests (207 HTTP + 7 file://) — suite completa
 node check-syntax.mjs      # sintaxis de todo el JS (incluye el <script> inline del HTML)
 npm run bump               # regenera ASSETS de sw.js + incrementa APP_VERSION y BUILD_TIME
 npm run sync-assets        # solo regenera la lista ASSETS de sw.js
@@ -162,7 +165,7 @@ npm run check-assets       # verifica ASSETS sin escribir (sale con 1 si no cuad
 | Notificaciones | Web Push API + Periodic Background Sync |
 | Service Worker | Cache-first + Network-first híbrido, precaché generado por script |
 | Chat IA | Pestaña **General** (misma pregunta a todos los proveedores visibles, en paralelo) + 7 proveedores (Groq, Mistral, OpenRouter, LLM7.io, NVIDIA vía Worker, Google Gemini, Chrome Built-in AI) |
-| Tests | Playwright (208 tests, servidor HTTP inline) |
+| Tests | Playwright (214 tests, servidor HTTP inline) |
 | Desarrollo | [OpenCode](https://opencode.ai) con modelos DeepSeek (libres) |
 
 ---
@@ -198,9 +201,56 @@ npm run check-assets       # verifica ASSETS sin escribir (sale con 1 si no cuad
 | [docs/PUSH_NOTIFICATIONS.md](./docs/PUSH_NOTIFICATIONS.md) | Arquitectura push (SW-based) y depuración |
 | [docs/mejoras-petrol.md](./docs/mejoras-petrol.md) | Por qué se hizo cada mejora |
 | [docs/test/TEST_PLAN.md](./docs/test/TEST_PLAN.md) | Plan de pruebas y cobertura |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | Cómo contribuir: entorno, reglas, tests y firma del CLA |
+| [docs/legal/README.md](./docs/legal/README.md) | Estrategia legal: qué permite la AGPL, cómo vender y qué protege el CLA |
+| [docs/legal/CLA.md](./docs/legal/CLA.md) | Acuerdo de Licencia de Contribuyente (v1.0) |
+| [NOTICE](./NOTICE) | Titular del copyright, código fuente y licencias de terceros |
+
+---
+
+## Contribuir
+
+Las aportaciones son bienvenidas. Antes de enviar código, lee
+[`CONTRIBUTING.md`](./CONTRIBUTING.md): hay que aceptar el
+[CLA v1.0](./docs/legal/CLA.md) añadiendo una entrada a
+[`docs/legal/CLA-firmas.json`](./docs/legal/CLA-firmas.json) y escribiendo
+*«Acepto el CLA v1.0 del Proyecto.»* en el pull request.
+
+El CLA **no te quita la autoría**: sigues siendo el autor de tu código y puedes
+reutilizarlo donde quieras. Solo concede al titular una licencia no exclusiva y
+transferible que le permite relicenciar el proyecto en el futuro (por ejemplo,
+para una edición comercial), sin dejar de publicar siempre el código bajo
+AGPLv3.
 
 ---
 
 ## Licencia
 
-ISC. Datos del [Geoportal de Hidrocarburos](https://geoportalgasolineras.es/) del Ministerio para la Transición Ecológica.
+Este proyecto se distribuye bajo la **GNU Affero General Public License v3.0,
+solo versión 3 (`AGPL-3.0-only`)**. El texto completo está en
+[`LICENSE`](./LICENSE) y el aviso de copyright en [`NOTICE`](./NOTICE).
+
+```
+Copyright (C) 2026 Juan Blanco Antelo
+
+Este programa es software libre: puedes redistribuirlo y/o modificarlo
+bajo los términos de la GNU Affero General Public License, versión 3.
+Se distribuye SIN NINGUNA GARANTÍA.
+```
+
+En resumen:
+
+- **Puedes** usar, copiar, modificar y vender el software, y cobrar por soporte
+  o alojamiento.
+- **Debes** entregar el código fuente completo —incluidas tus modificaciones— a
+  quien lo use, también si lo ofreces como servicio web (cláusula 13). La app
+  enlaza al repositorio desde **Config → Actualización de la app**.
+- **Debes** mantener los avisos de copyright y de licencia.
+- La licencia **no concede derechos de marca**: el nombre «Localiza tu
+  Gasolinera» y sus iconos no se pueden usar para identificar un fork.
+
+Los datos de precios provienen del [Geoportal de
+Hidrocarburos](https://geoportalgasolineras.es/) del Ministerio para la
+Transición Ecológica y tienen sus propias condiciones de reutilización. Las
+licencias de terceros (Leaflet, teselas de mapa, proveedores de IA) están
+detalladas en [`NOTICE`](./NOTICE).

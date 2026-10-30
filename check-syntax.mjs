@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Juan Blanco Antelo — Localiza tu Gasolinera
+
 // Comprobación de sintaxis de todo el JS del proyecto sin dependencias externas.
 // Los ficheros "clásicos" se compilan con el compilador de Node; los que usan
 // sintaxis de módulo (import/export, p. ej. el Worker de Cloudflare) se
@@ -19,7 +22,8 @@ const files = [
   'sw.js',
   'workers/nvidia-proxy.js',
   'scripts/bump-version.mjs',
-  'scripts/sync-sw-assets.mjs'
+  'scripts/sync-sw-assets.mjs',
+  'scripts/check-cla.mjs'
 ];
 
 const html = fs.readFileSync('index.html', 'utf8');
