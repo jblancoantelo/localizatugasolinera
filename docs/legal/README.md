@@ -93,8 +93,11 @@ La licencia **no concede derechos de marca**. Cualquiera puede hacer un fork
 legal del código, pero no puede usar el nombre «Localiza tu Gasolinera», el
 logotipo ni los iconos para identificar su versión.
 
-- [ ] Pendiente recomendado: registrar la marca denominativa en la OEPM
-      (clase 9 y/o 42) si el proyecto va a venderse como negocio.
+- [ ] **Registrar la marca** en la OEPM: guía completa, búsqueda de
+      anterioridades, listas de productos/servicios listas para pegar y tasas
+      en [`marca.md`](./marca.md).
+      Resumen: marca **denominativa** «Localiza tu Gasolinera», clases **9 y
+      42**, **210,72 €** por vía electrónica.
 
 ## 6. Checklist antes de vender
 

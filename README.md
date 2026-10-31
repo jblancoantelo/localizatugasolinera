@@ -204,6 +204,7 @@ npm run check-assets       # verifica ASSETS sin escribir (sale con 1 si no cuad
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Cómo contribuir: entorno, reglas, tests y firma del CLA |
 | [docs/legal/README.md](./docs/legal/README.md) | Estrategia legal: qué permite la AGPL, cómo vender y qué protege el CLA |
 | [docs/legal/CLA.md](./docs/legal/CLA.md) | Acuerdo de Licencia de Contribuyente (v1.0) |
+| [docs/legal/marca.md](./docs/legal/marca.md) | Cómo registrar la marca en la OEPM: búsqueda, clases 9 y 42, tasas y trámite |
 | [NOTICE](./NOTICE) | Titular del copyright, código fuente y licencias de terceros |
 
 ---

@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## [2026-10-31] — Guía para registrar la marca en la OEPM
+
+| Cambio | Detalle |
+|--------|---------|
+| `docs/legal/marca.md` | **Nuevo**. Guía completa: búsqueda de anterioridades (Localizador OEPM, TMview, EUIPO eSearch), clases **9 y 42** con las listas de productos/servicios listas para pegar, tasas vigentes desde el 1-abr-2026 (**127,88 €** la 1.ª + **82,84 €** la 2.ª = **210,72 €** por vía electrónica), paso a paso en la sede, plazos (**2 meses** de oposición, **12/20 meses** de resolución), obligaciones (uso en 5 años, renovación a 10) y alternativa EUIPO (900 € las dos clases) |
+| `docs/legal/README.md` | La marca deja de ser un «pendiente» y enlaza a la guía, con el resumen (denominativa, clases 9 y 42, 210,72 €) |
+| `README.md` | `docs/legal/marca.md` en la tabla de documentación |
+
+### Verificación
+
+- Suite completa: **214 tests** (207 HTTP + 7 file://), sin cambios: solo documentación. `APP_VERSION` no se toca porque ningún asset del precaché ha cambiado
+
+---
+
 ## [2026-10-30] — Licencia AGPLv3 + CLA: el proyecto se puede vender y aceptar contribuciones
 
 | Cambio | Detalle |
