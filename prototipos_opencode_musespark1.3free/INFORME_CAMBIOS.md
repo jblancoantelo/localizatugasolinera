@@ -25,6 +25,7 @@
 | `p5-completo.html` | Paridad funcional con la app real (checklist viva) | ✅ |
 | `p6-trayecto.html` | **Nuevo**: planificador "repostar de camino" con ahorro neto | ✅ |
 | `PLAN.md` | Cómo portar cada prototipo a la app real, por fases | ✅ |
+| `RESUMEN_PR.md` | Resumen por prototipo para la PR (qué hace cada uno) | ✅ |
 | `INFORME_CAMBIOS.md` | Este informe (hecho / pendiente / auditoría) | ✅ |
 
 ---
