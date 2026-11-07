@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Juan Blanco Antelo — Localiza tu Gasolinera
+
 const API_BASE = 'https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/';
 const API_LOG_RING = (typeof createRingLog === 'function') ? createRingLog(30) : (() => {
   const arr = [];

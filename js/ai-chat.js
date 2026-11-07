@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Juan Blanco Antelo — Localiza tu Gasolinera
+
 // Varios modelos gratuitos de estos proveedores son "reasoning": gastan el
 // presupuesto de max_tokens pensando y devuelven `content` vacío. En vez de
 // dejar el chat en blanco se explica y se sugiere un modelo que responda ya.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Juan Blanco Antelo — Localiza tu Gasolinera
+
 const DB_NAME = 'gasolineras_db';
 const DB_VERSION = 2;
 const provinceCacheMap = new Map();

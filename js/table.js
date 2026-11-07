@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Juan Blanco Antelo — Localiza tu Gasolinera
+
 function getAvailableFuels(station) {
   const fuels = [];
   for (const [name, key] of FUEL_NAMES) {

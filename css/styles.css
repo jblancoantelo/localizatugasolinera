@@ -1,3 +1,6 @@
+/* SPDX-License-Identifier: AGPL-3.0-only
+   Copyright (C) 2026 Juan Blanco Antelo — Localiza tu Gasolinera */
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; color: #1a1a2e; height: 100vh; overflow: hidden; }
 
@@ -245,6 +248,9 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 .config-card button { background: #1a73e8; color: #fff; border: none; padding: 0.2rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.72rem; }
 .config-card .btn-del { background: #e65100; }
 .config-desc { font-size: 0.72rem; color: #888; margin-bottom: 0.3rem; }
+.config-desc a { color: #1a73e8; text-decoration: none; word-break: break-all; }
+.config-desc a:hover { text-decoration: underline; }
+.config-source { margin-top: 0.4rem; margin-bottom: 0; }
 .cache-line { font-size: 0.75rem; color: #555; margin-bottom: 0.3rem; }
 .cache-line.muted { color: #999; word-break: break-all; }
 .config-card .config-cache-tabs { display: flex; gap: 0; margin: 0.2rem 0 0.3rem; }

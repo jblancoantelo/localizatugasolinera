@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Juan Blanco Antelo — Localiza tu Gasolinera
+
 import { readFileSync, writeFileSync } from 'fs';
 import { syncAssets } from './sync-sw-assets.mjs';
 

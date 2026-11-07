@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Juan Blanco Antelo — Localiza tu Gasolinera
+
 function drawPriceChart(canvas, data) {
   const { ctx, W, H } = chartSetupCanvas(canvas);
   const PAD = { top: 24, right: 24, bottom: 22, left: 56 };

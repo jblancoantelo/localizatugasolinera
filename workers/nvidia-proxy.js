@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Juan Blanco Antelo — Localiza tu Gasolinera
+
 // Proxy CORS para NVIDIA NIM (integrate.api.nvidia.com).
 //
 // Por que hace falta: el gateway de NVIDIA solo devuelve

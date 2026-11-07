@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Juan Blanco Antelo — Localiza tu Gasolinera
+
 function render(fitBounds) {
   const s = STATE;
   const q = document.getElementById('search').value.toLowerCase().trim();

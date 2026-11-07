@@ -1,0 +1,73 @@
+name: CLA
+
+# Avisa cuando una PR llega sin la firma del CLA.
+# Ver docs/legal/CLA.md (sección 12) y CONTRIBUTING.md.
+#
+# pull_request_target se ejecuta en el contexto de la rama base y con el
+# GITHUB_TOKEN de escritura: por eso NO se hace checkout del código del PR,
+# solo se descarga el JSON de firmas como dato.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: cla-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  cla:
+    name: Firma del CLA
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.user.type != 'Bot'
+    steps:
+      - name: Checkout de la rama base
+        uses: actions/checkout@v4
+
+      - name: Descargar el registro de firmas del PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${{ github.repository }}/contents/docs/legal/CLA-firmas.json?ref=${{ github.event.pull_request.head.sha }}" \
+            -H "Accept: application/vnd.github.raw" > "$RUNNER_TEMP/cla-firmas.json" \
+            || echo '{"firmas":[]}' > "$RUNNER_TEMP/cla-firmas.json"
+
+      - name: Comprobar la firma
+        id: check
+        continue-on-error: true
+        env:
+          AUTOR: ${{ github.event.pull_request.user.login }}
+        run: node scripts/check-cla.mjs "$AUTOR" --file "$RUNNER_TEMP/cla-firmas.json"
+
+      - name: Avisar en la PR si falta la firma
+        if: steps.check.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AUTOR: ${{ github.event.pull_request.user.login }}
+          NUMERO: ${{ github.event.pull_request.number }}
+        run: |
+          if gh pr view "$NUMERO" --json comments --jq '.comments[].body' | grep -q 'cla-check'; then
+            echo "Ya hay un aviso de CLA en esta PR"
+            exit 0
+          fi
+          cat > "$RUNNER_TEMP/aviso.md" <<'EOF'
+          <!-- cla-check -->
+          ## Falta la firma del CLA
+
+          Gracias por la contribución, @autor. Antes de integrarla necesitamos que aceptes el **CLA v1.0** del proyecto:
+
+          1. Añade tu entrada a `docs/legal/CLA-firmas.json`.
+          2. Escribe en esta PR: *«Acepto el CLA v1.0 del Proyecto.»*
+
+          Los detalles están en `docs/legal/CLA.md` y `CONTRIBUTING.md`.
+          EOF
+          sed -i "s/@autor/@$AUTOR/" "$RUNNER_TEMP/aviso.md"
+          gh pr comment "$NUMERO" --body-file "$RUNNER_TEMP/aviso.md"
+
+      - name: Fallar si no hay firma
+        if: steps.check.outcome == 'failure'
+        run: exit 1

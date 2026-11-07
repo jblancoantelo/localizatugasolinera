@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Juan Blanco Antelo — Localiza tu Gasolinera
+
 // Genera la lista ASSETS del Service Worker a partir de los ficheros que el
 // index.html y el manifest.json referencian realmente, para que no se
 // desincronice al añadir un script o un icono nuevo (paso en el que se colaron
@@ -53,13 +56,22 @@ export function syncAssets({ check = false } = {}) {
   }
   const before = sw.slice(start, end + END.length);
   const after = renderBlock(assets);
-  const changed = before !== after;
+  // La comparación ignora el fin de línea: en Windows el checkout de Git deja
+  // CRLF y renderBlock genera LF, así que `--check` fallaba siempre y cada
+  // sincronización reescribía el bloque mezclando CRLF y LF en el fichero.
+  const norm = s => s.replace(/\r\n/g, '\n');
+  const changed = norm(before) !== norm(after);
 
   if (changed && check) {
     console.error('ERROR: la lista ASSETS de sw.js no coincide con index.html/manifest.json. Ejecuta: node scripts/sync-sw-assets.mjs');
     process.exit(1);
   }
-  if (changed) writeFileSync('sw.js', sw.slice(0, start) + after + sw.slice(end + END.length));
+  if (changed) {
+    // Se escribe con el mismo fin de línea que ya usa el fichero.
+    const eol = sw.includes('\r\n') ? '\r\n' : '\n';
+    const block = eol === '\n' ? after : after.replace(/\n/g, eol);
+    writeFileSync('sw.js', sw.slice(0, start) + block + sw.slice(end + END.length));
+  }
 
   // Todo lo que el SW importa con importScripts tiene que estar precacheado,
   // o el SW arranca sin esas funciones (es lo que pasaba con js/ai-chat.js).

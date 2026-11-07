@@ -1,0 +1,35 @@
+Localiza tu Gasolinera — Precios de Gasolina en España
+Copyright (C) 2026 Juan Blanco Antelo
+
+Este programa es software libre: puedes redistribuirlo y/o modificarlo bajo
+los términos de la GNU Affero General Public License, versión 3, tal y como
+la publica la Free Software Foundation. El texto completo de la licencia está
+en el fichero LICENSE de este repositorio.
+
+Este programa se distribuye con la esperanza de que sea útil, pero SIN NINGUNA
+GARANTÍA, ni siquiera la garantía implícita de COMERCIABILIDAD o IDONEIDAD PARA
+UN FIN PARTICULAR. Ver la GNU Affero General Public License para más detalles.
+
+Código fuente: https://github.com/jblancoantelo/localizatugasolinera
+
+La GNU AGPLv3 no concede derechos sobre el nombre, el logotipo ni la marca del
+proyecto. Su uso requiere autorización del titular.
+
+--------------------------------------------------------------------------
+Componentes y servicios de terceros
+--------------------------------------------------------------------------
+
+- Leaflet (https://leafletjs.com) — BSD 2-Clause. Se carga desde el CDN de
+  unpkg; no se distribuye copia modificada en este repositorio.
+- Teselas de mapa: OpenStreetMap (© OpenStreetMap contributors, ODbL), CARTO,
+  Esri, OpenTopoMap y CyclOSM. Cada proveedor impone sus propios términos de
+  uso y límites de peticiones.
+- Datos de precios de carburantes: Geoportal de Hidrocarburos / API REST del
+  Ministerio para la Transición Ecológica y el Reto Demográfico. Los datos
+  tienen sus propias condiciones de reutilización, que esta licencia no altera.
+- Proveedores de IA (Groq, Mistral, OpenRouter, LLM7.io, NVIDIA, Google) y
+  Chrome Built-in AI: se usan a través de sus APIs públicas con las claves del
+  propio usuario, sujetas a sus términos de servicio.
+
+Las licencias de esos componentes y servicios prevalecen sobre la de este
+proyecto en lo que respecta a su propio código, datos y servicios.

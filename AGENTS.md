@@ -76,6 +76,31 @@ Cualquier función que necesiten los dos tiene que vivir en uno de esos ficheros
 
 ## Convenios del proyecto
 
+### Licencia, copyright y CLA
+
+- **Licencia:** `AGPL-3.0-only` (ver `LICENSE`). El `package.json` debe seguir
+  diciendo `"license": "AGPL-3.0-only"`; si vuelve a `ISC` o similar, GitHub y
+  `npm` muestran la licencia equivocada.
+- **Cabecera obligatoria** en todo fichero fuente nuevo (JS, CSS, HTML, SW,
+  scripts, tests):
+  ```js
+  // SPDX-License-Identifier: AGPL-3.0-only
+  // Copyright (C) 2026 Juan Blanco Antelo — Localiza tu Gasolinera
+  ```
+  En CSS va como `/* … */` y en HTML como `<!-- … -->` **después** del
+  `<!DOCTYPE html>` (un comentario antes del doctype activa el modo quirks).
+- **Contribuciones externas:** cualquiera que mande código debe firmar el
+  `docs/legal/CLA.md` añadiendo su login a `docs/legal/CLA-firmas.json`. Sin eso
+  no se puede fusionar: el CLA es lo que permite relicenciar el proyecto
+  (doble licencia / venta). No aceptar PRs de fuera sin firma.
+- **Comprobar firmas:** `npm run check-cla -- --list` o
+  `node scripts/check-cla.mjs <login>` (sale con 1 si no ha firmado).
+- **El workflow `cla.yml` usa `pull_request_target`**: no se le puede añadir un
+  `actions/checkout` del código de la PR, porque ejecutaría código de un fork con
+  el token de escritura. Solo se descarga el JSON de firmas con `gh api`.
+- **No cambiar de licencia** ni el titular del copyright sin actualizar a la vez
+  `LICENSE`, `NOTICE`, `README.md`, `docs/legal/` y las cabeceras SPDX.
+
 ### Tabs (propagación CSS/HTML/JS)
 - `data-tab` en HTML usa **kebab-case**: `tab-map`, `tab-table`, `tab-both`, `tab-config`
 - CSS clases usan el mismo kebab-case: `.tab-map`, `.tab-table`, `.tab-both`, `.tab-config`
@@ -348,7 +373,7 @@ Orden actual de grupos:
 ### Tests
 - Ubicación: `docs/test/full_test.mjs`
 - Plan: `docs/test/TEST_PLAN.md`
-- 208 tests totales (201 HTTP + 7 file://)
+- 214 tests totales (207 HTTP + 7 file://)
 - Secciones: 1-12 UI, 13 claves IA (manual), 14 push, 15 chat IA, 16 ring logs, 17 build (`ASSETS`/`APP_VERSION`/`?v=` de los iconos)
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)
@@ -374,6 +399,7 @@ node check-syntax.mjs   # sintaxis de todo el JS + <script> inline del HTML
 npm run bump            # sync de ASSETS + APP_VERSION + BUILD_TIME
 npm run sync-assets     # solo ASSETS
 npm run check-assets    # verifica ASSETS sin escribir
+npm run check-cla -- --list   # lista las firmas del CLA
 ```
 
 ### Decisiones técnicas clave

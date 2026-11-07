@@ -1,5 +1,77 @@
 # Mejoras realizadas — Precios Gasolina España
 
+## 2026-10-31 — La marca en la OEPM: el nombre también hay que protegerlo
+
+### Por qué hacía falta
+La AGPL deja el código libre por diseño: cualquiera puede hacer un fork legal y
+publicarlo. Lo que **no** puede es llamarlo igual. Sin una marca registrada, un
+fork puede usar «Localiza tu Gasolinera» y confundir a los usuarios, y al vender
+el negocio no hay ningún activo de propiedad industrial que transmitir. El
+`NOTICE` ya avisa de que la licencia no concede derechos de marca, pero un aviso
+no sustituye a un registro.
+
+### Qué contiene la guía
+- **Búsqueda de anterioridades** obligatoria de facto: Localizador de la OEPM,
+  TMview y EUIPO eSearch, con las variantes que hay que buscar (`localiza`,
+  `localizatu`, `gasolinera`) y cómo interpretar cada resultado. La tasa no se
+  devuelve si la marca se deniega.
+- **Clases 9 y 42** con las listas redactadas y listas para pegar, más las
+  opcionales (35 si hay publicidad, 38 casi nunca).
+- **Tasas reales** desde el 1-abr-2026: 127,88 € + 82,84 € = **210,72 €** por
+  vía electrónica (247,93 € en papel), frente a los 900 € de la EUIPO.
+- **Trámite completo**: sede electrónica con Cl@ve/certificado, publicación en
+  el BOPI, 2 meses de oposición, 12 meses de resolución sin incidencias (20 con
+  oposiciones).
+- **Obligaciones posteriores**: uso real en 5 años o caducidad, renovación cada
+  10, vigilancia del BOPI y qué hacer si un fork usa el nombre.
+
+### Lo que se evitó a propósito
+No se documenta un «registro exprés» ni se dan por buenas las cifras de blogs:
+las tasas se contrastaron con el cuadro oficial de la OEPM en vigor desde el
+1 de abril de 2026, y las de la EUIPO con su tarifa en línea.
+
+## 2026-10-30 — Licencia AGPLv3 y CLA para poder vender el proyecto
+
+### Por qué hacía falta
+El `package.json` declaraba `ISC`, pero no había fichero `LICENSE`, ni aviso de
+copyright, ni ninguna vía para que terceros aportaran código. Con un proyecto
+que se quiere poder **vender** en el futuro eso es un problema doble: sin
+licencia explícita nadie sabe qué puede hacer con el código, y sin CLA cualquier
+aportación externa quedaría atada a la licencia pública, de modo que una edición
+comercial futura tendría que excluirla o pedir permiso a cada contribuyente.
+
+### AGPLv3 y no MIT
+La app se sirve por red, así que la AGPL es la licencia que encaja: obliga a
+quien la modifique y la ofrezca como servicio a publicar su código, y a la vez
+**permite cobrar** por el software, el alojamiento o el soporte. Se fija como
+`AGPL-3.0-only` (no `or-later`) para no ceder el control sobre versiones futuras
+de la licencia.
+
+### El CLA, en una frase
+El contribuyente **conserva su copyright** y concede al titular una licencia
+**no exclusiva, perpetua, irrevocable y transferible** con derecho a
+**relicenciar** —incluida una licencia propietaria—. Es el modelo de doble
+licencia de MySQL, Qt o Grafana. Se descartó la cesión de copyright: en España
+la cesión en exclusiva tiene límites (art. 46 TRLPI) y espanta a los
+contribuyentes y a sus empresas, sin aportar nada extra para poder vender.
+
+### Lo que se añadió
+- `LICENSE` (texto literal de la AGPLv3), `NOTICE` y cabecera **SPDX** en los 26
+  ficheros fuente: el copyright queda claro fichero a fichero.
+- `docs/legal/CLA.md` con anexos individual y corporativo, y
+  `docs/legal/CLA-firmas.json` como registro de firmas.
+- `scripts/check-cla.mjs` + workflow `cla.yml`: el bot avisa en la PR si falta la
+  firma. Se ejecuta con `pull_request_target` **sin hacer checkout del código de
+  la PR**, así el token de escritura nunca ejecuta código de un fork.
+- `docs/legal/README.md` con los escenarios de venta (SaaS, venta del repo,
+  edición «Pro» cerrada) y el checklist previo a vender, incluida la cláusula 13
+  de la AGPL, que en una PWA exige ofrecer el código fuente a los usuarios.
+- Enlace **«Código fuente (AGPLv3)»** en Config → Actualización de la app, para
+  cumplir esa cláusula 13 sin depender de que el usuario busque el repositorio.
+
+### Pendiente recomendado
+- Registrar la marca en la OEPM: la licencia no concede derechos de marca.
+
 ## 2026-10-17 — Seis prototipos de rediseño para decidir la próxima UI
 
 ### Por qué hacía falta

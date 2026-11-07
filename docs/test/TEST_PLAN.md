@@ -19,7 +19,7 @@ node docs/test/full_test.mjs
 ### Qué hace el script:
 - Inicia servidor HTTP en :8080 sirviendo desde la raíz del proyecto
 - Lanza Chromium headless
-- Ejecuta 208 tests: 201 contra HTTP + 7 contra `file://`
+- Ejecuta 214 tests: 207 contra HTTP + 7 contra `file://`
 - Empieza por la sección 17 (build), que lee ficheros del disco sin abrir el navegador
 - Cierra servidor y navegador automáticamente
 - Exit code 0 = todo OK, 1 = algún fallo
@@ -138,7 +138,7 @@ node docs/test/full_test.mjs
 
 ## Resultados actuales
 
-**208 tests — 208 ✅ 0 ❌**
+**214 tests — 214 ✅ 0 ❌**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
@@ -163,10 +163,10 @@ node docs/test/full_test.mjs
 | Caché (limpiar caché borra de verdad) | 1 ✅ | — |
 | Push Notifications | 8 ✅ | — |
 | Helpers (norm/parsePrice/comparePrices) | 14 ✅ | — |
-| Chat IA (sección 15) | 121 ✅ | — |
+| Chat IA (sección 15) | 127 ✅ | — |
 | Ring logs (sección 16) | 7 ✅ | — |
 | Build (sección 17) | 4 ✅ | — |
-| **Total** | **201 ✅** | **7 ✅** |
+| **Total** | **207 ✅** | **7 ✅** |
 
 ## 15. Chat IA (automatizado)
 
@@ -195,6 +195,12 @@ guarda el modelo enviado como el último de su proveedor en
 `gasolineras_ai_last_models`, y al poblar de nuevo se restaura ese último modelo
 —aunque venga del catálogo remoto— o se vuelve al `defaultModel` si ya no existe
 en la lista.
+
+**Prompts rápidos** (6 tests nuevos): Config → Prompts rápidos tiene 5
+`textarea` y guarda lo introducido, las cajas crecen en vertical con varias
+líneas, solo los prompts rellenos generan botón (icono + número) a la izquierda
+de la papelera, y pulsar uno lo ejecuta directamente en todos los proveedores
+visibles.
 
 **Formato de la respuesta (5 tests nuevos)**: el Markdown que devuelve el modelo
 se pinta con `renderAiMarkdown()` en vez de verse literal en un bloque —títulos
