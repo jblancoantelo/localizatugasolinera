@@ -168,14 +168,13 @@ canvas{width:100%;height:170px;background:#f7f3ea;border:1px solid var(--line);b
       <h2>💡 Por qué esta parada</h2>
       <div id="why" class="note"></div>
     </div>
+    <div class="sum"><div class="in">
+      <div class="who" id="sumWho">—</div>
+      <div class="val">Ahorro neto<b id="sumVal">—</b></div>
+      <button id="sumBtn">Guardar ruta</button>
+    </div></div>
   </div>
 </div>
-
-<div class="sum"><div class="in">
-  <div class="who" id="sumWho">—</div>
-  <div class="val">Ahorro neto<b id="sumVal">—</b></div>
-  <button id="sumBtn">Guardar ruta</button>
-</div></div>
 </div>
 
 <div class="sheet" id="sheet"><div class="grab"></div>
@@ -256,25 +255,31 @@ function render(){
   $("sumVal").textContent=(saving(chosen)>=0?"+":"")+saving(chosen).toFixed(2)+" €";
   $("sumBtn").textContent=picked?"✓ Ruta guardada":"Guardar ruta";
   $("sumBtn").classList.toggle("saved",!!picked);
-  $("why").innerHTML=`La media de la ruta es <b>${fmt(refPrice())} €</b>. En <b>${chosen.marca}</b> cuesta <b>${fmt(price(chosen))} €</b>: con ${buy} L son <b>${((refPrice()-price(chosen))*buy).toFixed(2)} €</b> de diferencia. El desvío cuesta <b>${detourCost(chosen).toFixed(2)} €</b> (${chosen.detourMin} min + ${String(chosen.detourKm).replace(".",",")} km), así que el ahorro neto queda en <b>${saving(chosen).toFixed(2)} €</b>. ${chosen.detourMin?"Si vas con prisa, la de km 38 no desvía y aun así ahorra "+saving(STOPS[0]).toFixed(2)+" €.":"Está en la propia ruta: sin desvío."}`;
+  const alt=STOPS[0],altSave=saving(alt);
+  const altTxt=chosen.id===alt.id?"":" Si vas con prisa, <b>"+alt.marca+"</b> (km "+alt.km+") no desvía y "+(altSave>=0?"aún ahorra <b>"+altSave.toFixed(2)+" €</b>":"te cuesta <b>"+Math.abs(altSave).toFixed(2)+" €</b> más</b>")+".";
+  $("why").innerHTML=`La media de la ruta es <b>${fmt(refPrice())} €</b>. En <b>${chosen.marca}</b> cuesta <b>${fmt(price(chosen))} €</b>: con ${buy} L son <b>${((refPrice()-price(chosen))*buy).toFixed(2)} €</b> de diferencia. El desvío cuesta <b>${detourCost(chosen).toFixed(2)} €</b> (${chosen.detourMin} min + ${String(chosen.detourKm).replace(".",",")} km), así que el ahorro neto queda en <b>${saving(chosen).toFixed(2)} €</b>.${chosen.detourMin?altTxt:" Está en la propia ruta: sin desvío."}`;
   drawMap(best,chosen);
 }
 function pick(id){picked=picked==id?null:id;render();if(picked)toast("Parada guardada en la ruta")}
 function drawMap(best,chosen){
   const el=$("svgal");if(!el)return;
-  const W=520,H=300,pad=40;
-  const X=km=>pad+km/ROUTE.km*(W-pad*2);
-  const Y=i=>70+i*38;
-  el.innerHTML=`<h2>🗺️ Ruta simulada</h2><p class="hint">${ROUTE.from} → ${ROUTE.to} · ${tripKm()} km</p>
+  const W=520,H=300,pad=44;
+  const P0=[pad,80],P1=[W*.3,255],P2=[W*.7,255],P3=[W-pad,80];
+  const bez=t=>{const u=1-t;
+    return [u*u*u*P0[0]+3*u*u*t*P1[0]+3*u*t*t*P2[0]+t*t*t*P3[0],
+            u*u*u*P0[1]+3*u*u*t*P1[1]+3*u*t*t*P2[1]+t*t*t*P3[1]]};
+  el.innerHTML=`<h2>🗺️ Ruta simulada</h2><p class="hint">${ROUTE.from} → ${ROUTE.to} · ${tripKm()} km · ${STOPS.length} paradas posibles</p>
   <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ruta con paradas">
-    <path d="M${pad} ${Y(0)-20} C ${W*.25} 120, ${W*.3} 200, ${W*.55} 170 S ${W*.85} 90, ${W-pad} 70" fill="none" stroke="#c9bfa9" stroke-width="10" stroke-linecap="round"/>
-    <path d="M${pad} ${Y(0)-20} C ${W*.25} 120, ${W*.3} 200, ${W*.55} 170 S ${W*.85} 90, ${W-pad} 70" fill="none" stroke="#2f8f60" stroke-width="4" stroke-dasharray="10 8"/>
-    ${STOPS.map((s,i)=>{const x=X(s.km),y=70+i*0;const t=s.km/ROUTE.km;const yy=110-40*t+ (i%2?18:-8);
+    <path d="M${P0[0]} ${P0[1]} C ${P1[0]} ${P1[1]}, ${P2[0]} ${P2[1]}, ${P3[0]} ${P3[1]}" fill="none" stroke="#c9bfa9" stroke-width="12" stroke-linecap="round"/>
+    <path d="M${P0[0]} ${P0[1]} C ${P1[0]} ${P1[1]}, ${P2[0]} ${P2[1]}, ${P3[0]} ${P3[1]}" fill="none" stroke="#2f8f60" stroke-width="4" stroke-dasharray="12 9"/>
+    ${STOPS.map(s=>{const [x,y]=bez(s.km/ROUTE.km);
       const c=s.id==chosen.id?"#b45309":s.id==best.id?"#1f6b46":"#8b8272";
-      return `<circle cx="${X(s.km)}" cy="${yy}" r="${s.id==chosen.id?9:6}" fill="${c}" stroke="#fffdf8" stroke-width="3"><title>${s.marca} · km ${s.km}</title></circle>
-      <text x="${X(s.km)}" y="${yy-14}" font-size="9" fill="#7c7466" text-anchor="middle">${s.marca}</text>`}).join("")}
-    <circle cx="${pad}" cy="${Y(0)-20}" r="5" fill="#232019"/><text x="${pad}" y="${Y(0)-30}" font-size="10" fill="#232019">${ROUTE.from}</text>
-    <circle cx="${W-pad}" cy="70" r="5" fill="#232019"/><text x="${W-pad}" y="58" font-size="10" fill="#232019" text-anchor="end">${ROUTE.to}</text>
+      const r=s.id==chosen.id?10:s.id==best.id?8:6;
+      return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${c}" stroke="#fffdf8" stroke-width="3"><title>${s.marca} · km ${s.km} · ${fmt(price(s))} €</title></circle>
+      <text x="${x.toFixed(1)}" y="${(y-15).toFixed(1)}" font-size="9" fill="#5c5548" text-anchor="middle" font-weight="700">${s.marca}</text>
+      <text x="${x.toFixed(1)}" y="${(y+21).toFixed(1)}" font-size="8.5" fill="#8b8272" text-anchor="middle">km ${s.km}</text>`}).join("")}
+    <circle cx="${P0[0]}" cy="${P0[1]}" r="6" fill="#232019"/><text x="${P0[0]}" y="${P0[1]-14}" font-size="11" fill="#232019" font-weight="700">${ROUTE.from}</text>
+    <circle cx="${P3[0]}" cy="${P3[1]}" r="6" fill="#232019"/><text x="${P3[0]}" y="${P3[1]-14}" font-size="11" fill="#232019" text-anchor="end" font-weight="700">${ROUTE.to}</text>
   </svg>`;
 }
 /* ================== INTERACCIÓN ================== */

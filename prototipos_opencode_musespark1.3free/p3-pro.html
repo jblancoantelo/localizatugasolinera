@@ -93,7 +93,7 @@ function render(){const a=filt();$("kN").textContent=a.length;$("count").textCon
 if(a.length){$("kMin").textContent=price(a[0]).toFixed(3);$("kAvg").textContent=(a.reduce((t,s)=>t+price(s),0)/a.length).toFixed(3)}
 $("tb").innerHTML=a.map(s=>`<tr data-id="${s.id}" class="${sel==s.id?"sel":""}"><td>${s.marca}</td><td><b>${price(s).toFixed(3)} €</b></td><td>${s.dist.toFixed(1)} km</td><td>${s.loc}</td><td>${s.calle}</td><td><button data-f="${s.id}" style="border:none;background:none;cursor:pointer;font-size:1rem">${favs.has(s.id)?"★":"☆"}</button></td></tr>`).join("");
 document.querySelectorAll("#tb tr").forEach(r=>r.onclick=e=>{if(e.target.dataset.f){const id=+e.target.dataset.f;favs.has(id)?favs.delete(id):favs.add(id);render();return}open(+r.dataset.id)});
-document.querySelectorAll("[data-f]").forEach(b=>b.onclick=e=>{e.stopPropagation();const id=+b.dataset.f;favs.has(id)?favs.delete(id):favs.add(id);render()});
+document.querySelectorAll("#tb button[data-f]").forEach(b=>b.onclick=e=>{e.stopPropagation();const id=+b.dataset.f;favs.has(id)?favs.delete(id):favs.add(id);render()});
 $("pins").innerHTML=a.map(s=>`<div class="pin${sel==s.id?" sel":""}" data-id="${s.id}" title="${s.marca}" style="left:${s.x}%;top:${s.y}%;background:${col(price(s))}"></div>`).join("");
 document.querySelectorAll(".pin").forEach(p=>p.onclick=()=>open(+p.dataset.id));
 if(sel)open(sel,true);else idle()}

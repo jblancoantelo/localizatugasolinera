@@ -301,12 +301,12 @@ document.querySelectorAll("th .ar").forEach(e=>e.textContent="");
 const th=document.querySelector(`th[data-c="${sortC}"] .ar`);if(th)th.textContent=sortD>0?"▲":"▼";
 /* pins */
 [["pins","map"],["pins2","map2"]].forEach(([pid,mid])=>{const el=$(pid);if(!el)return;el.innerHTML=a.map(s=>`<div class="pin${sel==s.id?" sel":""}" data-id="${s.id}" style="left:${s.x}%;top:${s.y}%;background:${col(price(s))}"></div>`).join("");
-el.querySelectorAll(".pin").forEach(p=>p.onclick=()=>mid=="map"?pop(+p.dataset.id):open(+p.dataset.id))});
+el.querySelectorAll(".pin").forEach(p=>p.onclick=()=>mid=="map"?pop(+p.dataset.id):openSheet(+p.dataset.id))});
 /* clicks */
-document.querySelectorAll(".card[data-id],#tb tr[data-id]").forEach(e=>e.onclick=ev=>{if(ev.target.dataset.f){tgl(+ev.target.dataset.f);ev.stopPropagation();return}open(+e.dataset.id)});
-document.querySelectorAll("[data-f]").forEach(e=>e.onclick=ev=>{tgl(+e.dataset.f);ev.stopPropagation()});
+document.querySelectorAll(".card[data-id],#tb tr[data-id]").forEach(e=>e.onclick=ev=>{if(ev.target.dataset.f){tgl(+ev.target.dataset.f);ev.stopPropagation();return}openSheet(+e.dataset.id)});
+document.querySelectorAll("#cards .fav[data-f],#tb button[data-f]").forEach(e=>e.onclick=ev=>{tgl(+e.dataset.f);ev.stopPropagation()});
 }
-function tgl(id){favs.has(id)?favs.delete(id):favs.add(id);log(0,(favs.has(id)?"☆ fav +":"☆ fav −")+" "+S.find(s=>s.id==id).marca);render();if(sel==id)open(id)}
+function tgl(id){favs.has(id)?favs.delete(id):favs.add(id);log(0,(favs.has(id)?"☆ fav +":"☆ fav −")+" "+S.find(s=>s.id==id).marca);render();if(sel==id)openSheet(id)}
 ["q","loc","prov"].forEach(id=>$(id).addEventListener("input",()=>{page=1;render()}));
 $("prov").onchange=()=>{page=1;log(1,`GET prov_${$("prov").value||"—"} 200 · 140ms`);render()};
 $("bKm").oninput=()=>{page=1;render()};
@@ -325,11 +325,11 @@ function go(v){document.querySelectorAll(".nav button").forEach(x=>x.classList.t
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>go(b.dataset.v));
 /* popup mapa */
 function pop(id){sel=id;const s=S.find(x=>x.id==id),v=price(s);render();
-$("pop").innerHTML=`<b>${favs.has(id)?"★ ":""}${s.marca} · ${v.toFixed(3)} €</b><br><span style="color:var(--mut)">${s.loc} · ${s.calle} · ${s.dist} km</span><div style="display:flex;gap:.35rem;margin-top:.4rem"><button class="chip" onclick="open(${id})">Ver detalle</button><button class="chip" onclick="tgl(${id})">${favs.has(id)?"★ Quitar":"☆ Guardar"}</button><button class="chip" onclick="document.getElementById('pop').classList.remove('open')">Cerrar</button></div>`;
+$("pop").innerHTML=`<b>${favs.has(id)?"★ ":""}${s.marca} · ${v.toFixed(3)} €</b><br><span style="color:var(--mut)">${s.loc} · ${s.calle} · ${s.dist} km</span><div style="display:flex;gap:.35rem;margin-top:.4rem"><button class="chip" onclick="openSheet(${id})">Ver detalle</button><button class="chip" onclick="tgl(${id})">${favs.has(id)?"★ Quitar":"☆ Guardar"}</button><button class="chip" onclick="document.getElementById('pop').classList.remove('open')">Cerrar</button></div>`;
 $("pop").classList.add("open")}
-window.open=open;window.tgl=tgl;
+window.tgl=tgl;
 /* detail */
-function open(id){sel=id;const s=S.find(x=>x.id==id);
+function openSheet(id){sel=id;const s=S.find(x=>x.id==id);
 $("dB").textContent=(favs.has(id)?"★ ":"")+s.marca+` · ${price(s).toFixed(3)} €`;
 $("dA").textContent=`${s.loc} · ${s.calle} · ${s.dist.toFixed(1)} km · ${fuel}`;
 $("dInfo").innerHTML=`<div class="fgrid">${FUELS.map(f=>`<span>${f[0]}</span><b>${price(s,f[0]).toFixed(3)} €</b>`).join("")}</div>
