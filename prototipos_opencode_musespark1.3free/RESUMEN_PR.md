@@ -120,23 +120,34 @@ para validar que ningún rediseño se deja algo por el camino.
    defecto), representados con 3 fondos simulados.
 5. **Orden asc/desc** por precio, distancia y marca, desde la cabecera y desde
    el desplegable (sincronizados).
-6. **Paginación** 5/10/15/30/50/100/Todas con `◀ ▶` y contador.
-7. **Favoritos** desde cards y desde la tabla, y filtro "solo favoritas".
-8. **Descuentos por marca** que mueven precios, KPIs, badges y leyenda.
-9. **Histórico** 7/14/21/30/60/90/180, 5 combustibles, tooltip y nota de que la
-   serie acaba en el precio en vivo de hoy.
-10. **Chat IA**: General + 7 proveedores, modelo por proveedor, refresco de
-    catálogo, ✎ editar, ✕ cancelar, **General en paralelo** con marca de agua
-    `⏱ proveedor · modelo · tiempo`, prompts rápidos solo en General y borrado
-    de historial por pestaña.
+6. **Paginación** 5/10 (demo) + 15/30/50/100/150/300/Todas de la app real,
+   con `◀ ▶` y contador (30 por defecto).
+7. **Favoritos** desde cards, tabla y cabecera de la ficha, y filtro "solo
+   favoritas". La tabla marca la estación **más barata** del resultado.
+8. **Descuentos por marca** con **+ Añadir marca** (texto libre con
+   sugerencias) y ✕ para quitar; mueven precios, KPIs, badges y leyenda.
+9. **Histórico** 7/14/21/30/60/90/180, **los 10 combustibles** de la app (solo
+   los que vende cada estación), tooltip y nota de que la serie acaba en el
+   precio en vivo de hoy.
+10. **Chat IA**: General + 7 proveedores, **clave y modelo por proveedor** (se
+    recuerda el último enviado), estado por proveedor (`Sin API Key`,
+    `Anónimo`, `URL sin subdominio`), refresco de catálogo, ✎ editar, ✕
+    cancelar, **General en paralelo** con marca de agua
+    `⏱ proveedor · modelo · tiempo` y ❌ para quien no tiene clave, prompts
+    rápidos solo en General y borrado de historial por pestaña.
 11. **Config completa**: push (bajada/subida, intervalo, días, promedio vs
     consecutivos, probar), caché con pestañas IndexedDB/localStorage y ✕ por
     clave, logs API/Push con borrado, claves con contraseña `demo` y "Volver a
-    cargar", proxy NVIDIA con ↺ Predefinida y 🔎 Probar, visibilidad de
-    pestañas (mínimo una), prompts editables y buscar actualizaciones.
-12. **Buscador con filtros avanzados plegables** (⚙️ con punto rojo cuando hay
-    filtros activos); en PC la tabla oculta las cards duplicadas.
-13. **Leyenda por percentiles** dinámicos (25/75) y reset sin re-fetch.
+    cargar", proxy NVIDIA con ↺ Predefinida y 🔎 Probar (detecta la URL sin
+    subdominio), visibilidad de pestañas (mínimo una), 5 prompts editables,
+    versión actual y buscar actualizaciones.
+12. **Buscador con toggle 🔍** (como la app) y **filtros avanzados plegables**
+    (⚙️ con punto rojo cuando hay filtros activos); en PC la tabla oculta las
+    cards duplicadas.
+13. **Popup del mapa con pestañas Info/Histórico**: gráfica propia, selector de
+    combustible y 7 días por defecto (igual que la app).
+14. **Leyenda por percentiles** dinámicos (25/75) y reset sin re-fetch (que
+    también oculta la búsqueda, como el ✕ de la app).
 
 **Qué demuestra:** que el rediseño es *portable* a la app actual sin perder
 funciones, y sirve de checklist viva para el port real.
@@ -200,44 +211,48 @@ reales, no solo estéticos:
 
 ## Cobertura y limitaciones conscientes
 
-Cubierto: provincia/localidad, combustibles, marcas múltiples, distancia + GPS
-+ punto manual, búsqueda, vistas mapa/tabla/ambos, orden y paginación,
-favoritos, detalle, histórico 7–180 días, descuentos, push, logs, caché, IA
-(8 pestañas y General en paralelo), claves, proxy NVIDIA, visibilidad de
-pestañas y actualización.
+Cubierto: provincia/localidad, los 10 combustibles, marcas múltiples,
+distancia + GPS + punto manual, búsqueda con toggle, vistas mapa/tabla/ambos,
+orden y paginación, favoritos, detalle, histórico 7–180 días, descuentos con
+alta/baja de marca, popup con gráfica, push, logs, caché, IA (8 pestañas,
+clave y modelo por proveedor, General en paralelo), proxy NVIDIA, visibilidad
+de pestañas, prompts, versión y actualización.
 
 Simplificaciones a propósito (no son fallos):
 
 | Aspecto | Prototipo | App real |
 |---|---|---|
-| Combustibles | 5 | 10 (misma UI) |
 | Estilos de mapa | 10 en el desplegable, 3 fondos simulados | 10 proveedores reales |
 | Mapa | CSS / SVG simulado | Leaflet + tiles |
 | Histórico | Serie generada | API del Ministerio |
 | IA | Respuestas simuladas | Proveedores reales |
 | Push | Simulado en UI | Web Push + Service Worker |
-| Búsqueda | Siempre visible (en P5 plegable) | Toggle 🔍 |
+| Persistencia del chat | En memoria de la pestaña | localStorage por proveedor |
 
 ---
 
 ## Verificación
 
-- **98 comprobaciones automáticas** con Playwright a **390×844** y **1440×900**,
+- **115 comprobaciones automáticas** con Playwright a **390×844** y **1440×900**,
   en `file:///`, sin servidor.
 - Consola limpia y sin scroll horizontal en los 7 ficheros.
-- Flujos interactivos: filtros, favoritos, detalle, histórico con rangos y
-  combustibles, mapa y estilos, popup, IA (envío, meta, General, pestañas),
-  config (claves, proxy, visibilidad, caché, logs), orden, paginación y todo P6.
-- **Resultado: 98/98 OK, 0 fallos, 0 errores de consola.**
+- Flujos interactivos: filtros, 10 combustibles, favoritos, detalle, histórico
+  con rangos y combustibles, mapa y estilos, popup con gráfica, IA (envío,
+  meta, General, pestañas, estado por proveedor), config (descuentos, claves,
+  proxy, visibilidad, caché, logs), orden, paginación y todo P6.
+- **Resultado: 115/115 OK, 0 fallos, 0 errores de consola.**
 
 ## Cómo probarlo en 2 minutos
 
 1. Abrir `prototipos_opencode_musespark1.3free/index.html`.
-2. Cambiar combustible a **Gasóleo** → precios y KPIs se recalculan.
-3. Marcar ☆ en dos estaciones y activar **Solo ☆**.
-4. Abrir una estación → **Histórico** → cambiar rango y combustible.
-5. Entrar en **IA** y enviar "¿dónde reposto?" (respuesta simulada).
-6. En **Config**, mover TTL y paginación, cargar claves con `demo` y probar el
-   proxy.
+2. Cambiar combustible a **Gasóleo** (o a **H₂**, que solo vende una estación)
+   → precios, lista y KPIs se recalculan.
+3. Marcar ☆ en dos estaciones y activar **Solo ☆**; probar el toggle 🔍.
+4. Abrir una estación → **Histórico** → cambiar rango y combustible; en el
+   **mapa**, abrir un pin → **Histórico** para ver su gráfica.
+5. Entrar en **IA** y enviar "¿dónde reposto?" (respuesta simulada); cambia de
+   proveedor y verás su modelo y su estado (`Sin API Key` / `Anónimo`).
+6. En **Config**, añade un descuento a Ballenoil, mueve TTL y paginación, carga
+   claves con `demo` y prueba el proxy (primero con la URL de ejemplo).
 7. En **P6**, bajar los litros restantes y ver cómo cambia la parada
    recomendada y el aviso de autonomía.

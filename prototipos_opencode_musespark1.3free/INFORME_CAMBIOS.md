@@ -57,23 +57,33 @@ funciones ausentes. Se creó **P5 Completo** con paridad funcional:
    por defecto), mapeados a 3 fondos simulados.
 4. Ordenación asc/desc por las 4 columnas y desplegable completo
    (Precio, Distancia y Marca en ambos sentidos).
-5. Paginación 5/10/15/30/50/100/Todas con `◀ ▶` y contador.
-6. ☆ pulsable también en las filas de la tabla.
-7. Descuentos por marca que recalculan precios, KPIs, badges y leyenda.
-8. Histórico 7/14/21/30/60/90/180 + 5 combustibles + tooltip + nota de que la
-   serie llega hasta hoy con el precio en vivo.
-9. IA: 8 pestañas, modelo por proveedor, refresco de catálogo, ✎ editar,
-   ✕ cancelar, **General en paralelo** con `⏱ proveedor · modelo · tiempo`,
-   prompts rápidos solo en General, borrar historial por pestaña.
+5. Paginación 5/10 (demo) + 15/30/50/100/150/300/Todas de la app real, con
+   `◀ ▶` y contador; 30 por defecto.
+6. ☆ pulsable también en las filas de la tabla y en la cabecera de la ficha.
+7. Descuentos por marca con **+ Añadir marca** (texto libre + sugerencias) y ✕
+   para quitar; recalculan precios, KPIs, badges y leyenda.
+8. Histórico 7/14/21/30/60/90/180 + **los 10 combustibles** de la app + tooltip
+   + nota de que la serie llega hasta hoy con el precio en vivo.
+9. IA: 8 pestañas, **clave y modelo por proveedor** (el último enviado se
+   recuerda), estado por proveedor (`Sin API Key`, `Anónimo`, `URL sin
+   subdominio`), refresco de catálogo, ✎ editar, ✕ cancelar, **General en
+   paralelo** con `⏱ proveedor · modelo · tiempo` y ❌ para quien no tiene
+   clave, prompts rápidos solo en General, borrar historial por pestaña.
 10. Config: push (bajada/subida, intervalo, días, promedio/consecutivos,
     probar), caché con tabs IDB/LS y ✕ por clave, logs API/Push con borrado,
     claves con contraseña `demo` + "Volver a cargar", proxy NVIDIA con
-    ↺ Predefinida y 🔎 Probar, visibilidad de pestañas (mínimo una), prompts
-    editables, buscar actualizaciones.
+    ↺ Predefinida y 🔎 Probar (detecta URL sin subdominio), visibilidad de
+    pestañas (mínimo una), 5 prompts editables, versión actual y buscar
+    actualizaciones.
 11. Estado vacío "sin provincia", reset sin re-fetch y leyenda por percentiles
     dinámicos (25/75).
-12. Buscador con **filtros avanzados plegables** (⚙️ con punto rojo cuando hay
-    filtros activos); en PC la tabla oculta las cards duplicadas.
+12. Buscador con **toggle 🔍** (como la app) y **filtros avanzados plegables**
+    (⚙️ con punto rojo cuando hay filtros activos); en PC la tabla oculta las
+    cards duplicadas.
+13. **Popup del mapa con pestañas Info/Histórico**: gráfica propia, selector de
+    combustible y 7 días por defecto (igual que la app).
+14. Tabla con marca **"más barata"** del resultado y ficha con todos los
+    combustibles disponibles, su color y el descuento aplicado.
 
 ### 2.3 Correcciones de la última pasada
 - Mapa: 3 → **10 estilos**; clic en el mapa mueve el punto (equivalente al
@@ -86,7 +96,8 @@ funciones ausentes. Se creó **P5 Completo** con paridad funcional:
 - Histórico: estado "Cargando histórico…" al abrir la pestaña.
 - Claves: filas Mistral, OpenRouter y LLM7 + enlace "Volver a cargar".
 - Proxy: botón ↺ Predefinida con el mensaje de URL sin subdominio.
-- Paginación: opciones 15/50/100 añadidas.
+- Paginación: opciones 15/50/100/150/300/Todas de la app real añadidas (5 y 10
+  se quedan para poder demostrar el paginador con 12 estaciones).
 - `PLAN.md` con el port a la app real por fases y riesgos.
 - Carpeta renombrada a `prototipos_opencode_musespark1.3free` y rama a
   `prototipos_opencode_musespark1.3free_deepseekv4.1flash`.
@@ -142,27 +153,28 @@ simplificación consciente · ❌ pendiente.
 | Función de la app | Dónde se valida | Estado |
 |---|---|---|
 | Filtro provincia / localidad | P1-P5 | ✅ |
-| Filtro combustible (10) | P5 (5 combustibles) | ⚠️ se validan 5; el resto comparte la misma UI |
+| Filtro combustible (10) | P5 (10 combustibles, con disponibilidad por estación) | ✅ |
 | Filtro marcas múltiple + búsqueda | P5 | ✅ |
 | Distancia máxima + GPS + punto manual | P5 | ✅ |
-| Búsqueda textual (toggle 🔍) | P1-P5 (siempre visible; en P5 plegable) | ⚠️ sin toggle, misma función |
+| Búsqueda textual (toggle 🔍) | P1-P5 (en P5 con toggle y plegable) | ✅ |
 | Vistas Mapa / Tabla / Ambos | P1-P5 | ✅ |
 | 10 estilos de mapa | P5 (3 fondos simulados) | ⚠️ |
-| Leyenda de precios por percentiles | P1-P5 | ✅ |
+| Leyenda de precios por percentiles | P1-P5 | ✅ (mejora sobre umbrales fijos) |
 | Orden asc/desc y paginación | P3, P5 | ✅ |
 | Favoritos + filtro solo favoritas | P1-P5 | ✅ |
-| Detalle: 5 combustibles, 2 tabs | P1-P5 | ✅ |
+| Detalle: todos los combustibles, 2 tabs | P1-P5 | ✅ |
 | Histórico 7-180 días + tooltip | P1-P5, P6 | ✅ |
-| Gráfica en popup del mapa | P2 | ⚠️ popup sin gráfica propia |
-| Descuentos por marca | P5 | ✅ |
+| Gráfica en popup del mapa | P2, P5 | ✅ |
+| Descuentos por marca (añadir/quitar) | P5 | ✅ |
 | Push: bajada/subida, intervalo, días, modo | P5 | ✅ |
 | Logs API/Push con borrado | P5 | ✅ |
 | Caché IDB/LS + TTL + borrado | P5 | ✅ |
 | Chat IA: 8 pestañas, General paralelo | P5 | ✅ |
+| IA: clave y modelo por proveedor, estados | P5 | ✅ |
 | IA: modelos, refresco, editar, cancelar | P5 | ✅ |
 | IA: claves, proxy NVIDIA, visibilidad, prompts | P5 | ✅ |
 | Estado vacío sin provincia | P5 | ✅ |
-| Actualización de la app | P5 | ✅ |
+| Actualización de la app + versión actual | P5 | ✅ |
 | Planificar ruta y elegir parada por ahorro neto | P6 | ✅ (propuesta nueva) |
 
 ---
@@ -205,12 +217,13 @@ ahorro neto** (precio × litros − coste del desvío), no por precio absoluto.
 - **Herramienta**: script Playwright propio, fuera del repo (no toca la suite
   del proyecto ni `docs/test/full_test.mjs`).
 - **Resolución**: móvil 390×844 y escritorio 1440×900, `file:///`, sin servidor.
-- **Cobertura**: 98 comprobaciones → consola limpia y sin scroll horizontal en
+- **Cobertura**: 115 comprobaciones → consola limpia y sin scroll horizontal en
   los 7 ficheros (2 resoluciones), más flujos de interacción por prototipo:
-  filtros, favoritos, detalle, histórico (rangos y combustibles), mapa y
-  estilos, popup, IA (envío, meta, General, pestañas), config (claves, proxy,
+  filtros, 10 combustibles, favoritos, detalle, histórico (rangos y
+  combustibles), mapa y estilos, popup con gráfica, IA (envío, meta, General,
+  pestañas, estado por proveedor), config (descuentos, claves, proxy,
   visibilidad, caché, logs), paginación/orden y todo el P6.
-- **Resultado**: **98/98 OK, 0 fallos**, 0 errores de consola.
+- **Resultado**: **115/115 OK, 0 fallos**, 0 errores de consola.
 - **Capturas**: se generan en una carpeta temporal externa al repo; no se
   versionan para no engordar la rama.
 
