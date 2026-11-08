@@ -19,7 +19,7 @@ node docs/test/full_test.mjs
 ### Qué hace el script:
 - Inicia servidor HTTP en :8080 sirviendo desde la raíz del proyecto
 - Lanza Chromium headless
-- Ejecuta 214 tests: 207 contra HTTP + 7 contra `file://`
+- Ejecuta 216 tests: 209 contra HTTP + 7 contra `file://`
 - Empieza por la sección 17 (build), que lee ficheros del disco sin abrir el navegador
 - Cierra servidor y navegador automáticamente
 - Exit code 0 = todo OK, 1 = algún fallo
@@ -135,10 +135,12 @@ node docs/test/full_test.mjs
 |---|--------|------|---------|-------------------|
 | 12.1 | Recargar página | ✅ | — | Provincia seleccionada se restaura desde localStorage |
 | 12.2 | Toggle solo favoritos + F5 | ✅ | — | `STATE.showFavoritesOnly === true` se mantiene tras recargar |
+| 12.3 | Cambiar TTL de caché a 24 h | ✅ | — | Se guarda `cacheTtl: 24` en `gasolineras_state` (localStorage) |
+| 12.4 | Recargar tras cambiar el TTL | ✅ | — | El input, `STATE.cacheTtl` y el `push_config` de IndexedDB siguen en 24 h |
 
 ## Resultados actuales
 
-**214 tests — 214 ✅ 0 ❌**
+**216 tests — 216 ✅ 0 ❌**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
@@ -159,14 +161,14 @@ node docs/test/full_test.mjs
 | Geo | 1 ✅ | — |
 | Búsqueda | 1 ✅ | 1 ✅ |
 | Popup | 8 ✅ | — |
-| Persistencia | 4 ✅ | — |
+| Persistencia | 6 ✅ | — |
 | Caché (limpiar caché borra de verdad) | 1 ✅ | — |
 | Push Notifications | 8 ✅ | — |
 | Helpers (norm/parsePrice/comparePrices) | 14 ✅ | — |
 | Chat IA (sección 15) | 127 ✅ | — |
 | Ring logs (sección 16) | 7 ✅ | — |
 | Build (sección 17) | 4 ✅ | — |
-| **Total** | **207 ✅** | **7 ✅** |
+| **Total** | **209 ✅** | **7 ✅** |
 
 ## 15. Chat IA (automatizado)
 
