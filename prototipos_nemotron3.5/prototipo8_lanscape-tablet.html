@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Precios Gasolina - Prototipo 8 Landscape Tablet</title>
+  <meta name="description" content="Prototipo 8: Modo landscape tablet optimizado">
+  <meta name="theme-color" content="#1a73e8">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="icons/icon-192.svg">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    /* Landscape tablet - prototipo 8 */
+    .app { padding: 0.5rem; background: #fafafa; }
+    .toolbar { background: #fff; padding: 0.5rem 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 0.5rem; border-radius: 0; }
+    .toolbar-groups { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+    .filter-group { flex: 1 1 130px; min-width: 130px; }
+    .filter-group-label { display: block; font-size: 0.5rem; color: #555; margin-bottom: 0.2rem; font-weight: bold; }
+    select { width: 100%; padding: 0.3rem 0.4rem; font-size: 0.5rem; background: #fff; border: 1px solid #ddd; border-radius: 4px; }
+    .btn { padding: 0.3rem 0.5rem; font-size: 0.5rem; background: #1a73e8; color: #fff; border: none; border-radius: 4px; cursor: pointer; flex: 0; white-space: nowrap; }
+    .btn-primary { background: #1a73e8; }
+    .btn-del { background: #f20; color: #fff; }
+    .actions-group { margin-top: 0.2rem; padding-top: 0.2rem; border-top: 1px solid #eee; }
+    .price-legend { display: flex; gap: 0.8rem; align-items: center; font-size: 0.5rem; }
+    .price-legend span { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; flex-shrink: 0; }
+    .dot.g { background: #2e7d32; } .dot.o { background: #f57c00; } .dot.r { background: #b71c1c; }
+    .search-row { margin-top: 0.2rem; background: #f8f9fa; padding: 0.2rem; border-radius: 4px; font-size: 0.5rem; }
+    .search-row.hide { display: none; }
+    .search-row input { width: 100%; padding: 0.1rem 0.2rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.5rem; background: #fafafa; }
+    .no-province-msg { padding: 1rem; text-align: center; color: #555; font-size: 0.65rem; }
+    .online-badge { display: inline-block; padding: 0.1rem 0.3rem; background: #4caf50; color: #fff; font-size: 0.4rem; border-radius: 3px; margin-left: 0.3rem; }
+    .offline-badge { display: inline-block; padding: 0.1rem 0.3rem; background: #ff9800; color: #fff; font-size: 0.4rem; border-radius: 3px; margin-left: 0.3rem; }
+    
+    /* Favorites area */
+    .fav-area { background: #fff; border-radius: 6px; padding: 0.4rem; margin-bottom: 0.3rem; }
+    .fav-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem; padding-bottom: 0.2rem; border-bottom: 1px solid #eee; }
+    .fav-header h2 { margin: 0; font-size: 0.65rem; color: #1a73e8; }
+    .fav-count { font-size: 0.45rem; color: #666; }
+    .fav-list { display: flex; flex-direction: column; gap: 0.2rem; max-height: 180px; overflow-y: auto; font-size: 0.45rem; }
+    .fav-item { display: flex; align-items: center; gap: 0.3rem; padding: 0.2rem; background: #f8f9fa; border-radius: 4px; }
+    .fav-item.remove { background: #ffe; border: 1px solid #f20; }
+    .fav-item input { flex: 1; padding: 0; border: none; background: transparent; font-size: 0.45rem; }
+    .fav-item.remove input { color: #f20; }
+    
+    /* Landscape grid: two columns side by side */
+    .landscape-content { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem; }
+    @media (max-width: 800px) {
+      .landscape-content { grid-template-columns: 1fr; }
+    }
+    
+    /* Table */
+    .table-area { background: #fff; border-radius: 6px; padding: 0.3rem; }
+    .table-wrap { overflow-x: auto; }
+    .table-wrap table { width: 100%; border-collapse: collapse; margin-top: 0.2rem; font-size: 0.45rem; }
+    .table-wrap th, .table-wrap td { padding: 0.25rem; border-bottom: 1px solid #eee; text-align: left; vertical-align: top; }
+    .table-wrap th { background: #f5f5f5; font-weight: bold; font-size: 0.45rem; }
+    
+    /* Both area */
+    .both-table-area { background: #fff; border-radius: 6px; padding: 0.3rem; }
+    .both-table-wrap { overflow-x: auto; }
+    .both-table-wrap table { width: 100%; border-collapse: collapse; min-width: 500px; font-size: 0.4rem; }
+    .both-table-wrap th, .both-table-wrap td { padding: 0.2rem; border-bottom: 1px solid #eee; }
+    .both-table-wrap th { background: #f5f5f5; font-weight: bold; white-space: nowrap; font-size: 0.4rem; }
+    
+    /* Bottom tabs */
+    .bottom-tabs { padding: 0.3rem; background: #f8f9fa; border-radius: 6px; margin-top: 0.2rem; display: flex; overflow-x: auto; gap: 0.1rem; }
+    .bottom-tab { flex: 0 0 auto; padding: 0.2rem 0.3rem; font-size: 0.45rem; text-align: center; min-width: 30px; }
+    .bottom-tab.active { background: #1a73e8; color: #fff; }
+    
+    /* Config */
+    .config-card { padding: 0.2rem; margin-bottom: 0.1rem; background: #fff; border-radius: 4px; font-size: 0.5rem; }
+    .config-card h3 { margin: 0 0 0.1rem 0; font-size: 0.5rem; }
+    .config-desc { font-size: 0.4rem; color: #666; margin-bottom: 0.1rem; }
+    
+    /* Responsive */
+    @media (min-width: 600px) {
+      .filter-group { min-width: 100px; }
+    }
+    @media (min-width: 768px) {
+      .bottom-tabs { overflow-x: visible; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-groups">
+        <div class="filter-group">
+          <button class="btn" id="favToggleBtn" title="Favoritos">☆</button>
+          <span class="online-badge" id="onlineStatus">Online</span>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">⛽<span class="label-text"> Combustible</span></span>
+          <select id="fuelFilter" style="max-width:110px;font-size:0.5rem"><option value="">Todos</option><option value="Gasolina 95 E5">Gasolina 95 E5</option></select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">📍<span class="label-text"> Provincia</span></span>
+          <select id="provFilter" style="max-width:90px;font-size:0.5rem"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">🏘️<span class="label-text"> Localidad</span></span>
+          <select id="locFilter" style="max-width:90px;font-size:0.5rem"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">🏷️<span class="label-text"> Marca</span></span>
+          <button class="btn" id="brandFilterBtn">Todas</button>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">🗺️<span class="label-text"> Mapa</span></span>
+          <select id="mapStyle">
+            <option value="street">Calle</option>
+            <option value="satellite" selected>Satélite</option>
+          </select>
+          <span class="filter-sep"></span>
+          <button class="btn" id="searchToggleBtn" title="Buscar">🔍</button>
+        </div>
+        <div class="filter-group">
+          <button class="btn" id="resetFiltersBtn" title="Limpiar filtros" style="font-size:0.6rem">✕</button>
+        </div>
+        <div class="filter-group actions-group">
+          <div class="price-legend" id="legend"><span><span class="dot g"></span> <1.50</span><span><span class="dot o"></span> 1.50–1.70</span><span><span class="dot r"></span> >1.70</span></div>
+        </div>
+      </div>
+      <div class="search-row hide" id="searchRow">
+        <input type="text" id="search" placeholder="Buscar localidad, calle o marca..." style="width:100%;padding:0.1rem;font-size:0.5rem;border-radius:4px">
+      </div>
+    </div>
+
+    <!-- Favorites Area -->
+    <div class="fav-area" id="favArea">
+      <div class="fav-header">
+        <h2>⭐ Mis Favoritos</h2>
+        <span class="fav-count" id="favCount">0 favoritos</span>
+        <button class="btn btn-del" id="clearFavsBtn" title="Borrar todos los favoritos">Limpiar</button>
+      </div>
+      <div class="fav-list" id="favList">
+        <!-- Favorite items generados por JS -->
+      </div>
+      <div style="margin-top:0.2rem;font-size:0.4rem;color:#888">
+        Pulsa en una estación para verla en el mapa o tabla
+      </div>
+    </div>
+
+    <!-- Landscape Content Area -->
+    <div class="landscape-content" id="contentArea">
+      <!-- Left: Table -->
+      <div class="table-area">
+        <div class="table-wrap">
+          <table id="table">
+            <thead>
+              <tr>
+                <th data-col="Rótulo">Marca</th>
+                <th data-col="Precio">Precio</th>
+                <th data-col="Distancia">Distancia</th>
+                <th data-col="Localidad">Localidad</th>
+                <th data-col="Dirección">Calle</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Right: Both -->
+      <div class="both-table-area" id="bothTableArea">
+        <div class="both-table-wrap">
+          <table id="tableBoth">
+            <thead>
+              <tr>
+                <th data-col="Rótulo">Marca</th>
+                <th data-col="Precio">Precio</th>
+                <th data-col="Distancia">Distancia</th>
+                <th data-col="Localidad">Localidad</th>
+                <th data-col="Dirección">Calle</th>
+              </tr>
+            </thead>
+            <tbody id="tableBothBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Tabs -->
+    <div class="bottom-tabs">
+      <button class="bottom-tab active" data-tab="tab-map"><span class="tab-icon">🗺️</span> Mapa</button>
+      <button class="bottom-tab" data-tab="tab-table"><span class="tab-icon">☰</span> Tabla</button>
+      <button class="bottom-tab" data-tab="tab-both"><span class="tab-icon">⊞</span> Ambos</button>
+    </div>
+  </div>
+
+  <script src="js/state.js"></script>
+  <script src="js/helpers.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/table.js"></script>
+  <script src="js/controls.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/chart-core.js"></script>
+  <script src="js/chart-engine.js"></script>
+  <script src="js/push-notifications.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Datos fake para landscape
+      const estacionesFalso = [
+        { Rótulo: 'SHELL', Localidad: 'Madrid', Dirección: 'Calle Alcalá 283', 'Precio Gasolina 95 E5': 1.659, 'Precio Gasoleo A': 1.529, favorito: true },
+        { Rótulo: 'REPSOL', Localidad: 'Madrid', Dirección: 'Calle León 45', 'Precio Gasolina 95 E5': 1.635, 'Precio Gasoleo A': 1.515, favorito: false },
+        { Rótulo: 'CEPSA', Localidad: 'Barcelona', Dirección: 'Avenida Diagonal 157', 'Precio Gasolina 95 E5': 1.682, 'Precio Gasoleo A': 1.547, favorito: true },
+        { Rótulo: 'GALP', Localidad: 'Sevilla', Dirección: 'Calle San Francisco 12', 'Precio Gasolina 95 E5': 1.668, 'Precio Gasoleo A': 1.533, favorito: false },
+        { Rótulo: 'BP', Localidad: 'Valencia', Dirección: 'Carrera 4 88', 'Precio Gasolina 95 E5': 1.647, 'Precio Gasoleo A': 1.518, favorito: true },
+        { Rótulo: 'Total', Localidad: 'Málaga', Dirección: 'Corte Inglés 55', 'Precio Gasolina 95 E5': 1.675, 'Precio Gasoleo A': 1.542, favorito: false },
+        { Rótulo: 'Optimax', Localidad: 'Madrid', Dirección: 'Paseo de la Castellana 15', 'Precio Gasolina 95 E5': 1.620, 'Precio Gasoleo A': 1.505, favorito: true },
+        { Rótulo: 'IAI', Localidad: 'Sevilla', Dirección: 'Av. Kansai 30', 'Precio Gasolina 95 E5': 1.690, 'Precio Gasoleo A': 1.555, favorito: false },
+      ];
+      
+      const provinciasFalso = [
+        { id: 'md', name: 'Madrid' },
+        { id: 'bc', name: 'Barcelona' },
+        { id: 'sv', name: 'Sevilla' },
+        { id: 'va', name: 'Valencia' },
+        { id: 'ml', name: 'Málaga' },
+      ];
+      
+      STATE.provinces = provinciasFalso;
+      STATE.data = estacionesFalso;
+      STATE.filtered = estacionesFalso;
+      STATE.favorites = estacionesFalso.filter(st => st.favorito);
+      
+      // Poblar provincia
+      const provSelect = document.getElementById('provFilter');
+      provinciasFalso.forEach(prov => {
+        const opt = document.createElement('option');
+        opt.value = prov.id;
+        opt.textContent = prov.name;
+        provSelect.appendChild(opt);
+      });
+      
+      // Inicializar
+      renderTable(estacionesFalso);
+      renderFavorites();
+      document.getElementById('bothTableArea').style.display = 'none';
+      document.getElementById('onlineStatus').textContent = 'Online';
+      
+      // Event: cambio de provincia
+      provSelect.addEventListener('change', function() {
+        const prov = this.value;
+        if (!prov) {
+          STATE.filtered = [...estacionesFalso];
+        } else {
+          STATE.filtered = estacionesFalso.filter(st => 
+            st.Localidad === prov || st.Dirección.includes(prov)
+          );
+        }
+        renderTable(STATE.filtered);
+      });
+      
+      // Event: reset
+      document.getElementById('resetFiltersBtn').addEventListener('click', function() {
+        STATE.filtered = [...estacionesFalso];
+        renderTable(STATE.filtered);
+        document.getElementById('bothTableArea').style.display = 'none';
+        document.getElementById('searchRow').classList.add('hide');
+      });
+      
+      // Event: geolocalización
+      document.getElementById('geolocBtn').addEventListener('click', function() {
+        const isOnline = document.getElementById('onlineStatus').textContent === 'Online';
+        document.getElementById('onlineStatus').textContent = isOnline ? 'Offline' : 'Online';
+        document.getElementById('onlineStatus').className = isOnline ? 'online-badge' : 'offline-badge';
+        
+        if (!isOnline) {
+          STATE.filtered = [...STATE.favorites];
+          renderTable(STATE.filtered);
+          alert('Modo offline activado - solo se muestran ' + STATE.filtered.length + ' estaciones favoritas');
+        } else {
+          STATE.filtered = [...estacionesFalso];
+          renderTable(STATE.filtered);
+        }
+      });
+      
+      // Event: fav toggle
+      document.getElementById('favToggleBtn').addEventListener('click', function() {
+        const favArea = document.getElementById('favArea');
+        favArea.style.display = favArea.style.display === 'none' ? 'block' : 'none';
+      });
+      
+      function renderFavorites() {
+        const favList = document.getElementById('favList');
+        const favCount = document.getElementById('favCount');
+        
+        const favorites = STATE.favorites || [];
+        favCount.textContent = favorites.length + ' favoritos';
+        
+        if (favorites.length === 0) {
+          favList.innerHTML = '<div style="padding:1rem;text-align:center;color:#888">Aún no tienes favoritos.</div>';
+          return;
+        }
+        
+        favList.innerHTML = favorites.map(st => {
+          const precio = st['Precio Gasolina 95 E5'] || 0;
+          return `
+            <div class="fav-item" data-rótulo="${st.Rótulo}" style="cursor:pointer">
+              <span>${st.Rótulo}</span>
+              <span style="color:#1a73e8;font-weight:bold">${precio.toFixed(3).replace('.', ',')} €/L</span>
+            </div>
+          `;
+        }).join('');
+        
+        document.querySelectorAll('.fav-item').forEach(item => {
+          item.addEventListener('click', function() {
+            const rótulo = this.dataset.rótulo;
+            const st = estacionesFalso.find(s => s.Rótulo === rótulo);
+            if (st) {
+              alert('Estación ' + st.Rótulo + ' seleccionada.\nLocalidad: ' + st.Localidad + '\n' + st.Dirección);
+            }
+          });
+        });
+      }
+      
+      // Event: clear favorites
+      document.getElementById('clearFavsBtn').addEventListener('click', function() {
+        STATE.favorites = [];
+        renderFavorites();
+        renderTable([]);
+        alert('Todos los favoritos han sido borrados');
+      });
+      
+      function renderTable(data) {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:1rem">No hay estaciones con estos filtros</td></tr>';
+          return;
+        }
+        
+        data.forEach((st, i) => {
+          const tr = document.createElement('tr');
+          const precio = st['Precio Gasolina 95 E5'] || 0;
+          tr.innerHTML = `
+            <td>${st.Rótulo}</td>
+            <td>${precio.toFixed(3).replace('.', ',')} €/L</td>
+            <td>${(5 + Math.random()*10).toFixed(1)} km</td>
+            <td>${st.Localidad}</td>
+            <td>${st.Dirección}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+      
+      // Event: tabs bottom
+      document.querySelectorAll('.bottom-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+          const tabId = this.dataset.tab;
+          document.querySelectorAll('.bottom-tab').forEach(t => t.classList.remove('active'));
+          this.classList.add('active');
+          
+          document.getElementById('contentArea').querySelectorAll('[id$="Area"]').forEach(area => {
+            area.style.display = 'none';
+          });
+          
+          if (tabId === 'tab-both') {
+            document.getElementById('bothTableArea').style.display = 'block';
+          } else if (tabId === 'tab-table') {
+            document.querySelector('.table-area').style.display = 'block';
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>
