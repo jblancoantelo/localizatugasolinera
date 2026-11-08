@@ -138,6 +138,8 @@ if (saved.activeTab) setActiveTab(saved.activeTab);
 
 **Regla general**: cada propiedad guardada en `saveState()` (storage.js) debe tener su restauración correspondiente en `loadState()` (`main.js`). Las que no necesitan restauración en `loadState` se restauran desde `loadProvinceFilters` dentro de `fetchProvinceData()`.
 
+Caso que costó un bug: el TTL de caché (`#cacheTtl`) vivía solo en el input (`value="12"` en el HTML) y en el `push_config` de IndexedDB. Al arrancar nadie restauraba el input y el `setPushConfig()` inicial escribía 12 en IndexedDB, borrando la preferencia. Ahora `STATE.cacheTtl` entra en `saveState()`/`loadState()` y el input se restaura **antes** de ese `setPushConfig()`. Si añades otro ajuste de Config que solo toque IndexedDB, guárdalo también en `STATE` o se perderá igual.
+
 #### Flag `STATE.booting` — segunda barrera
 
 - `STATE.booting` arranca en `true` (`state.js`) y `saveProvinceFilters()` hace `if (!prov || STATE.booting) return;`

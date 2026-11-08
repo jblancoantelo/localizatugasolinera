@@ -1,5 +1,33 @@
 # Mejoras realizadas — Precios Gasolina España
 
+## 2026-11-08 — El TTL de caché se recuerda entre sesiones
+
+### Por qué hacía falta
+En Config → Caché de datos se puede elegir cuántas horas vale la caché de una
+provincia, pero el valor solo vivía en el input del HTML (`value="12"`) y en el
+`push_config` de IndexedDB. Al reabrir la app el input volvía a 12 y el
+`setPushConfig()` del arranque **sobrescribía con 12** el valor que el usuario
+había puesto. Es decir: el ajuste no solo se perdía en pantalla, también se
+destruía en la base de datos del Service Worker.
+
+### Qué se hizo
+- `cacheTtl` pasa a `STATE.cacheTtl` y entra en `saveState()`/`loadState()`,
+  igual que `checkInterval` y `priceFallDays`, que sí se recordaban.
+- La restauración ocurre **antes** del sync inicial a IndexedDB; era ese orden
+  el que provocaba el machaque.
+- `getCacheTtl()` mantiene el input como fuente mientras exista, pero ya no
+  fuerza 12 si el elemento no está disponible: usa `STATE.cacheTtl`.
+
+### Lo que se evitó a propósito
+No se migró el valor antiguo de IndexedDB porque cada arranque lo había
+sobrescrito ya con 12: no quedaba nada que recuperar. Se prioriza que a partir
+de ahora el valor elegido sobreviva, con test de regresión incluido.
+
+### Tests
+- 216 tests (209 HTTP + 7 file://) en verde, 2 nuevos en Persistencia: guardado
+  de `cacheTtl` en `gasolineras_state` y supervivencia tras F5 en input, estado
+  e IndexedDB.
+
 ## 2026-10-31 — La marca en la OEPM: el nombre también hay que protegerlo
 
 ### Por qué hacía falta

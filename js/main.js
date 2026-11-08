@@ -240,6 +240,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (saved.checkInterval) STATE.checkInterval = saved.checkInterval;
     if (saved.priceFallDays !== undefined) STATE.priceFallDays = saved.priceFallDays;
+    if (typeof saved.cacheTtl === 'number' && saved.cacheTtl >= 0) {
+      STATE.cacheTtl = saved.cacheTtl;
+      const ttlEl = document.getElementById('cacheTtl');
+      if (ttlEl) ttlEl.value = saved.cacheTtl;
+    }
     if (saved.priceCheckMode === 'average' || saved.priceCheckMode === 'consecutive') STATE.priceCheckMode = saved.priceCheckMode;
     if (saved.pushNotificationsEnabled) STATE.pushNotificationsEnabled = saved.pushNotificationsEnabled;
     if (saved.pushOnPriceRise) STATE.pushOnPriceRise = saved.pushOnPriceRise;
@@ -394,6 +399,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('cacheTtl')?.addEventListener('change', () => {
+    STATE.cacheTtl = getCacheTtl();
+    saveState();
     setPushConfig({
       checkInterval: STATE.checkInterval,
       priceFallDays: STATE.priceFallDays,
@@ -570,6 +577,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (fallDaysEl) fallDaysEl.value = STATE.priceFallDays;
   const modeRadio = document.querySelector('input[name="priceCheckMode"][value="' + STATE.priceCheckMode + '"]');
   if (modeRadio) modeRadio.checked = true;
+  const ttlEl = document.getElementById('cacheTtl');
+  if (ttlEl) ttlEl.value = STATE.cacheTtl;
 
   // Start periodic sync + initial check if already subscribed
   if (sub) {

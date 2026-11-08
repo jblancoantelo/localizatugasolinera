@@ -18,8 +18,11 @@ const STATE_KEY = 'gasolineras_state';
 const PROV_FILTER_PREFIX = 'gasolineras_prov_filters_';
 
 function getCacheTtl() {
-  const v = parseInt(document.getElementById('cacheTtl').value);
-  return (isNaN(v) || v < 0) ? 12 : v;
+  const el = document.getElementById('cacheTtl');
+  const v = el ? parseInt(el.value, 10) : NaN;
+  if (!isNaN(v) && v >= 0) return v;
+  // Sin input (o valor inválido) se usa el estado guardado y, si no, 12 h
+  return (typeof STATE !== 'undefined' && typeof STATE.cacheTtl === 'number') ? STATE.cacheTtl : 12;
 }
 
 
@@ -164,6 +167,7 @@ function saveState() {
       checkInterval: s.checkInterval,
       priceFallDays: s.priceFallDays,
       priceCheckMode: s.priceCheckMode,
+      cacheTtl: s.cacheTtl,
       pushNotificationsEnabled: s.pushNotificationsEnabled,
       pushOnPriceRise: s.pushOnPriceRise
     };

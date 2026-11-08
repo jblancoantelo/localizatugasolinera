@@ -11,7 +11,7 @@ const STATE = {
   favorites: [], showFavoritesOnly: false, historyDays: 14,
   provinces: [], provinceIdMap: {},
   booting: true,
-  pushNotificationsEnabled: false, pushOnPriceRise: false, checkInterval: 8, priceFallDays: 14, priceCheckMode: 'average',
+  pushNotificationsEnabled: false, pushOnPriceRise: false, checkInterval: 8, priceFallDays: 14, priceCheckMode: 'average', cacheTtl: 12,
   _prevFilteredIds: ''
 };
 

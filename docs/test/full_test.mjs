@@ -431,6 +431,40 @@ async function testHTTP(browser, server) {
     await sleep(500);
   }
 
+  // --- Persistencia del TTL de caché tras F5 (Config → Caché de datos) ---
+  // Antes el input solo se volcaba en IndexedDB y nadie lo restauraba: al
+  // arrancar valía 12 y el sync inicial sobrescribía el valor guardado.
+  await page.evaluate(() => {
+    const el = document.getElementById('cacheTtl');
+    el.value = '24';
+    el.dispatchEvent(new Event('change'));
+  });
+  await sleep(400);
+  const ttlSaved = await page.evaluate(() => {
+    const raw = localStorage.getItem('gasolineras_state');
+    return raw ? JSON.parse(raw).cacheTtl : null;
+  });
+  log('Persistencia', `TTL de caché guardado en localStorage: ${ttlSaved} h`, ttlSaved === 24);
+
+  await page.reload({ waitUntil: 'networkidle', timeout: 30000 });
+  await sleep(3000);
+  const ttlRestored = await page.evaluate(async () => {
+    const el = document.getElementById('cacheTtl');
+    const cfg = await getPushConfig();
+    return { input: el ? el.value : '', estado: typeof STATE !== 'undefined' ? STATE.cacheTtl : null, indexeddb: cfg.cacheTtl };
+  });
+  log('Persistencia', `TTL de caché se mantiene tras F5: ${ttlRestored.input} h`,
+    ttlRestored.input === '24' && ttlRestored.estado === 24 && ttlRestored.indexeddb === 24,
+    JSON.stringify(ttlRestored));
+
+  // Devolver el valor por defecto para no alterar los tests siguientes
+  await page.evaluate(() => {
+    const el = document.getElementById('cacheTtl');
+    el.value = '12';
+    el.dispatchEvent(new Event('change'));
+  });
+  await sleep(300);
+
   // --- Push Notifications ---
   const PUSH_SUB_KEY = 'gasolineras_push_subscription';
 

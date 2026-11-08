@@ -1,5 +1,30 @@
 # CHANGELOG
 
+## [2026-11-08] — El TTL de caché deja de resetearse a 12 h al reabrir la app
+
+| Cambio | Detalle |
+|--------|---------|
+| `js/state.js` | **Nuevo** `STATE.cacheTtl: 12`: el TTL pasa a ser estado de la app, no solo un valor del DOM |
+| `js/storage.js` | `saveState()` guarda `cacheTtl` en `gasolineras_state`; `getCacheTtl()` usa el input y, si no existe o no es válido, cae a `STATE.cacheTtl` en vez de forzar 12 |
+| `js/main.js` | `loadState()` restaura `STATE.cacheTtl` **y el valor del input** antes del `setPushConfig()` inicial (era el que sobrescribía IndexedDB con 12); el `change` del input actualiza `STATE` y llama a `saveState()`; el bloque de arranque también sincroniza el input por si no hay estado guardado |
+| `docs/test/full_test.mjs` | **Nuevos tests 12.3 y 12.4**: cambiar el TTL a 24 h → se persiste en localStorage → tras F5 el input, `STATE.cacheTtl` y el `push_config` de IndexedDB siguen en 24 h. Al terminar el test se devuelve a 12 |
+| `README.md`, `docs/test/TEST_PLAN.md` | Contadores a **216 tests** (209 HTTP + 7 file://) |
+
+### Por qué pasaba
+
+El input `#cacheTtl` tenía `value="12"` en el HTML y **nadie** lo restauraba al
+arrancar. Su único `change` volcaba el valor en el `push_config` de IndexedDB,
+pero el arranque siguiente leía el DOM (12), lo escribía en `IndexedDB` y
+machacaba el valor guardado. Ahora el TTL va en `saveState()`/`loadState()` como
+`checkInterval` y `priceFallDays`.
+
+### Verificación
+
+- `node check-syntax.mjs`: 20/20 ficheros OK
+- Suite completa: **216 tests** (209 HTTP + 7 file://), 2 nuevos
+
+---
+
 ## [2026-10-31] — Guía para registrar la marca en la OEPM
 
 | Cambio | Detalle |
