@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- Copyright (C) 2026 Juan Blanco Antelo - Localiza tu Gasolinera (prototipos de diseno) -->
+
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>v08 · Flujo móvil — pila de pantallas con animación, como une app nativa</title>
+<style>
+:root{
+  --pri:#1f6f4a; --pri2:#2c8f5f; --acento:#0b9e5e; --tinta:#16211b; --sub:#63736a;
+  --fondo:#f3f7f5; --tarj:#fff; --linea:#e2e8e4; --verde:#0a8a3c; --rojo:#c62828;
+  --baja:#0a8a3c; --media:#b26a00; --alta:#c62828;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{font-family:system-ui,'Segoe UI',Roboto,sans-serif;background:#0d1f17;overflow:hidden}
+button{font-family:inherit}
+
+/* marco en PC */
+.cuerpo{height:100dvh;max-width:none}
+@media (min-width:960px){
+  .escena{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100dvh;background:radial-gradient(1200px 600px at 70% 10%,#17402d,#0d1f17)}
+  .nota{position:static;color:#8fb3a2;font-size:.85rem;text-align:center;line-height:1.5;padding-bottom:14px}
+  .marco{width:390px;height:820px;border-radius:52px;position:relative;overflow:hidden;box-shadow:0 40px 90px rgba(0,0,0,.55),0 0 0 12px #131313,0 0 0 14px #2a2a2a;background:var(--fondo)}
+  .isla{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:110px;height:28px;border-radius:20px;background:#0d1f17;z-index:99}
+  .cuerpo{height:100%}
+}
+@media (max-width:959px){ .marco{width:100%;height:100dvh} .isla,.nota{display:none} }
+
+.marco{display:flex;flex-direction:column;font-family:system-ui;color:var(--tinta);background:var(--fondo);container-type:inline-size}
+.capas{position:relative;flex:1;overflow:hidden}
+
+/* ---------- pantallas ---------- */
+.pan{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--fondo);
+  transform:translateX(100%);transition:transform .32s cubic-bezier(.25,.9,.25,1);will-change:transform;z-index:1}
+.pan.act{transform:none;z-index:5}
+.pan.detras{transform:translateX(-24%)!important;z-index:0;filter:brightness(.92)}
+.pan.arr{display:flex;transform:translateY(100%);z-index:6}
+.pan.arr.act{transform:none}
+.pbarru{position:absolute;top:0;left:0;right:0;height:24px;background:var(--fondo);z-index:98}
+
+/* onboarding */
+.ic{position:absolute;inset:0;background:linear-gradient(160deg,#0d3b26,#122f22);display:none;flex-direction:column;
+  align-items:center;justify-content:center;color:#fff;padding:30px;text-align:center;z-index:40}
+.ic.act{display:flex}
+.ic .art{font-size:4rem;margin-bottom:18px}
+.ic h2{margin:0 0 8px;font-size:1.45rem;letter-spacing:-.3px}
+.ic p{color:#b8d5c6;font-size:.98rem;line-height:1.55;margin:0 0 24px;max-width:300px}
+.ic .dots{display:flex;gap:7px;margin-bottom:26px}
+.ic .dots i{width:8px;height:8px;border-radius:99px;background:rgba(255,255,255,.3)}
+.ic .dots i.on{background:#7be3ae}
+.ic .btns{display:flex;gap:10px;width:100%;max-width:320px}
+.ic .btns button{flex:1;border:none;border-radius:16px;padding:15px;font-size:1rem;font-weight:800;cursor:pointer}
+.ic .sk{background:rgba(255,255,255,.12);color:#fff}
+.ic .go{background:#7be3ae;color:#0d3b26}
+
+/* barra superior en pantallas raíz */
+.sup{padding:calc(14px + env(safe-area-inset-top)) 18px 12px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.sup .t{flex:1}
+.sup .t h1{margin:0;font-size:1.3rem;letter-spacing:-.4px}
+.sup .t p{margin:2px 0 0;font-size:.8rem;color:var(--sub)}
+.iconoR{width:42px;height:42px;border-radius:14px;background:#fff;border:1px solid var(--linea);display:grid;place-items:center;
+  font-size:1.05rem;cursor:pointer;color:var(--tinta)}
+.iconoR.marca{background:var(--pri);color:#fff;border:none;font-weight:800;font-size:.95rem}
+
+/* home */
+.corp{flex:1;overflow-y:auto;padding:0 16px 96px}
+.hero{background:linear-gradient(140deg,var(--pri),var(--pri2));border-radius:24px;color:#fff;padding:18px;margin-bottom:14px;
+  position:relative;overflow:hidden;cursor:pointer}
+.hero .e{font-size:.72rem;text-transform:uppercase;letter-spacing:1.4px;opacity:.85;font-weight:800}
+.hero .mn{font-size:1.05rem;font-weight:800;margin-top:8px}
+.hero .dr{font-size:.8rem;opacity:.85;margin-top:2px}
+.hero .px{font-size:2.5rem;font-weight:800;letter-spacing:-1.8px;margin-top:12px}
+.hero .px small{font-size:.8rem;opacity:.75;font-weight:600;margin-left:4px}
+.hero .chips{position:absolute;top:16px;right:16px;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.hero .chips span{font-size:.66rem;background:rgba(255,255,255,.18);padding:4px 9px;border-radius:99px;font-weight:700}
+.resum{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.resum .r{background:#fff;border:1px solid var(--linea);border-radius:18px;padding:13px;cursor:pointer}
+.resum .r .e{font-size:.68rem;color:var(--sub);font-weight:700;text-transform:uppercase;letter-spacing:.6px}
+.resum .r .v{font-size:1.35rem;font-weight:800;margin-top:5px;letter-spacing:-.6px}
+.resum .r .v small{font-size:.66rem;color:var(--sub);font-weight:600}
+.resum .r .q{font-size:.7rem;color:var(--sub);margin-top:4px}
+.rapd{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px}
+.rapd .q1{min-width:104px;background:#fff;border:1px solid var(--linea);border-radius:18px;padding:13px 12px;cursor:pointer;
+  font-weight:700;font-size:.86rem;display:flex;flex-direction:column;gap:6px}
+.rapd .q1 span{font-size:1.3rem}
+.h2{font-size:1.05rem;font-weight:800;margin:16px 4px 10px;display:flex;justify-content:space-between;align-items:baseline}
+.h2 a{font-size:.78rem;color:var(--pri);font-weight:700;text-decoration:none;cursor:pointer}
+.mini{display:flex;gap:12px;align-items:center;background:#fff;border:1px solid var(--linea);border-radius:18px;padding:11px 13px;margin-bottom:9px;cursor:pointer}
+.mini:active{transform:scale(.985)}
+.lm2{width:40px;height:40px;border-radius:13px;color:#fff;display:grid;place-items:center;font-weight:800;flex-shrink:0}
+.mini .tx{flex:1;min-width:0}
+.mini .m{font-weight:700;font-size:.94rem}
+.mini .d{font-size:.76rem;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.mini .pr{text-align:right;flex-shrink:0}
+.mini .p1{font-size:1.2rem;font-weight:800;letter-spacing:-.6px}
+.mini .un{font-size:.6rem;color:var(--sub)}
+.nivel-baja{color:var(--baja)}.nivel-media{color:var(--media)}.nivel-alta{color:var(--alta)}
+
+/* barra inferior pestañas (solo raíces) */
+.tabsS{position:absolute;bottom:0;left:0;right:0;z-index:30;background:#fff;border-top:1px solid var(--linea);display:flex;
+  padding:7px 4px calc(7px + env(safe-area-inset-bottom));border-radius:0}
+.tabsS button{flex:1;border:none;background:none;font-size:.65rem;font-weight:700;color:var(--sub);cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 0}
+.tabsS .ic{font-size:1.15rem}
+.tabsS button.act{color:var(--pri)}
+
+/* pantalla lista */
+.tools{display:flex;gap:8px;padding:2px 18px 12px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.tools::-webkit-scrollbar{display:none}
+.ch2{border:1px solid var(--linea);background:#fff;border-radius:999px;padding:8px 14px;font-size:.86rem;font-weight:700;
+  white-space:nowrap;cursor:pointer;color:var(--tinta)}
+.ch2.act{background:var(--pri);color:#fff;border-color:var(--pri)}
+
+/* pantallas de ficha / histórico / ajustes-sub */
+.pti{display:flex;align-items:center;gap:10px;padding:calc(12px + env(safe-area-inset-top)) 14px 10px;flex-shrink:0}
+.pti .zb{width:40px;height:40px;border-radius:13px;border:none;background:#fff;border:1px solid var(--linea);
+  font-size:1.05rem;cursor:pointer;color:var(--tinta);flex-shrink:0}
+.pti .ti{flex:1;font-weight:800;font-size:1.02rem;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sect{display:flex;justify-content:space-between;align-items:flex-end;padding:2px 18px 6px}
+.sect .g{font-size:2.6rem;font-weight:800;letter-spacing:-2px;line-height:1}
+.sect .un{font-size:.75rem;color:var(--sub);font-weight:700}
+.sect .dz{font-size:.85rem;font-weight:800}
+.psec{padding:0 18px 12px}
+.ptab{border:1px solid var(--linea);border-radius:14px;overflow:hidden;background:#fff}
+.fP{display:flex;justify-content:space-between;padding:10px 13px;border-top:1px solid var(--linea);font-size:.88rem}
+.fP:first-child{border-top:none}
+.fP:nth-child(odd){background:#fafcfb}
+.rgr{display:flex;gap:6px;margin:10px 18px}
+.rgr button{flex:1;border:1px solid var(--linea);background:#fff;border-radius:10px;padding:9px 0;font-size:.8rem;
+  font-weight:700;color:var(--sub);cursor:pointer}
+.rgr button.act{background:var(--pri);border-color:var(--pri);color:#fff}
+.cwrap{margin:8px 18px;border:1px solid var(--linea);border-radius:14px;padding:10px 7px 3px;background:#fff}
+.lm-line{stroke:var(--linea)}.lm-num{font-size:8px;fill:#8a9a90}
+.accx{display:flex;gap:8px;margin:10px 18px calc(20px + env(safe-area-inset-bottom))}
+.accx button{flex:1;border:none;border-radius:13px;padding:13px 6px;font-weight:800;font-size:.85rem;cursor:pointer;
+  background:#fff;border:1px solid var(--linea);color:var(--tinta)}
+.accx .pri{background:var(--pri);color:#fff;border-color:transparent}
+.accx .al{color:var(--rojo)}
+
+/* ajustes */
+.ajm{margin:6px 16px 14px;background:#fff;border:1px solid var(--linea);border-radius:18px;overflow:hidden}
+.ajm h4{margin:0;padding:13px 15px 5px;font-size:.98rem}
+.afl{display:flex;justify-content:space-between;align-items:center;padding:11px 15px;border-top:1px solid var(--linea);
+  font-size:.9rem;gap:10px;cursor:pointer}
+.afl .vy{color:var(--sub);font-size:.8rem;text-align:right;display:flex;align-items:center;gap:6px}
+.afl .vy b{color:var(--tinta)}
+.swx{width:46px;height:27px;border-radius:99px;background:var(--linea);position:relative;flex-shrink:0;cursor:pointer;transition:.2s}
+.swx.on{background:var(--pri)}
+.swx i{position:absolute;top:3px;left:4px;width:21px;height:21px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.22)}
+.swx.on i{left:21px}
+
+/* snack */
+.snk2{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translate(-50%,14px);z-index:999;
+  background:#16211b;color:#fff;font-size:.82rem;padding:10px 16px;border-radius:999px;opacity:0;pointer-events:none;transition:.25s}
+.snk2-vis{opacity:1;transform:translate(-50%,0)}
+@media(min-width:960px){.snk2{transform:translate(-50%,14px) scale(.9)}}
+</style>
+</head>
+<body>
+<div class="escena">
+  <div class="marco">
+    <div class="isla"></div>
+
+    <!-- ONBOARDING -->
+    <div class="ic act" id="ob1">
+      <div class="art">⛽</div><h2>Tu precio, sin rodeos</h2>
+      <p>Consulta la gasolinera más barata de tu zona con el precio que pagas de verdad: el de la bomba menos los descuentos que tengas guardados.</p>
+      <div class="dots"><i class="on"></i><i></i><i></i></div>
+      <div class="btns"><button class="sk" data-ob="2">Siguiente</button><button class="go" data-ob="fin">Empezar</button></div>
+    </div>
+    <div class="ic" id="ob2">
+      <div class="art">🔔</div><h2>Avisos al bajar</h2>
+      <p>Cada 8 horas, comprobación en segundo plano: si el precio de tus favoritas cae, te llega una notificación con el ahorro exacto.</p>
+      <div class="dots"><i></i><i class="on"></i><i></i></div>
+      <div class="btns"><button class="sk" data-ob="1">Atrás</button><button class="go" data-ob="3">Siguiente</button></div>
+    </div>
+    <div class="ic" id="ob3">
+      <div class="art">✨</div><h2>Pregúntale a la IA</h2>
+      <p>¿Cuál reabre más cerca? ¿Han subido en lo que llevas de mes? Pregunta en lenguaje natural y responde con tus datos reales.</p>
+      <div class="dots"><i></i><i></i><i class="on"></i></div>
+      <div class="btns"><button class="sk" data-ob="2">Atrás</button><button class="go" data-ob="fin">Empezar</button></div>
+    </div>
+
+    <div class="capas">
+      <!-- HOME (raíz) -->
+      <section class="pan act" data-raiz="home">
+        <div class="sup">
+          <div class="t"><h1 id="hHome">Buenos días 👋</h1><p id="pHome">Madrid · 38 estaciones con precio hoy</p></div>
+          <button class="iconoR marca" id="btnProv">28</button>
+          <button class="iconoR" id="btnBusc">🔍</button>
+        </div>
+        <div class="corp">
+          <div class="hero" id="heroCard"></div>
+          <div class="resum">
+            <div class="r" data-go="lista"><span class="e">Media G.95 hoy</span><div class="v" id="kMed">—</div><div class="q" id="kMedQ"></div></div>
+            <div class="r" data-go="favoritas"><span class="e">Favoritas ⭐</span><div class="v" id="kFav">—</div><div class="q">te avisamos si bajan</div></div>
+          </div>
+          <div class="rapd">
+            <div class="q1" data-go="lista"><span>☰</span>Toda la lista</div>
+            <div class="q1" data-go="hist"><span>📈</span>Evolución de media</div>
+            <div class="q1" data-go="ajus"><span>🏷️</span>Descuentos</div>
+            <div class="q1" data-go="ajus"><span>🔔</span>Avisos</div>
+            <div class="q1" data-go="ia"><span>✨</span>Preguntar IA</div>
+          </div>
+          <div class="h2">Las más baratas cerca<a data-go="lista">ver todas →</a></div>
+          <div id="miniL"></div>
+        </div>
+        <nav class="tabsS">
+          <button data-raizbtn="home" class="act"><span class="ic">⌂</span>Inicio</button>
+          <button data-raizbtn="lista"><span class="ic">☰</span>Lista</button>
+          <button data-raizbtn="favoritas"><span class="ic">★</span>Favoritas</button>
+          <button data-raizbtn="ia"><span class="ic">✨</span>IA</button>
+          <button data-raizbtn="ajus"><span class="ic">⚙</span>Ajustes</button>
+        </nav>
+      </section>
+
+      <!-- LISTA (raíz) -->
+      <section class="pan" data-raiz="lista">
+        <div class="sup">
+          <div class="t"><h1>Estaciones</h1><p id="pLst">Madrid · G.95</p></div>
+          <button class="iconoR" id="btnBusc2">🔍</button>
+        </div>
+        <div class="tools" id="carrousel"></div>
+        <div class="corp" id="corpLst"></div>
+        <nav class="tabsS">
+          <button data-raizbtn="home"><span class="ic">⌂</span>Inicio</button>
+          <button data-raizbtn="lista" class="act"><span class="ic">☰</span>Lista</button>
+          <button data-raizbtn="favoritas"><span class="ic">★</span>Favoritas</button>
+          <button data-raizbtn="ia"><span class="ic">✨</span>IA</button>
+          <button data-raizbtn="ajus"><span class="ic">⚙</span>Ajustes</button>
+        </nav>
+      </section>
+
+      <!-- FAVORITAS (raíz) -->
+      <section class="pan" data-raiz="favoritas">
+        <div class="sup"><div class="t"><h1>Favoritas</h1><p>seguidas en segundo plano</p></div></div>
+        <div class="corp" id="corpFav"></div>
+        <nav class="tabsS">
+          <button data-raizbtn="home"><span class="ic">⌂</span>Inicio</button>
+          <button data-raizbtn="lista"><span class="ic">☰</span>Lista</button>
+          <button data-raizbtn="favoritas" class="act"><span class="ic">★</span>Favoritas</button>
+          <button data-raizbtn="ia"><span class="ic">✨</span>IA</button>
+          <button data-raizbtn="ajus"><span class="ic">⚙</span>Ajustes</button>
+        </nav>
+      </section>
+
+      <!-- IA (raíz) -->
+      <section class="pan" data-raiz="ia" style="display:flex">
+        <div class="sup"><div class="t"><h1>Asistente</h1><p>pregunta con tus datos del día</p></div></div>
+        <div class="corp" id="corpIA" style="display:flex;flex-direction:column">
+          <div style="flex:1;overflow-y:auto" id="iaM"></div>
+          <div id="proP2" style="display:flex;gap:7px;overflow-x:auto;padding:9px 0"></div>
+          <div style="display:flex;gap:8px;padding-bottom:calc(12px + env(safe-area-inset-bottom))">
+            <input id="iaQ2" placeholder="¿Cuál me conviene hoy?" style="flex:1;border:1px solid var(--linea);border-radius:14px;padding:12px 14px;font-size:.95rem;background:#fff">
+            <button id="iaG2" style="border:none;background:var(--pri);color:#fff;border-radius:14px;padding:0 17px;font-weight:800;cursor:pointer">➤</button>
+          </div>
+        </div>
+        <nav class="tabsS">
+          <button data-raizbtn="home"><span class="ic">⌂</span>Inicio</button>
+          <button data-raizbtn="lista"><span class="ic">☰</span>Lista</button>
+          <button data-raizbtn="favoritas"><span class="ic">★</span>Favoritas</button>
+          <button data-raizbtn="ia" class="act"><span class="ic">✨</span>IA</button>
+          <button data-raizbtn="ajus"><span class="ic">⚙</span>Ajustes</button>
+        </nav>
+      </section>
+
+      <!-- AJUSTES (raíz) -->
+      <section class="pan" data-raiz="ajus">
+        <div class="sup"><div class="t"><h1>Ajustes</h1><p>igual que la pestaña Config actual</p></div></div>
+        <div class="corp">
+          <div class="ajm"><h4>🏷️ Descuentos por marca</h4><div id="ajD2"></div>
+            <div class="afl" data-sub="desc"><span class="vy" style="width:100%;justify-content:flex-start;color:#1f6f4a;font-weight:700">Editar descuentos →</span></div>
+          </div>
+          <div class="ajm"><h4>🔔 Notificaciones push</h4>
+            <div class="afl"><span>Avisos de bajada</span><div class="swx on" id="swx2"><i></i></div></div>
+            <div class="afl" data-sub="push"><span>Intervalo y días</span><span class="vy">8 h · 14 días</span></div>
+          </div>
+          <div class="ajm"><h4>🧰 Datos y caché</h4>
+            <div class="afl" data-sub="cache"><span>Caché IndexedDB</span><span class="vy">12 h</span></div>
+            <div class="afl"><span>Resultados por página</span><span class="vy">30</span></div>
+            <div class="afl"><span>Versión</span><span class="vy">5.2.1</span></div>
+          </div>
+          <p style="text-align:center;font-size:.74rem;color:var(--sub);padding-bottom:8px">Prototipo v08 — flujo con pila de pantallas</p>
+        </div>
+        <nav class="tabsS">
+          <button data-raizbtn="home"><span class="ic">⌂</span>Inicio</button>
+          <button data-raizbtn="lista"><span class="ic">☰</span>Lista</button>
+          <button data-raizbtn="favoritas"><span class="ic">★</span>Favoritas</button>
+          <button data-raizbtn="ia"><span class="ic">✨</span>IA</button>
+          <button data-raizbtn="ajus" class="act"><span class="ic">⚙</span>Ajustes</button>
+        </nav>
+      </section>
+
+      <!-- FICHA (detalle) -->
+      <section class="pan arr" id="panFicha">
+        <div class="pti">
+          <button class="zb" data-pop>←</button>
+          <div class="ti" id="tiFicha">Estación</div>
+          <button class="zb" data-favz id="favZ">☆</button>
+        </div>
+        <div style="flex:1;overflow-y:auto" id="bodFicha"></div>
+      </section>
+
+      <!-- HISTÓRICO full (detalle) -->
+      <section class="pan arr" id="panHist">
+        <div class="pti">
+          <button class="zb" data-pop>←</button>
+          <div class="ti">Evolución de precio</div>
+        </div>
+        <div style="flex:1;overflow-y:auto;align-content:flex-start;display:flex;flex-direction:column" id="bodHist"></div>
+      </section>
+
+      <!-- SUB-AJUSTES (detalle) -->
+      <section class="pan arr" id="panSub">
+        <div class="pti">
+          <button class="zb" data-pop>←</button>
+          <div class="ti" id="tiSub">—</div>
+        </div>
+        <div style="flex:1;overflow-y:auto" id="bodSub"></div>
+      </section>
+    </div>
+  </div>
+  <p class="nota">Prototipo v08 — en PC se previsualiza dentro del marco; en un móvil real se ve a pantalla completa. Prueba también el botón ← para volver</p>
+</div>
+<div class="snk2" id="snk2"></div>
+
+<script src="../_lib/mock.js"></script>
+<script>
+(function(){
+'use strict';
+var ST={prov:'Madrid',comb:'Gasolina 95 E5',raiz:'home',sel:null,fav:{},rg:14,ob:1,orden:'precio'};
+GLM.de('Madrid').forEach(function(e){ST.fav[e.id]=!!e.fav});
+function snack(m){var s=document.getElementById('snk2');s.textContent=m;s.classList.add('snk2-vis');
+  clearTimeout(s._t);s._t=setTimeout(function(){s.classList.remove('snk2-vis')},2300)}
+
+/* ---------- navegación ---------- */
+function irRaiz(r){
+  ST.raiz=r;
+  document.querySelectorAll('.pan[data-raiz]').forEach(function(p){
+    p.classList.toggle('act',p.dataset.raiz===r);p.classList.remove('detras');
+  });
+  document.querySelectorAll('[data-raizbtn]').forEach(function(b){
+    b.classList.toggle('act',b.dataset.raizbtn===r);
+  });
+  if(r==='favoritas')pFav();
+  if(r==='lista')pLst();
+  if(r==='home')pHome();
+}
+var historia=[];
+function empuja(id){
+  historia.push(ST.raiz);
+  document.querySelectorAll('.pan[data-raiz]').forEach(function(p){
+    if(p.classList.contains('act'))p.classList.add('detras');
+  });
+  document.getElementById(id).classList.add('act');
+}
+function sale(){
+  var arr=document.querySelector('.pan.arr.act');
+  if(arr){arr.classList.remove('act');
+    document.querySelectorAll('.pan[data-raiz]').forEach(function(p){p.classList.remove('detras')});
+  }
+}
+document.querySelectorAll('[data-pop]').forEach(function(b){
+  b.addEventListener('click',sale);
+});
+document.querySelectorAll('[data-raizbtn]').forEach(function(b){
+  b.addEventListener('click',function(){irRaiz(b.dataset.raizbtn)});
+});
+document.body.addEventListener('click',function(e){
+  var g=e.target.closest('[data-go]');
+  if(g){
+    if(g.dataset.go==='hist')pHist();else irRaiz(g.dataset.go);
+    return;
+  }
+  var fo=e.target.closest('[data-favz]');
+  if(fo){ST.favTog(ST.sel);return}
+});
+
+/* ---------- onboarding ---------- */
+function irOb(n){
+  ['ob1','ob2','ob3'].forEach(function(id){
+    document.getElementById(id).classList.toggle('act',id==='ob'+n);
+  });
+  ST.ob=n;
+}
+document.querySelectorAll('.ic [data-ob]').forEach(function(b){
+  b.addEventListener('click',function(){
+    var d=b.dataset.ob;
+    if(d==='fin'){
+      document.querySelectorAll('.ic').forEach(function(x){x.classList.remove('act')});
+      snack('Home — en la app real recordaríamos que ya viste el onboarding.');
+    } else irOb(d);
+  });
+});
+
+/* ---------- home ---------- */
+function listaOrd(){
+  var l=GLM.de(ST.prov).filter(function(e){return e.precios[ST.comb]!=null});
+  if(ST.orden==='cerca')l.sort(function(a,b){return a.dist-b.dist});
+  else l.sort(function(a,b){return GLM.precioFinal(a,ST.comb)-GLM.precioFinal(b,ST.comb)});
+  return l;
+}
+function pHome(){
+  var l=listaOrd(),media=l.reduce(function(t,e){return t+GLM.precioFinal(e,ST.comb)},0)/l.length;
+  var top=l[0],r=GLM.resumen(GLM.historico(top,ST.comb,ST.rg));
+  document.getElementById('hHome').textContent='Buenos días 👋';
+  document.getElementById('pHome').textContent=ST.prov+' · '+l.length+' estaciones · '+GLM.COMBUSTIBLES_CORTOS[ST.comb];
+  document.getElementById('kMed').innerHTML=GLM.fmt(media)+' <small>€/L</small>';
+  document.getElementById('kMedQ').textContent=(r.delta<0?'▼':'▲')+' '+GLM.fmt(Math.abs(r.delta))+' hoy';
+  document.getElementById('kFav').textContent=GLM.de(ST.prov).filter(function(e){return ST.fav[e.id]}).length;
+  document.getElementById('heroCard').innerHTML=
+    '<div class="e">La más barata · '+GLM.fmt2(top.dist)+' km</div>'+
+    '<div class="mn">'+top.marca+' · '+top.localidad+'</div>'+
+    '<div class="dr">'+top.direccion+'</div>'+
+    '<div class="px nivel-baja" style="color:#fff">'+GLM.fmt(GLM.precioFinal(top,ST.comb))+'<small>€/L</small></div>'+
+    '<div class="chips"><span>▼ '+GLM.fmt(Math.abs(r.delta))+' hoy</span>'+
+    (GLM.descuento(top.marca)?'<span>🏷️ '+GLM.cent(GLM.descuento(top.marca))+'</span>':'')+'</div>';
+  document.getElementById('miniL').innerHTML=l.slice(0,4).map(mini).join('');
+}
+function mini(e){
+  var t=GLM.tendencia(e,ST.comb);
+  return '<div class="mini" data-abre="'+e.id+'"><div class="lm2" style="background:'+GLM.colorMarca(e.marca)+'">'+e.marca.slice(0,2)+'</div>'+
+  '<div class="tx"><div class="m">'+e.marca+(ST.fav[e.id]?' ★':'')+'</div><div class="d">'+e.direccion+' · '+e.localidad+'</div></div>'+
+  '<div class="pr"><div class="p1 nivel-'+GLM.nivel(GLM.precioFinal(e,ST.comb))+'">'+GLM.fmt(GLM.precioFinal(e,ST.comb))+'</div>'+
+  '<div class="un" style="color:'+(t.d<0?'var(--verde)':'var(--rojo)')+'">'+(t.d<0?'▼':'▲')+GLM.fmt(Math.abs(t.d))+'</div></div></div>';
+}
+document.getElementById('heroCard').addEventListener('click',function(){abreFicha(listaOrd()[0])});
+document.getElementById('miniL').addEventListener('click',function(e){
+  var m=e.target.closest('[data-abre]');
+  if(m)abreFicha(estPorId(m.dataset.abre));
+});
+
+/* ---------- lista ---------- */
+function pLst(){
+  document.getElementById('pLst').textContent=ST.prov+' · '+GLM.COMBUSTIBLES_CORTOS[ST.comb];
+  document.getElementById('carrousel').innerHTML=
+    GLM.COMBUSTIBLES.slice(0,5).map(function(c){return '<button class="ch2'+(ST.comb===c?' act':'')+'" data-c="'+c+'">'+GLM.COMBUSTIBLES_CORTOS[c]+'</button>'}).join('')+
+    '<button class="ch2" id="chOr">⇅ Baratas</button>';
+}
+document.getElementById('carrousel').addEventListener('click',function(e){
+  var b=e.target.closest('[data-c]');if(b){ST.comb=b.dataset.c;pLst();return}
+  if(e.target.closest('#chOr')){ST.orden=ST.orden==='precio'?'cerca':'precio';pLst();snack(ST.orden==='cerca'?'Orden: cercanía':'Orden: baratas primero')}
+});
+function corpoLst(){
+  var l=listaOrd();
+  document.getElementById('corpLst').innerHTML=l.map(mini).join('')+pata;
+}
+var pata='<div style="height:80px"></div>';
+
+/* ---------- favoritas ---------- */
+function pFav(){
+  var l=GLM.de(ST.prov).filter(function(e){return ST.fav[e.id]});
+  document.getElementById('corpFav').innerHTML=
+    (l.length?'':'<div style="text-align:center;padding:56px 24px;color:var(--sub)"><div style="font-size:2.4rem">★</div>'+
+      '<b style="color:var(--tinta)">Nada en el radar</b><p style="font-size:.92rem">Toca estrella en una ficha y aquí la verás con su evolución.</p>'+
+      '<button style="margin-top:10px;border:none;background:var(--pri);color:#fff;border-radius:13px;padding:11px 16px;font-weight:800;cursor:pointer" data-go="lista">Ir a la lista</button></div>')+
+    l.slice().sort(function(a,b){return GLM.precioFinal(a,ST.comb)-GLM.precioFinal(b,ST.comb)}).map(mini).join('')+pata;
+}
+
+/* ---------- ficha ---------- */
+function abreFicha(e){
+  ST.sel=e.id;
+  document.getElementById('tiFicha').textContent=e.marca+' · '+e.localidad;
+  document.getElementById('favZ').textContent=ST.fav[e.id]?'★':'☆';
+  var p=GLM.precioFinal(e,ST.comb),r=GLM.resumen(GLM.historico(e,ST.comb,ST.rg));
+  document.getElementById('bodFicha').innerHTML=
+    '<div class="sect"><div><div class="g nivel-'+GLM.nivel(p)+'">'+GLM.fmt(p)+'</div><div class="un">€/L con descuentos</div></div>'+
+    '<div class="dz" style="text-align:right;color:'+(r.delta<0?'var(--verde)':'var(--rojo)')+'">'+(r.delta<0?'▼':'▲')+' '+
+    GLM.fmt(Math.abs(r.delta))+' €/L<div style="color:var(--sub);font-weight:600;font-size:.78rem">hoy · mín '+GLM.fmt(r.min)+' en '+r.minFecha+'</div></div></div>'+
+    '<div class="rgr">'+[7,14,30,90].map(function(d){return '<button class="'+(ST.rg===d?'act':'')+'" data-rgr="'+d+'">'+d+' d</button>'}).join('')+'</div>'+
+    '<div class="cwrap">'+GLM.chart(GLM.historico(e,ST.comb,ST.rg),{w:360,h:160,color:'#1f6f4a'})+'</div>'+
+    '<div class="ptab" style="margin:6px 18px">'+Object.keys(e.precios).map(function(c){var pp=GLM.precioFinal(e,c);
+      return '<div class="fP"><span>'+c+'</span><b class="nivel-'+GLM.nivel(pp)+'">'+GLM.fmt(pp)+' €/L</b></div>'}).join('')+'</div>'+
+    '<div class="accx"><button class="pri">🧭 Cómo llegar</button><button class="al">🔔 Avisar si baja</button>'+
+    '<button id="bIAF">✨ Preguntar</button></div>';
+  document.querySelectorAll('[data-rgr]').forEach(function(b){
+    b.addEventListener('click',function(){ST.rg=+b.dataset.rgr;abreFicha(e)})});
+  var bf=document.getElementById('bIAF');
+  bf.addEventListener('click',function(){
+    sale();irRaiz('ia');
+    document.getElementById('iaQ2').value='Histórico de '+e.marca+' '+GLM.COMBUSTIBLES_CORTOS[ST.comb];
+    document.getElementById('iaG2').click();
+  });
+  empuja('panFicha');
+}
+function pHist(){
+  var avg=GLM.de(ST.prov).filter(function(e){return e.precios[ST.comb]!=null});
+  var serieMix=[];
+  var dias=ST.rg;
+  for(var i=0;i<dias;i++)serieMix.push({f:'',p:0});
+  avg.forEach(function(e){
+    var s=GLM.historico(e,ST.comb,dias);
+    for(var i=0;i<dias;i++)serieMix[i].p+=s[i].p/avg.length;
+  });
+  var fechas=GLM.historico(avg[0],ST.comb,dias);
+  serieMix.forEach(function(m,i){m.f=fechas[i].f});
+  var r=GLM.resumen(serieMix);
+  document.getElementById('bodHist').innerHTML=
+    '<div class="sect"><div><div class="g">'+GLM.fmt(r.hoy)+'</div><div class="un">€/L · media '+ST.prov+' hoy</div></div>'+
+    '<div class="dz" style="text-align:right;color:'+(r.delta<0?'var(--verde)':'var(--rojo)')+'">'+(r.delta<0?'▼':'▲')+' '+
+    GLM.fmt(Math.abs(r.delta))+'<div style="color:var(--sub);font-weight:600;font-size:.78rem">vs ayer</div></div></div>'+
+    '<div class="rgr">'+[7,14,30].map(function(d){return '<button class="'+(ST.rg===d?'act':'')+'" data-rgh="'+d+'">'+d+' días</button>'}).join('')+'</div>'+
+    '<div class="cwrap">'+GLM.chart(serieMix,{w:360,h:170,color:'#1f6f4a'})+'</div>'+
+    '<p style="font-size:.8rem;color:var(--sub);margin:8px 20px">Mín '+GLM.fmt(r.min)+' ('+r.minFecha+') · máx '+GLM.fmt(r.max)+
+    ' ('+r.maxFecha+') · media '+GLM.fmt(r.media)+' €/L calculada sobre '+avg.length+' estaciones.</p>'+
+    '<div class="accx"><button>⭐ Comparar con favoritas</button><button>✨ Pedir explicación a la IA</button></div>';
+  document.querySelectorAll('[data-rgh]').forEach(function(b){
+    b.addEventListener('click',function(){ST.rg=+b.dataset.rgh;pHist()})});
+  empuja('panHist');
+}
+function estPorId(id){
+  return GLM.de(ST.prov).filter(function(x){return x.id===id})[0];
+}
+ST.favTog=function(id){
+  if(!id)return;
+  ST.fav[id]=!ST.fav[id];snack(ST.fav[id]?'⭐ Guardada':'Quitada');
+  var z=document.getElementById('favZ');
+  z.textContent=ST.fav[id]?'★':'☆';
+  if(ST.sel){var pan=document.getElementById('panFicha');
+    if(pan.classList.contains('act'))abreFicha(estPorId(id));
+  }
+  pHome();pLst();pFav();
+};
+['corpLst','corpFav','miniL'].forEach(function(z){
+  document.getElementById(z).addEventListener('click',function(e){
+    if(e.target.closest('[data-go]')&&!e.target.closest('[data-abre]')&&!e.target.closest('.mini'))return;
+    var m=e.target.closest('[data-abre]');
+    if(m)abreFicha(estPorId(m.dataset.abre));
+  });
+});
+
+/* ---------- sub-ajustes ---------- */
+document.querySelectorAll('[data-sub]').forEach(function(f){
+  f.addEventListener('click',function(){abreSub(f.dataset.sub)});
+});
+function abreSub(cual){
+  var b=document.getElementById('bodSub'),t=document.getElementById('tiSub');
+  if(cual==='desc'){
+    t.textContent='Descuentos por marca';
+    b.innerHTML='<div class="ajm" style="margin-top:8px">'+GLM.descuentos.map(function(d){
+      return '<div class="afl"><span>'+d.marca+'</span><span class="vy"><b style="color:#0a8a3c">'+GLM.cent(d.cent)+'</b></span></div>';
+    }).join('')+'<div class="afl" style="justify-content:center;color:#1f6f4a;font-weight:700">＋ Añadir marca</div></div>';
+  } else if(cual==='push'){
+    t.textContent='Avisos push';
+    b.innerHTML='<div class="ajm" style="margin-top:8px">'+
+      '<div class="afl"><span>Chequeo cada</span><span class="vy"><b>8 h</b></span></div>'+
+      '<div class="afl"><span>Caída en últimos</span><span class="vy"><b>14 días</b></span></div>'+
+      '<div class="afl"><span>Detección</span><span class="vy"><b>media</b> vs consecutivos</span></div>'+
+      '<div class="afl" style="justify-content:center;color:#1f6f4a;font-weight:700">🔔 Enviar aviso de prueba</div></div>';
+  } else {
+    t.textContent='Caché';
+    b.innerHTML='<div class="ajm" style="margin-top:8px">'+
+      '<div class="afl"><span>TTL caché</span><span class="vy"><b>12 h</b></span></div>'+
+      '<div class="afl"><span>Provincia: Madrid</span><span class="vy">1,2 MB</span></div>'+
+      '<div class="afl"><span>Histórico: 214 fechas</span><span class="vy">0,8 MB</span></div>'+
+      '<div class="afl" style="justify-content:center;color:#c62828;font-weight:700">🗑️ Limpiar la caché</div></div>'+
+      '<div class="ajm"><h4>localStorage</h4><div class="afl"><span>gasolineras_… (28 claves)</span><span class="vy">42 KB</span></div></div>';
+  }
+  empuja('panSub');
+}
+
+/* ---------- IA ---------- */
+var msgs2=[];
+GLM.PROMPTS.forEach(function(p){var b=document.createElement('button');b.className='ch2';b.textContent=p;
+  document.getElementById('proP2').appendChild(b)});
+document.getElementById('proP2').addEventListener('click',function(e){
+  if(e.target.classList.contains('ch2')){document.getElementById('iaQ2').value=e.target.textContent;document.getElementById('iaG2').click()}
+});
+function ia2(y,t){msgs2.push({y:y,t:t});pi2()}
+function pi2(){
+  document.getElementById('iaM').innerHTML=msgs2.map(function(m){return '<div style="max-width:88%;padding:11px 13px;border-radius:16px;margin:0 0 9px;'+(m.y?
+    'background:var(--pri);color:#fff;margin-left:auto':'background:#fff;border:1px solid var(--linea)')+'">'+m.t+'</div>'}).join('');
+  var el=document.getElementById('iaM');el.scrollTop=el.scrollHeight;
+}
+document.getElementById('iaG2').addEventListener('click',function(){
+  var v=document.getElementById('iaQ2').value.trim();if(!v)return;
+  document.getElementById('iaQ2').value='';ia2(1,GLM.md(v));
+  setTimeout(function(){
+    var resp=GLM.chatRespuesta(v,listaOrd(),ST.comb);
+    ia2(0,'<div style="font-size:.66rem;color:var(--sub);margin-bottom:5px">✨ IA · Groq · 1,1 s</div>'+GLM.md(resp));
+  },750);
+});
+
+/* ---------- ajustes y otros ---------- */
+document.getElementById('swx2').addEventListener('click',function(){
+  this.classList.toggle('on');snack(this.classList.contains('on')?'🔔 Avisos activados':'Avisos desactivados');
+});
+document.getElementById('ajD2').innerHTML=GLM.descuentos.slice(0,3).map(function(d){
+  return '<div class="afl"><span>'+d.marca+'</span><span class="vy"><b style="color:#0a8a3c">'+GLM.cent(d.cent)+'</b></span></div>';
+}).join('<div style="height:1px;background:var(--linea)"></div>');
+document.getElementById('btnProv').addEventListener('click',function(){
+  var i=GLM.PROVINCIAS.indexOf(ST.prov);ST.prov=GLM.PROVINCIAS[(i+1)%GLM.PROVINCIAS.length];
+  this.textContent=({Madrid:'28',Barcelona:'08',Valencia:'46',Sevilla:'41',Zaragoza:'50',Bizkaia:'48'})[ST.prov];
+  pHome();pLst();snack('Provincia: '+ST.prov);
+});
+document.getElementById('btnBusc').addEventListener('click',function(){irRaiz('lista');snack('En la app real: foco automático en el buscador de la lista')});
+document.getElementById('btnBusc2').addEventListener('click',function(){snack('Maqueta: filtrado de la lista por texto')});
+function snackbar(m){snack(m)}
+
+/* arranque */
+pHome();corpoLst();
+irRaiz('home');
+ia2(0,'<div style="font-size:.66rem;color:var(--sub);margin-bottom:5px">✨ IA · Groq · 0,9 s</div>'+GLM.md(GLM.chatRespuesta('',listaOrd(),ST.comb)));
+window.PT_VALID='v08';
+})();
+</script>
+</body>
+</html>

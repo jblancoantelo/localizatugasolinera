@@ -1,4 +1,7 @@
 <!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- Copyright (C) 2026 Juan Blanco Antelo - Localiza tu Gasolinera (prototipos de diseno) -->
+
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -26,6 +29,15 @@ select,input{font-family:inherit}
   border-radius:999px;padding:5px 12px;white-space:nowrap}
 .bar .brr{border:1px solid var(--linea);background:#fff;border-radius:10px;padding:8px 12px;font-size:.8rem;font-weight:600;cursor:pointer}
 .bar .brr.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+/* móvil: barra compacta — sin subtítulo ni contadores largos, botones sin quiebra */
+@media(max-width:480px){
+  .bar{gap:6px;padding:0 10px}
+  .bar .logo{font-size:.9rem}
+  .bar .logo .subt{display:none}
+  .bar .cnt{display:none}
+  .bar .brr{padding:7px 9px;font-size:.76rem;white-space:nowrap}
+  .bar .brr#bExp{display:none}
+}
 
 .espaciado{height:100%;display:flex;flex-direction:column}
 .prin{flex:1;display:flex;min-height:0}
@@ -140,7 +152,7 @@ select,input{font-family:inherit}
 <body>
 <div class="espaciado">
   <div class="bar">
-    <span class="logo"><i>⛽</i> Precios · panel denso</span>
+    <span class="logo"><i>⛽</i> Precios <span class="subt" style="color:var(--sub);font-weight:600">· panel denso</span></span>
     <button class="brr" id="bFiltM" style="display:none">≡ Filtros</button>
     <div class="esp"></div>
     <span class="cnt" id="bCont">38 estaciones · G.95 · Madrid</span>

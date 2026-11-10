@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html lang="es">
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- Copyright (C) 2026 Juan Blanco Antelo - Localiza tu Gasolinera (prototipos de diseno) -->
+
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -35,6 +37,11 @@ button{font-family:inherit}
 
 /* ---------- tarjetas ---------- */
 .list{position:fixed;inset:0;overflow-y:auto;padding:calc(150px + env(safe-area-inset-top)) 12px calc(96px + env(safe-area-inset-bottom))}
+/* PC: dos columnas de filas, como parrilla brutalista */
+@media(min-width:1000px){
+  .list{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;align-content:start;grid-auto-rows:max-content}
+  .list > *{margin-bottom:0}
+}
 .hereda{border:var(--borde);border-radius:14px;background:#fff;margin-bottom:10px;padding:12px 14px;display:flex;gap:12px;align-items:center;cursor:pointer}
 .hereda:active{background:var(--acento)}
 .hereda.podio{background:#fff8c9}
@@ -130,7 +137,7 @@ button{font-family:inherit}
 <body>
 <header class="bar">
   <div class="f1">
-    <span class="lg">⛽ PRECIOms</span>
+    <span class="lg">⛽ PRECIOS·RASOS</span>
     <select id="selProv"></select>
     <button class="bsq" id="bSq" title="Buscar">🔍</button>
   </div>

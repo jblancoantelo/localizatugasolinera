@@ -1,4 +1,7 @@
 <!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- Copyright (C) 2026 Juan Blanco Antelo - Localiza tu Gasolinera (prototipos de diseno) -->
+
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -21,6 +24,12 @@ html,body{margin:0;height:100%}
 body{font-family:'Segoe UI Variable Display',system-ui,'Segoe UI',Roboto,sans-serif;background:var(--fondo);color:var(--tinta)}
 .app{width:100%;max-width:1000px;height:100dvh;margin:0 auto;display:flex;flex-direction:column;position:relative;overflow:hidden}
 @media(min-width:900px){.app{border-left:1px solid var(--linea);border-right:1px solid var(--linea)}}
+/* PC: rejilla de 2 columnas en la lista para aprovechar el ancho */
+@media(min-width:1000px){
+  .app{max-width:1180px}
+  #zonaL{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding-top:12px;align-content:start;grid-auto-rows:max-content}
+  #zonaL > article{margin-bottom:0}
+}
 
 .top{padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:10px;flex-shrink:0}
 .top .tit{font-size:1.26rem;font-weight:800;letter-spacing:-.4px;flex:1;line-height:1.1}

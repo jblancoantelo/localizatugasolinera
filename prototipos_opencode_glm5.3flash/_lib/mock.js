@@ -1,5 +1,8 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Juan Blanco Antelo - Localiza tu Gasolinera (prototipos de diseno)
+
 /* =============================================================================
- * GLM — datos fake + utilidades compartidas de prototipos_glm
+ * GLM — datos fake + utilidades compartidas de prototipos_opencode_glm5.3flash
  * =============================================================================
  * Script clásico (sin módulos) para que funcione abriendo los HTML por file://.
  * Todos los prototipos cargan esto con <script src="../_lib/mock.js"></script>.

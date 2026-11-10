@@ -1,4 +1,7 @@
 <!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- Copyright (C) 2026 Juan Blanco Antelo - Localiza tu Gasolinera (prototipos de diseno) -->
+
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -37,6 +40,11 @@ body{font-family:system-ui,'Segoe UI',Roboto,sans-serif;color:var(--tinta);overf
 /* ---------- tarjetas modo conducción ---------- */
 .lista{padding:calc(126px + env(safe-area-inset-top)) 12px calc(110px + env(safe-area-inset-bottom));overflow-y:auto;height:100dvh}
 .card{background:var(--panel);border:1px solid var(--linea);border-radius:20px;margin-bottom:12px;overflow:hidden}
+/* PC: rejilla de 2 columnas para aprovechar el ancho sin perder lo nocturno */
+@media(min-width:1000px){
+  .lista{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;align-content:start;grid-auto-rows:max-content}
+  .card{margin-bottom:0}
+}
 .card:active{transform:scale(.99)}
 .card .topl{display:flex;align-items:center;gap:12px;padding:14px 16px 10px}
 .card .mL{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-weight:800;color:#0b0f14;flex-shrink:0}
@@ -148,7 +156,7 @@ body{font-family:system-ui,'Segoe UI',Roboto,sans-serif;color:var(--tinta);overf
 </head>
 <body>
 <header class="barra">
-  <div class="tt" id="tt">Noci · precios<small id="ttS">Madrid · G.95</small></div>
+  <div class="tt" id="tt">Nocti · precios<small id="ttS">Madrid · G.95</small></div>
   <div class="esp"></div>
   <button id="bBus">🔍 Buscar</button>
   <button class="bpr" id="bLoc">📍 Cercanis</button>

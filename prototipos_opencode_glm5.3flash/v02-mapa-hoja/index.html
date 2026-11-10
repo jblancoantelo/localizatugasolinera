@@ -1,4 +1,7 @@
 <!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- Copyright (C) 2026 Juan Blanco Antelo - Localiza tu Gasolinera (prototipos de diseno) -->
+
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -188,6 +191,7 @@ function pintaChips(){
     GLM.PROVINCIAS.map(function(p){return '<option'+(p===ST.prov?' selected':'')+'>'+p+'</option>'}).join('')+'</select>'+
     GLM.COMBUSTIBLES.slice(0,6).map(function(c){
       var n = GLM.de(ST.prov).filter(function(e){return e.precios[c]!=null}).length;
+      if(!n) return '';               /* sin estaciones con ese combustible: no muestra el chip */
       return '<button class="mch'+(ST.comb===c?' act':'')+'" data-c="'+c+'">'+GLM.COMBUSTIBLES_CORTOS[c]+' <span class="sub">'+n+'</span></button>';
     }).join('') +
     '<button class="mch" id="chipFiltrar">≡ Filtros'+(ST.marcas.length||ST.soloFav?' <span class="sub">●</span>':'')+'</button>';
