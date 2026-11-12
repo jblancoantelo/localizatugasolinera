@@ -303,6 +303,9 @@
     var C = osc
       ? { fondo: '#101418', manzana: '#1b2129', parque: '#142a1d', agua: '#12293d', calle: '#3c4754', calleMayor: '#54637a', ring: '#5f6f86', texto: '#98a8bb' }
       : { fondo: '#eef0ee', manzana: '#e2e5e1', parque: '#cdeccb', agua: '#bcd9f2', calle: '#ffffff', calleMayor: '#ffe9a8', ring: '#ffdf8a', texto: '#7d8a80' };
+    if (opts.estilo === 'sat') {
+      C = { fondo: '#22331f', manzana: '#2c4028', parque: '#31491f', agua: '#1c3a4d', calle: '#5d6b52', calleMayor: '#8a7f4f', ring: '#7a6f45', texto: '#c9d4bd' };
+    }
     var calles = '';
     [[14, 'C'], [30, 'H'], [46, 'H'], [62, 'H'], [80, '']].forEach(function (f) {
       calles += '<rect x="0" y="' + f[0] + '" width="100" height="' + (f[2] === 'H' ? 2.4 : 1.4) + '" fill="' + C.calle + '"/>';
@@ -422,6 +425,111 @@
 
   GLM.DEPOSITO_LS = 'glm_dep';
   GLM.deposito = function (litros, pa, pb) { return (pa - pb) * litros; };
+
+  /* --- Kit común (pasada de cobertura funcional) ----------------------------
+   * Helpers compartidos para que los 8 prototipos cubran las funciones de la
+   * app real: rangos del histórico, filtros (localidad/marcas/favoritas/
+   * búsqueda/orden), paginación, leyenda del semáforo, CSV, aviso push fake.
+   * ------------------------------------------------------------------------ */
+  GLM.RANGOS = [7, 14, 21, 30, 60, 90, 180];          // mismos que HISTORY_DAYS_OPTIONS
+  GLM.VERSION = 'v44 · prototipo';
+  GLM.TAMS = [15, 30, 50, 9999];                       // tamaños de página (9999 = Todas)
+
+  GLM.norm = function (s) {
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  };
+
+  /* Combustibles con al menos una estación con precio en la provincia */
+  GLM.combDisponibles = function (pro) {
+    var ests = GLM.de(pro), out = [];
+    for (var i = 0; i < GLM.COMBUSTIBLES.length; i++) {
+      var k = GLM.COMBUSTIBLES[i];
+      for (var j = 0; j < ests.length; j++) {
+        if (ests[j].precios[k] != null) { out.push(k); break; }
+      }
+    }
+    return out;
+  };
+
+  /* Filtro + orden compartido. Opts: q, loc, marcas[], favs, desc,
+   * ord ('precio'|'cerca'|'marca'), dir (1 asc | -1 desc), comb (para precio). */
+  GLM.filtrar = function (lista, o) {
+    o = o || {};
+    var q = GLM.norm(o.q), out = lista.slice();
+    if (o.loc && o.loc !== 'Todas') out = out.filter(function (x) { return x.localidad === o.loc; });
+    if (o.marcas && o.marcas.length) out = out.filter(function (x) { return o.marcas.indexOf(x.marca) >= 0; });
+    if (o.favs) out = out.filter(function (x) { return x.fav; });
+    if (o.desc) out = out.filter(function (x) { return GLM.descuento(x.marca) > 0; });
+    if (q) out = out.filter(function (x) {
+      return GLM.norm(x.marca + ' ' + x.localidad + ' ' + x.direccion).indexOf(q) >= 0;
+    });
+    var ord = o.ord || 'precio', dir = o.dir === -1 ? -1 : 1;
+    out.sort(function (a, b) {
+      var r = 0;
+      if (ord === 'cerca') {
+        r = a.dist - b.dist;
+      } else if (ord === 'marca') {
+        r = a.marca.localeCompare(b.marca, 'es');
+      } else {
+        var pa = GLM.precioFinal(a, o.comb), pb = GLM.precioFinal(b, o.comb);
+        if (pa == null && pb == null) r = 0;
+        else if (pa == null) r = 1;      // estaciones sin ese combustible al final
+        else if (pb == null) r = -1;
+        else r = pa - pb;
+      }
+      return r * dir;
+    });
+    return out;
+  };
+
+  /* Paginación: devuelve {filas, pag, pags} */
+  GLM.paginar = function (lista, pag, tam) {
+    if (!tam || tam >= lista.length) return { filas: lista.slice(), pag: 1, pags: 1 };
+    var pags = Math.max(1, Math.ceil(lista.length / tam));
+    pag = Math.min(Math.max(1, pag || 1), pags);
+    return { filas: lista.slice((pag - 1) * tam, pag * tam), pag: pag, pags: pags };
+  };
+
+  /* Pager estándar. html(el?) devuelve el HTML del pager (oculto si 1 página) */
+  GLM.pager = function (pag, pags, clase) {
+    if (pags <= 1) return '';
+    return '<div class="' + (clase || 'glm-pager') + '" style="display:flex;gap:6px;align-items:center;justify-content:center;padding:10px 0;font-size:12px">' +
+      '<button data-pg="prev" style="padding:6px 10px;cursor:pointer">‹</button>' +
+      '<span>pág ' + pag + '/' + pags + '</span>' +
+      '<button data-pg="next" style="padding:6px 10px;cursor:pointer">›</button></div>';
+  };
+
+  /* Leyenda del semáforo, autosuficiente (sin CSS del prototipo) */
+  GLM.leyenda = function (oscuro) {
+    var it = function (c, t) {
+      return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;white-space:nowrap;' +
+        (oscuro ? 'color:#c7d3de;' : 'color:#3c4a3a;') + '">' +
+        '<i style="width:9px;height:9px;border-radius:50%;background:' + c + ';display:inline-block"></i>' + t + '</span>';
+    };
+    return '<span style="display:inline-flex;gap:10px;align-items:center;flex-wrap:wrap">' +
+      it('#1fa463', '&lt;1,50 €') + it('#e5a50a', '1,50–1,70 €') + it('#e0472e', '&gt;1,70 €') + '</span>';
+  };
+
+  /* CSV de la lista filtrada (sep ;) — como exportaría la tabla */
+  GLM.csv = function (lista, comb) {
+    var filas = ['Marca;Localidad;Direccion;Km;Precio (' + comb + ');Descuento;Final'];
+    (lista || []).forEach(function (e) {
+      var p = e.precios[comb], d = GLM.descuento(e.marca);
+      filas.push([e.marca, e.localidad, e.direccion, e.dist,
+        p == null ? '' : p.toFixed(3).replace('.', ','),
+        d || '',
+        p == null ? '' : GLM.fmt(GLM.precioFinal(e, comb))].join(';'));
+    });
+    return filas.join('\r\n');
+  };
+
+  /* Aviso push simulado: snack + entrada en el log push */
+  GLM.avisoPush = function (titulo, texto) {
+    var d = new Date();
+    var hh = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ':' + ('0' + d.getSeconds()).slice(-2);
+    GLM.logPush.unshift({ t: GLM.hoyCorto + ' ' + hh, s: 'showNotification: ' + titulo + (texto ? ' — ' + texto : '') });
+    GLM.snack('🔔 ' + titulo + (texto ? ' — ' + texto : ''));
+  };
 
   GLM.integrable = false;
 })();

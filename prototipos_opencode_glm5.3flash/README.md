@@ -18,13 +18,22 @@ prototipos_opencode_glm5.3flash/
 
 Aunque la estética cambia radicalmente, la **funcionalidad es la misma** en los ocho:
 
-- Provincias y localidades de ejemplo, varios combustibles conmutables con recálculo.
+- Provincias y localidades de ejemplo, varios combustibles conmutables con recálculo
+  (los chips solo muestran combustibles **con datos**, `GLM.combDisponibles`).
 - Precios finales **con descuento por marca** (céntimos configurables, como en Config).
 - Favoritas con estrella, persistidas durante la sesión (simulan el IndexedDB real).
-- Histórico con rangos 7/14/30 días (v08 llega hasta 90) y gráficas SVG (sparkline en
-  tarjeta, serie completa en ficha).
-- Chat IA fake que responde por palabras clave (`GLM.PROMPTS`) con los datos del día.
-- Aviso push simulado (alertas de bajada con horas y ahorro).
+- Histórico con los **7 rangos de la app real** (7/14/21/30/60/90/180, `GLM.RANGOS`) y
+  gráficas SVG (sparkline en tarjeta, serie completa en ficha).
+- Ficha de estación completa: precio con descuento, gráfica por rango, tabla de todos los
+  combustibles (con aviso «Sin datos de X» si el activo no tiene precio) y acciones
+  (ruta, favorita, alerta push).
+- Chat IA fake que responde por palabras clave (`GLM.PROMPTS`) con los datos del día,
+  con input libre y prompts rápidos.
+- Aviso push simulado (alertas de bajada con horas y ahorro) + panel de Ajustes real:
+  descuentos editables que recalculan al instante, TTL de caché, limpiar caché,
+  registro de actividad (tabs API/Push) y versión (`GLM.VERSION`).
+- Lista con búsqueda por texto, orden cerca/precio, paginación (`GLM.paginar`) y
+  filtro «solo con descuento» en los prototipos con vista lista.
 - Pines/mapa coloreados con el semáforo de la app real: verde <1,50 € · ámbar 1,50–1,70 € · rojo >1,70 €.
 - Los ocho funcionan bien en móvil 390×844 y en PC 1440×900 (capturas verificadas).
 
@@ -159,6 +168,12 @@ En `_capturas/` queda la evidencia antes/después.
   `GLM.miniMapa(el,{oscuro,onpin})` devuelve `{pines(...)}`, `GLM.chatRespuesta()`,
   `GLM.md()`, `GLM.snack()` y las constantes `GLM.PROVINCIAS / COMBUSTIBLES / MARCAS /
   descuentos`. PRNG con semilla: datos idénticos entre prototipos.
+  Kit de QA compartido (pasada 4ª): `GLM.RANGOS` (los 7 rangos), `GLM.VERSION`,
+  `GLM.combDisponibles(prov)` (combustibles con datos), `GLM.filtrar(lista,{q,loc,marcas,
+  favs,desc,ord,dir,comb})` (orden cerca/precio con nulos al final), `GLM.paginar` /
+  `GLM.pager`, `GLM.leyenda`, `GLM.csv`, `GLM.avisoPush` y el estilo `'sat'` en
+  `miniMapa`. Los prototipos redirigen `GLM.snack` a su snack local y exponen
+  `window.PT_PROBE` (asidero del sondeo interactivo).
 - **_validar.mjs**: los 9 (galería + 8) en Chromium headless, móvil 390×844 y PC 1440×900,
   comprueba 0 errores de consola/pageerror, `window.PT_VALID` y hace 1 clic de navegación
   antes de capturar. `node prototipos_opencode_glm5.3flash/_validar.mjs` desde la raíz. Las capturas van a `_capturas/`.
@@ -168,4 +183,14 @@ En `_capturas/` queda la evidencia antes/después.
 Pasadas ejecutadas: **1ª** ideas (v01–v08) · **2ª** QA con Playwright y pulido visual
 (0 errores JS en 18 pases; mojibake de encoding reparado con la transformación inversa
 cp1252→UTF-8; hero invisible de v01; rejilla PC de v03/v05/v06; cabecera móvil de v04;
-logos y títulos; pie de v08) · **3ª** este dossier, sin más ideas nuevas de diseño.
+logos y títulos; pie de v08) · **3ª** este dossier, sin más ideas nuevas de diseño ·
+**4ª** QA funcional contra la app real: sondeo Playwright interactivo con una batería
+por prototipo (v01 14, v02 14, v03 13, v04 13 a PC 1440×900, v05 19, v06 19, v07 14,
+v08 19 = **125 pruebas, todas en verde, 0 errores JS**). Bugs reales corregidos en
+esta pasada: crash de KPIs sin datos y media inexacta en v07; tabs de v08 sin listener
+de navegación y cambio de combustible/orden que no repintaba la lista; crash del
+histórico provincial de v08 con media sobre series con huecos; botones del mapa de v06
+tapados por la cabecera fija (`.mt`); barra de v05 desbordada a 390 px y input de IA
+bajo las pestañas; mapa recreado en cada repintado (v05/v08, ahora instancia única);
+fichas completas con 7 rangos, sort dual y paneles de Ajustes reales en v07/v08
+(descuentos editables, push de prueba, caché, logs API/Push, versión).

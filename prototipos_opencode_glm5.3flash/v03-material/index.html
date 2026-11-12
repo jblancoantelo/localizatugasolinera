@@ -146,6 +146,13 @@ body{font-family:'Segoe UI Variable Display',system-ui,'Segoe UI',Roboto,sans-se
     <button class="binfo" id="bBus" title="Buscar">🔍</button>
   </header>
   <div class="chips" id="chips"></div>
+  <div id="busRow" style="display:none;padding:0 16px 10px;flex-shrink:0">
+    <div style="display:flex;gap:8px">
+      <input id="qIn" placeholder="Busca marca, calle o localidad…" aria-label="Buscar"
+        style="flex:1;border:1px solid var(--linea);border-radius:12px;padding:10px 12px;font-size:.88rem;background:var(--tarj);color:var(--tinta)">
+      <button class="mchip" id="qX" style="height:auto">✕</button>
+    </div>
+  </div>
 
   <!-- LISTA (también sirve de Favoritas) -->
   <section class="pane act" data-pane="lista" style="position:relative;z-index:10">
@@ -173,15 +180,24 @@ body{font-family:'Segoe UI Variable Display',system-ui,'Segoe UI',Roboto,sans-se
     <div class="ajc" style="margin-top:14px"><h4>🏷️ Descuentos</h4><div id="ajDesc"></div></div>
     <div class="ajc"><h4>🔔 Avisos de bajada</h4>
       <div class="swf"><span>Avisos push</span><div class="switch on" id="swPush"><i></i></div></div>
-      <div class="swf"><span>Chequeo cada</span><span class="vv">8 horas</span></div>
-      <div class="swf"><span>Caída considerada</span><span class="vv">en 14 días</span></div>
+      <div class="swf"><span>Chequeo cada</span>
+        <select id="ajHoras" style="border:1px solid var(--linea);border-radius:10px;padding:7px 9px;background:var(--tarj);color:var(--tinta)"></select></div>
+      <div class="swf"><span>Caída considerada</span>
+        <select id="ajDias" style="border:1px solid var(--linea);border-radius:10px;padding:7px 9px;background:var(--tarj);color:var(--tinta)"></select></div>
       <div class="swf" id="swTest"><span>Enviar aviso de prueba</span><span class="vv">🔔 Probar</span></div>
+      <div id="ajAlertas"></div>
     </div>
     <div class="ajc"><h4>🧰 Datos</h4>
-      <div class="swf"><span>Caché provincial</span><span class="vv">12 h · limpiar</span></div>
-      <div class="swf"><span>Resultados por página</span><span class="vv">30</span></div>
+      <div class="swf"><span>Caché provincial · caduca en</span>
+        <span style="display:flex;align-items:center;gap:4px"><input id="ajTtl" type="number" min="1" max="72" value="12"
+          style="width:56px;padding:7px;border:1px solid var(--linea);border-radius:10px;text-align:right;background:var(--tarj);color:var(--tinta)"> h</span></div>
+      <div class="swf" id="ajCache"><span>Limpiar caché (IndexedDB)</span><span class="vv">🗑️ Limpiar</span></div>
+      <div class="swf"><span>Resultados por página</span>
+        <select id="ajTam" style="border:1px solid var(--linea);border-radius:10px;padding:7px 9px;background:var(--tarj);color:var(--tinta)">
+          <option value="15">15</option><option value="30" selected>30</option><option value="50">50</option><option value="9999">Todas</option>
+        </select></div>
       <div class="swf"><span>Claves de IA</span><span class="vv">cargadas ✓</span></div>
-      <div class="swf"><span>Versión</span><span class="vv">5.2.1</span></div>
+      <div class="swf" id="ajUpd"><span id="ajVer">Versión v44 · prototipo</span><span class="vv" style="color:var(--pri-osc)">Comprobar actualización</span></div>
     </div>
     <p style="text-align:center;font-size:.72rem;color:var(--sub);padding-bottom:20px">Prototipo v03 · Material 3</p>
   </section>
@@ -202,13 +218,36 @@ body{font-family:'Segoe UI Variable Display',system-ui,'Segoe UI',Roboto,sans-se
     <div class="hM3">
       <div class="lm" id="hLm">R</div>
       <div><div class="n" id="hN">—</div><div class="d" id="hD">—</div></div>
+      <button id="hFav2" title="Favorita" style="margin-left:auto;border:none;background:var(--fondo);border-radius:999px;width:44px;height:44px;font-size:1.2rem;cursor:pointer">☆</button>
     </div>
     <div class="tabM">
       <button class="act" data-t="p">Precios</button>
       <button data-t="h">Histórico</button>
-      <button data-t="n">Favorito</button>
     </div>
     <div class="hM3b" id="hB"></div>
+  </section>
+
+  <!-- hoja de filtros (localidad + marcas) -->
+  <section class="hojaM" id="hojaF" role="dialog" aria-label="Filtros" style="z-index:62">
+    <div class="asa2"></div>
+    <div style="padding:6px 20px 10px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--linea)">
+      <b>Filtros</b>
+      <button id="fX" style="border:none;background:none;font-size:1.1rem;cursor:pointer;color:var(--sub)">✕</button>
+    </div>
+    <div class="hM3b">
+      <p style="font-size:.8rem;color:var(--sub);margin:2px 0 6px">Localidad</p>
+      <select id="fLoc" style="width:100%;border:1px solid var(--linea);border-radius:12px;padding:11px;font-size:.9rem;background:var(--tarj);color:var(--tinta)"></select>
+      <p style="font-size:.8rem;color:var(--sub);margin:14px 0 6px">Marcas</p>
+      <div id="fMarcas" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+        <button class="mchip" id="fFv" type="button">⭐ Solo favoritas</button>
+        <button class="mchip" id="fDesc" type="button">🏷️ Con descuento</button>
+      </div>
+      <div class="botM">
+        <button class="bM" id="fLimpiar">✕ Limpiar</button>
+        <button class="bM rell" id="fAplicar">Aplicar</button>
+      </div>
+    </div>
   </section>
   <div class="snackM" id="snackM"></div>
 </div>
@@ -217,88 +256,115 @@ body{font-family:'Segoe UI Variable Display',system-ui,'Segoe UI',Roboto,sans-se
 <script>
 (function(){
 'use strict';
-var ST={prov:'Madrid',comb:'Gasolina 95 E5',vista:'lista',sel:null,favoritos:{},orden:'precio',tab:'p',rang:14};
+var ST={prov:'Madrid',comb:'Gasolina 95 E5',vista:'lista',sel:null,favoritos:{},orden:'precio',tab:'p',rang:14,
+  q:'',loc:'Todas',marcas:[],desc:false,tam:30,pag:1};
 GLM.de('Madrid').forEach(function(e){ST.favoritos[e.id]=!!e.fav});
-var mm=null;
+var mm=null, ESTILOS=[['dia','Calles'],['sat','Satélite'],['noche','Noche']], iEst=0;
 
 function snack(msg){
   var s=document.getElementById('snackM');
   s.textContent=msg; s.classList.add('snackM-vis');
   clearTimeout(s._t); s._t=setTimeout(function(){s.classList.remove('snackM-vis')},2400);
 }
+/* GLM.avisoPush/GLM.descuentos y demás helpers usan GLM.snack: aquí es el mismo UI */
+GLM.snack = snack;
 
 /* ---- chips ---- */
 function pintaChips(){
+  var disp=GLM.combDisponibles(ST.prov);
+  if(disp.length && disp.indexOf(ST.comb)<0) ST.comb=disp[0];
   document.getElementById('chips').innerHTML =
-    GLM.COMBUSTIBLES.slice(0,5).map(function(c){
+    disp.map(function(c){
       return '<button class="mchip'+(ST.comb===c?' act':'')+'" data-c="'+c+'">'+GLM.COMBUSTIBLES_CORTOS[c]+'</button>';
     }).join('')+
     '<button class="mchip'+(ST.orden==='cerca'?' act':'')+'" id="chCerca">📍 Cerca</button>'+
-    '<button class="mchip" id="chFv">★ Favoritas</button>';
+    '<button class="mchip" id="chFv">★ Favoritas</button>'+
+    '<button class="mchip'+(ST.loc!=='Todas'||ST.marcas.length||ST.desc?' act':'')+'" id="chFil">≡ Filtros</button>';
 }
 document.getElementById('chips').addEventListener('click',function(e){
   var b=e.target.closest('[data-c]');
-  if(b){ST.comb=b.dataset.c;pintaChips();render();return;}
-  if(e.target.closest('#chCerca')){ST.orden=ST.orden==='cerca'?'precio':'cerca';pintaChips();render();
+  if(b){ST.comb=b.dataset.c;ST.pag=1;pintaChips();render();return;}
+  if(e.target.closest('#chCerca')){ST.orden=ST.orden==='cerca'?'precio':'cerca';ST.pag=1;pintaChips();render();
     snack(ST.orden==='cerca'?'Ordenando por cercanía':'Por precio');return;}
   if(e.target.closest('#chFv')){go('favos');}
+  if(e.target.closest('#chFil')){abreFiltros();}
 });
 
 /* ---- tarjetas ---- */
 function tarj(e){
-  var p=GLM.precioFinal(e,ST.comb), t=GLM.tendencia(e,ST.comb), dd=GLM.descuento(e.marca);
+  var p=GLM.precioFinal(e,ST.comb), t=p==null?{d:0,pct:0}:GLM.tendencia(e,ST.comb), dd=GLM.descuento(e.marca);
   return '<article class="t3" data-abre="'+e.id+'"><div class="cab">'+
     '<div class="lm" style="background:'+GLM.colorMarca(e.marca)+'">'+e.marca.slice(0,2)+'</div>'+
     '<div class="te"><div class="m">'+e.marca+'</div><div class="d">'+e.direccion+' · '+e.localidad+'</div>'+
     '<div class="q">'+(dd?'<span class="qk dd">'+GLM.cent(dd)+'</span>':'')+
     '<span class="qk">'+GLM.fmt2(e.dist)+' km</span>'+
     (ST.favoritos[e.id]?'<span class="qk fv">★ favorita</span>':'')+'</div></div>'+
-    '<div class="pxx"><span class="n nivel-'+GLM.nivel(p)+'">'+GLM.fmt(p)+'</span><span class="u">€/L</span>'+
+    '<div class="pxx"><span class="n nivel-'+(p==null?'media':GLM.nivel(p))+'">'+(p==null?'—':GLM.fmt(p))+'</span><span class="u">€/L</span>'+
     '<span class="t" style="color:'+(t.d<0?'var(--verde)':'var(--rojo)')+'">'+(t.d<0?'▼':'▲')+' '+GLM.fmt(Math.abs(t.d))+' · '+Math.abs(t.pct)+'%</span></div></div>'+
     '<div class="ola"><span style="flex:1">'+GLM.spark(GLM.historico(e,ST.comb,14),72,20,'var(--pri)')+'</span>'+
     '<span>actualizado hoy</span></div></article>';
 }
 function render(){
-  var l=GLM.de(ST.prov).filter(function(e){return e.precios[ST.comb]!=null});
-  if(ST.vista==='favos') l=l.filter(function(e){return ST.favoritos[e.id]});
-  if(ST.orden==='cerca') l.sort(function(a,b){return a.dist-b.dist});
-  else l.sort(function(a,b){return GLM.precioFinal(a,ST.comb)-GLM.precioFinal(b,ST.comb)});
+  var filtros={q:ST.q,loc:ST.loc,marcas:ST.marcas,favs:(ST.vista==='favos'),desc:ST.desc,ord:ST.orden,comb:ST.comb};
+  var l=GLM.filtrar(GLM.de(ST.prov),filtros).filter(function(e){return e.precios[ST.comb]!=null});
   ST.lista=l;
+  var pag=GLM.paginar(l,ST.pag,ST.tam);
   var media=l.length?l.reduce(function(t,e){return t+GLM.precioFinal(e,ST.comb)},0)/l.length:0;
   document.getElementById('hSub').textContent=ST.prov+' · '+GLM.COMBUSTIBLES_CORTOS[ST.comb]+
     (ST.vista==='favos'?' · favoritas':' · media '+GLM.fmt(media)+' €/L');
+  var oscuro=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
   document.getElementById('zonaL').innerHTML =
-    (l.length? l.map(tarj).join('') :
+    (l.length?
+      '<div style="padding:2px 2px 8px">'+GLM.leyenda(oscuro)+'</div>'+
+      pag.filas.map(tarj).join('')+
+      (pag.pags>1?'<div>'+GLM.pager(pag.pag,pag.pags)+'</div>':'') :
       '<div style="text-align:center;padding:56px 20px"><div style="font-size:2.3rem">'+(ST.vista==='favos'?'⭐':'⛽')+'</div>'+
-      '<b>'+(ST.vista==='favos'?'Sin favoritas aún':'Sin datos')+'</b>'+
-      '<p style="color:var(--sub);font-size:.85rem">'+(ST.vista==='favos'?'Marca con ★ en la ficha para vigilar el precio.':'Cambia de combustible o de provincia.')+'</p></div>')+
+      '<b>'+(ST.vista==='favos'?'Sin favoritas aún':'Sin resultados')+'</b>'+
+      '<p style="color:var(--sub);font-size:.85rem">'+(ST.vista==='favos'?'Marca con ★ en la ficha para vigilar el precio.':'Cambia el combustible, limpia los filtros o prueba otra provincia.')+'</p></div>')+
     '<div style="height:84px"></div>';
 }
 function estacion(id){
   var l=ST.lista||GLM.de(ST.prov);
-  return l.filter(function(x){return x.id===id})[0];
+  return l.filter(function(x){return x.id===id})[0] || GLM.de(ST.prov).filter(function(x){return x.id===id})[0];
 }
+/* clic en tarjetas y paginación (delegado una sola vez) */
+document.body.addEventListener('click',function(e){
+  var pg=e.target.closest('[data-pg]');
+  if(pg){
+    ST.pag+=pg.dataset.pg==='next'?1:-1;
+    render();
+    document.getElementById('zonaL').scrollTop=0;
+    return;
+  }
+  var ab=e.target.closest('[data-abre]');
+  if(ab) abreFicha(estacion(ab.dataset.abre));
+});
 
 /* ---- navegación ---- */
 function go(n){
-  ST.vista=n;
+  ST.vista=n; ST.pag=1;
   var pane = n==='favos'?'lista':n;
   document.querySelectorAll('.pane').forEach(function(p){p.classList.toggle('act',p.dataset.pane===pane)});
   document.querySelectorAll('.navb button').forEach(function(b){b.classList.toggle('act',b.dataset.n===n)});
   render();
   if(n==='mapa') redMapa();
 }
+function mmOpts(){
+  var o={onpin:function(e){abreFicha(e)}};
+  if(ESTILOS[iEst][0]==='noche') o.oscuro=true; else o.estilo=ESTILOS[iEst][0];
+  return o;
+}
 function redMapa(){
-  var w=document.getElementById('mmW'); w.innerHTML='';
-  mm=GLM.miniMapa(w,{onpin:function(e){abreFicha(e)}});
-  mm.pines(ST.lista||[], null, ST.comb);
+  var w=document.getElementById('mmW');
+  if(!mm) mm=GLM.miniMapa(w, mmOpts());
+  mm.pines(ST.lista||[], ST.sel?estacion(ST.sel):null, ST.comb);
 }
 document.querySelector('.navb').addEventListener('click',function(e){
   var b=e.target.closest('[data-n]'); if(!b) return; go(b.dataset.n);
 });
 
 /* ---- ficha hoja ---- */
-var velo=document.getElementById('velo'), hojaM=document.getElementById('hojaM');
+var velo=document.getElementById('velo'), hojaM=document.getElementById('hojaM'), hojaF=document.getElementById('hojaF');
 function abreFicha(e){
   if(!e) return;
   ST.sel=e.id;
@@ -307,9 +373,19 @@ function abreFicha(e){
   document.getElementById('hN').textContent=e.marca+' · '+e.localidad;
   document.getElementById('hD').textContent=e.direccion+' · '+GLM.fmt2(e.dist)+' km';
   document.querySelectorAll('.tabM button').forEach(function(x){x.classList.toggle('act',x.dataset.t==='p')});
+  var fv=document.getElementById('hFav2');
+  fv.textContent=ST.favoritos[e.id]?'★':'☆';
+  fv.style.color=ST.favoritos[e.id]?'#c07a00':'var(--sub)';
   cuerpo();
   hojaM.classList.add('vis'); velo.classList.add('vis');
 }
+document.getElementById('hFav2').addEventListener('click',function(){
+  if(!ST.sel) return;
+  ST.favoritos[ST.sel]=!ST.favoritos[ST.sel];
+  snack(ST.favoritos[ST.sel]?'⭐ Añadida a favoritas':'Quitada de favoritas');
+  abreFicha(estacion(ST.sel));
+  if(ST.vista==='favos') render(); else render();
+});
 function cuerpo(){
   var e=ST.sel?estacion(ST.sel):null; if(!e) return;
   var z=document.getElementById('hB'), tab=document.querySelector('.tabM button.act').dataset.t;
@@ -325,23 +401,27 @@ function cuerpo(){
       document.getElementById('iaQ').value='Histórico de '+e.marca+' '+GLM.COMBUSTIBLES_CORTOS[ST.comb];
       document.getElementById('iaGo').click();
     });
-    document.getElementById('hAv').addEventListener('click',function(){snack('🔔 Aviso activado: esta estación bajará de '+GLM.fmt(GLM.precioFinal(e,ST.comb)))});
+    document.getElementById('hAv').addEventListener('click',function(){
+      GLM.avisoPush(e.marca+' vigilada','te avisaremos si '+GLM.COMBUSTIBLES_CORTOS[ST.comb]+' baja 3 jornadas seguidas');
+    });
     document.getElementById('hGeo').addEventListener('click',function(){snack('Maqueta: abriría rutas del móvil')});
   } else if(tab==='h'){
+    if(e.precios[ST.comb]==null){
+      /* sin datos del combustible activo: sin gráfica ni histórico (como la app real) */
+      z.innerHTML='<p style="font-size:.85rem;color:var(--sub)">Sin datos de '+GLM.COMBUSTIBLES_CORTOS[ST.comb]+
+        ' en esta estación: la gráfica y el histórico no están disponibles. Cambia de combustible para verlos.</p>'+
+        '<div class="botM"><button class="bM rell" id="hGeo">🧭 Cómo llegar</button></div>';
+      var g=document.getElementById('hGeo');
+      if(g) g.addEventListener('click',function(){snack('Maqueta: abriría rutas del móvil')});
+      return;
+    }
     var r=GLM.resumen(GLM.historico(e,ST.comb,ST.rang));
-    z.innerHTML='<div class="tabM" style="margin:0 0 10px;background:var(--fondo)">'+[7,14,30,90].map(function(d){
+    z.innerHTML='<div class="tabM" style="margin:0 0 10px;background:var(--fondo)">'+GLM.RANGOS.map(function(d){
       return '<button data-r="'+d+'" class="'+(ST.rang===d?'act':'')+'">'+d+' d</button>'}).join('')+'</div>'+
       '<div class="chartww">'+GLM.chart(GLM.historico(e,ST.comb,ST.rang),{w:350,h:150})+'</div>'+
       '<p style="font-size:.78rem;color:var(--sub);margin:8px 2px">Mín '+GLM.fmt(r.min)+' ('+r.minFecha+') · Máx '+
       GLM.fmt(r.max)+' ('+r.maxFecha+') · hoy '+(r.delta<0?'▼':'▲')+GLM.fmt(Math.abs(r.delta))+' €/L</p>';
     z.querySelectorAll('[data-r]').forEach(function(b){b.addEventListener('click',function(){ST.rang=+b.dataset.r;cuerpo()})});
-  } else {
-    z.innerHTML='<p style="font-size:.85rem;color:var(--sub)">Los avisos push por estación viven aquí, junto al estado del favorito (más visible que en la app actual, donde el ★ está escondido).</p>'+
-      '<div class="botM"><button class="bM rell" id="hFav">'+(ST.favoritos[e.id]?'★ Quitar de favoritas':'☆ Añadir a favoritas')+'</button></div>';
-    document.getElementById('hFav').addEventListener('click',function(){
-      ST.favoritos[e.id]=!ST.favoritos[e.id]; snack(ST.favoritos[e.id]?'⭐ Guardada':'Quitada');
-      cuerpo(); if(ST.vista==='favos') render();
-    });
   }
 }
 function cierra(){hojaM.classList.remove('vis');velo.classList.remove('vis')}
@@ -350,13 +430,60 @@ document.querySelector('.tabM').addEventListener('click',function(e){
   document.querySelectorAll('.tabM button').forEach(function(x){x.classList.toggle('act',x===b)});
   cuerpo();
 });
-velo.addEventListener('click',cierra);
+velo.addEventListener('click',function(){ cierra(); cierraFiltros(); });
+
+/* ---- hoja de filtros ---- */
+function abreFiltros(){
+  document.getElementById('fLoc').innerHTML=['Todas'].concat(GLM.localidades(ST.prov)).map(function(l){
+    return '<option'+(ST.loc===l?' selected':'')+' value="'+l+'">'+(l==='Todas'?'Todas las localidades':l)+'</option>';
+  }).join('');
+  var cnt={};
+  GLM.de(ST.prov).forEach(function(e){cnt[e.marca]=(cnt[e.marca]||0)+1});
+  document.getElementById('fMarcas').innerHTML=GLM.MARCAS.filter(function(m){return cnt[m.n]}).map(function(m){
+    return '<button type="button" class="mchip'+(ST.marcas.indexOf(m.n)>=0?' act':'')+'" data-m="'+m.n+'">'+m.n+' ('+cnt[m.n]+')</button>';
+  }).join('');
+  document.getElementById('fFv').classList.toggle('act',ST.vista==='favos');
+  document.getElementById('fDesc').classList.toggle('act',ST.desc);
+  hojaF.classList.add('vis'); velo.classList.add('vis');
+}
+function cierraFiltros(){ hojaF.classList.remove('vis'); }
+document.getElementById('fX').addEventListener('click',cierraFiltros);
+document.getElementById('fAplicar').addEventListener('click',function(){
+  ST.loc=document.getElementById('fLoc').value;
+  ST.desc=document.getElementById('fDesc').classList.contains('act');
+  ST.pag=1;
+  pintaChips(); cierraFiltros(); velo.classList.remove('vis'); render();
+});
+document.getElementById('fLimpiar').addEventListener('click',function(){
+  ST.marcas=[]; ST.desc=false; ST.loc='Todas';
+  document.getElementById('fLoc').value='Todas';   // si no, "Aplicar" releería la localidad anterior
+  document.querySelectorAll('#fMarcas .mch, #fMarcas .mchip').forEach(function(x){x.classList.remove('act')});
+  document.getElementById('fDesc').classList.remove('act');
+  pintaChips(); cierraFiltros(); velo.classList.remove('vis'); render();
+});
+document.getElementById('fLoc').addEventListener('change',function(){ ST.loc=this.value; ST.pag=1; render(); });
+document.getElementById('fMarcas').addEventListener('click',function(e){
+  var b=e.target.closest('[data-m]'); if(!b) return;
+  var m=b.dataset.m, i=ST.marcas.indexOf(m);
+  if(i>=0) ST.marcas.splice(i,1); else ST.marcas.push(m);
+  b.classList.toggle('act');
+});
+document.getElementById('fFv').addEventListener('click',function(){ go(ST.vista==='favos'?'lista':'favos'); this.classList.toggle('act',ST.vista==='favos'); });
+document.getElementById('fDesc').addEventListener('click',function(){ ST.desc=!ST.desc; this.classList.toggle('act',ST.desc); });
 
 /* ---- fabs / mapa ---- */
 document.getElementById('fabGeo').addEventListener('click',function(){ST.orden='cerca';pintaChips();render();go('lista');snack('Ordenado por cercanía')});
-document.getElementById('mCap').addEventListener('click',function(){snack('Maqueta: satélite/oscuro/relieve…')});
-document.getElementById('mLoc').addEventListener('click',function(){snack('Centrar en GPS')});
-document.getElementById('mFil').addEventListener('click',function(){snack('Maqueta: filtros por localidad y marca')});
+document.getElementById('mCap').addEventListener('click',function(){
+  iEst=(iEst+1)%ESTILOS.length;
+  mm=GLM.miniMapa(document.getElementById('mmW'), mmOpts());
+  redMapa();
+  snack('🗺️ Tipo de mapa: '+ESTILOS[iEst][1]);
+});
+document.getElementById('mLoc').addEventListener('click',function(){
+  ST.orden='cerca'; ST.pag=1; pintaChips(); go('lista');
+  snack('📍 Ordenado por cercanía (posición simulada)');
+});
+document.getElementById('mFil').addEventListener('click',abreFiltros);
 
 /* ---- IA ---- */
 var msgs=[];
@@ -382,26 +509,80 @@ document.getElementById('iaGo').addEventListener('click',function(){
 });
 
 /* ---- ajustes ---- */
-document.getElementById('ajDesc').innerHTML=GLM.descuentos.map(function(d){
-  return '<div class="swf"><span>'+d.marca+'</span><span class="vv" style="color:var(--verde)">'+GLM.cent(d.cent)+' €/L</span></div>';
-}).join('');
+function horaAhora(){
+  var d=new Date();
+  return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+':'+('0'+d.getSeconds()).slice(-2);
+}
+function pintaDesc(){
+  document.getElementById('ajDesc').innerHTML=GLM.descuentos.map(function(d,i){
+    return '<div class="swf"><span>'+d.marca+'</span><span style="display:flex;align-items:center;gap:4px">'+
+      '<input data-d="'+i+'" type="number" step="0.5" min="0" max="30" value="'+d.cent+'" '+
+      'style="width:60px;padding:7px;border:1px solid var(--linea);border-radius:10px;text-align:right;background:var(--tarj);color:var(--tinta)"> c/L</span></div>';
+  }).join('');
+}
+pintaDesc();
+document.getElementById('ajDesc').addEventListener('input',function(e){
+  var i=e.target.dataset&&e.target.dataset.d;
+  if(i===undefined||i==='') return;
+  GLM.descuentos[+i].cent=Math.max(0,+e.target.value||0);
+  render();
+});
+var selH=document.getElementById('ajHoras'), selD=document.getElementById('ajDias');
+selH.innerHTML=Array.apply(null,Array(24)).map(function(_,i){return '<option value="'+(i+1)+'"'+((i+1)===8?' selected':'')+'>'+(i+1)+' h</option>'}).join('');
+selD.innerHTML=[1,2,3,5,7,14,30,60,90].map(function(d){return '<option value="'+d+'"'+(d===3?' selected':'')+'>'+d+' días seguidos bajando</option>'}).join('');
 document.getElementById('swPush').addEventListener('click',function(){
   this.classList.toggle('on'); snack(this.classList.contains('on')?'🔔 Avisos activados':'Avisos apagados');
 });
-document.getElementById('swTest').addEventListener('click',function(){snack('🔔 En la app real envía una notificación de prueba')});
+function pintaAlertas(){
+  document.getElementById('ajAlertas').innerHTML=GLM.alertasPush.map(function(a){
+    return '<div class="swf"><span>'+(a.tipo==='caida'?'📉':'📈')+' <b>'+a.est+'</b> · '+a.txt+'</span><span class="vv" style="white-space:nowrap">'+a.hora+'</span></div>';
+  }).join('');
+}
+pintaAlertas();
+document.getElementById('swTest').addEventListener('click',function(){
+  var a=GLM.alertasPush[0];
+  GLM.avisoPush(a.est+' '+a.txt,'llenando 50 L ahorras '+GLM.fmt2(GLM.deposito(50,1.479,1.412))+' €');
+  pintaAlertas();
+});
+document.getElementById('ajCache').addEventListener('click',function(){
+  GLM.logApi.unshift({t:GLM.hoyCorto+' '+horaAhora(),d:'—',s:'caché limpiada',url:'IndexedDB'});
+  snack('🗑️ Caché limpiada (simulada)');
+});
+document.getElementById('ajTtl').addEventListener('change',function(){snack('Caducidad de caché: '+this.value+' h')});
+document.getElementById('ajTam').addEventListener('change',function(){
+  ST.tam=+this.value; ST.pag=1; render();
+  snack('Resultados por página: '+(ST.tam>=9999?'todas':ST.tam));
+});
+document.getElementById('ajUpd').addEventListener('click',function(){snack('✅ Estás en la última versión (v44)')});
 
 /* ---- cabecera ---- */
 document.getElementById('bPro').addEventListener('click',function(){
   var i=GLM.PROVINCIAS.indexOf(ST.prov); ST.prov=GLM.PROVINCIAS[(i+1)%GLM.PROVINCIAS.length];
-  this.textContent=ST.prov; pintaChips(); render(); if(ST.vista==='mapa')redMapa();
+  this.textContent=ST.prov;
+  ST.loc='Todas'; ST.marcas=[]; ST.pag=1;
+  pintaChips(); render(); if(ST.vista==='mapa')redMapa();
+  snack('Provincia: '+ST.prov);
 });
-document.getElementById('bBus').addEventListener('click',function(){snack('Maqueta: la búsqueda vive en la pestaña Lista')});
+document.getElementById('bBus').addEventListener('click',function(){
+  var r=document.getElementById('busRow');
+  var vis=r.style.display!=='none';
+  r.style.display=vis?'none':'flex';
+  if(!vis){ document.getElementById('qIn').focus(); }
+  else { document.getElementById('qIn').value=''; ST.q=''; ST.pag=1; render(); }
+});
+document.getElementById('qX').addEventListener('click',function(){
+  document.getElementById('qIn').value=''; ST.q=''; ST.pag=1; render();
+});
+document.getElementById('qIn').addEventListener('input',function(){ST.q=this.value;ST.pag=1;render()});
 
 /* arranque */
-pintaChips(); render(); redMapa(); redCierra();
-function redCierra(){}
+pintaChips(); render(); redMapa();
 IA(0,'<div style="font-size:.64rem;opacity:.55;margin-bottom:5px">✨ IA · Mistral · 1,1 s</div>'+GLM.md(GLM.chatRespuesta('',GLM.de('Madrid'),'Gasolina 95 E5')));
 window.PT_VALID='v03';
+/* asas para el validador/sondeo (mismo patrón que PT_VALID) */
+window.PT_PROBE={ ST:ST, abreFicha:abreFicha, render:render, redMapa:redMapa,
+  cierra:function(){ cierra(); cierraFiltros(); ST.sel=null; }
+};
 })();
 </script>
 </body>

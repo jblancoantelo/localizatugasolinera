@@ -208,13 +208,7 @@ button{font-family:inherit}
           <div class="h2">Las más baratas cerca<a data-go="lista">ver todas →</a></div>
           <div id="miniL"></div>
         </div>
-        <nav class="tabsS">
-          <button data-raizbtn="home" class="act"><span class="ic">⌂</span>Inicio</button>
-          <button data-raizbtn="lista"><span class="ic">☰</span>Lista</button>
-          <button data-raizbtn="favoritas"><span class="ic">★</span>Favoritas</button>
-          <button data-raizbtn="ia"><span class="ic">✨</span>IA</button>
-          <button data-raizbtn="ajus"><span class="ic">⚙</span>Ajustes</button>
-        </nav>
+        <nav class="tabsS"></nav>
       </section>
 
       <!-- LISTA (raíz) -->
@@ -223,28 +217,31 @@ button{font-family:inherit}
           <div class="t"><h1>Estaciones</h1><p id="pLst">Madrid · G.95</p></div>
           <button class="iconoR" id="btnBusc2">🔍</button>
         </div>
+        <div id="rowBus" style="display:none;gap:8px;padding:0 18px 10px">
+          <input id="qLst" placeholder="Marca, calle o localidad…" aria-label="Buscar"
+            style="flex:1;border:1px solid var(--linea);border-radius:14px;padding:11px 14px;font-size:.95rem;background:#fff">
+          <button id="qX" style="border:1px solid var(--linea);background:#fff;border-radius:14px;padding:0 14px;font-weight:800;cursor:pointer">✕</button>
+        </div>
         <div class="tools" id="carrousel"></div>
         <div class="corp" id="corpLst"></div>
-        <nav class="tabsS">
-          <button data-raizbtn="home"><span class="ic">⌂</span>Inicio</button>
-          <button data-raizbtn="lista" class="act"><span class="ic">☰</span>Lista</button>
-          <button data-raizbtn="favoritas"><span class="ic">★</span>Favoritas</button>
-          <button data-raizbtn="ia"><span class="ic">✨</span>IA</button>
-          <button data-raizbtn="ajus"><span class="ic">⚙</span>Ajustes</button>
-        </nav>
+        <nav class="tabsS"></nav>
       </section>
 
       <!-- FAVORITAS (raíz) -->
       <section class="pan" data-raiz="favoritas">
         <div class="sup"><div class="t"><h1>Favoritas</h1><p>seguidas en segundo plano</p></div></div>
         <div class="corp" id="corpFav"></div>
-        <nav class="tabsS">
-          <button data-raizbtn="home"><span class="ic">⌂</span>Inicio</button>
-          <button data-raizbtn="lista"><span class="ic">☰</span>Lista</button>
-          <button data-raizbtn="favoritas" class="act"><span class="ic">★</span>Favoritas</button>
-          <button data-raizbtn="ia"><span class="ic">✨</span>IA</button>
-          <button data-raizbtn="ajus"><span class="ic">⚙</span>Ajustes</button>
-        </nav>
+        <nav class="tabsS"></nav>
+      </section>
+
+      <!-- MAPA (raíz) -->
+      <section class="pan" data-raiz="mapa">
+        <div class="sup">
+          <div class="t"><h1>Mapa</h1><p id="pMapa">Madrid · G.95</p></div>
+          <button class="iconoR" id="btnMapaTipo" title="Tipo de mapa">🗺️</button>
+        </div>
+        <div style="flex:1;position:relative" id="mmV"></div>
+        <nav class="tabsS"></nav>
       </section>
 
       <!-- IA (raíz) -->
@@ -258,13 +255,7 @@ button{font-family:inherit}
             <button id="iaG2" style="border:none;background:var(--pri);color:#fff;border-radius:14px;padding:0 17px;font-weight:800;cursor:pointer">➤</button>
           </div>
         </div>
-        <nav class="tabsS">
-          <button data-raizbtn="home"><span class="ic">⌂</span>Inicio</button>
-          <button data-raizbtn="lista"><span class="ic">☰</span>Lista</button>
-          <button data-raizbtn="favoritas"><span class="ic">★</span>Favoritas</button>
-          <button data-raizbtn="ia" class="act"><span class="ic">✨</span>IA</button>
-          <button data-raizbtn="ajus"><span class="ic">⚙</span>Ajustes</button>
-        </nav>
+        <nav class="tabsS"></nav>
       </section>
 
       <!-- AJUSTES (raíz) -->
@@ -280,8 +271,11 @@ button{font-family:inherit}
           </div>
           <div class="ajm"><h4>🧰 Datos y caché</h4>
             <div class="afl" data-sub="cache"><span>Caché IndexedDB</span><span class="vy">12 h</span></div>
-            <div class="afl"><span>Resultados por página</span><span class="vy">30</span></div>
-            <div class="afl"><span>Versión</span><span class="vy">5.2.1</span></div>
+            <div class="afl"><span>Resultados por página</span>
+              <span class="vy"><select id="tamSel" style="border:1px solid var(--linea);border-radius:9px;padding:6px;font-weight:700;background:#fff">
+                <option value="15">15</option><option value="30" selected>30</option><option value="50">50</option><option value="9999">Todas</option>
+              </select></span></div>
+            <div class="afl"><span>Versión</span><span class="vy" id="verTxt"></span></div>
           </div>
           <p style="text-align:center;font-size:.74rem;color:var(--sub);padding-bottom:8px">Prototipo v08 — flujo con pila de pantallas</p>
         </div>
@@ -331,12 +325,18 @@ button{font-family:inherit}
 <script>
 (function(){
 'use strict';
-var ST={prov:'Madrid',comb:'Gasolina 95 E5',raiz:'home',sel:null,fav:{},rg:14,ob:1,orden:'precio'};
+var ST={prov:'Madrid',comb:'Gasolina 95 E5',raiz:'home',sel:null,fav:{},rg:14,ob:1,orden:'precio',
+  q:'',tam:30,pag:1};
 GLM.de('Madrid').forEach(function(e){ST.fav[e.id]=!!e.fav});
 function snack(m){var s=document.getElementById('snk2');s.textContent=m;s.classList.add('snk2-vis');
   clearTimeout(s._t);s._t=setTimeout(function(){s.classList.remove('snk2-vis')},2300)}
 
 /* ---------- navegación ---------- */
+/* pestañas generadas una vez por raíz: así Mapa entra en las 6 sin repetir HTML */
+var TABS=[['home','⌂','Inicio'],['lista','☰','Lista'],['mapa','🗺️','Mapa'],['favoritas','★','Favoritas'],['ia','✨','IA'],['ajus','⚙','Ajustes']];
+document.querySelectorAll('.tabsS').forEach(function(nav){
+  nav.innerHTML=TABS.map(function(t){return '<button data-raizbtn="'+t[0]+'"><span class="ic">'+t[1]+'</span>'+t[2]+'</button>'}).join('');
+});
 function irRaiz(r){
   ST.raiz=r;
   document.querySelectorAll('.pan[data-raiz]').forEach(function(p){
@@ -346,7 +346,8 @@ function irRaiz(r){
     b.classList.toggle('act',b.dataset.raizbtn===r);
   });
   if(r==='favoritas')pFav();
-  if(r==='lista')pLst();
+  if(r==='lista'){pLst();corpoLst();}
+  if(r==='mapa')pMapa();
   if(r==='home')pHome();
 }
 var historia=[];
@@ -366,8 +367,11 @@ function sale(){
 document.querySelectorAll('[data-pop]').forEach(function(b){
   b.addEventListener('click',sale);
 });
-document.querySelectorAll('[data-raizbtn]').forEach(function(b){
-  b.addEventListener('click',function(){irRaiz(b.dataset.raizbtn)});
+/* delegación: los tabsS se generan por JS, así que el listener va en document (el
+   querySelectorAll original quedaba sin efecto al regenerarlos) */
+document.addEventListener('click',function(e){
+  var b=e.target.closest('[data-raizbtn]');
+  if(b)irRaiz(b.dataset.raizbtn);
 });
 document.body.addEventListener('click',function(e){
   var g=e.target.closest('[data-go]');
@@ -398,13 +402,19 @@ document.querySelectorAll('.ic [data-ob]').forEach(function(b){
 
 /* ---------- home ---------- */
 function listaOrd(){
-  var l=GLM.de(ST.prov).filter(function(e){return e.precios[ST.comb]!=null});
-  if(ST.orden==='cerca')l.sort(function(a,b){return a.dist-b.dist});
-  else l.sort(function(a,b){return GLM.precioFinal(a,ST.comb)-GLM.precioFinal(b,ST.comb)});
-  return l;
+  /* un solo camino: GLM.filtrar hace q + orden (cerca/precio, sin dato al final) */
+  return GLM.filtrar(GLM.de(ST.prov),{q:ST.q,ord:ST.orden,comb:ST.comb});
 }
 function pHome(){
-  var l=listaOrd(),media=l.reduce(function(t,e){return t+GLM.precioFinal(e,ST.comb)},0)/l.length;
+  var l=listaOrd();
+  if(!l.length){
+    document.getElementById('pHome').textContent=ST.prov+' · sin resultados para «'+ST.q+'»';
+    document.getElementById('kMed').innerHTML='— <small>€/L</small>';
+    document.getElementById('kMedQ').textContent='';
+    document.getElementById('miniL').innerHTML='';
+    return;
+  }
+  var media=l.reduce(function(t,e){return t+GLM.precioFinal(e,ST.comb)},0)/l.length;
   var top=l[0],r=GLM.resumen(GLM.historico(top,ST.comb,ST.rg));
   document.getElementById('hHome').textContent='Buenos días 👋';
   document.getElementById('pHome').textContent=ST.prov+' · '+l.length+' estaciones · '+GLM.COMBUSTIBLES_CORTOS[ST.comb];
@@ -421,13 +431,16 @@ function pHome(){
   document.getElementById('miniL').innerHTML=l.slice(0,4).map(mini).join('');
 }
 function mini(e){
-  var t=GLM.tendencia(e,ST.comb);
+  var p=GLM.precioFinal(e,ST.comb),t=p==null?{d:0}:GLM.tendencia(e,ST.comb);
   return '<div class="mini" data-abre="'+e.id+'"><div class="lm2" style="background:'+GLM.colorMarca(e.marca)+'">'+e.marca.slice(0,2)+'</div>'+
   '<div class="tx"><div class="m">'+e.marca+(ST.fav[e.id]?' ★':'')+'</div><div class="d">'+e.direccion+' · '+e.localidad+'</div></div>'+
-  '<div class="pr"><div class="p1 nivel-'+GLM.nivel(GLM.precioFinal(e,ST.comb))+'">'+GLM.fmt(GLM.precioFinal(e,ST.comb))+'</div>'+
-  '<div class="un" style="color:'+(t.d<0?'var(--verde)':'var(--rojo)')+'">'+(t.d<0?'▼':'▲')+GLM.fmt(Math.abs(t.d))+'</div></div></div>';
+  '<div class="pr">'+(p==null?'<div class="p1" style="color:var(--sub);font-size:.95rem">— sin dato</div>':
+    '<div class="p1 nivel-'+GLM.nivel(p)+'">'+GLM.fmt(p)+'</div>'+
+    '<div class="un" style="color:'+(t.d<0?'var(--verde)':'var(--rojo)')+'">'+(t.d<0?'▼':'▲')+GLM.fmt(Math.abs(t.d))+'</div>')+'</div></div>';
 }
-document.getElementById('heroCard').addEventListener('click',function(){abreFicha(listaOrd()[0])});
+document.getElementById('heroCard').addEventListener('click',function(){
+  var l=listaOrd();if(l.length)abreFicha(l[0]);
+});
 document.getElementById('miniL').addEventListener('click',function(e){
   var m=e.target.closest('[data-abre]');
   if(m)abreFicha(estPorId(m.dataset.abre));
@@ -435,29 +448,55 @@ document.getElementById('miniL').addEventListener('click',function(e){
 
 /* ---------- lista ---------- */
 function pLst(){
-  document.getElementById('pLst').textContent=ST.prov+' · '+GLM.COMBUSTIBLES_CORTOS[ST.comb];
+  var disp=GLM.combDisponibles(ST.prov);   // solo combustibles con datos del mock
+  if(disp.length&&disp.indexOf(ST.comb)<0)ST.comb=disp[0];
+  document.getElementById('pLst').textContent=ST.prov+' · '+GLM.COMBUSTIBLES_CORTOS[ST.comb]+(ST.q?' · «'+ST.q+'»':'');
   document.getElementById('carrousel').innerHTML=
-    GLM.COMBUSTIBLES.slice(0,5).map(function(c){return '<button class="ch2'+(ST.comb===c?' act':'')+'" data-c="'+c+'">'+GLM.COMBUSTIBLES_CORTOS[c]+'</button>'}).join('')+
-    '<button class="ch2" id="chOr">⇅ Baratas</button>';
+    disp.map(function(c){return '<button class="ch2'+(ST.comb===c?' act':'')+'" data-c="'+c+'">'+GLM.COMBUSTIBLES_CORTOS[c]+'</button>'}).join('')+
+    '<button class="ch2" id="chOr">⇅ '+(ST.orden==='cerca'?'Cerca ✓':'Baratas')+'</button>';
 }
+/* OJO: cambiar de chip/orden debe repintar TAMBIÉN el cuerpo (bug grave del prototipo: solo se repintaban los chips) */
 document.getElementById('carrousel').addEventListener('click',function(e){
-  var b=e.target.closest('[data-c]');if(b){ST.comb=b.dataset.c;pLst();return}
-  if(e.target.closest('#chOr')){ST.orden=ST.orden==='precio'?'cerca':'precio';pLst();snack(ST.orden==='cerca'?'Orden: cercanía':'Orden: baratas primero')}
+  var b=e.target.closest('[data-c]');
+  if(b){ST.comb=b.dataset.c;ST.pag=1;pLst();corpoLst();return}
+  if(e.target.closest('#chOr')){
+    ST.orden=ST.orden==='precio'?'cerca':'precio';ST.pag=1;
+    pLst();corpoLst();
+    snack(ST.orden==='cerca'?'Orden: cercanía (posición simulada)':'Orden: baratas primero');
+  }
 });
 function corpoLst(){
-  var l=listaOrd();
-  document.getElementById('corpLst').innerHTML=l.map(mini).join('')+pata;
+  var l=listaOrd(),pag=GLM.paginar(l,ST.pag,ST.tam);
+  var html=pag.filas.map(mini).join('')+pata;
+  if(pag.pags>1)html+=GLM.pager(pag.pag,pag.pags);
+  else if(!l.length)html='<div style="text-align:center;padding:56px 24px;color:var(--sub)"><div style="font-size:2.4rem">🔍</div>'+
+    '<b style="color:var(--tinta)">Sin resultados</b><p style="font-size:.92rem">Cambia de combustible, de orden o limpia la búsqueda.</p></div>';
+  document.getElementById('corpLst').innerHTML=html;
 }
 var pata='<div style="height:80px"></div>';
+/* buscador real de la lista */
+function abreBus(v){
+  document.getElementById('rowBus').style.display=v?'flex':'none';
+  if(v){document.getElementById('qLst').focus();return}
+  document.getElementById('qLst').value='';ST.q='';ST.pag=1;pLst();corpoLst();
+}
+document.getElementById('btnBusc').addEventListener('click',function(){irRaiz('lista');abreBus(true)});
+document.getElementById('btnBusc2').addEventListener('click',function(){
+  abreBus(document.getElementById('rowBus').style.display!=='flex')});
+document.getElementById('qLst').addEventListener('input',function(){ST.q=this.value;ST.pag=1;pLst();corpoLst()});
+document.getElementById('qLst').addEventListener('keydown',function(e){if(e.key==='Escape')abreBus(false)});
+document.getElementById('qX').addEventListener('click',function(){abreBus(false)});
 
 /* ---------- favoritas ---------- */
 function pFav(){
   var l=GLM.de(ST.prov).filter(function(e){return ST.fav[e.id]});
+  l.sort(function(a,b){var pa=GLM.precioFinal(a,ST.comb),pb=GLM.precioFinal(b,ST.comb);
+    return (pa==null?1e9:pa)-(pb==null?1e9:pb)});   // sin dato al final, no NaN
   document.getElementById('corpFav').innerHTML=
     (l.length?'':'<div style="text-align:center;padding:56px 24px;color:var(--sub)"><div style="font-size:2.4rem">★</div>'+
       '<b style="color:var(--tinta)">Nada en el radar</b><p style="font-size:.92rem">Toca estrella en una ficha y aquí la verás con su evolución.</p>'+
       '<button style="margin-top:10px;border:none;background:var(--pri);color:#fff;border-radius:13px;padding:11px 16px;font-weight:800;cursor:pointer" data-go="lista">Ir a la lista</button></div>')+
-    l.slice().sort(function(a,b){return GLM.precioFinal(a,ST.comb)-GLM.precioFinal(b,ST.comb)}).map(mini).join('')+pata;
+    l.map(mini).join('')+pata;
 }
 
 /* ---------- ficha ---------- */
@@ -465,19 +504,33 @@ function abreFicha(e){
   ST.sel=e.id;
   document.getElementById('tiFicha').textContent=e.marca+' · '+e.localidad;
   document.getElementById('favZ').textContent=ST.fav[e.id]?'★':'☆';
-  var p=GLM.precioFinal(e,ST.comb),r=GLM.resumen(GLM.historico(e,ST.comb,ST.rg));
-  document.getElementById('bodFicha').innerHTML=
-    '<div class="sect"><div><div class="g nivel-'+GLM.nivel(p)+'">'+GLM.fmt(p)+'</div><div class="un">€/L con descuentos</div></div>'+
-    '<div class="dz" style="text-align:right;color:'+(r.delta<0?'var(--verde)':'var(--rojo)')+'">'+(r.delta<0?'▼':'▲')+' '+
-    GLM.fmt(Math.abs(r.delta))+' €/L<div style="color:var(--sub);font-weight:600;font-size:.78rem">hoy · mín '+GLM.fmt(r.min)+' en '+r.minFecha+'</div></div></div>'+
-    '<div class="rgr">'+[7,14,30,90].map(function(d){return '<button class="'+(ST.rg===d?'act':'')+'" data-rgr="'+d+'">'+d+' d</button>'}).join('')+'</div>'+
-    '<div class="cwrap">'+GLM.chart(GLM.historico(e,ST.comb,ST.rg),{w:360,h:160,color:'#1f6f4a'})+'</div>'+
-    '<div class="ptab" style="margin:6px 18px">'+Object.keys(e.precios).map(function(c){var pp=GLM.precioFinal(e,c);
-      return '<div class="fP"><span>'+c+'</span><b class="nivel-'+GLM.nivel(pp)+'">'+GLM.fmt(pp)+' €/L</b></div>'}).join('')+'</div>'+
-    '<div class="accx"><button class="pri">🧭 Cómo llegar</button><button class="al">🔔 Avisar si baja</button>'+
-    '<button id="bIAF">✨ Preguntar</button></div>';
+  var pie='<div class="ptab" style="margin:6px 18px">'+Object.keys(e.precios).map(function(c){var pp=GLM.precioFinal(e,c);
+      return '<div class="fP"><span>'+c+'</span><b class="'+(pp==null?'':('nivel-'+GLM.nivel(pp)))+'">'+
+        (pp==null?'— sin dato':GLM.fmt(pp)+' €/L')+'</b></div>'}).join('')+'</div>'+
+    '<div class="accx"><button class="pri" data-fruta="1">🧭 Cómo llegar</button>'+
+    '<button class="al" data-alta="1">🔔 Avisar si baja</button><button id="bIAF">✨ Preguntar</button></div>';
+  var cuerpo;
+  if(e.precios[ST.comb]==null){
+    /* sin datos del combustible activo: sin gráfica ni histórico (como la app real) */
+    cuerpo='<p style="font-size:.9rem;color:var(--sub);padding:16px 18px">Sin datos de '+
+      (GLM.COMBUSTIBLES_CORTOS[ST.comb]||ST.comb)+' en esta estación: la gráfica y el histórico no están disponibles. '+
+      'Cambia de combustible en la lista para verlos.</p>'+pie;
+  } else {
+    var p=GLM.precioFinal(e,ST.comb),r=GLM.resumen(GLM.historico(e,ST.comb,ST.rg));
+    cuerpo='<div class="sect"><div><div class="g nivel-'+GLM.nivel(p)+'">'+GLM.fmt(p)+'</div><div class="un">€/L con descuentos</div></div>'+
+      '<div class="dz" style="text-align:right;color:'+(r.delta<0?'var(--verde)':'var(--rojo)')+'">'+(r.delta<0?'▼':'▲')+' '+
+      GLM.fmt(Math.abs(r.delta))+' €/L<div style="color:var(--sub);font-weight:600;font-size:.78rem">hoy · mín '+GLM.fmt(r.min)+' en '+r.minFecha+'</div></div></div>'+
+      '<div class="rgr">'+GLM.RANGOS.map(function(d){return '<button class="'+(ST.rg===d?'act':'')+'" data-rgr="'+d+'">'+d+' d</button>'}).join('')+'</div>'+
+      '<div class="cwrap">'+GLM.chart(GLM.historico(e,ST.comb,ST.rg),{w:360,h:160,color:'#1f6f4a'})+'</div>'+pie;
+  }
+  document.getElementById('bodFicha').innerHTML=cuerpo;
   document.querySelectorAll('[data-rgr]').forEach(function(b){
     b.addEventListener('click',function(){ST.rg=+b.dataset.rgr;abreFicha(e)})});
+  var ffr=document.getElementById('bodFicha').querySelector('[data-fruta]');
+  if(ffr)ffr.addEventListener('click',function(){snack('Maqueta: abriría rutas')});
+  var fal=document.getElementById('bodFicha').querySelector('[data-alta]');
+  if(fal)fal.addEventListener('click',function(){
+    GLM.avisoPush(e.marca+' vigilada','te avisaremos si '+GLM.COMBUSTIBLES_CORTOS[ST.comb]+' baja 3 jornadas seguidas')});
   var bf=document.getElementById('bIAF');
   bf.addEventListener('click',function(){
     sale();irRaiz('ia');
@@ -488,27 +541,47 @@ function abreFicha(e){
 }
 function pHist(){
   var avg=GLM.de(ST.prov).filter(function(e){return e.precios[ST.comb]!=null});
-  var serieMix=[];
+  if(!avg.length){   /* guard: antes crasheaba con avg.length=0 (división por cero y avg[0] undefined) */
+    document.getElementById('bodHist').innerHTML='<p style="padding:22px 20px;color:var(--sub)">Sin datos de '+
+      (GLM.COMBUSTIBLES_CORTOS[ST.comb]||ST.comb)+' en '+ST.prov+'. Cambia de combustible en la lista.</p>';
+    empuja('panHist');
+    return;
+  }
   var dias=ST.rg;
-  for(var i=0;i<dias;i++)serieMix.push({f:'',p:0});
-  avg.forEach(function(e){
-    var s=GLM.historico(e,ST.comb,dias);
-    for(var i=0;i<dias;i++)serieMix[i].p+=s[i].p/avg.length;
-  });
-  var fechas=GLM.historico(avg[0],ST.comb,dias);
-  serieMix.forEach(function(m,i){m.f=fechas[i].f});
+  var sers=avg.map(function(e){return GLM.historico(e,ST.comb,dias)});
+  var fechas=sers[0];
+  var serieMix=[];
+  for(var i=0;i<fechas.length;i++){
+    var suma=0,cnt=0;
+    for(var j=0;j<sers.length;j++){
+      var p=sers[j][i]&&sers[j][i].p;
+      if(p!=null){suma+=p;cnt++}   /* un día sin precio no cuenta para la media */
+    }
+    if(cnt)serieMix.push({f:fechas[i].f,p:suma/cnt});
+  }
+  if(!serieMix.length){
+    document.getElementById('bodHist').innerHTML='<p style="padding:22px 20px;color:var(--sub)">No hay precios publicados en el rango de '+dias+' días.</p>';
+    empuja('panHist');
+    return;
+  }
   var r=GLM.resumen(serieMix);
   document.getElementById('bodHist').innerHTML=
     '<div class="sect"><div><div class="g">'+GLM.fmt(r.hoy)+'</div><div class="un">€/L · media '+ST.prov+' hoy</div></div>'+
     '<div class="dz" style="text-align:right;color:'+(r.delta<0?'var(--verde)':'var(--rojo)')+'">'+(r.delta<0?'▼':'▲')+' '+
     GLM.fmt(Math.abs(r.delta))+'<div style="color:var(--sub);font-weight:600;font-size:.78rem">vs ayer</div></div></div>'+
-    '<div class="rgr">'+[7,14,30].map(function(d){return '<button class="'+(ST.rg===d?'act':'')+'" data-rgh="'+d+'">'+d+' días</button>'}).join('')+'</div>'+
+    '<div class="rgr">'+GLM.RANGOS.map(function(d){return '<button class="'+(ST.rg===d?'act':'')+'" data-rgh="'+d+'">'+d+' días</button>'}).join('')+'</div>'+
     '<div class="cwrap">'+GLM.chart(serieMix,{w:360,h:170,color:'#1f6f4a'})+'</div>'+
     '<p style="font-size:.8rem;color:var(--sub);margin:8px 20px">Mín '+GLM.fmt(r.min)+' ('+r.minFecha+') · máx '+GLM.fmt(r.max)+
-    ' ('+r.maxFecha+') · media '+GLM.fmt(r.media)+' €/L calculada sobre '+avg.length+' estaciones.</p>'+
-    '<div class="accx"><button>⭐ Comparar con favoritas</button><button>✨ Pedir explicación a la IA</button></div>';
+    ' ('+r.maxFecha+') · media '+GLM.fmt(r.media)+' €/L sobre '+avg.length+' estaciones con precio (los días sin publicación no cuentan).</p>'+
+    '<div class="accx"><button id="hCmp">⭐ Comparar con favoritas</button><button id="hIA">✨ Pedir explicación a la IA</button></div>';
   document.querySelectorAll('[data-rgh]').forEach(function(b){
     b.addEventListener('click',function(){ST.rg=+b.dataset.rgh;pHist()})});
+  document.getElementById('hCmp').addEventListener('click',function(){sale();irRaiz('favoritas')});
+  document.getElementById('hIA').addEventListener('click',function(){
+    sale();irRaiz('ia');
+    document.getElementById('iaQ2').value='¿Por qué la media de '+GLM.COMBUSTIBLES_CORTOS[ST.comb]+' en '+ST.prov+' ha evolucionado así en '+dias+' días?';
+    document.getElementById('iaG2').click();
+  });
   empuja('panHist');
 }
 function estPorId(id){
@@ -522,45 +595,115 @@ ST.favTog=function(id){
   if(ST.sel){var pan=document.getElementById('panFicha');
     if(pan.classList.contains('act'))abreFicha(estPorId(id));
   }
-  pHome();pLst();pFav();
+  pHome();pLst();corpoLst();pFav();
+  if(ST.raiz==='mapa')pMapa();
 };
 ['corpLst','corpFav','miniL'].forEach(function(z){
   document.getElementById(z).addEventListener('click',function(e){
     if(e.target.closest('[data-go]')&&!e.target.closest('[data-abre]')&&!e.target.closest('.mini'))return;
+    var pg=e.target.closest('[data-pg]');
+    if(pg){ST.pag+=pg.dataset.pg==='next'?1:-1;corpoLst();document.getElementById('corpLst').scrollTop=0;return}
     var m=e.target.closest('[data-abre]');
     if(m)abreFicha(estPorId(m.dataset.abre));
   });
+});
+
+/* ---------- mapa (raíz) ---------- */
+var mm=null,iEst=0,ESTILOS=[['dia','Calles'],['sat','Satélite'],['oscuro','Oscuro']];
+function mmOpts(){
+  var o={parque:'Casa de Campo',parque2:'El Retiro',ring:'M-40',onpin:function(e){abreFicha(e)}};
+  var es=ESTILOS[iEst][0];
+  if(es==='sat')o.estilo='sat'; else if(es==='oscuro')o.oscuro=true; else o.estilo='dia';
+  return o;
+}
+function pMapa(){
+  document.getElementById('pMapa').textContent=ST.prov+' · '+GLM.COMBUSTIBLES_CORTOS[ST.comb];
+  var w=document.getElementById('mmV');
+  if(!mm)mm=GLM.miniMapa(w,mmOpts());   // instancia única: repintar pines no lo recrea
+  mm.pines(listaOrd(),ST.sel?estPorId(ST.sel):null,ST.comb);
+}
+document.getElementById('btnMapaTipo').addEventListener('click',function(){
+  iEst=(iEst+1)%ESTILOS.length;
+  mm=GLM.miniMapa(document.getElementById('mmV'),mmOpts());
+  pMapa();
+  snack('🗺️ Tipo de mapa: '+ESTILOS[iEst][1]);
 });
 
 /* ---------- sub-ajustes ---------- */
 document.querySelectorAll('[data-sub]').forEach(function(f){
   f.addEventListener('click',function(){abreSub(f.dataset.sub)});
 });
+function pintaAlertasSub(){
+  var z=document.getElementById('subAlertas');
+  if(!z)return;
+  z.innerHTML=GLM.alertasPush.map(function(a){
+    return '<div class="afl"><span style="font-size:.84rem">'+(a.tipo==='caida'?'📉':'📈')+' <b>'+a.est+'</b> · '+a.txt+'</span>'+
+      '<span class="vy" style="white-space:nowrap">'+a.hora+'</span></div>';
+  }).join('');
+}
+function pintaDescSub(){
+  document.getElementById('bodSub').innerHTML='<div class="ajm" style="margin-top:8px" id="subDescBox">'+GLM.descuentos.map(function(d,i){
+    return '<div class="afl"><span>'+d.marca+'</span><span class="vy">'+
+      '<input data-d="'+i+'" type="number" step="0.5" min="0" max="30" value="'+d.cent+'" '+
+      'style="width:58px;border:1px solid var(--linea);border-radius:9px;padding:7px;text-align:right;font-weight:700;background:#fff"> c/L</span></div>';
+  }).join('')+'<div class="afl" id="addMarca" style="justify-content:center;color:#1f6f4a;font-weight:700">＋ Añadir marca</div></div>';
+}
+function horaAhora(){
+  var d=new Date();
+  return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+':'+('0'+d.getSeconds()).slice(-2);
+}
 function abreSub(cual){
   var b=document.getElementById('bodSub'),t=document.getElementById('tiSub');
   if(cual==='desc'){
     t.textContent='Descuentos por marca';
-    b.innerHTML='<div class="ajm" style="margin-top:8px">'+GLM.descuentos.map(function(d){
-      return '<div class="afl"><span>'+d.marca+'</span><span class="vy"><b style="color:#0a8a3c">'+GLM.cent(d.cent)+'</b></span></div>';
-    }).join('')+'<div class="afl" style="justify-content:center;color:#1f6f4a;font-weight:700">＋ Añadir marca</div></div>';
+    pintaDescSub();
   } else if(cual==='push'){
     t.textContent='Avisos push';
     b.innerHTML='<div class="ajm" style="margin-top:8px">'+
-      '<div class="afl"><span>Chequeo cada</span><span class="vy"><b>8 h</b></span></div>'+
-      '<div class="afl"><span>Caída en últimos</span><span class="vy"><b>14 días</b></span></div>'+
-      '<div class="afl"><span>Detección</span><span class="vy"><b>media</b> vs consecutivos</span></div>'+
-      '<div class="afl" style="justify-content:center;color:#1f6f4a;font-weight:700">🔔 Enviar aviso de prueba</div></div>';
+      '<div class="afl"><span>Avisos de bajada</span><div class="swx on" id="swxSub"><i></i></div></div>'+
+      '<div class="afl"><span>Chequeo cada</span><span class="vy"><select id="subHoras" style="border:1px solid var(--linea);border-radius:9px;padding:6px;font-weight:700;background:#fff"></select></span></div>'+
+      '<div class="afl"><span>Caída en últimos</span><span class="vy"><select id="subDias" style="border:1px solid var(--linea);border-radius:9px;padding:6px;font-weight:700;background:#fff"></select></span></div>'+
+      '<div class="afl" id="subTest" style="justify-content:center;color:#1f6f4a;font-weight:700">🔔 Enviar aviso de prueba</div>'+
+      '<div id="subAlertas"></div></div>';
+    var sh=document.getElementById('subHoras'),sd=document.getElementById('subDias');
+    sh.innerHTML=Array.apply(null,Array(24)).map(function(_,i){return '<option value="'+(i+1)+'"'+((i+1)===8?' selected':'')+'>'+(i+1)+' h</option>'}).join('');
+    sd.innerHTML=[1,2,3,5,7,14,30,60,90].map(function(d){return '<option value="'+d+'"'+(d===3?' selected':'')+'>'+d+' días</option>'}).join('');
+    document.getElementById('swxSub').addEventListener('click',function(){
+      this.classList.toggle('on');snack(this.classList.contains('on')?'🔔 Avisos activados':'Avisos desactivados')});
+    document.getElementById('subTest').addEventListener('click',function(){
+      var a=GLM.alertasPush[0];
+      GLM.avisoPush(a.est+' '+a.txt,'llenando 50 L ahorras '+GLM.fmt2(GLM.deposito(50,1.479,1.412))+' €');
+      pintaAlertasSub();
+    });
+    pintaAlertasSub();
   } else {
     t.textContent='Caché';
+    var claves=Object.keys(localStorage).filter(function(k){return k.indexOf('gasolineras_')===0}).length;
     b.innerHTML='<div class="ajm" style="margin-top:8px">'+
-      '<div class="afl"><span>TTL caché</span><span class="vy"><b>12 h</b></span></div>'+
-      '<div class="afl"><span>Provincia: Madrid</span><span class="vy">1,2 MB</span></div>'+
-      '<div class="afl"><span>Histórico: 214 fechas</span><span class="vy">0,8 MB</span></div>'+
-      '<div class="afl" style="justify-content:center;color:#c62828;font-weight:700">🗑️ Limpiar la caché</div></div>'+
-      '<div class="ajm"><h4>localStorage</h4><div class="afl"><span>gasolineras_… (28 claves)</span><span class="vy">42 KB</span></div></div>';
+      '<div class="afl"><span>TTL caché</span><span class="vy">'+
+      '<input id="subTtl" type="number" min="1" max="72" value="12" style="width:58px;border:1px solid var(--linea);border-radius:9px;padding:7px;text-align:right;font-weight:700;background:#fff"> h</span></div>'+
+      '<div class="afl"><span>Provincia: '+ST.prov+'</span><span class="vy">1,2 MB</span></div>'+
+      '<div class="afl"><span>Histórico</span><span class="vy">0,8 MB</span></div>'+
+      '<div class="afl" id="subLimpiar" style="justify-content:center;color:#c62828;font-weight:700">🗑️ Limpiar la caché</div></div>'+
+      '<div class="ajm"><h4>localStorage</h4><div class="afl"><span>gasolineras_… ('+claves+' claves)</span><span class="vy">'+(claves*1.5).toFixed(0)+' KB</span></div></div>';
+    document.getElementById('subTtl').addEventListener('change',function(){snack('Caducidad de caché: '+this.value+' h')});
+    document.getElementById('subLimpiar').addEventListener('click',function(){
+      GLM.logApi.unshift({t:GLM.hoyCorto+' '+horaAhora(),d:'—',s:'caché limpiada',url:'IndexedDB'});
+      snack('🗑️ Caché limpiada (simulada)');
+    });
   }
   empuja('panSub');
 }
+/* delegación para los inputs de descuentos (se regeneran al editar) */
+document.getElementById('bodSub').addEventListener('input',function(e){
+  var i=e.target.dataset&&e.target.dataset.d;
+  if(i===undefined||i==='')return;
+  GLM.descuentos[+i].cent=Math.max(0,+e.target.value||0);
+  pHome();corpoLst();
+});
+document.getElementById('bodSub').addEventListener('click',function(e){
+  if(e.target.closest('#addMarca'))snack('En la app real: alta de descuento por marca con importe y fecha');
+});
 
 /* ---------- IA ---------- */
 var msgs2=[];
@@ -583,6 +726,8 @@ document.getElementById('iaG2').addEventListener('click',function(){
     ia2(0,'<div style="font-size:.66rem;color:var(--sub);margin-bottom:5px">✨ IA · Groq · 1,1 s</div>'+GLM.md(resp));
   },750);
 });
+document.getElementById('iaQ2').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('iaG2').click()});
+GLM.snack=snack;   // helpers del mock (avisoPush…) usan el mismo snack
 
 /* ---------- ajustes y otros ---------- */
 document.getElementById('swx2').addEventListener('click',function(){
@@ -591,20 +736,29 @@ document.getElementById('swx2').addEventListener('click',function(){
 document.getElementById('ajD2').innerHTML=GLM.descuentos.slice(0,3).map(function(d){
   return '<div class="afl"><span>'+d.marca+'</span><span class="vy"><b style="color:#0a8a3c">'+GLM.cent(d.cent)+'</b></span></div>';
 }).join('<div style="height:1px;background:var(--linea)"></div>');
+document.getElementById('tamSel').addEventListener('change',function(){
+  ST.tam=+this.value;ST.pag=1;corpoLst();
+  snack('Resultados por página: '+(ST.tam>=9999?'todas':ST.tam));
+});
+document.getElementById('verTxt').textContent=GLM.VERSION;
 document.getElementById('btnProv').addEventListener('click',function(){
   var i=GLM.PROVINCIAS.indexOf(ST.prov);ST.prov=GLM.PROVINCIAS[(i+1)%GLM.PROVINCIAS.length];
   this.textContent=({Madrid:'28',Barcelona:'08',Valencia:'46',Sevilla:'41',Zaragoza:'50',Bizkaia:'48'})[ST.prov];
-  pHome();pLst();snack('Provincia: '+ST.prov);
+  ST.pag=1;
+  pHome();pLst();corpoLst();pFav();
+  if(ST.raiz==='mapa')pMapa();
+  snack('Provincia: '+ST.prov);
 });
-document.getElementById('btnBusc').addEventListener('click',function(){irRaiz('lista');snack('En la app real: foco automático en el buscador de la lista')});
-document.getElementById('btnBusc2').addEventListener('click',function(){snack('Maqueta: filtrado de la lista por texto')});
-function snackbar(m){snack(m)}
 
 /* arranque */
-pHome();corpoLst();
+pHome();pLst();corpoLst();
 irRaiz('home');
 ia2(0,'<div style="font-size:.66rem;color:var(--sub);margin-bottom:5px">✨ IA · Groq · 0,9 s</div>'+GLM.md(GLM.chatRespuesta('',listaOrd(),ST.comb)));
 window.PT_VALID='v08';
+/* asas para el validador/sondeo (mismo patrón que PT_VALID) */
+window.PT_PROBE={ST:ST,abreFicha:abreFicha,abreId:function(id){abreFicha(estPorId(id))},
+  render:function(){pHome();pLst();corpoLst();pFav();if(ST.raiz==='mapa')pMapa()},
+  cierra:function(){sale()},sale:sale};
 })();
 </script>
 </body>

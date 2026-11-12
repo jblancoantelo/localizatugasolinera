@@ -121,11 +121,13 @@ select,input{font-family:inherit}
 /* ===== móvil: pestañas inferior ===== */
 .mtabs{display:none}
 @media (max-width:900px){
-  .mtabs{display:flex;background:var(--panel);border-top:1px solid var(--linea);padding:6px 6px calc(6px + env(safe-area-inset-bottom));position:relative;z-index:40;flex-shrink:0}
+  /* z-index por encima del panel derecho (70): con el detalle abierto las pestañas siguen pulsables */
+  .mtabs{display:flex;background:var(--panel);border-top:1px solid var(--linea);padding:6px 6px calc(6px + env(safe-area-inset-bottom));position:relative;z-index:80;flex-shrink:0}
   .mtabs button{flex:1;border:none;background:none;font-size:.68rem;font-weight:700;color:var(--sub);padding:6px 0;cursor:pointer}
   .mtabs button.act{color:var(--pri)}
   .mtabs .ic{display:block;font-size:1.1rem}
-  .dercha{position:fixed;z-index:70;inset:0;transform:translateY(102%);transition:.28s;border-radius:20px 20px 0 0;width:100%;border-left:none}
+  /* display:flex pisa el display:none de ≤1128px: sin él las pestañas móviles no mostrarían nada */
+  .dercha{display:flex;position:fixed;z-index:70;inset:0;transform:translateY(102%);transition:.28s;border-radius:20px 20px 0 0;width:100%;border-left:none}
   .dercha.abierto{transform:none}
   .dmapa{height:34%}
 }
@@ -147,6 +149,10 @@ select,input{font-family:inherit}
 .snack{position:fixed;left:50%;bottom:calc(74px + env(safe-area-inset-bottom));transform:translate(-50%,12px);z-index:99;
   background:#1b2430;color:#fff;font-size:.8rem;padding:9px 15px;border-radius:999px;opacity:0;pointer-events:none;transition:.25s}
 .snack-vis{opacity:1;transform:translate(-50%,0)}
+#iaMsgs .yo{align-self:flex-end;background:var(--pri);color:#fff;border-radius:14px 14px 4px 14px;padding:8px 12px;max-width:85%}
+#iaMsgs .ia{align-self:flex-start;background:var(--fondo);border:1px solid var(--linea);border-radius:14px 14px 14px 4px;padding:10px 12px;max-width:92%}
+#iaMsgs .meta{font-size:.64rem;color:var(--sub);margin-top:4px}
+#iaProm button{border:1px solid var(--linea);background:#fff;border-radius:999px;padding:6px 12px;font-size:.74rem;font-weight:600;cursor:pointer;color:var(--tinta)}
 </style>
 </head>
 <body>
@@ -156,6 +162,7 @@ select,input{font-family:inherit}
     <button class="brr" id="bFiltM" style="display:none">≡ Filtros</button>
     <div class="esp"></div>
     <span class="cnt" id="bCont">38 estaciones · G.95 · Madrid</span>
+    <button class="brr" id="bIA">✨ IA</button>
     <button class="brr" id="bExp">⬇ CSV</button>
     <button class="brr pri" id="bAct">↻ Actualizar</button>
   </div>
@@ -182,7 +189,18 @@ select,input{font-family:inherit}
       <div class="grupo">
         <h5>Otros</h5>
         <div class="swfil" id="swFav">⭐ Solo favoritas <b style="color:var(--sub)" id="swFavV">no</b></div>
-        <div class="swfil" id="swOrd" style="margin-top:8px">↓ Ordenar por precio</div>
+        <div class="swfil" id="swDesc" style="margin-top:8px">🏷️ Solo con descuento <b style="color:var(--sub)" id="swDescV">no</b></div>
+        <div class="swfil" id="swOrd" style="margin-top:8px">⇅ Dirección del orden <b style="color:var(--sub)" id="swOrdV">ascendente</b></div>
+      </div>
+      <div class="grupo">
+        <h5>🔔 Avisos de bajada</h5>
+        <div class="swfil" id="swPush">Push <b style="color:var(--sub)" id="swPushV">activado</b></div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <select id="pshHoras" style="flex:1;border:1px solid var(--linea);border-radius:9px;padding:7px;font-size:.76rem;background:#fff"></select>
+          <select id="pshDias" style="flex:1.4;border:1px solid var(--linea);border-radius:9px;padding:7px;font-size:.76rem;background:#fff"></select>
+        </div>
+        <button class="brr" id="pshTest" style="margin-top:8px;width:100%">🔔 Enviar aviso de prueba</button>
+        <div id="pshAlertas" style="margin-top:8px;display:flex;flex-direction:column;gap:4px"></div>
       </div>
       <button class="brr" id="bReset" style="margin-top:auto;border:1px solid #f0d3d3;color:var(--rojo);background:#fff">✕ Limpiar filtros</button>
     </aside>
@@ -198,6 +216,7 @@ select,input{font-family:inherit}
       </div>
       <div style="flex:1;overflow-y:auto" id="filas"></div>
       <div class="pagin">
+        <span id="zonaLey" style="font-size:.72rem;display:inline-flex;align-items:center"></span>
         <button id="pPrev">◀</button><span class="pg" id="pTxt">1/2</span><button id="pNext">▶</button>
         <select id="pTam"><option>15</option><option selected>30</option><option>50</option><option>All</option></select>
       </div>
@@ -219,19 +238,38 @@ select,input{font-family:inherit}
   </nav>
 </div>
 <button class="fabfil" id="fabFil">≡</button>
+
+<!-- chat IA (modal) -->
+<div id="iaModal" style="position:fixed;inset:0;z-index:120;display:none;place-items:center;background:rgba(10,20,40,.42)">
+  <div style="width:min(640px,94vw);height:min(620px,88dvh);background:var(--panel);border:1px solid var(--linea);border-radius:18px;display:flex;flex-direction:column;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--linea)">
+      <b style="font-size:.98rem">✨ Chat IA · precios e histórico</b>
+      <button id="iaX" style="border:none;background:var(--fondo);border-radius:999px;width:34px;height:34px;cursor:pointer;font-size:.9rem">✕</button>
+    </div>
+    <div id="iaMsgs" style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:8px;font-size:.86rem"></div>
+    <div style="display:flex;gap:8px;padding:0 16px 10px;flex-wrap:wrap" id="iaProm"></div>
+    <div style="display:flex;gap:8px;padding:10px 16px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--linea)">
+      <input id="iaQ" placeholder="Pregunta de precios, histórico, ahorro…"
+        style="flex:1;border:1px solid var(--linea);border-radius:10px;padding:11px 13px;font-size:.88rem;background:#fff;color:var(--tinta)">
+      <button id="iaGo" style="border:none;background:var(--pri);color:#fff;border-radius:10px;padding:0 16px;font-weight:700;cursor:pointer">➤</button>
+    </div>
+  </div>
+</div>
+
 <div class="snack" id="snk"></div>
 
 <script src="../_lib/mock.js"></script>
 <script>
 (function(){
 'use strict';
-var ST={prov:'Madrid',loc:'Todas',comb:'Gasolina 95 E5',marcas:[],soloFav:false,
+var ST={prov:'Madrid',loc:'Todas',comb:'Gasolina 95 E5',marcas:[],soloFav:false,desc:false,
   ord:{c:'precio',d:'asc'},q:'',pag:1,tam:30,sel:null,vista:'lista',favoritos:{}};
 GLM.de('Madrid').forEach(function(e){ST.favoritos[e.id]=!!e.fav});
 var mmD=GLM.miniMapa(document.getElementById('mD'),{onpin:function(est){abreD(est.id,true)}});
 
 function snack(m){var s=document.getElementById('snk');s.textContent=m;s.classList.add('snack-vis');
   clearTimeout(s._t);s._t=setTimeout(function(){s.classList.remove('snack-vis')},2200)}
+GLM.snack = snack;   // helpers del mock (avisoPush…) usan el mismo UI
 
 /* ---------- sidebar ---------- */
 document.getElementById('sProv').innerHTML=GLM.PROVINCIAS.map(function(p){
@@ -241,7 +279,9 @@ document.getElementById('sProv').addEventListener('change',function(){
   ST.prov=this.value;ST.loc='Todas';ST.pag=1;renderTodo();snack('Provincia: '+ST.prov);
 });
 function pintaComb(){
-  document.getElementById('gComb').innerHTML=GLM.COMBUSTIBLES.slice(0,6).map(function(c){
+  var disp=GLM.combDisponibles(ST.prov);
+  if(disp.length && disp.indexOf(ST.comb)<0) ST.comb=disp[0];
+  document.getElementById('gComb').innerHTML=disp.map(function(c){
     return '<button'+(ST.comb===c?' class="act"':'')+' data-g="'+c+'">'+GLM.COMBUSTIBLES_CORTOS[c]+'</button>';
   }).join('');
 }
@@ -266,38 +306,42 @@ document.getElementById('sLoc').addEventListener('change',function(){ST.loc=this
 document.getElementById('swFav').addEventListener('click',function(){
   ST.soloFav=!ST.soloFav;
   document.getElementById('swFavV').textContent=ST.soloFav?'sí':'no';
-  renderTodo();
+  ST.pag=1;renderTodo();
+});
+document.getElementById('swDesc').addEventListener('click',function(){
+  ST.desc=!ST.desc;
+  document.getElementById('swDescV').textContent=ST.desc?'sí':'no';
+  ST.pag=1;renderTodo();
+});
+document.getElementById('swOrd').addEventListener('click',function(){
+  ST.ord.d=ST.ord.d==='asc'?'desc':'asc';
+  document.getElementById('swOrdV').textContent=ST.ord.d==='asc'?'ascendente':'descendente';
+  render();
 });
 document.getElementById('bReset').addEventListener('click',function(){
-  ST={prov:ST.prov,loc:'Todas',comb:'Gasolina 95 E5',marcas:[],soloFav:false,
+  ST={prov:ST.prov,loc:'Todas',comb:'Gasolina 95 E5',marcas:[],soloFav:false,desc:false,
     ord:{c:'precio',d:'asc'},q:'',pag:1,tam:ST.tam,sel:null,vista:ST.vista,favoritos:ST.favoritos};
   document.getElementById('qq').value='';
+  document.getElementById('swFavV').textContent='no';
+  document.getElementById('swDescV').textContent='no';
+  document.getElementById('swOrdV').textContent='ascendente';
   renderTodo();snack('Filtros limpiados');
 });
 document.getElementById('qq').addEventListener('input',function(){ST.q=this.value;ST.pag=1;renderTodo()});
 
 /* ---------- cómputo ---------- */
 function filtradas(){
-  var l=GLM.de(ST.prov,{loc:ST.loc,marcas:ST.marcas});
-  if(ST.soloFav||ST.vista==='favoritas')l=l.filter(function(e){return ST.favoritos[e.id]});
-  if(ST.q){var q=ST.q.toLowerCase();
-    l=l.filter(function(e){return (e.marca+' '+e.direccion+' '+e.localidad).toLowerCase().indexOf(q)>=0});}
-  var c=ST.ord.c,d=ST.ord.d==='asc'?1:-1;
-  var con=l.filter(function(e){return e.precios[ST.comb]!=null}),
-      sin=l.filter(function(e){return e.precios[ST.comb]==null});
-  con.sort(function(a,b){
-    if(c==='marca')return d*a.marca.localeCompare(b.marca,'es');
-    if(c==='dist')return d*(a.dist-b.dist);
-    return d*(GLM.precioFinal(a,ST.comb)-GLM.precioFinal(b,ST.comb));
-  });
-  return con.concat(sin);
+  return GLM.filtrar(GLM.de(ST.prov),{ q:ST.q, loc:ST.loc, marcas:ST.marcas,
+    favs:(ST.soloFav||ST.vista==='favoritas'), desc:ST.desc, ord:ST.ord.c==='dist'?'cerca':ST.ord.c, dir:ST.ord.d==='asc'?1:-1, comb:ST.comb });
 }
 function est(id){
-  return filtradas().filter(function(x){return x.id===id})[0];
+  var l=filtradas();
+  return l.filter(function(x){return x.id===id})[0] || GLM.de(ST.prov).filter(function(x){return x.id===id})[0];
 }
 function mediaProv(){
-  var l=filtradas();
-  return l.reduce(function(t,e){return t+GLM.precioFinal(e,ST.comb)},0)/(l.length||1);
+  var l=filtradas().filter(function(e){return e.precios[ST.comb]!=null});
+  if(!l.length) return 0;
+  return l.reduce(function(t,e){return t+GLM.precioFinal(e,ST.comb)},0)/l.length;
 }
 
 /* ---------- render lista ---------- */
@@ -323,6 +367,7 @@ function render(){
   document.getElementById('pNext').disabled=ST.pag>=pgs;
   document.getElementById('bCont').textContent=l.length+' est. · '+GLM.COMBUSTIBLES_CORTOS[ST.comb]+' · '+
     ST.prov+(ST.soloFav?' · ⭐':'');
+  document.getElementById('zonaLey').innerHTML=GLM.leyenda(false);
   var op=document.querySelector('.cabezal .ordn.act');
   document.querySelectorAll('.cabezal .ordn').forEach(function(o){
     o.classList.remove('act','flecha-a','flecha-d');
@@ -364,22 +409,40 @@ function abreD(id,conPin){
     return '<div class="dcelda'+(c===ST.comb?' act':'')+'"><div class="ct">'+GLM.COMBUSTIBLES_CORTOS[c]+'</div>'+
       '<div class="vl nivel-'+GLM.nivel(pp)+'">'+GLM.fmt(pp)+'</div></div>';
   }).join('');
-  var r=GLM.resumen(GLM.historico(e,ST.comb,14));
+  var sinDato=e.precios[ST.comb]==null;
+  var histHtml;
+  if(sinDato){
+    /* sin datos del combustible activo: sin gráfica ni histórico (como la app real) */
+    histHtml='<b style="font-size:.78rem">Histórico · '+GLM.COMBUSTIBLES_CORTOS[ST.comb]+'</b>'+
+      '<p style="font-size:.8rem;color:var(--sub);margin:8px 2px">Sin datos de este combustible en la estación: '+
+      'la gráfica y el histórico no están disponibles. Elige otro combustible en la nube de arriba.</p>';
+  } else {
+    var r=GLM.resumen(GLM.historico(e,ST.comb,ST.rang||14));
+    histHtml='<b style="font-size:.78rem">Histórico · '+GLM.RANGOS.map(function(d){
+      return '<button class="brr" data-rang="'+d+'" style="padding:4px 8px;margin-right:4px;font-size:.72rem'+(ST.rang===d?';background:var(--pri-suave);border-color:var(--pri)':'')+'">'+d+' d</button>';
+    }).join('')+' ('+GLM.COMBUSTIBLES_CORTOS[ST.comb]+')</b>'+
+      '<div class="dgraf">'+GLM.chart(GLM.historico(e,ST.comb,ST.rang||14),{w:330,h:140})+'</div>'+
+      '<p style="font-size:.74rem;color:var(--sub);margin:6px 2px">Mín '+GLM.fmt(r.min)+' ('+
+      r.minFecha+') · Máx '+GLM.fmt(r.max)+' ('+r.maxFecha+') · media '+GLM.fmt(r.media)+' — hoy '+
+      (r.delta<0?'▼':'▲')+GLM.fmt(Math.abs(r.delta))+' €/L</p>';
+  }
+  var fin=GLM.precioFinal(e,ST.comb), med=mediaProv();
   document.getElementById('dDet').innerHTML='<h4>'+e.marca+'</h4>'+
     '<div class="dirr">'+e.direccion+' · '+e.localidad+' · '+GLM.fmt2(e.dist)+' km</div>'+
     '<div class="dnube">'+celdas+'</div>'+
-    '<b style="font-size:.78rem">Histórico · 14 días ('+GLM.COMBUSTIBLES_CORTOS[ST.comb]+')</b>'+
-    '<div class="dgraf">'+GLM.chart(GLM.historico(e,ST.comb,14),{w:330,h:140})+'</div>'+
-    '<p style="font-size:.74rem;color:var(--sub);margin:6px 2px">Mín '+GLM.fmt(r.min)+' ('+
-    r.minFecha+') · Máx '+GLM.fmt(r.max)+' ('+r.maxFecha+') · media '+GLM.fmt(r.media)+' — hoy '+
-    (r.delta<0?'▼':'▲')+GLM.fmt(Math.abs(r.delta))+' €/L</p>'+
+    histHtml+
     '<div class="dacc"><button class="pri" id="dRuta">🧭 Cómo llegar</button>'+
     '<button id="dFavA">'+(ST.favoritos[e.id]?'★ Favorita':'☆ Añadir')+'</button>'+
     '<button id="dAv">🔔 Avisar si baja</button></div>'+
-    '<div class="estadistica">💡 Comparativa en pantalla: la media de la provincia es '+
-    GLM.fmt(mediaProv())+' €/L y esta estación '+(GLM.precioFinal(e,ST.comb)<mediaProv()?'queda por debajo.':'queda por encima.')+'</div>';
+    (sinDato?'':'<div class="estadistica">💡 Comparativa en pantalla: la media de la provincia es '+
+      GLM.fmt(med)+' €/L y esta estación '+(fin<med?'queda por debajo.':'queda por encima.')+'</div>');
+  document.querySelectorAll('#dDet [data-rang]').forEach(function(b){
+    b.addEventListener('click',function(){ ST.rang=+b.dataset.rang; abreD(e.id,false); });
+  });
   document.getElementById('dRuta').addEventListener('click',function(){snack('Maqueta: abriría las rutas del móvil')});
-  document.getElementById('dAv').addEventListener('click',function(){snack('🔔 Aviso activado para '+e.marca)});
+  document.getElementById('dAv').addEventListener('click',function(){
+    GLM.avisoPush(e.marca+' vigilada','te avisaremos si '+GLM.COMBUSTIBLES_CORTOS[ST.comb]+' baja 3 jornadas seguidas');
+  });
   document.getElementById('dFavA').addEventListener('click',function(){
     ST.favoritos[e.id]=!ST.favoritos[e.id];
     snack(ST.favoritos[e.id]?'⭐ Añadida':'Quitada');
@@ -401,7 +464,7 @@ function go(v){
   if(v==='mapa'||v==='detalle'){
     der.classList.add('abierto');
     der.classList.toggle('solo-mapa',v==='mapa');   // solo mapa, sin detalle
-    if(ST.vista==='mapa'){render();document.getElementById('mD').innerHTML='';mmD=GLM.miniMapa(document.getElementById('mD'),{onpin:function(est){abreD(est.id,true)}});mmD.pines(filtradas(),null,ST.comb);}
+    if(ST.vista==='mapa'){render();}
   } else {
     der.classList.remove('abierto','solo-mapa');
   }
@@ -424,8 +487,79 @@ document.getElementById('side').addEventListener('click',function(e){
 document.getElementById('bFiltM').addEventListener('click',function(){
   document.getElementById('side').classList.add('abierto');
 });
-document.getElementById('bExp').addEventListener('click',function(){snack('Maqueta: exporta CSV de la lista filtrada')});
-document.getElementById('bAct').addEventListener('click',function(){snack('↻ Actualizado del Ministerio en 0,8 s')});
+document.getElementById('bExp').addEventListener('click',function(){
+  var csv=GLM.csv(filtradas(),ST.comb);
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download='gasolineras_'+ST.prov+'_'+GLM.hoy+'.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  snack('⬇ CSV descargado ('+filtradas().length+' estaciones)');
+});
+document.getElementById('bAct').addEventListener('click',function(){
+  GLM.logApi.unshift({t:GLM.hoyCorto+' '+horaAhora(),d:'0,8 s',s:'200 OK',url:'gasolineras/prov (actualizar)'});
+  snack('↻ Actualizado del Ministerio en 0,8 s');
+});
+
+/* ---------- avisos push (sidebar) ---------- */
+function horaAhora(){
+  var d=new Date();
+  return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+':'+('0'+d.getSeconds()).slice(-2);
+}
+var selH=document.getElementById('pshHoras'), selD=document.getElementById('pshDias');
+selH.innerHTML=Array.apply(null,Array(24)).map(function(_,i){return '<option value="'+(i+1)+'"'+((i+1)===8?' selected':'')+'>'+(i+1)+' h</option>'}).join('');
+selD.innerHTML=[1,2,3,5,7,14,30,60,90].map(function(d){return '<option value="'+d+'"'+(d===3?' selected':'')+'>'+d+' d bajando</option>'}).join('');
+document.getElementById('swPush').addEventListener('click',function(){
+  var on=document.getElementById('swPushV').textContent==='activado';
+  document.getElementById('swPushV').textContent=on?'desactivado':'activado';
+});
+function pintaAlertas(){
+  document.getElementById('pshAlertas').innerHTML=GLM.alertasPush.map(function(a){
+    return '<div style="font-size:.74rem;color:var(--sub);display:flex;justify-content:space-between;gap:6px">'+
+      '<span>'+(a.tipo==='caida'?'📉':'📈')+' <b>'+a.est+'</b> · '+a.txt+'</span><span style="white-space:nowrap">'+a.hora+'</span></div>';
+  }).join('');
+}
+pintaAlertas();
+document.getElementById('pshTest').addEventListener('click',function(){
+  var a=GLM.alertasPush[0];
+  GLM.avisoPush(a.est+' '+a.txt,'llenando 50 L ahorras '+GLM.fmt2(GLM.deposito(50,1.479,1.412))+' €');
+  pintaAlertas();
+});
+
+/* ---------- chat IA ---------- */
+var iaModal=document.getElementById('iaModal');
+document.getElementById('bIA').addEventListener('click',function(){
+  if(!document.getElementById('iaMsgs').children.length){
+    GLM.PROMPTS.forEach(function(p){
+      var b=document.createElement('button'); b.type='button'; b.textContent=p;
+      b.addEventListener('click',function(){preguntaIA(p)});
+      document.getElementById('iaProm').appendChild(b);
+    });
+    preguntaIA('',true);
+  }
+  iaModal.style.display='grid';
+});
+document.getElementById('iaX').addEventListener('click',function(){iaModal.style.display='none'});
+iaModal.addEventListener('click',function(e){if(e.target===iaModal)iaModal.style.display='none'});
+function preguntaIA(q,bienvenida){
+  var t0=Date.now(), el=document.getElementById('iaMsgs');
+  if(q&&!bienvenida){
+    var m=document.createElement('div'); m.className='yo'; m.textContent=q; el.appendChild(m);
+  }
+  var r=document.createElement('div'); r.className='ia';
+  r.innerHTML=GLM.md(GLM.chatRespuesta(q||'',filtradas().length?filtradas():GLM.de(ST.prov),ST.comb));
+  var meta=document.createElement('div'); meta.className='meta';
+  meta.textContent='✨ IA · '+((Date.now()-t0)/1000).toFixed(1).replace('.',',')+' s';
+  r.appendChild(meta);
+  el.appendChild(r);
+  el.scrollTop=el.scrollHeight;
+}
+document.getElementById('iaGo').addEventListener('click',function(){
+  var v=document.getElementById('iaQ').value.trim();
+  if(!v){snack('✍️ Escribe una pregunta');return;}
+  document.getElementById('iaQ').value='';
+  preguntaIA(v);
+});
+document.getElementById('iaQ').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('iaGo').click()});
 
 /* ---------- responsive ---------- */
 function resp(){
@@ -457,6 +591,10 @@ function pintaLoc(){
 /* arranque */
 renderTodo();resp();
 window.PT_VALID='v04';
+/* asas para el validador/sondeo (mismo patrón que PT_VALID) */
+window.PT_PROBE={ ST:ST, abreD:abreD, render:render,
+  cierra:function(){ document.getElementById('derch').classList.remove('abierto'); document.getElementById('iaModal').style.display='none'; ST.sel=null; render(); }
+};
 })();
 </script>
 </body>
