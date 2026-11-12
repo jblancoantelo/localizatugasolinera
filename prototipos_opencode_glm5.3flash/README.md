@@ -185,8 +185,8 @@ Pasadas ejecutadas: **1ª** ideas (v01–v08) · **2ª** QA con Playwright y pul
 cp1252→UTF-8; hero invisible de v01; rejilla PC de v03/v05/v06; cabecera móvil de v04;
 logos y títulos; pie de v08) · **3ª** este dossier, sin más ideas nuevas de diseño ·
 **4ª** QA funcional contra la app real: sondeo Playwright interactivo con una batería
-por prototipo (v01 14, v02 14, v03 13, v04 13 a PC 1440×900, v05 19, v06 19, v07 14,
-v08 19 = **125 pruebas, todas en verde, 0 errores JS**). Bugs reales corregidos en
+por prototipo (v01 14, v02 14, v03 13, v04 13 a PC 1440×900, v05 19, v06 18, v07 14,
+v08 19 = **124 pruebas, todas en verde, 0 errores JS**). Bugs reales corregidos en
 esta pasada: crash de KPIs sin datos y media inexacta en v07; tabs de v08 sin listener
 de navegación y cambio de combustible/orden que no repintaba la lista; crash del
 histórico provincial de v08 con media sobre series con huecos; botones del mapa de v06
