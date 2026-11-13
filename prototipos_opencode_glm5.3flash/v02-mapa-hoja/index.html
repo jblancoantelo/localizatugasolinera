@@ -188,6 +188,9 @@ button{font-family:inherit}
   <div class="caj">
     <h3>🏷️ Descuentos por marca</h3>
     <div id="cDesc"></div>
+    <h3>⚡ Prompts rápidos</h3>
+    <p style="font-size:.76rem;color:var(--sub);margin:-2px 0 6px">Chips ⚡N del chat IA (solo los rellenos). Se guardan al recargar.</p>
+    <div id="cPrompts"></div>
     <h3>🔔 Avisos al bajar de precio (push simulado)</h3>
     <div style="display:flex;flex-direction:column;gap:9px;font-size:.88rem">
       <label style="display:flex;justify-content:space-between;align-items:center;gap:8px">Avisos activos
@@ -215,7 +218,7 @@ button{font-family:inherit}
     <div id="cLog" style="margin-top:8px"></div>
     <h3>Versión</h3>
     <div style="display:flex;justify-content:space-between;align-items:center;font-size:.88rem">
-      <span>v44 · prototipo</span>
+      <span id="cVer">v44 · prototipo</span>
       <button class="mch" id="cUpd" type="button">Comprobar actualización</button>
     </div>
     <div class="pie"><button class="gramar" id="cCerrar">Cerrar</button></div>
@@ -224,7 +227,7 @@ button{font-family:inherit}
 
 <div class="fmodal" id="iamodal">
   <div class="caj" style="height:min(600px,86dvh);display:flex;flex-direction:column">
-    <h3 style="margin:12px 0 8px">✨ IA · precios e histórico</h3>
+    <h3 style="margin:12px 0 8px;display:flex;align-items:center;gap:8px">✨ IA · precios e histórico <button id="iaBorra" title="Borrar conversación" style="margin-left:auto;border:1px solid var(--linea);background:#fff;border-radius:10px;padding:4px 9px;font-size:.8rem;cursor:pointer">🗑️</button></h3>
     <div id="iaMsgs" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:2px 0;font-size:.86rem"></div>
     <div class="grupo" id="iaPrompts" style="flex-wrap:nowrap;overflow-x:auto;padding:6px 0 2px"></div>
     <div style="display:flex;gap:8px;margin-top:10px">
@@ -312,6 +315,7 @@ document.getElementById('lista').addEventListener('click',function(e){
   if(f){
     var id = f.dataset.fav;
     ST.favoritos[id] = !ST.favoritos[id];
+    GLM.favSet(id, ST.favoritos[id]);
     GLM.snack(ST.favoritos[id]?'⭐ Añadida a favoritas':'Quitada de favoritas');
     render();
     if(ST.sel===id && ficha.classList.contains('vis')) abreFicha(estacion(id));
@@ -390,6 +394,7 @@ function abreFicha(est){
 document.getElementById('fcFav').addEventListener('click',function(){
   if(!ST.sel) return;
   ST.favoritos[ST.sel] = !ST.favoritos[ST.sel];
+  GLM.favSet(ST.sel, ST.favoritos[ST.sel]);
   GLM.snack(ST.favoritos[ST.sel]?'⭐ Añadida a favoritas':'Quitada de favoritas');
   abreFicha(estacion(ST.sel)); render();
 });
@@ -545,7 +550,21 @@ document.getElementById('cDesc').addEventListener('input',function(e){
   var i = e.target.dataset && e.target.dataset.d;
   if(i===undefined || i==='') return;
   GLM.descuentos[+i].cent = Math.max(0, +e.target.value || 0);
+  GLM.descGuarda();
   render();
+});
+function pintaPromptsCfg(){
+  document.getElementById('cPrompts').innerHTML = GLM.PROMPTS.map(function(p,i){
+    return '<div><span style="font-size:.7rem;color:var(--sub)">⚡'+(i+1)+'</span>'+
+      '<textarea data-pr="'+i+'" rows="2" placeholder="Vacío = sin chip" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--linea);border-radius:10px;font:inherit;resize:vertical">'+GLM.escHtml(p)+'</textarea></div>';
+  }).join('');
+}
+pintaPromptsCfg();
+document.getElementById('cPrompts').addEventListener('input',function(e){
+  var i = e.target.getAttribute && e.target.getAttribute('data-pr');
+  if(i===null || i===undefined) return;
+  GLM.PROMPTS[+i] = e.target.value; GLM.promptsGuarda();
+  if(iaArrancado) pintaChipsIA();
 });
 var selH = document.getElementById('cHoras'), selD = document.getElementById('cDias');
 selH.innerHTML = Array.apply(null, Array(24)).map(function(_,i){
@@ -570,7 +589,8 @@ document.getElementById('cTam').addEventListener('change',function(){
   ST.tam = +this.value; ST.pag = 1; render();
   GLM.snack('Resultados por página: '+(ST.tam>=9999?'todas':ST.tam));
 });
-document.getElementById('cUpd').addEventListener('click',function(){ GLM.snack('✅ Estás en la última versión (v44)'); });
+document.getElementById('cUpd').addEventListener('click',function(){ GLM.snack('✅ Estás en la última versión ('+GLM.VERSION+')'); });
+document.getElementById('cVer').textContent = GLM.VERSION;
 function horaAhora(){
   var d = new Date();
   return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+':'+('0'+d.getSeconds()).slice(-2);
@@ -600,42 +620,70 @@ cmodal.addEventListener('click',function(e){
 
 /* ---------- chat IA (iamodal) ---------- */
 var iamodal = document.getElementById('iamodal'), iaMsgs = document.getElementById('iaMsgs');
+var CHATK = GLM.chatKit('v02');
 var iaArrancado = false;
+function pintaChipsIA(){
+  document.getElementById('iaPrompts').innerHTML = GLM.chipsPrompts('mch');
+  document.querySelectorAll('#iaPrompts [data-pr]').forEach(function(b){
+    b.style.boxShadow = 'none'; b.style.border = '1px solid var(--linea)';
+  });
+}
+document.getElementById('iaPrompts').addEventListener('click',function(e){
+  var b = e.target.closest('[data-pr]'); if(!b) return;
+  preguntaIA(GLM.PROMPTS[+b.getAttribute('data-pr')]);
+});
+function nodoMsg(m,i){
+  if(m.r==='user'){
+    var d = document.createElement('div');
+    d.style.cssText = 'align-self:flex-end;background:var(--azul);color:#fff;border-radius:14px 14px 4px 14px;padding:8px 12px;max-width:85%';
+    d.appendChild(document.createTextNode(m.md));
+    var ed = document.createElement('button'); ed.textContent='✎'; ed.title='Editar y reenviar';
+    ed.style.cssText='border:none;background:none;color:inherit;opacity:.55;cursor:pointer;font-size:.85rem;padding:0 4px';
+    ed.addEventListener('click',function(){editarMsg(i)});
+    d.appendChild(ed);
+    return d;
+  }
+  var r = document.createElement('div');
+  r.style.cssText = 'align-self:flex-start;background:#f2f4f7;border-radius:14px 14px 14px 4px;padding:10px 12px;max-width:92%';
+  r.innerHTML = GLM.md(m.md);
+  var meta = document.createElement('div');
+  meta.style.cssText = 'font-size:.64rem;color:var(--sub);margin-top:4px';
+  meta.textContent = m.meta||'';
+  r.appendChild(meta);
+  return r;
+}
+function pintaMsgs(){
+  iaMsgs.innerHTML = '';
+  CHATK.get().forEach(function(m,i){ iaMsgs.appendChild(nodoMsg(m,i)); });
+  iaMsgs.scrollTop = iaMsgs.scrollHeight;
+}
+function editarMsg(i){
+  document.getElementById('iaQ').value = CHATK.get()[i].md;
+  CHATK.trunca(i); pintaMsgs();
+  document.getElementById('iaQ').focus();
+}
+function responde(q){
+  var t0 = Date.now();
+  var resp = GLM.chatRespuesta(q || '', GLM.de(ST.prov), ST.comb);
+  var meta = '✨ IA · ' + ((Date.now()-t0)/1000).toFixed(1).replace('.', ',') + ' s';
+  CHATK.add({r:'assistant', md:resp, meta:meta});
+}
+function preguntaIA(q){
+  if(q) CHATK.add({r:'user', md:q, meta:''});
+  responde(q);
+  pintaMsgs();
+}
 function abreIA(){
+  pintaChipsIA();
   if(!iaArrancado){
-    var zona = document.getElementById('iaPrompts');
-    GLM.PROMPTS.forEach(function(p){
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'mch'; b.style.boxShadow = 'none'; b.style.border = '1px solid var(--linea)';
-      b.textContent = p;
-      b.addEventListener('click',function(){ preguntaIA(p); });
-      zona.appendChild(b);
-    });
     iaArrancado = true;
-    preguntaIA('', true);
+    if(CHATK.get().length) pintaMsgs();
+    else { responde(''); pintaMsgs(); }
   }
   iamodal.classList.add('vis');
 }
 document.getElementById('iaX').addEventListener('click',function(){ iamodal.classList.remove('vis'); });
 iamodal.addEventListener('click',function(e){ if(e.target===iamodal) iamodal.classList.remove('vis'); });
-function preguntaIA(q, bienvenida){
-  var t0 = Date.now();
-  if(q && !bienvenida){
-    var m = document.createElement('div');
-    m.style.cssText = 'align-self:flex-end;background:var(--azul);color:#fff;border-radius:14px 14px 4px 14px;padding:8px 12px;max-width:85%';
-    m.textContent = q;
-    iaMsgs.appendChild(m);
-  }
-  var r = document.createElement('div');
-  r.style.cssText = 'align-self:flex-start;background:#f2f4f7;border-radius:14px 14px 14px 4px;padding:10px 12px;max-width:92%';
-  r.innerHTML = GLM.md(GLM.chatRespuesta(q || '', GLM.de(ST.prov), ST.comb));
-  var meta = document.createElement('div');
-  meta.style.cssText = 'font-size:.64rem;color:var(--sub);margin-top:4px';
-  meta.textContent = '✨ IA · ' + ((Date.now()-t0)/1000).toFixed(1).replace('.', ',') + ' s';
-  r.appendChild(meta);
-  iaMsgs.appendChild(r);
-  iaMsgs.scrollTop = iaMsgs.scrollHeight;
-}
 document.getElementById('iaGo').addEventListener('click',function(){
   var q = document.getElementById('iaQ').value.trim();
   if(!q){ GLM.snack('✍️ Escribe una pregunta para la IA'); return; }
@@ -644,6 +692,9 @@ document.getElementById('iaGo').addEventListener('click',function(){
 });
 document.getElementById('iaQ').addEventListener('keydown',function(e){
   if(e.key==='Enter') document.getElementById('iaGo').click();
+});
+document.getElementById('iaBorra').addEventListener('click',function(){
+  CHATK.borrar(); responde(''); pintaMsgs();
 });
 
 /* ---------- init ---------- */

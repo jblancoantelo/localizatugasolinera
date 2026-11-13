@@ -192,8 +192,8 @@ button{font-family:inherit}
   <!-- IA -->
   <div class="secpane" data-pane="ia" style="flex-direction:column">
     <div class="tarj">
-      <h3>✨ Resumen del asistente</h3>
-      <div class="st">Pregunta a todos los proveedores como en la pestaña General de la app</div>
+      <h3 style="display:flex;align-items:center;gap:8px">✨ Resumen del asistente <button id="iaBorra" title="Borrar conversación" style="margin-left:auto;border:1px solid var(--linea);background:#fff;border-radius:10px;padding:4px 9px;font-size:.8rem;cursor:pointer">🗑️</button></h3>
+      <div class="st">Pregunta a todos los proveedores como en la pestaña General de la app. Se recuerda la última respuesta al recargar.</div>
       <div class="iahint" id="iah"></div>
       <div style="display:flex;gap:8px;margin-bottom:12px">
         <input id="iaQ" placeholder="Escribe tu pregunta…" aria-label="Pregunta a la IA"
@@ -210,6 +210,11 @@ button{font-family:inherit}
       <h3>🏷️ Descuentos por marca</h3>
       <div class="st">El precio mostrado ya los aplica (se recalcula al instante)</div>
       <div id="ajD"></div>
+    </div>
+    <div class="tarj" style="margin-top:12px">
+      <h3>⚡ Prompts rápidos</h3>
+      <div class="st">Chips ⚡N del asistente (solo los rellenos). Se guardan al recargar.</div>
+      <div id="ajP" style="margin-top:8px"></div>
     </div>
     <div class="tarj" style="margin-top:12px">
       <h3>🔔 Avisos de bajada</h3>
@@ -486,31 +491,46 @@ function abre(id,noShow){
 }
 function fCierra(){fich.classList.remove('vis');velo.classList.remove('vis');ST.sel=null;renderAll()}
 velo.addEventListener('click',fCierra);
-ST.favTog=function(id){ST.fav[id]=!ST.fav[id];snack(ST.fav[id]?'⭐ Vigilada: te avisaremos si baja':'Quitada de vigiladas');
+ST.favTog=function(id){ST.fav[id]=!ST.fav[id];GLM.favSet(id,ST.fav[id]);snack(ST.fav[id]?'⭐ Vigilada: te avisaremos si baja':'Quitada de vigiladas');
   renderAll();if(ST.sel===id)abre(id,true)};
 
 /* ---- IA resumen ---- */
-function iaResumenGen(){
-  var l=GLM.de(ST.prov).filter(function(e){return e.precios[ST.comb]!=null});
-  var txt=GLM.chatRespuesta('¿Cuál es la más barata?',l,ST.comb);
-  document.getElementById('iaBox').innerHTML='<div class="iaMeta">✨ IA · '+(GLM.PROVINCIAS.indexOf(ST.prov)+1)+
-    ' de tus pestañas · 1,3 s</div>'+GLM.md(txt);
+var CHATK=GLM.chatKit('v07');
+function iaPinta(m){
+  document.getElementById('iaBox').innerHTML='<div class="iaMeta">'+GLM.escHtml(m.meta)+'</div>'+GLM.md(m.md);
 }
-document.getElementById('iah').innerHTML=GLM.PROMPTS.map(function(p){return '<button class="ch">'+p+'</button>'}).join('');
+function iaGenera(q,metaBase){
+  var l=GLM.de(ST.prov).filter(function(e){return e.precios[ST.comb]!=null});
+  var rp=GLM.chatRespuesta(q||'¿Cuál es la más barata?',l,ST.comb);
+  var meta=metaBase||('✨ IA · '+(GLM.PROVINCIAS.indexOf(ST.prov)+1)+' de tus pestañas · 1,3 s');
+  CHATK.borrar();
+  if(q) CHATK.add({r:'user',md:q,meta:''});
+  CHATK.add({r:'assistant',md:rp,meta:meta});
+  iaPinta({md:rp,meta:meta});
+}
+function iaResumen(){
+  var h=CHATK.get(), ult=h.length?h[h.length-1]:null;
+  if(ult&&ult.r==='assistant') iaPinta(ult);
+  else iaGenera();
+}
+function pintaChips(){
+  document.getElementById('iah').innerHTML=GLM.chipsPrompts('ch');
+}
+pintaChips();
 document.getElementById('iah').addEventListener('click',function(e){
-  if(e.target.classList.contains('ch')){
-    var l=GLM.de(ST.prov).filter(function(e){return e.precios[ST.comb]!=null});
-    document.getElementById('iaBox').innerHTML='<div class="iaMeta">✨ IA · respuesta · 1,4 s</div>'+GLM.md(GLM.chatRespuesta(e.target.textContent,l,ST.comb));
-  }
+  var b=e.target.closest('[data-pr]'); if(!b) return;
+  iaGenera(GLM.PROMPTS[+b.getAttribute('data-pr')],'✨ IA · respuesta · 1,4 s');
 });
 /* input libre (la pestaña General de la app real también lo permite) */
 document.getElementById('iaGo').addEventListener('click',function(){
   var v=document.getElementById('iaQ').value.trim();if(!v)return;
   document.getElementById('iaQ').value='';
-  var l=GLM.de(ST.prov).filter(function(e){return e.precios[ST.comb]!=null});
-  document.getElementById('iaBox').innerHTML='<div class="iaMeta">✨ IA · respuesta · 1,3 s</div>'+GLM.md(GLM.chatRespuesta(v,l,ST.comb));
+  iaGenera(v,'✨ IA · respuesta · 1,3 s');
 });
 document.getElementById('iaQ').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('iaGo').click()});
+document.getElementById('iaBorra').addEventListener('click',function(){
+  CHATK.borrar(); iaGenera(); snack('🗑️ Conversación borrada');
+});
 
 /* ---- arriba ---- */
 function goPane(v){
@@ -544,7 +564,20 @@ document.getElementById('ajD').addEventListener('input',function(e){
   var i=e.target.dataset&&e.target.dataset.d;
   if(i===undefined||i==='')return;
   GLM.descuentos[+i].cent=Math.max(0,+e.target.value||0);
+  GLM.descGuarda();
   renderAll();
+});
+function pintaPromptsCfg(){
+  document.getElementById('ajP').innerHTML=GLM.PROMPTS.map(function(p,i){
+    return '<div style="margin-bottom:6px"><span style="font-size:.7rem;color:var(--sub)">⚡'+(i+1)+'</span>'+
+      '<textarea data-pr="'+i+'" rows="2" placeholder="Vacío = sin chip" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--linea);border-radius:10px;background:#fff;font:inherit;resize:vertical">'+GLM.escHtml(p)+'</textarea></div>';
+  }).join('');
+}
+pintaPromptsCfg();
+document.getElementById('ajP').addEventListener('input',function(e){
+  var i=e.target.getAttribute&&e.target.getAttribute('data-pr');
+  if(i===null||i===undefined) return;
+  GLM.PROMPTS[+i]=e.target.value; GLM.promptsGuarda(); pintaChips();
 });
 function horaAhora(){
   var d=new Date();
@@ -602,7 +635,7 @@ document.querySelector('[data-pane="ajustes"]').addEventListener('click',functio
 });
 pLog('api');
 
-function renderAll(){kpis();drawChart();alertasZ();tablaF();iaResumenGen()}
+function renderAll(){kpis();drawChart();alertasZ();tablaF();iaResumen()}
 window.addEventListener('resize',drawChart);
 pSelComb();
 renderAll();

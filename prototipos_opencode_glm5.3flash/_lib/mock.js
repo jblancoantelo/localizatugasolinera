@@ -160,6 +160,14 @@
     var lista = REGISTRO[pro].slice();
     if (opts.loc && opts.loc !== 'Todas') lista = lista.filter(function (e) { return e.localidad === opts.loc; });
     if (opts.marcas && opts.marcas.length) lista = lista.filter(function (e) { return opts.marcas.indexOf(e.marca) >= 0; });
+    /* favoritas persistidas (simulan el IndexedDB real): el override guardado
+     * manda sobre el PRNG, así que un F5 no las pierde */
+    try {
+      var _fav = JSON.parse(localStorage.getItem(GLM.FAV_LS) || '{}');
+      if (_fav && typeof _fav === 'object') {
+        lista.forEach(function (e) { if (_fav[e.id] !== undefined) e.fav = !!_fav[e.id]; });
+      }
+    } catch (err) {}
     return lista;
   };
 
@@ -366,9 +374,20 @@
     var sin = lista.filter(function (e) { return e.precios[comb] != null; })
       .sort(function (a, b) { return GLM.precioFinal(a, comb) - GLM.precioFinal(b, comb); });
     var top3 = sin.slice(0, 3), peor = sin[sin.length - 1];
+    /* rango explícito en la pregunta, como resolveAiHistoryDays() de la app:
+     * «60 días», «21 jornadas», «6 semanas», «3 meses», «1 año» (clamp 7-180) */
+    var dias = 14;
+    var mR = /(\d+)\s*(d[ií]as?|jornadas?|semanas?|mes(?:es)?|a[ñn]o)/.exec(q);
+    if (mR) {
+      var n = +mR[1];
+      if (/seman/.test(mR[2])) n *= 7;
+      else if (/mes/.test(mR[2])) n *= 30;
+      else if (/a[ñn]o/.test(mR[2])) n = 180;
+      dias = Math.min(180, Math.max(7, n));
+    }
     if (/hist[óo]ric|evoluci|subid|bajad|minim/.test(q)) {
-      var s = GLM.historico(top3[0], comb, 14), r = GLM.resumen(s);
-      return '**Histórico de ' + comb + '**\n\nLa más barata de ahora (' + top3[0].marca + ', ' + top3[0].direccion + ') ha pasado de ' + GLM.fmt(s[0].p) + ' a **' + GLM.fmt(r.hoy) + ' €/L** en 14 días (' + (r.pct >= 0 ? '+' : '') + r.pct + '%).\n\n- Mínimo: ' + GLM.fmt(r.min) + ' (' + r.minFecha + ')\n- Máximo: ' + GLM.fmt(r.max) + ' (' + r.maxFecha + ')\n- Media: ' + GLM.fmt(r.media) + '\n\n> Un día sin precio publicado no significa precio constante; el Ministerio puede no publicar ese día.';
+      var s = GLM.historico(top3[0], comb, dias), r = GLM.resumen(s);
+      return '**Histórico de ' + comb + ' (' + dias + ' días)**\n\nLa más barata de ahora (' + top3[0].marca + ', ' + top3[0].direccion + ') ha pasado de ' + GLM.fmt(s[0].p) + ' a **' + GLM.fmt(r.hoy) + ' €/L** en ' + dias + ' días (' + (r.pct >= 0 ? '+' : '') + r.pct + '%).\n\n- Mínimo: ' + GLM.fmt(r.min) + ' (' + r.minFecha + ')\n- Máximo: ' + GLM.fmt(r.max) + ' (' + r.maxFecha + ')\n- Media: ' + GLM.fmt(r.media) + '\n\n> Un día sin precio publicado no significa precio constante; el Ministerio puede no publicar ese día.';
     }
     if (/barat|mejor|óptim/.test(q)) {
       var filas = top3.map(function (e, i) {
@@ -388,7 +407,12 @@
     h = h.split(/\n{2,}/).map(function (p) { return /^<(ul|block)/.test(p.trim()) ? p : '<p>' + p + '</p>'; }).join('');
     return h;
   };
-  GLM.PROMPTS = ['¿Cuál es la más barata?', 'Histórico de 14 días', '¿Han subido los precios?', 'Ahorro llenando 50 L'];
+  /* Escapado para HTML/atributos (el esc interno solo cubre & y <) */
+  GLM.escHtml = function (s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  };
+  GLM.PROMPTS = ['¿Cuál es la más barata?', 'Histórico de 14 días', '¿Han subido los precios?', 'Ahorro llenando 50 L', ''];
 
   /* ---registros de ejemplo (Config) --------------------------------------- */
   GLM.logApi = [
@@ -529,6 +553,80 @@
     var hh = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ':' + ('0' + d.getSeconds()).slice(-2);
     GLM.logPush.unshift({ t: GLM.hoyCorto + ' ' + hh, s: 'showNotification: ' + titulo + (texto ? ' — ' + texto : '') });
     GLM.snack('🔔 ' + titulo + (texto ? ' — ' + texto : ''));
+  };
+
+  /* --- Persistencia real (paridad con la app) -------------------------------
+   * La app real guarda favoritas (IndexedDB), descuentos y prompts (config) y
+   * el historial de cada chat (localStorage, una clave por "proveedor").
+   * El mock lo simula con localStorage para que un F5 no pierda nada.
+   * ------------------------------------------------------------------------ */
+  GLM.FAV_LS = 'glm_fav';
+  GLM.DESC_LS = 'glm_desc';
+  GLM.PROMPTS_LS = 'glm_prompts';
+
+  GLM.favSet = function (id, on) {
+    try {
+      var f = JSON.parse(localStorage.getItem(GLM.FAV_LS) || '{}') || {};
+      if (on) f[id] = true; else delete f[id];
+      localStorage.setItem(GLM.FAV_LS, JSON.stringify(f));
+    } catch (err) {}
+  };
+  GLM.descGuarda = function () {
+    try { localStorage.setItem(GLM.DESC_LS, JSON.stringify(GLM.descuentos)); } catch (err) {}
+  };
+  GLM.promptsGuarda = function () {
+    try { localStorage.setItem(GLM.PROMPTS_LS, JSON.stringify(GLM.PROMPTS)); } catch (err) {}
+  };
+
+  try {
+    var _desc = JSON.parse(localStorage.getItem(GLM.DESC_LS) || 'null');
+    if (Array.isArray(_desc)) {
+      _desc.forEach(function (r) {
+        if (!r || !r.marca) return;
+        for (var i = 0; i < GLM.descuentos.length; i++) {
+          if (GLM.descuentos[i].marca === r.marca) {
+            GLM.descuentos[i].cent = Math.max(0, Math.min(30, +r.cent || 0)); break;
+          }
+        }
+      });
+    }
+    var _prom = JSON.parse(localStorage.getItem(GLM.PROMPTS_LS) || 'null');
+    if (Array.isArray(_prom) && _prom.length === GLM.PROMPTS.length) {
+      GLM.PROMPTS = _prom.map(function (x) { return typeof x === 'string' ? x : ''; });
+    }
+  } catch (err) {}
+
+  /* Historial de conversación persistente, como el chat real: una clave por
+   * prototipo ("proveedor"), máximo 100 mensajes, ✎ trunca desde el mensaje
+   * editado y 🗑 borra la clave entera. Los mensajes guardan el Markdown
+   * original (md) y la marca de agua (meta), nunca el HTML renderizado. */
+  GLM.chatKit = function (clave) {
+    var K = 'glm_chat_' + clave, msgs = [];
+    try {
+      var a = JSON.parse(localStorage.getItem(K) || '[]');
+      if (Array.isArray(a)) msgs = a.filter(function (m) { return m && (m.r === 'user' || m.r === 'assistant'); });
+    } catch (err) {}
+    var api = {
+      clave: K,
+      get: function () { return msgs.slice(); },
+      add: function (m) { msgs.push(m); api.guardar(); return msgs.length - 1; },
+      guardar: function () { try { localStorage.setItem(K, JSON.stringify(msgs.slice(-100))); } catch (err) {} },
+      trunca: function (i) { msgs = msgs.slice(0, i); api.guardar(); },
+      borrar: function () { msgs = []; try { localStorage.removeItem(K); } catch (err) {} }
+    };
+    return api;
+  };
+
+  /* Chips de prompts rápidos: solo los rellenos, rotulados ⚡N (N = hueco
+   * original en GLM.PROMPTS), con el texto completo en el title. */
+  GLM.chipsPrompts = function (clase) {
+    var out = [];
+    for (var i = 0; i < GLM.PROMPTS.length; i++) {
+      if (!GLM.PROMPTS[i]) continue;
+      out.push('<button type="button" class="' + (clase || 'chip') + '" data-pr="' + i + '" title="' +
+        GLM.escHtml(GLM.PROMPTS[i]) + '">⚡' + (i + 1) + '</button>');
+    }
+    return out.join('');
   };
 
   GLM.integrable = false;

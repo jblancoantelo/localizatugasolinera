@@ -172,12 +172,15 @@ body{font-family:'Segoe UI Variable Display',system-ui,'Segoe UI',Roboto,sans-se
     <div class="iaP">
       <div class="iaM" id="iaM"></div>
       <div id="iaProm" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px"></div>
-      <div class="iainx"><input id="iaQ" placeholder="Consulta precios, histórico, ahorro…"><button id="iaGo">➤</button></div>
+      <div class="iainx"><button id="iaBorra" title="Borrar conversación" style="border:none;background:none;cursor:pointer;font-size:1rem;opacity:.7;padding:0 6px">🗑️</button><input id="iaQ" placeholder="Consulta precios, histórico, ahorro…"><button id="iaGo">➤</button></div>
     </div>
   </section>
   <!-- AJUSTES -->
   <section class="pane" data-pane="ajus" style="overflow-y:auto">
     <div class="ajc" style="margin-top:14px"><h4>🏷️ Descuentos</h4><div id="ajDesc"></div></div>
+    <div class="ajc"><h4>⚡ Prompts rápidos</h4>
+      <p style="font-size:.74rem;color:var(--sub);margin:-2px 0 8px">Salen como chips ⚡N en el chat (solo los rellenos). Se guardan aunque cierres la app.</p>
+      <div id="ajPrompts"></div></div>
     <div class="ajc"><h4>🔔 Avisos de bajada</h4>
       <div class="swf"><span>Avisos push</span><div class="switch on" id="swPush"><i></i></div></div>
       <div class="swf"><span>Chequeo cada</span>
@@ -197,7 +200,7 @@ body{font-family:'Segoe UI Variable Display',system-ui,'Segoe UI',Roboto,sans-se
           <option value="15">15</option><option value="30" selected>30</option><option value="50">50</option><option value="9999">Todas</option>
         </select></div>
       <div class="swf"><span>Claves de IA</span><span class="vv">cargadas ✓</span></div>
-      <div class="swf" id="ajUpd"><span id="ajVer">Versión v44 · prototipo</span><span class="vv" style="color:var(--pri-osc)">Comprobar actualización</span></div>
+      <div class="swf" id="ajUpd"><span id="ajVer">Versión</span><span class="vv" style="color:var(--pri-osc)">Comprobar actualización</span></div>
     </div>
     <p style="text-align:center;font-size:.72rem;color:var(--sub);padding-bottom:20px">Prototipo v03 · Material 3</p>
   </section>
@@ -346,6 +349,8 @@ function go(n){
   var pane = n==='favos'?'lista':n;
   document.querySelectorAll('.pane').forEach(function(p){p.classList.toggle('act',p.dataset.pane===pane)});
   document.querySelectorAll('.navb button').forEach(function(b){b.classList.toggle('act',b.dataset.n===n)});
+  /* el FAB de cercanía solo tiene sentido en la lista: sobre la IA/ajustes tapaba el input */
+  document.getElementById('fabGeo').style.display = (n==='lista'||n==='favos') ? '' : 'none';
   render();
   if(n==='mapa') redMapa();
 }
@@ -382,6 +387,7 @@ function abreFicha(e){
 document.getElementById('hFav2').addEventListener('click',function(){
   if(!ST.sel) return;
   ST.favoritos[ST.sel]=!ST.favoritos[ST.sel];
+  GLM.favSet(ST.sel, ST.favoritos[ST.sel]);
   snack(ST.favoritos[ST.sel]?'⭐ Añadida a favoritas':'Quitada de favoritas');
   abreFicha(estacion(ST.sel));
   if(ST.vista==='favos') render(); else render();
@@ -486,26 +492,54 @@ document.getElementById('mLoc').addEventListener('click',function(){
 document.getElementById('mFil').addEventListener('click',abreFiltros);
 
 /* ---- IA ---- */
+var CHATK=GLM.chatKit('v03');
 var msgs=[];
-function IA(yo,t){msgs.push({y:yo,t:t});pintaIA()}
-function pintaIA(){
-  document.getElementById('iaM').innerHTML=msgs.map(function(m){return '<div class="msgg '+(m.y?'yo':'ia')+'">'+m.t+'</div>'}).join('');
-  var el=document.getElementById('iaM'); el.scrollTop=el.scrollHeight;
+function htmlMsg(m){
+  return (m.meta?'<div style="font-size:.64rem;opacity:.55;margin-bottom:5px">'+GLM.escHtml(m.meta)+'</div>':'')+GLM.md(m.md);
 }
-GLM.PROMPTS.forEach(function(p){
-  var b=document.createElement('button'); b.className='mchip'; b.textContent=p;
-  document.getElementById('iaProm').appendChild(b);
+function IA(yo,t,md,meta){
+  msgs.push({y:yo,t:t,md:md!=null?md:t,meta:meta||''});
+  CHATK.add({r:yo?'user':'assistant',md:md!=null?md:t,meta:meta||''});
+  pintaIA();
+}
+function pintaIA(){
+  var el=document.getElementById('iaM');
+  el.innerHTML=msgs.map(function(m,i){
+    var ed=m.y?' <button data-ed="'+i+'" title="Editar y reenviar" style="border:none;background:none;color:inherit;opacity:.55;cursor:pointer;font-size:.85rem;padding:0 3px">✎</button>':'';
+    return '<div class="msgg '+(m.y?'yo':'ia')+'">'+ed+m.t+'</div>';
+  }).join('');
+  el.scrollTop=el.scrollHeight;
+}
+document.getElementById('iaM').addEventListener('click',function(e){
+  var b=e.target.closest('[data-ed]'); if(!b) return;
+  var i=+b.getAttribute('data-ed');
+  document.getElementById('iaQ').value=msgs[i].md;
+  CHATK.trunca(i); msgs=msgs.slice(0,i); pintaIA();
+  document.getElementById('iaQ').focus();
 });
+function pintaPromptsIA(){
+  document.getElementById('iaProm').innerHTML=GLM.chipsPrompts('mchip');
+}
+pintaPromptsIA();
 document.getElementById('iaProm').addEventListener('click',function(e){
-  if(e.target.classList.contains('mchip')){document.getElementById('iaQ').value=e.target.textContent;document.getElementById('iaGo').click()}
+  var b=e.target.closest('[data-pr]'); if(!b) return;
+  document.getElementById('iaQ').value=GLM.PROMPTS[+b.getAttribute('data-pr')];
+  document.getElementById('iaGo').click();
 });
 document.getElementById('iaGo').addEventListener('click',function(){
   var v=document.getElementById('iaQ').value.trim(); if(!v) return;
-  document.getElementById('iaQ').value=''; IA(1,GLM.md(v));
+  document.getElementById('iaQ').value=''; IA(1,GLM.md(v),v,'');
   setTimeout(function(){
+    var meta='✨ IA · Mistral · 1,4 s';
     var resp=GLM.chatRespuesta(v,GLM.de(ST.prov),ST.comb);
-    IA(0,'<div style="font-size:.64rem;opacity:.55;margin-bottom:5px">✨ IA · Mistral · 1,4 s</div>'+GLM.md(resp));
+    IA(0,htmlMsg({md:resp,meta:meta}),resp,meta);
   },800);
+});
+document.getElementById('iaBorra').addEventListener('click',function(){
+  CHATK.borrar(); msgs=[];
+  var metaW='✨ IA · Mistral · 1,1 s';
+  var respW=GLM.chatRespuesta('',GLM.de('Madrid'),'Gasolina 95 E5');
+  IA(0,htmlMsg({md:respW,meta:metaW}),respW,metaW);
 });
 
 /* ---- ajustes ---- */
@@ -525,7 +559,20 @@ document.getElementById('ajDesc').addEventListener('input',function(e){
   var i=e.target.dataset&&e.target.dataset.d;
   if(i===undefined||i==='') return;
   GLM.descuentos[+i].cent=Math.max(0,+e.target.value||0);
+  GLM.descGuarda();
   render();
+});
+function pintaPromptsCfg(){
+  document.getElementById('ajPrompts').innerHTML=GLM.PROMPTS.map(function(p,i){
+    return '<div style="margin-bottom:6px"><span style="font-size:.7rem;color:var(--sub)">⚡'+(i+1)+'</span>'+
+      '<textarea data-pr="'+i+'" rows="2" placeholder="Vacío = sin chip" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--linea);border-radius:10px;background:var(--tarj);color:var(--tinta);font:inherit;resize:vertical">'+GLM.escHtml(p)+'</textarea></div>';
+  }).join('');
+}
+pintaPromptsCfg();
+document.getElementById('ajPrompts').addEventListener('input',function(e){
+  var i=e.target.getAttribute&&e.target.getAttribute('data-pr');
+  if(i===null||i===undefined) return;
+  GLM.PROMPTS[+i]=e.target.value; GLM.promptsGuarda(); pintaPromptsIA();
 });
 var selH=document.getElementById('ajHoras'), selD=document.getElementById('ajDias');
 selH.innerHTML=Array.apply(null,Array(24)).map(function(_,i){return '<option value="'+(i+1)+'"'+((i+1)===8?' selected':'')+'>'+(i+1)+' h</option>'}).join('');
@@ -553,7 +600,7 @@ document.getElementById('ajTam').addEventListener('change',function(){
   ST.tam=+this.value; ST.pag=1; render();
   snack('Resultados por página: '+(ST.tam>=9999?'todas':ST.tam));
 });
-document.getElementById('ajUpd').addEventListener('click',function(){snack('✅ Estás en la última versión (v44)')});
+document.getElementById('ajUpd').addEventListener('click',function(){snack('✅ Estás en la última versión ('+GLM.VERSION+')')});
 
 /* ---- cabecera ---- */
 document.getElementById('bPro').addEventListener('click',function(){
@@ -577,7 +624,16 @@ document.getElementById('qIn').addEventListener('input',function(){ST.q=this.val
 
 /* arranque */
 pintaChips(); render(); redMapa();
-IA(0,'<div style="font-size:.64rem;opacity:.55;margin-bottom:5px">✨ IA · Mistral · 1,1 s</div>'+GLM.md(GLM.chatRespuesta('',GLM.de('Madrid'),'Gasolina 95 E5')));
+document.getElementById('ajVer').textContent='Versión '+GLM.VERSION;
+var _hist=CHATK.get();
+if(_hist.length){
+  msgs=_hist.map(function(m){return {y:m.r==='user',t:htmlMsg(m),md:m.md,meta:m.meta||''};});
+  pintaIA();
+} else {
+  var metaW='✨ IA · Mistral · 1,1 s';
+  var respW=GLM.chatRespuesta('',GLM.de('Madrid'),'Gasolina 95 E5');
+  IA(0,htmlMsg({md:respW,meta:metaW}),respW,metaW);
+}
 window.PT_VALID='v03';
 /* asas para el validador/sondeo (mismo patrón que PT_VALID) */
 window.PT_PROBE={ ST:ST, abreFicha:abreFicha, render:render, redMapa:redMapa,

@@ -193,7 +193,7 @@ body{font-family:system-ui,'Segoe UI',Roboto,sans-serif;color:var(--tinta);overf
   <div class="iaC">
     <div class="iaM" id="iaM"></div>
     <div class="proP" id="proP"></div>
-    <div class="iaIn"><input id="iaQ" placeholder="Pregunta grande y clara…"><button id="iaG">➤</button></div>
+    <div class="iaIn"><button id="iaBorra" title="Borrar conversación" style="border:none;background:none;cursor:pointer;font-size:1.05rem;opacity:.7;padding:0 8px">🗑️</button><input id="iaQ" placeholder="Pregunta grande y clara…"><button id="iaG">➤</button></div>
   </div>
 </section>
 
@@ -210,6 +210,9 @@ body{font-family:system-ui,'Segoe UI',Roboto,sans-serif;color:var(--tinta);overf
       <div id="ajAlertas"></div>
     </div>
     <div class="ajC"><h4>🏷️ Descuentos guardados</h4><div id="AjD"></div></div>
+    <div class="ajC"><h4>⚡ Prompts rápidos</h4>
+      <p style="font-size:.74rem;color:var(--sub);margin:-2px 0 8px">Chips ⚡N del chat (solo los rellenos). Se guardan aunque cierres la app.</p>
+      <div id="AjP"></div></div>
     <div class="ajC"><h4>🧰 Datos</h4>
       <div class="fA"><span>Caché IndexedDB · caduca en</span>
         <span style="display:flex;align-items:center;gap:6px"><input id="ajTtl" type="number" min="1" max="72" value="12"
@@ -358,7 +361,7 @@ document.body.addEventListener('click',function(e){
   e.stopPropagation();
 });
 
-ST.favTog=function(id){ST.fav[id]=!ST.fav[id];snack(ST.fav[id]?'⭐ Guardada':'Quitada');pantallas();if(ST.sel===id)fAbre(id,true)};
+ST.favTog=function(id){ST.fav[id]=!ST.fav[id];GLM.favSet(id,ST.fav[id]);snack(ST.fav[id]?'⭐ Guardada':'Quitada');pantallas();if(ST.sel===id)fAbre(id,true)};
 
 function fAbre(id,noShow){
   ST.sel=id;
@@ -526,26 +529,56 @@ document.getElementById('fLimpiar').addEventListener('click',function(){
 });
 
 /* IA */
+var CHATK=GLM.chatKit('v05');
 var msgs=[];
-function ia(yo,t){msgs.push({y:yo,t:t});piA()}
-function piA(){
-  document.getElementById('iaM').innerHTML=msgs.map(function(m){return '<div class="mg '+(m.y?'yo':'ia')+'">'+m.t+'</div>'}).join('');
-  var el=document.getElementById('iaM');el.scrollTop=el.scrollHeight;
+function htmlMsg(m){
+  return (m.meta?'<div style="font-size:.66rem;color:var(--sub);margin-bottom:5px">'+GLM.escHtml(m.meta)+'</div>':'')+GLM.md(m.md);
 }
-GLM.PROMPTS.forEach(function(p){var b=document.createElement('button');b.className='chip';b.textContent=p;
-  document.getElementById('proP').appendChild(b)});
+function ia(yo,t,md,meta){
+  msgs.push({y:yo,t:t,md:md!=null?md:t,meta:meta||''});
+  CHATK.add({r:yo?'user':'assistant',md:md!=null?md:t,meta:meta||''});
+  piA();
+}
+function piA(){
+  var el=document.getElementById('iaM');
+  el.innerHTML=msgs.map(function(m,i){
+    var ed=m.y?' <button data-ed="'+i+'" title="Editar y reenviar" style="border:none;background:none;color:inherit;opacity:.55;cursor:pointer;font-size:.85rem;padding:0 3px">✎</button>':'';
+    return '<div class="mg '+(m.y?'yo':'ia')+'">'+ed+m.t+'</div>';
+  }).join('');
+  el.scrollTop=el.scrollHeight;
+}
+document.getElementById('iaM').addEventListener('click',function(e){
+  var b=e.target.closest('[data-ed]'); if(!b) return;
+  var i=+b.getAttribute('data-ed');
+  document.getElementById('iaQ').value=msgs[i].md;
+  CHATK.trunca(i); msgs=msgs.slice(0,i); piA();
+  document.getElementById('iaQ').focus();
+});
+function pintaChips(){
+  document.getElementById('proP').innerHTML=GLM.chipsPrompts('chip');
+}
+pintaChips();
 document.getElementById('proP').addEventListener('click',function(e){
-  if(e.target.classList.contains('chip')){document.getElementById('iaQ').value=e.target.textContent;document.getElementById('iaG').click()}
+  var b=e.target.closest('[data-pr]'); if(!b) return;
+  document.getElementById('iaQ').value=GLM.PROMPTS[+b.getAttribute('data-pr')];
+  document.getElementById('iaG').click();
 });
 document.getElementById('iaG').addEventListener('click',function(){
   var v=document.getElementById('iaQ').value.trim();if(!v)return;
-  document.getElementById('iaQ').value='';ia(1,GLM.md(v));
+  document.getElementById('iaQ').value='';ia(1,GLM.md(v),v,'');
   setTimeout(function(){
+    var meta='✨ IA · LLM7 · 1,2 s';
     var resp=GLM.chatRespuesta(v,filtradas(),ST.comb);
-    ia(0,'<div style="font-size:.66rem;color:var(--sub);margin-bottom:5px">✨ IA · LLM7 · 1,2 s</div>'+GLM.md(resp));
+    ia(0,htmlMsg({md:resp,meta:meta}),resp,meta);
   },800);
 });
 document.getElementById('iaQ').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('iaG').click()});
+document.getElementById('iaBorra').addEventListener('click',function(){
+  CHATK.borrar(); msgs=[];
+  var metaW='✨ IA · LLM7 · 1,1 s';
+  var respW=GLM.chatRespuesta('',filtradas(),ST.comb);
+  ia(0,htmlMsg({md:respW,meta:metaW}),respW,metaW);
+});
 
 /* ajustes */
 function pintaDesc(){
@@ -560,7 +593,20 @@ document.getElementById('AjD').addEventListener('input',function(e){
   var i=e.target.dataset&&e.target.dataset.d;
   if(i===undefined||i==='')return;
   GLM.descuentos[+i].cent=Math.max(0,+e.target.value||0);
+  GLM.descGuarda();
   pantallas();
+});
+function pintaPromptsCfg(){
+  document.getElementById('AjP').innerHTML=GLM.PROMPTS.map(function(p,i){
+    return '<div style="margin-bottom:6px"><span style="font-size:.7rem;color:var(--sub)">⚡'+(i+1)+'</span>'+
+      '<textarea data-pr="'+i+'" rows="2" placeholder="Vacío = sin chip" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--linea);border-radius:10px;background:var(--panel2);color:var(--tinta);font:inherit;resize:vertical">'+GLM.escHtml(p)+'</textarea></div>';
+  }).join('');
+}
+pintaPromptsCfg();
+document.getElementById('AjP').addEventListener('input',function(e){
+  var i=e.target.getAttribute&&e.target.getAttribute('data-pr');
+  if(i===null||i===undefined) return;
+  GLM.PROMPTS[+i]=e.target.value; GLM.promptsGuarda(); pintaChips();
 });
 function horaAhora(){
   var d=new Date();
@@ -622,7 +668,15 @@ pLog('api');
 
 /* arranque */
 pChips();go('lista');
-ia(0,'<div style="font-size:.66rem;color:var(--sub);margin-bottom:5px">✨ IA · LLM7 · 1,1 s</div>'+GLM.md(GLM.chatRespuesta('',filtradas(),ST.comb)));
+var _hist=CHATK.get();
+if(_hist.length){
+  msgs=_hist.map(function(m){return {y:m.r==='user',t:htmlMsg(m),md:m.md,meta:m.meta||''};});
+  piA();
+} else {
+  var metaW='✨ IA · LLM7 · 1,1 s';
+  var respW=GLM.chatRespuesta('',filtradas(),ST.comb);
+  ia(0,htmlMsg({md:respW,meta:metaW}),respW,metaW);
+}
 window.PT_VALID='v05';
 /* asas para el validador/sondeo (mismo patrón que PT_VALID) */
 window.PT_PROBE={ST:ST,abreFicha:fAbre,render:pantallas,cierra:fCierra};

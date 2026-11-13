@@ -234,6 +234,7 @@ body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background
       <div class="iam" id="iam"></div>
       <div class="prompts" id="prompts"></div>
       <div class="iain">
+        <button id="iaBorra" title="Borrar conversación" style="border:none;background:none;cursor:pointer;font-size:1rem;opacity:.7;padding:0 6px">🗑️</button>
         <input id="iaQ" placeholder="Pregunta de precios, histórico, ahorro…">
         <button id="iaEnv">➤</button>
       </div>
@@ -278,6 +279,11 @@ body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background
         <button data-log="push" type="button">Push</button>
       </div>
       <div id="logBody" style="padding:8px 14px 14px"></div>
+    </div>
+    <div class="sat">
+      <h4>⚡ Prompts rápidos</h4>
+      <p>Chips ⚡N de la vista IA (solo los rellenos). Se guardan aunque cierres la app.</p>
+      <div id="cfgPrompts" style="padding:8px 14px 14px;display:flex;flex-direction:column;gap:6px"></div>
     </div>
     <div class="sat">
       <h4>✨ Claves de IA y versión</h4>
@@ -468,6 +474,7 @@ document.body.addEventListener('click', function(e){
 });
 function toggle(id){
   ST.favoritos[id] = !ST.favoritos[id];
+  GLM.favSet(id, ST.favoritos[id]);
   repinta(); if(ST.vist==='favos') renderFavs();
   if(ST.sel===id) abre(estacion(id), true);
   GLM.snack(ST.favoritos[id]?'⭐ Añadida a favoritas':'Quitada de favoritas');
@@ -663,29 +670,53 @@ function mensagemMedia(fs){
 }
 
 /* ----- IA fake ----- */
+var CHATK=GLM.chatKit('v01');
 var msgsIA=[];
+function htmlMsg(m){
+  return '<div>'+((m.meta)?'<div style="font-size:.66rem;color:#8a97a4;margin:2px 0 6px">'+GLM.escHtml(m.meta)+'</div>':'')+GLM.md(m.md)+'</div>';
+}
+function IApush(yo,md,meta){
+  msgsIA.push({yo:yo,t:yo?md:htmlMsg({md:md,meta:meta}),md:md,meta:meta||''});
+  CHATK.add({r:yo?'user':'assistant',md:md,meta:meta||''});
+  renderIA();
+}
 function renderIA(){
   var el=document.getElementById('iam');
-  el.innerHTML=msgsIA.map(function(m){return '<div class="msg '+(m.yo?'user':'ia')+'">'+(m.yo?GLM.md(m.t):m.t)+'</div>'+(!m.yo?'':'')}).join('');
+  el.innerHTML=msgsIA.map(function(m,i){
+    var ed=m.yo?' <button data-ed="'+i+'" title="Editar y reenviar" style="border:none;background:none;color:inherit;opacity:.55;cursor:pointer;font-size:.85rem;padding:0 3px">✎</button>':'';
+    return '<div class="msg '+(m.yo?'user':'ia')+'">'+ed+(m.yo?GLM.md(m.t):m.t)+'</div>';
+  }).join('');
   el.scrollTop=el.scrollHeight;
 }
-document.getElementById('prompts').innerHTML=GLM.PROMPTS.map(function(p){return '<button class="chip">'+p+'</button>'}).join('');
+document.getElementById('iam').addEventListener('click',function(e){
+  var b=e.target.closest('[data-ed]'); if(!b) return;
+  var i=+b.getAttribute('data-ed');
+  document.getElementById('iaQ').value=msgsIA[i].md;
+  CHATK.trunca(i); msgsIA=msgsIA.slice(0,i); renderIA();
+  document.getElementById('iaQ').focus();
+});
+function pintaChips(){ document.getElementById('prompts').innerHTML=GLM.chipsPrompts('chip'); }
+pintaChips();
 document.getElementById('prompts').addEventListener('click',function(e){
-  if(e.target.classList.contains('chip')){ document.getElementById('iaQ').value=e.target.textContent; document.getElementById('iaEnv').click(); }
+  var b=e.target.closest('[data-pr]'); if(!b) return;
+  document.getElementById('iaQ').value=GLM.PROMPTS[+b.getAttribute('data-pr')];
+  document.getElementById('iaEnv').click();
 });
 function enviaIA(){
   var inp=document.getElementById('iaQ'); var t=inp.value.trim(); if(!t)return;
-  inp.value=''; msgsIA.push({yo:1,t:t});
-  renderIA();
+  inp.value=''; IApush(1,t,'');
   setTimeout(function(){
     var lista=GLM.de(ST.prov).filter(function(e){return e.precios[ST.comb]!=null});
     var resp=GLM.chatRespuesta(t,lista,ST.comb);
-    resp='<div><div style="font-size:.66rem;color:#8a97a4;margin:2px 0 6px">✨ IA · Groq · 1,2 s</div>'+GLM.md(resp)+'</div>';
-    msgsIA.push({yo:0,t:resp}); renderIA();
+    IApush(0,resp,'✨ IA · Groq · 1,2 s');
   },700);
 }
 document.getElementById('iaEnv').addEventListener('click',enviaIA);
 document.getElementById('iaQ').addEventListener('keydown',function(e){if(e.key==='Enter')enviaIA();});
+document.getElementById('iaBorra').addEventListener('click',function(){
+  CHATK.borrar(); msgsIA=[];
+  IApush(0,GLM.chatRespuesta('',GLM.de('Madrid'),'Gasolina 95 E5'),'✨ IA · Groq · 0,9 s');
+});
 
 /* ----- ajustes ----- */
 function hhDia(d){
@@ -702,7 +733,20 @@ document.getElementById('descList').addEventListener('input', function(e){
   var i = e.target.dataset ? e.target.dataset.d : null;
   if(i===undefined || i===null) return;
   GLM.descuentos[+i].cent = Math.max(0, +e.target.value || 0);
+  GLM.descGuarda();
   repinta(); if(ST.vist==='favos') renderFavs();
+});
+function pintaPromptsCfg(){
+  document.getElementById('cfgPrompts').innerHTML=GLM.PROMPTS.map(function(p,i){
+    return '<div><span style="font-size:.72rem;color:var(--sub)">⚡'+(i+1)+'</span>'+
+      '<textarea data-pr="'+i+'" rows="2" placeholder="Vacío = sin chip" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--linea);border-radius:8px;font:inherit;resize:vertical">'+GLM.escHtml(p)+'</textarea></div>';
+  }).join('');
+}
+pintaPromptsCfg();
+document.getElementById('cfgPrompts').addEventListener('input',function(e){
+  var i=e.target.getAttribute&&e.target.getAttribute('data-pr');
+  if(i===null||i===undefined) return;
+  GLM.PROMPTS[+i]=e.target.value; GLM.promptsGuarda(); pintaChips();
 });
 var selH=document.getElementById('pshHoras'), selD=document.getElementById('pshDias');
 selH.innerHTML = Array.apply(null, Array(24)).map(function(_,i){ return '<option value="'+(i+1)+'"'+((i+1)===8?' selected':'')+'>'+(i+1)+' h</option>'; }).join('');
@@ -729,7 +773,7 @@ document.getElementById('cfgTam').addEventListener('change', function(){
   ST.tam = +this.value; ST.pag = 1; repinta();
   GLM.snack('Resultados por página: '+(ST.tam>=9999?'todas':ST.tam));
 });
-document.getElementById('cfgUpd').addEventListener('click', function(){ GLM.snack('✅ Estás en la última versión (v44)'); });
+document.getElementById('cfgUpd').addEventListener('click', function(){ GLM.snack('✅ Estás en la última versión ('+GLM.VERSION+')'); });
 
 var logTab='api';
 function pintaLog(tab){
@@ -768,9 +812,14 @@ document.getElementById('busBtn').addEventListener('click',function(){
 document.getElementById('busX').addEventListener('click',function(){document.getElementById('busBtn').click()});
 document.getElementById('q').addEventListener('input',function(){ST.q=this.value;ST.pag=1;repinta();});
 
-renderIA();
-msgsIA.push({yo:0,t:'<div><div style="font-size:.66rem;color:#8a97a4;margin:2px 0 6px">✨ IA · Groq · 0,9 s</div>'+GLM.md(GLM.chatRespuesta('',GLM.de('Madrid'),'Gasolina 95 E5'))+'</div>'});
-renderIA();
+document.getElementById('cfgVer').textContent='Versión '+GLM.VERSION;
+var _hist=CHATK.get();
+if(_hist.length){
+  msgsIA=_hist.map(function(m){return {yo:m.r==='user',t:m.r==='user'?m.md:htmlMsg(m),md:m.md,meta:m.meta||''};});
+  renderIA();
+} else {
+  IApush(0,GLM.chatRespuesta('',GLM.de('Madrid'),'Gasolina 95 E5'),'✨ IA · Groq · 0,9 s');
+}
 document.getElementById('zonaLeyenda').innerHTML = GLM.leyenda(false);
 chipsComb();
 chipsOrden();

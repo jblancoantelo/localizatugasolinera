@@ -170,7 +170,7 @@ button{font-family:inherit}
   <div class="iaW">
     <div class="iaM" id="iaM"></div>
     <div id="proP" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:10px"></div>
-    <div class="iaF"><input id="iaQ" placeholder="Escribe tu pregunta…"><button id="iaG">ENVIAR</button></div>
+    <div class="iaF"><button id="iaBorra" title="Borrar conversación" style="border:var(--borde);background:#fff;border-radius:12px;padding:0 12px;cursor:pointer;font-size:1rem">🗑️</button><input id="iaQ" placeholder="Escribe tu pregunta…"><button id="iaG">ENVIAR</button></div>
   </div>
 </section>
 <section class="ov" id="v-ajs">
@@ -178,6 +178,9 @@ button{font-family:inherit}
     <h2>Ajustes</h2>
     <p>Lo mismo que la app actual, con saltos visuales claros.</p>
     <div class="ajZ"><h4>🏷️ Descuentos por marca</h4><div id="ajD"></div></div>
+    <div class="ajZ"><h4>⚡ Prompts rápidos</h4>
+      <p style="font-size:.74rem;color:var(--sub);margin:-2px 0 8px">Chips ⚡N del chat (solo los rellenos). Se guardan aunque cierres la app.</p>
+      <div id="ajP"></div></div>
     <div class="ajZ"><h4>🔔 Avisos de bajada</h4>
       <div class="fZ"><span>Avisos push</span><button id="ajSwp" class="btZ act" type="button">Sí</button></div>
       <div class="fZ"><span>Chequeo cada</span><select id="ajHoras" style="border:var(--borde);border-radius:10px;padding:8px;font-weight:700;background:#fff"></select></div>
@@ -342,7 +345,7 @@ document.getElementById('v-lista').addEventListener('click',function(e){
 document.body.addEventListener('click',function(e){
   var f=e.target.closest('[data-fav]');if(!f||!f.dataset.fav)return;ST.favTog(f.dataset.fav);e.stopPropagation();
 });
-ST.favTog=function(id){ST.fav[id]=!ST.fav[id];snack(ST.fav[id]?'⭐ Guardada':'Quitada');pantallas();if(ST.sel===id)abre(id,true)};
+ST.favTog=function(id){ST.fav[id]=!ST.fav[id];GLM.favSet(id,ST.fav[id]);snack(ST.fav[id]?'⭐ Guardada':'Quitada');pantallas();if(ST.sel===id)abre(id,true)};
 
 /* mapa */
 var mm=null,ESTILOS=[['dia','Calles'],['sat','Satélite']],iEst=0;
@@ -471,26 +474,58 @@ document.querySelectorAll('.tabs button').forEach(function(b){
 });
 
 /* IA */
+var CHATK=GLM.chatKit('v06');
 var msgs=[];
-function ia(y,t){msgs.push({y:y,t:t});piA()}
-function piA(){document.getElementById('iaM').innerHTML=msgs.map(function(m){return '<div class="ms '+(m.y?'yo':'')+'">'+m.t+'</div>'}).join('');
-  var el=document.getElementById('iaM');el.scrollTop=el.scrollHeight}
-GLM.PROMPTS.forEach(function(p){var b=document.createElement('button');b.className='chip';b.textContent=p.toUpperCase();b.dataset.p=p;
-  document.getElementById('proP').appendChild(b)});
+function htmlMsg(m){
+  return (m.meta?'<div style="font-size:.7rem;color:var(--sub);font-weight:800;margin-bottom:5px">'+GLM.escHtml(m.meta)+'</div>':'')+GLM.md(m.md);
+}
+function ia(y,t,md,meta){
+  msgs.push({y:y,t:t,md:md!=null?md:t,meta:meta||''});
+  CHATK.add({r:y?'user':'assistant',md:md!=null?md:t,meta:meta||''});
+  piA();
+}
+function piA(){
+  var el=document.getElementById('iaM');
+  el.innerHTML=msgs.map(function(m,i){
+    var ed=m.y?' <button data-ed="'+i+'" title="Editar y reenviar" style="border:none;background:none;color:inherit;opacity:.55;cursor:pointer;font-size:.85rem;padding:0 3px">✎</button>':'';
+    return '<div class="ms '+(m.y?'yo':'')+'">'+ed+m.t+'</div>';
+  }).join('');
+  el.scrollTop=el.scrollHeight;
+}
+document.getElementById('iaM').addEventListener('click',function(e){
+  var b=e.target.closest('[data-ed]'); if(!b) return;
+  var i=+b.getAttribute('data-ed');
+  document.getElementById('iaQ').value=msgs[i].md;
+  CHATK.trunca(i); msgs=msgs.slice(0,i); piA();
+  document.getElementById('iaQ').focus();
+});
+function pintaChips(){
+  document.getElementById('proP').innerHTML=GLM.chipsPrompts('chip');
+}
+pintaChips();
 document.getElementById('proP').addEventListener('click',function(e){
-  if(e.target.classList.contains('chip')){document.getElementById('iaQ').value=e.target.dataset.p;document.getElementById('iaG').click()}
+  var b=e.target.closest('[data-pr]'); if(!b) return;
+  document.getElementById('iaQ').value=GLM.PROMPTS[+b.getAttribute('data-pr')];
+  document.getElementById('iaG').click();
 });
 document.getElementById('iaG').addEventListener('click',function(){
   var v=document.getElementById('iaQ').value.trim();if(!v)return;
-  document.getElementById('iaQ').value='';ia(1,GLM.md(v));
+  document.getElementById('iaQ').value='';ia(1,GLM.md(v),v,'');
   setTimeout(function(){
+    var meta='✨ IA · GROQ · 1,1 S';
     var rp=GLM.chatRespuesta(v,filtradas(),ST.comb);
-    ia(0,'<div style="font-size:.7rem;color:var(--sub);font-weight:800;margin-bottom:5px">✨ IA · GROQ · 1,1 S</div>'+GLM.md(rp));
+    ia(0,htmlMsg({md:rp,meta:meta}),rp,meta);
   },800);
 });
 
 /* IA: Enter también envía (como la app real) */
 document.getElementById('iaQ').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('iaG').click()});
+document.getElementById('iaBorra').addEventListener('click',function(){
+  CHATK.borrar(); msgs=[];
+  var metaW='✨ IA · GROQ · 0,9 S';
+  var respW=GLM.chatRespuesta('',filtradas(),ST.comb);
+  ia(0,htmlMsg({md:respW,meta:metaW}),respW,metaW);
+});
 
 /* ajustes */
 function pintaDesc(){
@@ -505,7 +540,20 @@ document.getElementById('ajD').addEventListener('input',function(e){
   var i=e.target.dataset&&e.target.dataset.d;
   if(i===undefined||i==='')return;
   GLM.descuentos[+i].cent=Math.max(0,+e.target.value||0);
+  GLM.descGuarda();
   pantallas();
+});
+function pintaPromptsCfg(){
+  document.getElementById('ajP').innerHTML=GLM.PROMPTS.map(function(p,i){
+    return '<div style="margin-bottom:6px"><span style="font-size:.7rem;color:var(--sub)">⚡'+(i+1)+'</span>'+
+      '<textarea data-pr="'+i+'" rows="2" placeholder="Vacío = sin chip" style="width:100%;box-sizing:border-box;padding:8px;border:var(--borde);border-radius:10px;background:#fff;font:inherit;resize:vertical">'+GLM.escHtml(p)+'</textarea></div>';
+  }).join('');
+}
+pintaPromptsCfg();
+document.getElementById('ajP').addEventListener('input',function(e){
+  var i=e.target.getAttribute&&e.target.getAttribute('data-pr');
+  if(i===null||i===undefined) return;
+  GLM.PROMPTS[+i]=e.target.value; GLM.promptsGuarda(); pintaChips();
 });
 function horaAhora(){
   var d=new Date();
@@ -568,7 +616,15 @@ pLog('api');
 
 /* arranque */
 pChips();pantallas();
-ia(0,'<div style="font-size:.7rem;color:var(--sub);font-weight:800;margin-bottom:5px">✨ IA · GROQ · 0,9 S</div>'+GLM.md(GLM.chatRespuesta('',filtradas(),ST.comb)));
+var _hist=CHATK.get();
+if(_hist.length){
+  msgs=_hist.map(function(m){return {y:m.r==='user',t:htmlMsg(m),md:m.md,meta:m.meta||''};});
+  piA();
+} else {
+  var metaW='✨ IA · GROQ · 0,9 S';
+  var respW=GLM.chatRespuesta('',filtradas(),ST.comb);
+  ia(0,htmlMsg({md:respW,meta:metaW}),respW,metaW);
+}
 window.PT_VALID='v06';
 /* asas para el validador/sondeo (mismo patrón que PT_VALID) */
 window.PT_PROBE={ST:ST,abreFicha:abre,render:pantallas,cierra:function(){fich.classList.remove('vis');velo.classList.remove('vis');ST.sel=null;pantallas()}};

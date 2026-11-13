@@ -136,7 +136,9 @@ sentido fuera del móvil).
 3. ¿El texto sigue siendo grande? (el PC invita a comprimir: tipografía mini)
 
 **En todos:** rango de histórico, guardar/quitar favorita, cargar descuentos en Config,
-aviso push de prueba y pregunta a la IA citando una estación concreta.
+aviso push de prueba y pregunta a la IA citando una estación concreta. Y todo eso
+aguantando un F5: favoritas, descuentos, prompts rápidos y conversación del chat
+vuelven solas al recargar (persistencia simulada en `localStorage`).
 
 ## Recomendación y plan de integración
 
@@ -173,7 +175,11 @@ En `_capturas/` queda la evidencia antes/después.
   favs,desc,ord,dir,comb})` (orden cerca/precio con nulos al final), `GLM.paginar` /
   `GLM.pager`, `GLM.leyenda`, `GLM.csv`, `GLM.avisoPush` y el estilo `'sat'` en
   `miniMapa`. Los prototipos redirigen `GLM.snack` a su snack local y exponen
-  `window.PT_PROBE` (asidero del sondeo interactivo).
+  `window.PT_PROBE` (asidero del sondeo interactivo). La 5ª pasada añade el kit de
+  persistencia simulada sobre `localStorage`: `GLM.favSet` (favoritas), `GLM.descGuarda`
+  (descuentos), `GLM.promptsGuarda` (prompts), `GLM.chatKit(clave)` (chat con máximo
+  100 mensajes, una clave por prototipo), `GLM.chipsPrompts(clase)` (chips ⚡N solo con
+  los huecos rellenos, texto completo en el `title`) y `GLM.escHtml`.
 - **_validar.mjs**: los 9 (galería + 8) en Chromium headless, móvil 390×844 y PC 1440×900,
   comprueba 0 errores de consola/pageerror, `window.PT_VALID` y hace 1 clic de navegación
   antes de capturar. `node prototipos_opencode_glm5.3flash/_validar.mjs` desde la raíz. Las capturas van a `_capturas/`.
@@ -193,4 +199,14 @@ histórico provincial de v08 con media sobre series con huecos; botones del mapa
 tapados por la cabecera fija (`.mt`); barra de v05 desbordada a 390 px y input de IA
 bajo las pestañas; mapa recreado en cada repintado (v05/v08, ahora instancia única);
 fichas completas con 7 rangos, sort dual y paneles de Ajustes reales en v07/v08
-(descuentos editables, push de prueba, caché, logs API/Push, versión).
+(descuentos editables, push de prueba, caché, logs API/Push, versión) ·
+**5ª** paridad con la app real: chat IA con historial persistente por prototipo
+(`localStorage`, máx. 100 mensajes), botón ✎ en cada mensaje propio (devuelve el
+texto al input y trunca la conversación desde ahí) y 🗑 para borrarla entera
+(regenera el saludo y lo guarda para el F5); prompts rápidos editables desde
+Ajustes/Config de los 8 (los chips ⚡N del chat solo salen si el hueco tiene
+texto); favoritas y descuentos que sobreviven a la recarga; v04 estrena editor
+de descuentos en su sidebar; el histórico de la IA respeta rangos explícitos
+(«60 días», «6 semanas», «3 meses», «1 año»). Sondeo ampliado a **156 pruebas
+(v01 18, v02 18, v03 17, v04 17 a PC, v05 23, v06 22, v07 18, v08 23), todas en
+verde y 0 errores JS**.

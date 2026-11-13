@@ -251,6 +251,7 @@ button{font-family:inherit}
           <div style="flex:1;overflow-y:auto" id="iaM"></div>
           <div id="proP2" style="display:flex;gap:7px;overflow-x:auto;padding:9px 0"></div>
           <div style="display:flex;gap:8px;padding-bottom:calc(12px + env(safe-area-inset-bottom))">
+            <button id="iaBorra" title="Borrar conversación" style="border:1px solid var(--linea);background:#fff;border-radius:14px;padding:0 14px;font-size:1rem;cursor:pointer">🗑️</button>
             <input id="iaQ2" placeholder="¿Cuál me conviene hoy?" style="flex:1;border:1px solid var(--linea);border-radius:14px;padding:12px 14px;font-size:.95rem;background:#fff">
             <button id="iaG2" style="border:none;background:var(--pri);color:#fff;border-radius:14px;padding:0 17px;font-weight:800;cursor:pointer">➤</button>
           </div>
@@ -264,6 +265,10 @@ button{font-family:inherit}
         <div class="corp">
           <div class="ajm"><h4>🏷️ Descuentos por marca</h4><div id="ajD2"></div>
             <div class="afl" data-sub="desc"><span class="vy" style="width:100%;justify-content:flex-start;color:#1f6f4a;font-weight:700">Editar descuentos →</span></div>
+          </div>
+          <div class="ajm"><h4>⚡ Prompts rápidos</h4>
+            <p style="font-size:.74rem;color:var(--sub);margin:2px 0 6px">Chips ⚡N del asistente (solo los rellenos). Se guardan al recargar.</p>
+            <div id="ajP2"></div>
           </div>
           <div class="ajm"><h4>🔔 Notificaciones push</h4>
             <div class="afl"><span>Avisos de bajada</span><div class="swx on" id="swx2"><i></i></div></div>
@@ -589,7 +594,7 @@ function estPorId(id){
 }
 ST.favTog=function(id){
   if(!id)return;
-  ST.fav[id]=!ST.fav[id];snack(ST.fav[id]?'⭐ Guardada':'Quitada');
+  ST.fav[id]=!ST.fav[id];GLM.favSet(id,ST.fav[id]);snack(ST.fav[id]?'⭐ Guardada':'Quitada');
   var z=document.getElementById('favZ');
   z.textContent=ST.fav[id]?'★':'☆';
   if(ST.sel){var pan=document.getElementById('panFicha');
@@ -699,6 +704,7 @@ document.getElementById('bodSub').addEventListener('input',function(e){
   var i=e.target.dataset&&e.target.dataset.d;
   if(i===undefined||i==='')return;
   GLM.descuentos[+i].cent=Math.max(0,+e.target.value||0);
+  GLM.descGuarda();
   pHome();corpoLst();
 });
 document.getElementById('bodSub').addEventListener('click',function(e){
@@ -706,27 +712,69 @@ document.getElementById('bodSub').addEventListener('click',function(e){
 });
 
 /* ---------- IA ---------- */
+var CHATK=GLM.chatKit('v08');
 var msgs2=[];
-GLM.PROMPTS.forEach(function(p){var b=document.createElement('button');b.className='ch2';b.textContent=p;
-  document.getElementById('proP2').appendChild(b)});
-document.getElementById('proP2').addEventListener('click',function(e){
-  if(e.target.classList.contains('ch2')){document.getElementById('iaQ2').value=e.target.textContent;document.getElementById('iaG2').click()}
-});
-function ia2(y,t){msgs2.push({y:y,t:t});pi2()}
-function pi2(){
-  document.getElementById('iaM').innerHTML=msgs2.map(function(m){return '<div style="max-width:88%;padding:11px 13px;border-radius:16px;margin:0 0 9px;'+(m.y?
-    'background:var(--pri);color:#fff;margin-left:auto':'background:#fff;border:1px solid var(--linea)')+'">'+m.t+'</div>'}).join('');
-  var el=document.getElementById('iaM');el.scrollTop=el.scrollHeight;
+function htmlMsg(m){
+  return (m.meta?'<div style="font-size:.66rem;color:var(--sub);margin-bottom:5px">'+GLM.escHtml(m.meta)+'</div>':'')+GLM.md(m.md);
 }
+function pintaChips(){
+  document.getElementById('proP2').innerHTML=GLM.chipsPrompts('ch2');
+}
+pintaChips();
+document.getElementById('proP2').addEventListener('click',function(e){
+  var b=e.target.closest('[data-pr]'); if(!b) return;
+  document.getElementById('iaQ2').value=GLM.PROMPTS[+b.getAttribute('data-pr')];
+  document.getElementById('iaG2').click();
+});
+function ia2(y,t,md,meta){
+  msgs2.push({y:y,t:t,md:md!=null?md:t,meta:meta||''});
+  CHATK.add({r:y?'user':'assistant',md:md!=null?md:t,meta:meta||''});
+  pi2();
+}
+function pi2(){
+  var el=document.getElementById('iaM');
+  el.innerHTML=msgs2.map(function(m,i){
+    var ed=m.y?' <button data-ed="'+i+'" title="Editar y reenviar" style="border:none;background:none;color:inherit;opacity:.55;cursor:pointer;font-size:.85rem;padding:0 3px">✎</button>':'';
+    return '<div style="max-width:88%;padding:11px 13px;border-radius:16px;margin:0 0 9px;'+(m.y?
+      'background:var(--pri);color:#fff;margin-left:auto':'background:#fff;border:1px solid var(--linea)')+'">'+ed+m.t+'</div>';
+  }).join('');
+  el.scrollTop=el.scrollHeight;
+}
+document.getElementById('iaM').addEventListener('click',function(e){
+  var b=e.target.closest('[data-ed]'); if(!b) return;
+  var i=+b.getAttribute('data-ed');
+  document.getElementById('iaQ2').value=msgs2[i].md;
+  CHATK.trunca(i); msgs2=msgs2.slice(0,i); pi2();
+  document.getElementById('iaQ2').focus();
+});
 document.getElementById('iaG2').addEventListener('click',function(){
   var v=document.getElementById('iaQ2').value.trim();if(!v)return;
-  document.getElementById('iaQ2').value='';ia2(1,GLM.md(v));
+  document.getElementById('iaQ2').value='';ia2(1,GLM.md(v),v,'');
   setTimeout(function(){
+    var meta='✨ IA · Groq · 1,1 s';
     var resp=GLM.chatRespuesta(v,listaOrd(),ST.comb);
-    ia2(0,'<div style="font-size:.66rem;color:var(--sub);margin-bottom:5px">✨ IA · Groq · 1,1 s</div>'+GLM.md(resp));
+    ia2(0,htmlMsg({md:resp,meta:meta}),resp,meta);
   },750);
 });
 document.getElementById('iaQ2').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('iaG2').click()});
+document.getElementById('iaBorra').addEventListener('click',function(){
+  CHATK.borrar(); msgs2=[];
+  var metaW='✨ IA · Groq · 0,9 s';
+  var respW=GLM.chatRespuesta('',listaOrd(),ST.comb);
+  ia2(0,htmlMsg({md:respW,meta:metaW}),respW,metaW);
+});
+function pintaPromptsCfg(){
+  document.getElementById('ajP2').innerHTML=GLM.PROMPTS.map(function(p,i){
+    return '<div style="margin-bottom:6px"><span style="font-size:.7rem;color:var(--sub)">⚡'+(i+1)+'</span>'+
+      '<textarea data-pr="'+i+'" rows="2" placeholder="Vacío = sin chip" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--linea);border-radius:10px;background:#fff;font:inherit;resize:vertical">'+GLM.escHtml(p)+'</textarea></div>';
+  }).join('');
+}
+pintaPromptsCfg();
+document.getElementById('ajP2').addEventListener('input',function(e){
+  var i=e.target.getAttribute&&e.target.getAttribute('data-pr');
+  if(i===null||i===undefined) return;
+  GLM.PROMPTS[+i]=e.target.value; GLM.promptsGuarda(); pintaChips();
+});
 GLM.snack=snack;   // helpers del mock (avisoPush…) usan el mismo snack
 
 /* ---------- ajustes y otros ---------- */
@@ -753,7 +801,15 @@ document.getElementById('btnProv').addEventListener('click',function(){
 /* arranque */
 pHome();pLst();corpoLst();
 irRaiz('home');
-ia2(0,'<div style="font-size:.66rem;color:var(--sub);margin-bottom:5px">✨ IA · Groq · 0,9 s</div>'+GLM.md(GLM.chatRespuesta('',listaOrd(),ST.comb)));
+var _hist=CHATK.get();
+if(_hist.length){
+  msgs2=_hist.map(function(m){return {y:m.r==='user',t:htmlMsg(m),md:m.md,meta:m.meta||''};});
+  pi2();
+} else {
+  var metaW='✨ IA · Groq · 0,9 s';
+  var respW=GLM.chatRespuesta('',listaOrd(),ST.comb);
+  ia2(0,htmlMsg({md:respW,meta:metaW}),respW,metaW);
+}
 window.PT_VALID='v08';
 /* asas para el validador/sondeo (mismo patrón que PT_VALID) */
 window.PT_PROBE={ST:ST,abreFicha:abreFicha,abreId:function(id){abreFicha(estPorId(id))},

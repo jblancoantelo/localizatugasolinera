@@ -202,6 +202,15 @@ select,input{font-family:inherit}
         <button class="brr" id="pshTest" style="margin-top:8px;width:100%">🔔 Enviar aviso de prueba</button>
         <div id="pshAlertas" style="margin-top:8px;display:flex;flex-direction:column;gap:4px"></div>
       </div>
+      <div class="grupo">
+        <h5>🏷️ Descuentos por marca</h5>
+        <div id="descCfg" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+      <div class="grupo">
+        <h5>⚡ Prompts rápidos</h5>
+        <p style="font-size:.72rem;color:var(--sub);margin:2px 0 6px">Chips ⚡N del chat (solo los rellenos). Se guardan al recargar.</p>
+        <div id="promptsCfg" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
       <button class="brr" id="bReset" style="margin-top:auto;border:1px solid #f0d3d3;color:var(--rojo);background:#fff">✕ Limpiar filtros</button>
     </aside>
 
@@ -244,7 +253,10 @@ select,input{font-family:inherit}
   <div style="width:min(640px,94vw);height:min(620px,88dvh);background:var(--panel);border:1px solid var(--linea);border-radius:18px;display:flex;flex-direction:column;overflow:hidden">
     <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--linea)">
       <b style="font-size:.98rem">✨ Chat IA · precios e histórico</b>
-      <button id="iaX" style="border:none;background:var(--fondo);border-radius:999px;width:34px;height:34px;cursor:pointer;font-size:.9rem">✕</button>
+      <span style="display:flex;gap:8px;align-items:center">
+        <button id="iaBorra" title="Borrar conversación" style="border:1px solid var(--linea);background:#fff;border-radius:10px;padding:5px 9px;font-size:.8rem;cursor:pointer">🗑️</button>
+        <button id="iaX" style="border:none;background:var(--fondo);border-radius:999px;width:34px;height:34px;cursor:pointer;font-size:.9rem">✕</button>
+      </span>
     </div>
     <div id="iaMsgs" style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:8px;font-size:.86rem"></div>
     <div style="display:flex;gap:8px;padding:0 16px 10px;flex-wrap:wrap" id="iaProm"></div>
@@ -380,6 +392,7 @@ document.getElementById('filas').addEventListener('click',function(e){
   var fv=e.target.closest('[data-fav]');
   if(fv){var id=fv.dataset.fav;
     ST.favoritos[id]=!ST.favoritos[id];
+    GLM.favSet(id, ST.favoritos[id]);
     snack(ST.favoritos[id]?'⭐ Añadida a favoritas':'Quitada de favoritas');
     render(); if(ST.sel===id)abreD(id,false); return;}
   var f=e.target.closest('[data-id]');
@@ -445,6 +458,7 @@ function abreD(id,conPin){
   });
   document.getElementById('dFavA').addEventListener('click',function(){
     ST.favoritos[e.id]=!ST.favoritos[e.id];
+    GLM.favSet(e.id, ST.favoritos[e.id]);
     snack(ST.favoritos[e.id]?'⭐ Añadida':'Quitada');
     abreD(e.id,false);
   });
@@ -527,32 +541,65 @@ document.getElementById('pshTest').addEventListener('click',function(){
 
 /* ---------- chat IA ---------- */
 var iaModal=document.getElementById('iaModal');
+var CHATK=GLM.chatKit('v04');
+function nodoMsg(m,i){
+  if(m.r==='user'){
+    var d=document.createElement('div'); d.className='yo';
+    d.appendChild(document.createTextNode(m.md));
+    var ed=document.createElement('button'); ed.textContent='✎'; ed.title='Editar y reenviar';
+    ed.style.cssText='border:none;background:none;color:inherit;opacity:.55;cursor:pointer;font-size:.85rem;padding:0 4px';
+    ed.addEventListener('click',function(){editarMsg(i)});
+    d.appendChild(ed);
+    return d;
+  }
+  var r=document.createElement('div'); r.className='ia';
+  r.innerHTML=GLM.md(m.md);
+  var meta=document.createElement('div'); meta.className='meta'; meta.textContent=m.meta||'';
+  r.appendChild(meta);
+  return r;
+}
+function pintaMsgs(){
+  var el=document.getElementById('iaMsgs');
+  el.innerHTML='';
+  CHATK.get().forEach(function(m,i){ el.appendChild(nodoMsg(m,i)); });
+  el.scrollTop=el.scrollHeight;
+}
+function editarMsg(i){
+  document.getElementById('iaQ').value=CHATK.get()[i].md;
+  CHATK.trunca(i); pintaMsgs();
+  document.getElementById('iaQ').focus();
+}
+function responde(q){
+  var t0=Date.now();
+  var resp=GLM.chatRespuesta(q||'',filtradas().length?filtradas():GLM.de(ST.prov),ST.comb);
+  var meta='✨ IA · '+((Date.now()-t0)/1000).toFixed(1).replace('.',',')+' s';
+  CHATK.add({r:'assistant',md:resp,meta:meta});
+}
+function preguntaIA(q){
+  if(q) CHATK.add({r:'user',md:q,meta:''});
+  responde(q);
+  pintaMsgs();
+}
+function pintaChipsIA(){
+  document.getElementById('iaProm').innerHTML=GLM.chipsPrompts('');
+}
+document.getElementById('iaProm').addEventListener('click',function(e){
+  var b=e.target.closest('[data-pr]'); if(!b) return;
+  preguntaIA(GLM.PROMPTS[+b.getAttribute('data-pr')]);
+});
 document.getElementById('bIA').addEventListener('click',function(){
+  pintaChipsIA();
   if(!document.getElementById('iaMsgs').children.length){
-    GLM.PROMPTS.forEach(function(p){
-      var b=document.createElement('button'); b.type='button'; b.textContent=p;
-      b.addEventListener('click',function(){preguntaIA(p)});
-      document.getElementById('iaProm').appendChild(b);
-    });
-    preguntaIA('',true);
+    if(CHATK.get().length) pintaMsgs();
+    else { responde(''); pintaMsgs(); }
   }
   iaModal.style.display='grid';
 });
 document.getElementById('iaX').addEventListener('click',function(){iaModal.style.display='none'});
+document.getElementById('iaBorra').addEventListener('click',function(){
+  CHATK.borrar(); responde(''); pintaMsgs();
+});
 iaModal.addEventListener('click',function(e){if(e.target===iaModal)iaModal.style.display='none'});
-function preguntaIA(q,bienvenida){
-  var t0=Date.now(), el=document.getElementById('iaMsgs');
-  if(q&&!bienvenida){
-    var m=document.createElement('div'); m.className='yo'; m.textContent=q; el.appendChild(m);
-  }
-  var r=document.createElement('div'); r.className='ia';
-  r.innerHTML=GLM.md(GLM.chatRespuesta(q||'',filtradas().length?filtradas():GLM.de(ST.prov),ST.comb));
-  var meta=document.createElement('div'); meta.className='meta';
-  meta.textContent='✨ IA · '+((Date.now()-t0)/1000).toFixed(1).replace('.',',')+' s';
-  r.appendChild(meta);
-  el.appendChild(r);
-  el.scrollTop=el.scrollHeight;
-}
 document.getElementById('iaGo').addEventListener('click',function(){
   var v=document.getElementById('iaQ').value.trim();
   if(!v){snack('✍️ Escribe una pregunta');return;}
@@ -560,6 +607,34 @@ document.getElementById('iaGo').addEventListener('click',function(){
   preguntaIA(v);
 });
 document.getElementById('iaQ').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('iaGo').click()});
+function pintaPromptsCfg(){
+  document.getElementById('promptsCfg').innerHTML=GLM.PROMPTS.map(function(p,i){
+    return '<div><span style="font-size:.68rem;color:var(--sub)">⚡'+(i+1)+'</span>'+
+      '<textarea data-pr="'+i+'" rows="2" placeholder="Vacío = sin chip" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--linea);border-radius:8px;font:inherit;font-size:.78rem;resize:vertical;background:#fff">'+GLM.escHtml(p)+'</textarea></div>';
+  }).join('');
+}
+pintaPromptsCfg();
+document.getElementById('promptsCfg').addEventListener('input',function(e){
+  var i=e.target.getAttribute&&e.target.getAttribute('data-pr');
+  if(i===null||i===undefined) return;
+  GLM.PROMPTS[+i]=e.target.value; GLM.promptsGuarda(); pintaChipsIA();
+});
+function pintaDescCfg(){
+  document.getElementById('descCfg').innerHTML=GLM.descuentos.map(function(d,i){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.78rem"><span>'+d.marca+'</span>'+
+      '<span style="display:flex;align-items:center;gap:4px">'+
+      '<input data-d="'+i+'" type="number" step="0.5" min="0" max="30" value="'+d.cent+'" '+
+      'style="width:56px;padding:6px;border:1px solid var(--linea);border-radius:8px;text-align:right;background:#fff"> c/L</span></div>';
+  }).join('');
+}
+pintaDescCfg();
+document.getElementById('descCfg').addEventListener('input',function(e){
+  var i=e.target.getAttribute&&e.target.getAttribute('data-d');
+  if(i===null||i===undefined) return;
+  GLM.descuentos[+i].cent=Math.max(0,+e.target.value||0);
+  GLM.descGuarda();
+  render();
+});
 
 /* ---------- responsive ---------- */
 function resp(){
