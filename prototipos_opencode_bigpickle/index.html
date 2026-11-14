@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>Prototipos de rediseño · Gasolineras (Big_pickle)</title>
+<style>
+  /* Índice de los prototipos. Sin dependencias: se abre por file://. */
+  :root {
+    --bg: #eef1f6;
+    --sup: #ffffff;
+    --sup-2: #f7f9fc;
+    --txt: #101a24;
+    --txt-2: #48566a;
+    --txt-3: #64748b;
+    --linea: #dfe6ef;
+    --azul: #1458ba;
+    --azul-sup: #e8f0fe;
+    --verde: #146b3c;
+    --verde-sup: #e6f6ec;
+    --radio: 18px;
+    --sombra: 0 1px 2px rgba(16,26,36,.06), 0 10px 30px rgba(16,26,36,.08);
+    --fuente: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font: 16px/1.55 var(--fuente);
+    color: var(--txt);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+  .envoltorio { max-width: 1180px; margin: 0 auto; padding: 32px 20px 64px; }
+
+  header.portada { margin-bottom: 28px; }
+  .pastilla {
+    display: inline-block; padding: 6px 12px; border-radius: 999px;
+    background: var(--azul-sup); color: var(--azul);
+    font-size: 13px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase;
+  }
+  h1 { font-size: clamp(26px, 4vw, 40px); line-height: 1.15; margin: 14px 0 10px; letter-spacing: -.02em; }
+  .entradilla { font-size: 17px; color: var(--txt-2); max-width: 70ch; margin: 0; }
+  .entradilla code, .notas code { font-family: var(--mono); font-size: .92em; background: var(--sup-2); border: 1px solid var(--linea); border-radius: 6px; padding: 1px 6px; }
+
+  .resumen { display: flex; flex-wrap: wrap; gap: 10px; margin: 22px 0 0; padding: 0; list-style: none; }
+  .resumen li {
+    background: var(--sup); border: 1px solid var(--linea); border-radius: 12px;
+    padding: 12px 16px; box-shadow: var(--sombra); flex: 1 1 200px;
+  }
+  .resumen b { display: block; font-size: 22px; letter-spacing: -.02em; }
+  .resumen span { font-size: 13px; color: var(--txt-3); }
+
+  h2.seccion { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: var(--txt-3); margin: 40px 0 16px; }
+
+  .rejilla { display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+
+  article.tarjeta {
+    background: var(--sup); border: 1px solid var(--linea); border-radius: var(--radio);
+    box-shadow: var(--sombra); overflow: hidden; display: flex; flex-direction: column;
+  }
+  .tarjeta-cab { display: flex; align-items: center; gap: 12px; padding: 16px 18px 10px; }
+  .num {
+    flex: 0 0 auto; width: 40px; height: 40px; border-radius: 12px;
+    display: grid; place-items: center; font-weight: 800; font-size: 18px;
+    background: var(--azul-sup); color: var(--azul);
+  }
+  .tarjeta-cab h3 { margin: 0; font-size: 19px; letter-spacing: -.01em; }
+  .tarjeta-cab .etq { font-size: 13px; color: var(--txt-3); }
+
+  .muestra {
+    aspect-ratio: 16 / 10; background: var(--sup-2); border-top: 1px solid var(--linea);
+    border-bottom: 1px solid var(--linea); overflow: hidden; position: relative;
+  }
+  .muestra img { width: 100%; height: 100%; object-fit: cover; object-position: top left; display: block; }
+  .muestra.sin-imagen::after {
+    content: "Vista previa no disponible — abre el prototipo";
+    position: absolute; inset: 0; display: grid; place-items: center;
+    color: var(--txt-3); font-size: 14px; text-align: center; padding: 0 20px;
+  }
+
+  .cuerpo { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
+  .cuerpo p { margin: 0; color: var(--txt-2); font-size: 15px; }
+  .cuerpo ul { margin: 0; padding-left: 18px; color: var(--txt-2); font-size: 14px; }
+  .cuerpo li { margin: 3px 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--sup-2); border: 1px solid var(--linea); color: var(--txt-2); }
+  .chip.movil { background: var(--verde-sup); color: var(--verde); border-color: #bfe6cd; }
+  .acciones { margin-top: auto; display: flex; gap: 8px; }
+  .boton {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 44px; padding: 0 18px; border-radius: 12px; font-weight: 700; font-size: 15px;
+    text-decoration: none; border: 1px solid transparent; cursor: pointer; flex: 1;
+  }
+  .boton.primario { background: var(--azul); color: #fff; }
+  .boton.secundario { background: var(--sup); color: var(--azul); border-color: #c7d7ef; }
+
+  .notas { background: var(--sup); border: 1px solid var(--linea); border-radius: var(--radio); box-shadow: var(--sombra); padding: 20px 22px; margin-top: 8px; }
+  .notas h3 { margin: 0 0 10px; font-size: 18px; }
+  .notas ol, .notas ul { margin: 0; padding-left: 20px; color: var(--txt-2); }
+  .notas li { margin: 6px 0; }
+  .notas pre {
+    background: #0f1720; color: #d7e1ee; border-radius: 12px; padding: 14px 16px;
+    overflow-x: auto; font: 13.5px/1.5 var(--mono); margin: 10px 0 0;
+  }
+  footer.pie { margin-top: 40px; color: var(--txt-3); font-size: 13px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="envoltorio">
+
+  <header class="portada">
+    <span class="pastilla">Big_pickle · prototipos</span>
+    <h1>Rediseño responsive de la app de gasolineras</h1>
+    <p class="entradilla">
+      Nueve maquetas interactivas con datos simulados para mejorar la experiencia
+      <strong>sobre todo en móvil</strong> sin perder nada de la app actual, y para
+      <strong>aprovechar de verdad las pantallas grandes</strong> en PC. Todo funciona
+      abriendo los HTML directamente: sin servidor, sin CDN y sin dependencias.
+    </p>
+    <ul class="resumen">
+      <li><b>9</b><span>conceptos de diseño</span></li>
+      <li><b>37</b><span>estaciones fake · 16 provincias</span></li>
+      <li><b>0</b><span>avisos de auditoría (móvil y PC)</span></li>
+      <li><b>100 %</b><span>funcional y navegable</span></li>
+    </ul>
+  </header>
+
+  <h2 class="seccion">Prototipos</h2>
+  <div class="rejilla">
+
+    <article class="tarjeta">
+      <div class="tarjeta-cab">
+        <div class="num">1</div>
+        <div><h3>Mapa + hojas</h3><div class="etq">Móvil primero · hojas arrastrables</div></div>
+      </div>
+      <div class="muestra"><img src="shared/capturas/prototipo1-mapa-hojas-movil.png" alt="Prototipo 1 en móvil" loading="lazy" onerror="this.parentNode.classList.add('sin-imagen'); this.remove();"></div>
+      <div class="cuerpo">
+        <p>El mapa manda y la lista vive en una hoja inferior que se arrastra en tres alturas (peek, media, llena). En PC la hoja se convierte en panel lateral.</p>
+        <ul>
+          <li>¿Se siente natural la hoja en móvil?</li>
+          <li>¿Los filtros detrás de chips son suficientes?</li>
+          <li>¿El histórico con tooltip se entiende?</li>
+        </ul>
+        <div class="chips"><span class="chip movil">Móvil</span><span class="chip">Mapa</span><span class="chip">Hojas</span></div>
+        <div class="acciones"><a class="boton primario" href="prototipo1-mapa-hojas/index.html">Abrir prototipo</a></div>
+      </div>
+    </article>
+
+    <article class="tarjeta">
+      <div class="tarjeta-cab">
+        <div class="num">2</div>
+        <div><h3>Sala de control</h3><div class="etq">Escritorio primero · 3 columnas</div></div>
+      </div>
+      <div class="muestra"><img src="shared/capturas/prototipo2-escritorio-sala-de-control-pc.png" alt="Prototipo 2 en PC" loading="lazy" onerror="this.parentNode.classList.add('sin-imagen'); this.remove();"></div>
+      <div class="cuerpo">
+        <p>Tres columnas (mapa · lista densa · detalle) con tarjetas de resumen, sparklines y tabla. Pensado para trabajar con 1440 px sin desperdiciar espacio.</p>
+        <ul>
+          <li>¿Tres columnas se siguen o agobian?</li>
+          <li>¿Las sparklines ayudan a decidir?</li>
+          <li>¿El móvil degrada con elegancia?</li>
+        </ul>
+        <div class="chips"><span class="chip">Escritorio</span><span class="chip">Denso</span><span class="chip">Datos</span></div>
+        <div class="acciones"><a class="boton primario" href="prototipo2-escritorio-sala-de-control/index.html">Abrir prototipo</a></div>
+      </div>
+    </article>
+
+    <article class="tarjeta">
+      <div class="tarjeta-cab">
+        <div class="num">3</div>
+        <div><h3>Lista primero</h3><div class="etq">Tarjetas grandes · grupos pegajosos</div></div>
+      </div>
+      <div class="muestra"><img src="shared/capturas/prototipo3-lista-tarjetas-movil.png" alt="Prototipo 3 en móvil" loading="lazy" onerror="this.parentNode.classList.add('sin-imagen'); this.remove();"></div>
+      <div class="cuerpo">
+        <p>La lista es la protagonista: tarjetas con el precio destacado, agrupadas por localidad y con filtros en hojas. El mapa queda en segundo plano.</p>
+        <ul>
+          <li>¿Encontrar la gasolinera es más rápido que en el mapa?</li>
+          <li>¿Las tarjetas llevan demasiada información?</li>
+          <li>¿Agrupar por localidad ayuda o estorba?</li>
+        </ul>
+        <div class="chips"><span class="chip movil">Móvil</span><span class="chip">Lista</span><span class="chip">Tarjetas</span></div>
+        <div class="acciones"><a class="boton primario" href="prototipo3-lista-tarjetas/index.html">Abrir prototipo</a></div>
+      </div>
+    </article>
+
+    <article class="tarjeta">
+      <div class="tarjeta-cab">
+        <div class="num">4</div>
+        <div><h3>Modo noche / conducción</h3><div class="etq">Alto contraste · precio gigante</div></div>
+      </div>
+      <div class="muestra"><img src="shared/capturas/prototipo4-modo-noche-conduccion-movil.png" alt="Prototipo 4 en móvil" loading="lazy" onerror="this.parentNode.classList.add('sin-imagen'); this.remove();"></div>
+      <div class="cuerpo">
+        <p>Interfaz oscura, letra enorme y solo tres acciones (Ir · Favorito · Salir). Incluye un carrusel de las estaciones cercanas ordenadas por precio.</p>
+        <ul>
+          <li>¿Se lee a un vistazo de noche?</li>
+          <li>¿El precio gigante basta para decidir?</li>
+          <li>¿El carrusel ordena bien (barato primero)?</li>
+        </ul>
+        <div class="chips"><span class="chip movil">Móvil</span><span class="chip">Noche</span><span class="chip">Coche</span></div>
+        <div class="acciones"><a class="boton primario" href="prototipo4-modo-noche-conduccion/index.html">Abrir prototipo</a></div>
+      </div>
+    </article>
+
+    <article class="tarjeta">
+      <div class="tarjeta-cab">
+        <div class="num">5</div>
+        <div><h3>Split + comparador</h3><div class="etq">Lista ↔ mapa sincronizados</div></div>
+      </div>
+      <div class="muestra"><img src="shared/capturas/prototipo5-split-comparador-pc.png" alt="Prototipo 5 en PC" loading="lazy" onerror="this.parentNode.classList.add('sin-imagen'); this.remove();"></div>
+      <div class="cuerpo">
+        <p>Lista y mapa sincronizados: al pasar el ratón por una fila se resalta su marcador. Añade un comparador de 2–4 estaciones con gráfica solapada.</p>
+        <ul>
+          <li>¿La sincronía lista ↔ mapa es intuitiva?</li>
+          <li>¿Comparar 2–4 estaciones resulta útil?</li>
+          <li>¿El divisor arrastrable se descubre solo?</li>
+        </ul>
+        <div class="chips"><span class="chip">Sincronía</span><span class="chip">Comparador</span><span class="chip">Split</span></div>
+        <div class="acciones"><a class="boton primario" href="prototipo5-split-comparador/index.html">Abrir prototipo</a></div>
+      </div>
+    </article>
+
+    <article class="tarjeta">
+      <div class="tarjeta-cab">
+        <div class="num">6</div>
+        <div><h3>Gestos y atajos</h3><div class="etq">Sin chrome · gestos y teclado</div></div>
+      </div>
+      <div class="muestra"><img src="shared/capturas/prototipo6-gestos-atajos-movil.png" alt="Prototipo 6 en móvil" loading="lazy" onerror="this.parentNode.classList.add('sin-imagen'); this.remove();"></div>
+      <div class="cuerpo">
+        <p>Navegación sin botones: en móvil con gestos (swipe entre vistas, deslizar tarjeta, long-press, pull-to-refresh) y en PC con paleta de comandos ⌘K y atajos de teclado.</p>
+        <ul>
+          <li>¿Los gestos se descubren solos?</li>
+          <li>¿La paleta ⌘K acelera en PC?</li>
+          <li>¿Merecen la pena los atajos <code>j</code>/<code>k</code>, <code>/</code>, <code>?</code>?</li>
+        </ul>
+        <div class="chips"><span class="chip movil">Móvil</span><span class="chip">Gestos</span><span class="chip">Teclado</span></div>
+        <div class="acciones"><a class="boton primario" href="prototipo6-gestos-atajos/index.html">Abrir prototipo</a></div>
+      </div>
+    </article>
+
+    <article class="tarjeta">
+      <div class="tarjeta-cab">
+        <div class="num">7</div>
+        <div><h3>Asistente por decisiones</h3><div class="etq">Una decisión por pantalla</div></div>
+      </div>
+      <div class="muestra"><img src="shared/capturas/prototipo7-asistente-decisiones-movil.png" alt="Prototipo 7 en móvil" loading="lazy" onerror="this.parentNode.classList.add('sin-imagen'); this.remove();"></div>
+      <div class="cuerpo">
+        <p>El asistente guía paso a paso desde «¿Qué necesitas?» hasta una recomendación accionable: repostar barato ahora, ahorrar en la ruta o vigilar una estación.</p>
+        <ul>
+          <li>¿Decidir paso a paso es más rápido que escanear?</li>
+          <li>¿El asistente limita o ayuda?</li>
+          <li>¿El resultado final da confianza?</li>
+        </ul>
+        <div class="chips"><span class="chip movil">Móvil</span><span class="chip">Asistente</span><span class="chip">Pasos</span></div>
+        <div class="acciones"><a class="boton primario" href="prototipo7-asistente-decisiones/index.html">Abrir prototipo</a></div>
+      </div>
+    </article>
+
+    <article class="tarjeta">
+      <div class="tarjeta-cab">
+        <div class="num">8</div>
+        <div><h3>Panel de datos</h3><div class="etq">Analítica · escritorio</div></div>
+      </div>
+      <div class="muestra"><img src="shared/capturas/prototipo8-panel-de-datos-pc.png" alt="Prototipo 8 en PC" loading="lazy" onerror="this.parentNode.classList.add('sin-imagen'); this.remove();"></div>
+      <div class="cuerpo">
+        <p>KPIs, evolución de la media provincial, mapa de calor por provincia, histograma de precios, ranking de marcas, comparador y «¿cuándo repostar?» calculados sobre los datos.</p>
+        <ul>
+          <li>¿Los gráficos aportan o abruman?</li>
+          <li>¿Qué KPIs se usan de verdad?</li>
+          <li>¿El móvil soporta tanta densidad?</li>
+        </ul>
+        <div class="chips"><span class="chip">Datos</span><span class="chip">Gráficas</span><span class="chip">Analítica</span></div>
+        <div class="acciones"><a class="boton primario" href="prototipo8-panel-de-datos/index.html">Abrir prototipo</a></div>
+      </div>
+    </article>
+
+    <article class="tarjeta">
+      <div class="tarjeta-cab">
+        <div class="num">9</div>
+        <div><h3>Coste real</h3><div class="etq">Decidir por el total · persistencia</div></div>
+      </div>
+      <div class="muestra"><img src="shared/capturas/prototipo9-coste-real-pc.png" alt="Prototipo 9 en PC" loading="lazy" onerror="this.parentNode.classList.add('sin-imagen'); this.remove();"></div>
+      <div class="cuerpo">
+        <p>La recomendación no se ordena por €/L sino por el <strong>coste total del repostaje</strong>: litros × precio + el combustible del desvío ida/vuelta. Enseña por qué la más barata por litro no siempre gana.</p>
+        <ul>
+          <li>¿Decidir por coste total convence más que por €/L?</li>
+          <li>¿Se entiende el desvío cuando cambias litros o radio?</li>
+          <li>¿Recordar filtros y litros tras F5 se agradece?</li>
+        </ul>
+        <div class="chips"><span class="chip movil">Móvil</span><span class="chip">Coste total</span><span class="chip">Persistencia</span></div>
+        <div class="acciones"><a class="boton primario" href="prototipo9-coste-real/index.html">Abrir prototipo</a></div>
+      </div>
+    </article>
+
+  </div>
+
+  <h2 class="seccion">Cómo se valida</h2>
+  <div class="notas">
+    <h3>Comprobación automática (sin mirar las capturas)</h3>
+    <p>Como la revisión se hace sin inspección visual, cada prototipo se comprueba con medidas reales del navegador:</p>
+    <ul>
+      <li><b>Sin errores de consola</b> y con capturas móvil (390×844) y PC (1440×900).</li>
+      <li><b>Objetivos táctiles</b> ≥ 32 px, <b>texto</b> nunca por debajo de 12 px y <b>contraste</b> WCAG AA.</li>
+      <li>Sin desbordes, sin navegación tapada y con ≥ 5 destinos navegables.</li>
+    </ul>
+    <pre>node prototipos_opencode_bigpickle/capturar.mjs   # capturas + smoke test
+node prototipos_opencode_bigpickle/auditar.mjs    # auditoría de diseño → shared/informes/</pre>
+  </div>
+
+  <h2 class="seccion">Pasadas de diseño</h2>
+  <div class="notas">
+    <ol>
+      <li><b>Pasada 1 — exploración amplia:</b> cuatro direcciones distintas (prototipos 1–4).</li>
+      <li><b>Pasada 2 — profundidad:</b> sincronía lista↔mapa y comparador (prototipo 5).</li>
+      <li><b>Pasada 3 — interacción:</b> gestos y atajos como navegación principal (prototipo 6).</li>
+      <li><b>Pasada 4 — nuevos paradigmas:</b> asistente por decisiones (7) y panel de datos (8).</li>
+      <li><b>Pasada 5 — depurado cruzado:</b> auditoría de los ocho y corrección de todo lo detectado.</li>
+      <li><b>Pasada 6 — renombrado y colisión de selectores:</b> carpeta <code>prototipos_opencode_bigpickle</code> y fix del toast <code>.aviso</code> vs <code>.etiqueta.aviso</code> (0 avisos en los 8).</li>
+      <li><b>Pasada 7 — un paradigma nuevo:</b> <em>coste real</em> del repostaje (prototipo 9), con persistencia del estado y aviso educativo cuando la más barata por litro pierde por el desvío.</li>
+    </ol>
+    <p style="margin-top:12px">Detalle completo en <code>README.md</code>.</p>
+  </div>
+
+  <footer class="pie">
+    Prototipos de rediseño · datos simulados · no forman parte de la aplicación.
+  </footer>
+
+</div>
+</body>
+</html>

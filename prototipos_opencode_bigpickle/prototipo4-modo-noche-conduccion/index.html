@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gasolineras · Modo noche y conducción</title>
+<meta name="description" content="Prototipo de modo noche / carretera para la app de precios de gasolineras">
+<!-- Tema oscuro por defecto: el navegador pinta barras y controles en oscuro -->
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0b0f14">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body class="tema-oscuro" data-vista="mapa">
+
+<noscript>
+  <p style="padding:24px;font:16px system-ui;color:#e8eef5;background:#0b0f14">
+    Este prototipo necesita JavaScript activado.
+  </p>
+</noscript>
+
+<div class="app" id="app">
+
+  <!-- ═══════════ Cabecera ═══════════ -->
+  <header class="cabecera" id="cabecera">
+    <div class="cab-izq">
+      <span class="cab-logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round">
+          <path d="M6 21V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v16"/>
+          <path d="M4 21h13M15 9h2.5a2 2 0 0 1 2 2v6a1.5 1.5 0 0 0 3 0v-6l-2.5-4"/>
+        </svg>
+      </span>
+      <div class="cab-titulos">
+        <strong id="cabProvincia">Madrid</strong>
+        <span id="cabResumen">— estaciones</span>
+      </div>
+    </div>
+    <div class="cab-der">
+      <button class="btn-cab" id="btnFiltros" aria-expanded="false" aria-controls="panelFiltros">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M7 12h10M10 17h4"/></svg>
+        <span class="btn-cab-txt">Filtros</span>
+        <span class="badge" id="filtrosBadge" hidden>0</span>
+      </button>
+      <button class="btn-cab btn-solo-icono" id="btnTema" title="Cambiar tema claro / oscuro" aria-label="Cambiar tema">
+        <span id="iconoTema" aria-hidden="true"></span>
+      </button>
+      <button class="btn-cab btn-solo-icono" id="btnConduccion" title="Modo conducción" aria-label="Activar modo conducción">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round">
+          <path d="M4 16v-3.2L5.7 8h12.6L20 12.8V16"/><path d="M4 16h16"/><circle cx="7.5" cy="16.6" r="1.7"/><circle cx="16.5" cy="16.6" r="1.7"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Atajos de teclado: solo se muestran en pantalla grande -->
+  <div class="atajos" id="atajos" aria-hidden="true">
+    <span><kbd>1</kbd>–<kbd>5</kbd> vistas</span>
+    <span><kbd>M</kbd> mapa</span>
+    <span><kbd>L</kbd> lista</span>
+    <span><kbd>C</kbd> conducción</span>
+    <span><kbd>T</kbd> tema</span>
+    <span><kbd>/</kbd> buscar</span>
+    <span><kbd>←</kbd><kbd>→</kbd> estación</span>
+    <span><kbd>Esc</kbd> cerrar</span>
+  </div>
+
+  <div class="cuerpo" id="cuerpo">
+
+    <!-- ═══════════ Panel de filtros (barra lateral en PC, hoja en móvil) ═══════════ -->
+    <aside class="panel-filtros" id="panelFiltros" aria-label="Filtros de búsqueda">
+      <div class="pf-cab">
+        <strong>Filtros</strong>
+        <button class="btn-x" id="pfCerrar" aria-label="Cerrar filtros">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
+      <label class="campo">
+        <span class="campo-lbl">Provincia</span>
+        <select id="selProv"></select>
+      </label>
+
+      <label class="campo">
+        <span class="campo-lbl">Localidad</span>
+        <select id="selLocalidad"></select>
+      </label>
+
+      <label class="campo">
+        <span class="campo-lbl">Combustible</span>
+        <select id="selCombustible"></select>
+      </label>
+
+      <div class="campo">
+        <span class="campo-lbl">Marcas <em id="marcasCount">todas</em></span>
+        <button class="btn-bloque" id="btnMarcas" aria-expanded="false">
+          Elegir marcas
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="marcas-lista" id="marcasLista" hidden>
+          <div class="marcas-acciones">
+            <button class="btn-mini" id="marcasTodas">Todas</button>
+            <button class="btn-mini" id="marcasNinguna">Ninguna</button>
+          </div>
+          <div id="marcasChecks" class="marcas-checks"></div>
+        </div>
+      </div>
+
+      <div class="campo">
+        <span class="campo-lbl">Distancia máxima <em id="distValor">sin límite</em></span>
+        <input type="range" id="rngDist" min="0" max="40" step="1" value="0"
+               aria-label="Distancia máxima en kilómetros">
+      </div>
+
+      <label class="switch-linea">
+        <input type="checkbox" id="chkFavoritos">
+        <span class="switch-ui" aria-hidden="true"></span>
+        <span class="switch-txt">Solo favoritas</span>
+      </label>
+
+      <label class="campo">
+        <span class="campo-lbl">Buscar</span>
+        <input type="search" id="inpBusqueda" placeholder="Localidad, calle o marca…" autocomplete="off">
+      </label>
+
+      <label class="campo">
+        <span class="campo-lbl">Ordenar por</span>
+        <select id="selOrden">
+          <option value="precio">Precio (más barata primero)</option>
+          <option value="distancia">Distancia</option>
+          <option value="marca">Marca (A–Z)</option>
+        </select>
+      </label>
+
+      <div class="pf-pie">
+        <button class="btn-sec" id="btnLimpiar">Limpiar filtros</button>
+        <button class="btn-prim" id="btnAplicarFiltros">Ver resultados</button>
+      </div>
+    </aside>
+
+    <!-- ═══════════ Panel lista ═══════════ -->
+    <section class="panel-lista" id="panelLista" aria-label="Lista de estaciones">
+      <div class="resumen-pegajoso">
+        <div class="rs-celda">
+          <span class="rs-num" id="rsNum">0</span>
+          <span class="rs-lbl">resultados</span>
+        </div>
+        <div class="rs-celda">
+          <span class="rs-num" id="rsMedia">—</span>
+          <span class="rs-lbl">media</span>
+        </div>
+        <div class="rs-celda">
+          <span class="rs-num verde" id="rsBarata">—</span>
+          <span class="rs-lbl">más barata</span>
+        </div>
+      </div>
+      <div class="lista" id="lista"></div>
+      <div class="lista-pie" id="listaPie"></div>
+    </section>
+
+    <!-- ═══════════ Panel mapa ═══════════ -->
+    <section class="panel-mapa" id="panelMapa" aria-label="Mapa de estaciones">
+      <div class="mapa" id="mapa">
+        <div class="mapa-capa" id="mapaCapa">
+          <svg class="mapa-svg" id="mapaSvg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+          <div class="marcadores" id="marcadores"></div>
+        </div>
+
+        <div class="mapa-controles">
+          <button id="mapaMas" aria-label="Acercar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <button id="mapaMenos" aria-label="Alejar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"/></svg>
+          </button>
+          <button id="mapaCentrar" aria-label="Centrar en mi posición">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="6.5"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg>
+          </button>
+        </div>
+
+        <div class="mapa-leyenda" id="mapaLeyenda" aria-hidden="true">
+          <span><i class="pt verde"></i> barato</span>
+          <span><i class="pt ambar"></i> medio</span>
+          <span><i class="pt rojo"></i> caro</span>
+        </div>
+
+        <!-- HUD inferior: carrusel de estaciones más baratas -->
+        <div class="hud" id="hud"></div>
+
+        <!-- HUD gigante del modo conducción -->
+        <div class="cd-hud" id="cdHud"></div>
+      </div>
+    </section>
+
+    <!-- ═══════════ Panel IA ═══════════ -->
+    <section class="panel-ia" id="panelIA" aria-label="Asistente IA">
+      <div class="ia-cab">
+        <div class="ia-pills" id="iaPills" role="tablist" aria-label="Proveedor de IA"></div>
+      </div>
+      <div class="ia-hilo" id="iaHilo" aria-live="polite"></div>
+      <div class="ia-prompts" id="iaPrompts"></div>
+      <form class="ia-envio" id="iaForm">
+        <input type="text" id="iaInput" placeholder="Pregunta sobre precios, tendencias o estaciones…" autocomplete="off">
+        <button type="submit" class="ia-enviar" aria-label="Enviar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 12 20 4l-8 16-2-6z"/></svg>
+        </button>
+      </form>
+    </section>
+
+    <!-- ═══════════ Panel ajustes ═══════════ -->
+    <section class="panel-ajustes" id="panelAjustes" aria-label="Ajustes">
+      <h2 class="aj-titulo">Ajustes</h2>
+
+      <details class="hoja" open>
+        <summary>
+          <span class="hoja-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+          </span>
+          Pantalla y accesibilidad
+        </summary>
+        <div class="hoja-cuerpo">
+          <label class="switch-linea">
+            <input type="checkbox" id="swTema">
+            <span class="switch-ui" aria-hidden="true"></span>
+            <span class="switch-txt">Tema claro (por defecto: noche)</span>
+          </label>
+          <label class="switch-linea">
+            <input type="checkbox" id="swConduccion">
+            <span class="switch-ui" aria-hidden="true"></span>
+            <span class="switch-txt">Modo conducción (todo más grande)</span>
+          </label>
+          <label class="switch-linea">
+            <input type="checkbox" id="swDescuentos">
+            <span class="switch-ui" aria-hidden="true"></span>
+            <span class="switch-txt">Aplicar descuentos por marca</span>
+          </label>
+          <p class="aj-nota">El modo conducción oculta filtros, resumen y navegación, y deja solo tres acciones: Ir, Favorito y Salir.</p>
+        </div>
+      </details>
+
+      <details class="hoja">
+        <summary>
+          <span class="hoja-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M7 12h10M10 17h4"/></svg>
+          </span>
+          Resultados y paginación
+        </summary>
+        <div class="hoja-cuerpo">
+          <label class="campo">
+            <span class="campo-lbl">Resultados por página</span>
+            <select id="selPagina"></select>
+          </label>
+          <label class="campo">
+            <span class="campo-lbl">Orden por defecto</span>
+            <select id="selOrdenDef">
+              <option value="precio">Precio</option>
+              <option value="distancia">Distancia</option>
+              <option value="marca">Marca</option>
+            </select>
+          </label>
+        </div>
+      </details>
+
+      <details class="hoja">
+        <summary>
+          <span class="hoja-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0l-7.2-7.2A2 2 0 0 1 3 12V5.6A2.6 2.6 0 0 1 5.6 3H12a2 2 0 0 1 1.4.6l7.2 7.2a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg>
+          </span>
+          Descuentos por marca
+        </summary>
+        <div class="hoja-cuerpo">
+          <p class="aj-nota">Resta céntimos al precio mostrado. Actívalo con el conmutador «Aplicar descuentos por marca».</p>
+          <div id="discList" class="disc-lista"></div>
+          <div class="disc-nuevo">
+            <select id="discMarca"></select>
+            <input type="number" id="discValor" step="0.005" min="0" max="1" placeholder="€/L" value="0.02" aria-label="Descuento en euros por litro">
+            <button class="btn-sec" id="discAdd">Añadir</button>
+          </div>
+        </div>
+      </details>
+
+      <details class="hoja">
+        <summary>
+          <span class="hoja-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>
+          </span>
+          Caché de datos
+        </summary>
+        <div class="hoja-cuerpo">
+          <div class="tabs-internas" data-tabs="cache">
+            <button class="tab-int activa" data-cachetab="idb">IndexedDB</button>
+            <button class="tab-int" data-cachetab="ls">localStorage</button>
+          </div>
+          <div class="tab-panel" data-cachepanel="idb" id="cacheIdb"></div>
+          <div class="tab-panel" data-cachepanel="ls" id="cacheLs" hidden></div>
+          <div class="disc-nuevo">
+            <label class="campo campo-inline">
+              <span class="campo-lbl">Horas de caché</span>
+              <input type="number" id="cacheTtl" min="0" max="72" value="12">
+            </label>
+            <button class="btn-sec peligro" id="btnLimpiarCache">Vaciar caché</button>
+          </div>
+        </div>
+      </details>
+
+      <details class="hoja">
+        <summary>
+          <span class="hoja-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M5 4h14v13H7l-2 2z"/><path d="M9 8h6M9 11h4"/></svg>
+          </span>
+          Registro de actividad
+        </summary>
+        <div class="hoja-cuerpo">
+          <div class="tabs-internas" data-tabs="log">
+            <button class="tab-int activa" data-logtab="api" id="tabLogApi">API</button>
+            <button class="tab-int" data-logtab="push" id="tabLogPush">Push</button>
+          </div>
+          <div class="tab-panel" data-logpanel="api"><div id="logApi" class="log-lista"></div></div>
+          <div class="tab-panel" data-logpanel="push" hidden><div id="logPush" class="log-lista"></div></div>
+        </div>
+      </details>
+
+      <details class="hoja">
+        <summary>
+          <span class="hoja-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6"/><path d="M10.5 20a2 2 0 0 0 3 0"/></svg>
+          </span>
+          Notificaciones push
+        </summary>
+        <div class="hoja-cuerpo">
+          <label class="switch-linea">
+            <input type="checkbox" id="swPushBajada" checked>
+            <span class="switch-ui" aria-hidden="true"></span>
+            <span class="switch-txt">Avisar cuando baje el precio</span>
+          </label>
+          <label class="switch-linea">
+            <input type="checkbox" id="swPushSubida">
+            <span class="switch-ui" aria-hidden="true"></span>
+            <span class="switch-txt">Avisar también cuando suba</span>
+          </label>
+          <div class="disc-nuevo">
+            <label class="campo campo-inline">
+              <span class="campo-lbl">Comprobar cada (h)</span>
+              <input type="number" id="pushIntervalo" min="1" max="24" value="8">
+            </label>
+            <label class="campo campo-inline">
+              <span class="campo-lbl">Bajada en (días)</span>
+              <input type="number" id="pushDias" min="0" max="90" value="3">
+            </label>
+          </div>
+          <div class="campo">
+            <span class="campo-lbl">Detección de bajada</span>
+            <div class="segmentado" role="radiogroup" aria-label="Método de detección">
+              <label><input type="radio" name="modoPush" value="promedio" checked><span>Promedio</span></label>
+              <label><input type="radio" name="modoPush" value="consecutivos"><span>Días seguidos</span></label>
+            </div>
+          </div>
+          <button class="btn-sec" id="pushProbar">Probar notificación</button>
+        </div>
+      </details>
+
+      <details class="hoja">
+        <summary>
+          <span class="hoja-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="8" cy="14" r="4"/><path d="M11 11 20 3M17 5l2 2"/></svg>
+          </span>
+          Claves API de IA
+        </summary>
+        <div class="hoja-cuerpo">
+          <p class="aj-nota">Las claves se guardan solo en este dispositivo. Escribe la contraseña para cargar las claves cifradas.</p>
+          <div class="disc-nuevo">
+            <input type="password" id="iaPass" placeholder="Contraseña" aria-label="Contraseña de claves">
+            <button class="btn-sec" id="iaCargar">Cargar claves</button>
+          </div>
+          <p class="aj-nota" id="iaPassEstado"></p>
+          <div class="claves-grid" id="iaClaves"></div>
+        </div>
+      </details>
+
+      <details class="hoja">
+        <summary>
+          <span class="hoja-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 4v4M9 13.5h.01M15 13.5h.01"/></svg>
+          </span>
+          Proveedores de IA visibles
+        </summary>
+        <div class="hoja-cuerpo">
+          <p class="aj-nota">Desmarca los que no uses: su pestaña desaparece del chat. Siempre queda al menos uno.</p>
+          <div class="proveedores-grid" id="provVisibles"></div>
+        </div>
+      </details>
+
+      <details class="hoja">
+        <summary>
+          <span class="hoja-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>
+          </span>
+          Prompts rápidos
+        </summary>
+        <div class="hoja-cuerpo">
+          <p class="aj-nota">Aparecen como botones sobre el chat. Deja un campo vacío para ocultarlo.</p>
+          <div id="listaPrompts" class="prompts-config"></div>
+        </div>
+      </details>
+
+      <details class="hoja">
+        <summary>
+          <span class="hoja-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></svg>
+          </span>
+          Actualización de la app
+        </summary>
+        <div class="hoja-cuerpo">
+          <p class="aj-nota">Versión instalada: <strong id="versionApp">—</strong></p>
+          <div class="disc-nuevo">
+            <button class="btn-sec" id="btnBuscarAct">Buscar actualizaciones</button>
+            <span class="aj-nota" id="estadoAct"></span>
+          </div>
+        </div>
+      </details>
+
+      <p class="aj-pie">Prototipo «modo noche / carretera» · datos de ejemplo compartidos (shared/datos-fake.js)</p>
+    </section>
+
+  </div><!-- /.cuerpo -->
+
+  <!-- Avisos breves (toast) -->
+  <div class="avisos" id="avisos" aria-live="polite"></div>
+
+  <!-- ═══════════ Navegación inferior ═══════════ -->
+  <nav class="dock" id="dock" aria-label="Navegación principal">
+    <button class="dock-btn" data-vista="mapa" aria-label="Mapa">
+      <span class="dock-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z"/><path d="M9 4v13.5M15 6.5V20"/></svg></span>
+      <span class="dock-txt">Mapa</span>
+    </button>
+    <button class="dock-btn" data-vista="lista" data-shot="vista" aria-label="Lista">
+      <span class="dock-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>
+      <span class="dock-txt">Lista</span>
+    </button>
+    <button class="dock-btn" data-vista="ia" aria-label="Asistente IA">
+      <span class="dock-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 4v4M9 13.5h.01M15 13.5h.01"/></svg></span>
+      <span class="dock-txt">IA</span>
+    </button>
+    <button class="dock-btn" data-vista="favoritas" aria-label="Favoritas">
+      <span class="dock-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3.6 14.6 9l6 .9-4.3 4.2 1 6-5.3-2.8L6.7 20l1-6L3.4 9.9l6-.9z"/></svg></span>
+      <span class="dock-txt">Favoritas</span>
+    </button>
+    <button class="dock-btn" data-vista="ajustes" aria-label="Ajustes">
+      <span class="dock-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8 5.6 18.4"/></svg></span>
+      <span class="dock-txt">Ajustes</span>
+    </button>
+  </nav>
+
+  <!-- Botón central de IA destacado, flotando sobre el dock -->
+  <button class="ia-flotante" id="btnIaFlotante" data-vista="ia" aria-label="Abrir el asistente IA">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="7.5" width="16" height="12" rx="3.2"/><path d="M12 3.5v4M9 13.2h.01M15 13.2h.01"/></svg>
+    <span>IA</span>
+  </button>
+
+  <!-- Velo para la hoja de filtros en móvil -->
+  <div class="velo" id="velo" hidden></div>
+
+  <!-- ═══════════ Detalle: cuadro de mandos a pantalla completa ═══════════ -->
+  <section class="detalle" id="detalle" role="dialog" aria-modal="true" aria-label="Detalle de la estación" hidden>
+    <div class="det-cab">
+      <button class="btn-x" id="detCerrar" aria-label="Cerrar detalle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+      <div class="det-titulo">
+        <strong id="detMarca">—</strong>
+        <span id="detDir">—</span>
+      </div>
+      <button class="det-fav" id="detFav" aria-label="Marcar como favorita" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.6 14.6 9l6 .9-4.3 4.2 1 6-5.3-2.8L6.7 20l1-6L3.4 9.9l6-.9z"/></svg>
+      </button>
+    </div>
+
+    <div class="det-scroll">
+      <div class="det-hero">
+        <div class="det-precio-bloque">
+          <span class="det-comb" id="detCombLbl">—</span>
+          <div class="det-precio-linea">
+            <span class="det-precio" id="detPrecio">—</span>
+            <span class="det-unidad">€/L</span>
+          </div>
+          <span class="det-delta" id="detDelta">—</span>
+        </div>
+        <div class="det-minmax">
+          <div><span class="mm-lbl">mín. 30 d</span><strong class="verde" id="detMin">—</strong></div>
+          <div><span class="mm-lbl">máx. 30 d</span><strong class="rojo" id="detMax">—</strong></div>
+          <div><span class="mm-lbl">distancia</span><strong id="detDist">—</strong></div>
+          <div><span class="mm-lbl">horario</span><strong id="detHorario">—</strong></div>
+        </div>
+      </div>
+
+      <div class="det-controles">
+        <label class="campo">
+          <span class="campo-lbl">Combustible</span>
+          <select id="detCombSel"></select>
+        </label>
+        <label class="campo">
+          <span class="campo-lbl">Periodo</span>
+          <select id="detDiasSel"></select>
+        </label>
+      </div>
+
+      <div class="det-grafica" id="detGrafica"></div>
+
+      <table class="det-tabla">
+        <caption class="sr-only">Precios por combustible</caption>
+        <tbody id="detTabla"></tbody>
+      </table>
+
+      <div class="det-acciones">
+        <button class="btn-gigante btn-prim" id="detIr">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 11 21 3l-8 18-2-8z"/></svg>
+          Ir
+        </button>
+        <button class="btn-gigante btn-sec" id="detFav2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.6 14.6 9l6 .9-4.3 4.2 1 6-5.3-2.8L6.7 20l1-6L3.4 9.9l6-.9z"/></svg>
+          Favorita
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ Modo conducción: solo 3 acciones ═══════════ -->
+  <div class="conduccion-acciones" id="conduccionAcciones" hidden>
+    <button class="cd-accion cd-ir" id="cdIr">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 11 21 3l-8 18-2-8z"/></svg>
+      <span>Ir</span>
+    </button>
+    <button class="cd-accion" id="cdFav">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.6 14.6 9l6 .9-4.3 4.2 1 6-5.3-2.8L6.7 20l1-6L3.4 9.9l6-.9z"/></svg>
+      <span>Favorito</span>
+    </button>
+    <button class="cd-accion cd-salir" id="cdSalir">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      <span>Salir</span>
+    </button>
+  </div>
+
+  <!-- Cargando: capa oscura, nunca un fondo blanco intermitente -->
+  <div class="cargando" id="cargando" hidden>
+    <div class="spinner" aria-hidden="true"></div>
+    <span>Cargando precios…</span>
+  </div>
+
+</div><!-- /.app -->
+
+<script src="../shared/datos-fake.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

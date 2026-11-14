@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- Copyright (C) 2026 Juan Blanco Antelo - Localiza tu Gasolinera (prototipos de diseno) -->
+
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>v07 · Torre de control — comparar y decidir, no solo consultar</title>
+<style>
+:root{
+  --fondo:#eef0f4; --panel:#fff; --tinta:#15202b; --sub:#66717e; --linea:#dde2e9;
+  --azul:#0b6ef0; --verde:#0a8a3c; --rojo:#c62828; --amb:#b26a00;
+  --baja:#0a8a3c; --media:#b26a00; --alta:#c62828;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:var(--tinta)}
+button{font-family:inherit}
+
+.top{height:54px;background:var(--panel);border-bottom:1px solid var(--linea);display:flex;align-items:center;
+  gap:10px;padding:0 16px;position:sticky;top:0;z-index:50}
+.top .lg{font-weight:800;font-size:1rem;display:flex;align-items:center;gap:9px}
+@media(max-width:600px){.top .lgT{display:none}}
+.top .lg i{width:27px;height:27px;border-radius:8px;background:linear-gradient(135deg,#0b6ef0,#7fb0ff);color:#fff;
+  display:grid;place-items:center;font-style:normal;font-size:.8rem}
+.top select{border:1px solid var(--linea);border-radius:10px;padding:8px 10px;font-weight:700;font-size:.85rem;background:#fff}
+.top .esp{flex:1}
+.top .b{border:1px solid var(--linea);border-radius:10px;background:#fff;padding:8px 13px;font-weight:700;font-size:.82rem;cursor:pointer}
+.top .b.pr{background:var(--azul);border-color:var(--azul);color:#fff}
+
+.cont{max-width:1280px;margin:0 auto;padding:14px 16px 40px}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+@media (max-width:1100px){.kpis{grid-template-columns:1fr 1fr}}
+@media (max-width:600px){.kpis{grid-template-columns:1fr 1fr;gap:10px}}
+.kpi{background:var(--panel);border:1px solid var(--linea);border-radius:16px;padding:14px 16px;min-width:0}
+.kpi .e{font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.7px;display:flex;justify-content:space-between;gap:8px}
+.kpi .v{font-size:1.7rem;font-weight:800;letter-spacing:-1px;margin-top:6px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .v small{font-size:.8rem;font-weight:600;color:var(--sub);letter-spacing:0}
+.kpi .x{font-size:.78rem;color:var(--sub);margin-top:6px}
+.kpi .mr{font-size:1rem!important}
+
+/* panes */
+.grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,.9fr);gap:14px}
+@media (max-width:980px){.grid{grid-template-columns:1fr}}
+.tarj{background:var(--panel);border:1px solid var(--linea);border-radius:18px;padding:16px;min-width:0}
+.tarj h3{margin:0 0 2px;font-size:1.02rem;display:flex;align-items:center;gap:8px}
+.tarj .st{font-size:.76rem;color:var(--sub);margin-bottom:10px}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.leg{display:flex;align-items:center;gap:6px;font-size:.76rem;font-weight:700;border:1px solid var(--linea);
+  border-radius:999px;padding:5px 10px;background:#fff;cursor:pointer}
+.leg .sw{width:12px;height:12px;border-radius:4px}
+.leg.off{opacity:.38;text-decoration:line-through}
+.chartX{width:100%}
+.axisT{font-size:9px;fill:var(--sub)}
+
+/* alertas */
+.al{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px dashed var(--linea)}
+.al:last-child{border-bottom:none}
+.al .ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:1.05rem;flex-shrink:0}
+.al .ic.bd{background:#e9f9f0;color:var(--verde)}
+.al .ic.su{background:#fdeeee;color:var(--rojo)}
+.al .tt{font-weight:700;font-size:.88rem}
+.al .tx{font-size:.78rem;color:var(--sub);margin-top:2px}
+.al .q{margin-left:auto;font-size:.68rem;color:var(--sub);flex-shrink:0}
+
+/* tabla favoritas */
+.tbl{width:100%;border-collapse:collapse;font-size:.85rem}
+.tbl th{text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.6px;color:var(--sub);
+  padding:8px 10px;border-bottom:1px solid var(--linea);cursor:pointer;user-select:none;
+}
+.tbl th.ordA::after{content:' ▲';color:var(--azul);font-size:.6rem}
+.tbl th.ordD::after{content:' ▼';color:var(--azul);font-size:.6rem}
+.tbl td{padding:9px 10px;border-bottom:1px solid #f0f2f5}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr{cursor:pointer}
+.tbl tr:hover{background:#f6f9ff}
+.tbl .px{font-weight:800;letter-spacing:-.4px}
+.tbl .dr{color:var(--sub);font-size:.78rem}
+.lm{width:30px;height:30px;border-radius:9px;display:inline-grid;place-items:center;color:#fff;font-weight:800;font-size:.68rem;vertical-align:middle;margin-right:8px}
+
+/* IA */
+.iaS{font-size:.86rem;line-height:1.55;margin:0}
+.iaS ul{margin:6px 0;padding-left:17px}
+.iaS p{margin:6px 0}
+.iaS blockquote{margin:6px 0;padding:6px 10px;border-left:3px solid var(--azul);background:#f2f7ff;border-radius:8px;font-size:.78rem;color:var(--sub)}
+.iaM{max-width:88%;padding:11px 13px;border-radius:14px;background:#eef4ff;font-size:.86rem}
+.iaMeta{font-size:.68rem;color:var(--sub);margin-bottom:6px;font-weight:600}
+.iahint{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.iahint .ch{border:1px solid var(--linea);border-radius:999px;background:#fff;padding:7px 12px;font-size:.78rem;font-weight:700;cursor:pointer}
+.iahint .ch.act{background:var(--azul);border-color:var(--azul);color:#fff}
+
+/* favorita en tabla */
+.fvS{border:1px solid var(--linea);border-radius:9px;background:#fff;width:34px;height:34px;cursor:pointer;font-size:.95rem;font-weight:800}
+.fvS.on{background:#fff3cd;border-color:#e5c100}
+
+/* ajustes */
+.ajF{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed var(--linea);font-size:.88rem;font-weight:600}
+.ajF:last-child{border-bottom:none}
+.tarj .tarj+.tarj{margin-top:12px}
+
+/* ficha de estación */
+.velo{position:fixed;inset:0;background:rgba(21,32,43,.45);z-index:70;opacity:0;pointer-events:none;transition:.2s}
+.velo.vis{opacity:1;pointer-events:auto}
+.fich{position:fixed;left:0;right:0;bottom:0;background:var(--panel);z-index:71;max-height:92dvh;border-radius:20px 20px 0 0;
+  border-top:3px solid var(--azul);transform:translateY(104%);transition:.28s;display:flex;flex-direction:column;
+  box-shadow:0 -12px 30px rgba(21,32,43,.18)}
+.fich.vis{transform:none}
+@media(min-width:981px){.fich{left:auto;right:24px;bottom:24px;width:420px;border-radius:18px;transform:translateY(24px);opacity:0;pointer-events:none}
+ .fich.vis{transform:none;opacity:1;pointer-events:auto}}
+.asa{width:50px;height:5px;background:var(--linea);border-radius:6px;margin:10px auto 0;flex-shrink:0}
+.fh{padding:12px 18px;border-bottom:1px solid var(--linea);display:flex;align-items:baseline;gap:10px;flex-shrink:0}
+.fh .tt{font-weight:800;font-size:1.08rem}
+.fh .sb{font-size:.8rem;color:var(--sub)}
+.cpg{display:flex;justify-content:space-between;align-items:flex-end;padding:14px 18px 6px}
+.cpg .g{font-size:3rem;font-weight:800;letter-spacing:-2px;line-height:.9}
+.cpg .un{font-size:.9rem;color:var(--sub);font-weight:600;margin-top:4px}
+.cpg .dn{text-align:right;font-size:.9rem;font-weight:700}
+.cpg .dn small{display:block;color:var(--sub);font-weight:600}
+.rwg{display:flex;gap:6px;margin:8px 18px}
+.rwg button{flex:1;border:1px solid var(--linea);background:#fff;border-radius:10px;padding:8px 0;font-weight:700;font-size:.8rem;cursor:pointer}
+.rwg button.act{background:var(--azul);border-color:var(--azul);color:#fff}
+.chartw{margin:8px 18px;border:1px solid var(--linea);border-radius:12px;padding:10px 8px 4px}
+.tablaP{border:1px solid var(--linea);border-radius:12px;margin:8px 18px;overflow:hidden}
+.trP{display:flex;justify-content:space-between;padding:8px 12px;font-weight:600;font-size:.88rem;border-top:1px solid var(--linea)}
+.trP:first-child{border-top:none}
+.trP:nth-child(odd){background:#f8fafc}
+.accX{display:flex;gap:8px;margin:10px 18px calc(20px + env(safe-area-inset-bottom))}
+.accX button{flex:1;height:48px;border:1px solid var(--linea);border-radius:12px;background:#fff;font-weight:700;font-size:.85rem;cursor:pointer}
+.accX .pri{background:var(--azul);border-color:var(--azul);color:#fff}
+
+/* móvil */
+.mtbs{position:fixed;bottom:0;left:0;right:0;z-index:60;display:none;background:var(--panel);border-top:1px solid var(--linea);
+  padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+.mtbs button{flex:1;border:none;background:none;font-size:.68rem;font-weight:700;color:var(--sub);padding:6px 0;cursor:pointer}
+.mtbs button.act{color:var(--azul)}
+@media (max-width:980px){
+  .mtbs{display:flex}
+  .cont{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+}
+.secpane{display:none}
+.secpane.act{display:flex}
+
+.snk{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom));transform:translate(-50%,12px);z-index:99;
+  background:#15202b;color:#fff;font-size:.8rem;padding:9px 15px;border-radius:999px;opacity:0;pointer-events:none;transition:.25s}
+.snk-vis{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<header class="top">
+  <span class="lg"><i>📊</i> <b class="lgT">Torre de control</b></span>
+  <select id="selProv"></select>
+  <select id="selComb"></select>
+  <div class="esp"></div>
+  <span style="font-size:.75rem;color:var(--sub)" id="hoyTxt"></span>
+  <button class="b" id="bPush">🔔 Avisos</button>
+  <button class="b" id="bAj">⚙️ Ajustes</button>
+  <button class="b pr" id="bLista">Vista lista →</button>
+</header>
+
+<div class="cont">
+  <!-- RESUMEN -->
+  <div class="secpane act" data-pane="resumen" style="flex-direction:column">
+    <div class="kpis" id="kpis"></div>
+    <div class="grid">
+      <div class="tarj">
+        <h3>📈 Evolución del precio</h3>
+        <div class="st" id="chSt">—</div>
+        <div class="legend" id="legend"></div>
+        <div id="chartZone"></div>
+      </div>
+      <div class="tarj">
+        <h3>🔔 Alertas recientes</h3>
+        <div class="st">Ejemplo de avisos push que estarían activos</div>
+        <div id="zonaAl"></div>
+        <button class="b" style="width:100%;margin-top:10px;border:1px dashed var(--linea);background:#fafbfd;border-radius:12px;padding:11px;font-weight:700;font-size:.8rem;cursor:pointer" id="bVerTodas">Ver todas (maqueta)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAVORITAS/TABLA -->
+  <div class="secpane" data-pane="favoritas" style="flex-direction:column">
+    <div class="tarj">
+      <h3>⭐ Mis estaciones vigiladas</h3>
+      <div class="st" id="tblSt"></div>
+      <table class="tbl" id="tblF"></table>
+    </div>
+  </div>
+
+  <!-- IA -->
+  <div class="secpane" data-pane="ia" style="flex-direction:column">
+    <div class="tarj">
+      <h3 style="display:flex;align-items:center;gap:8px">✨ Resumen del asistente <button id="iaBorra" title="Borrar conversación" style="margin-left:auto;border:1px solid var(--linea);background:#fff;border-radius:10px;padding:4px 9px;font-size:.8rem;cursor:pointer">🗑️</button></h3>
+      <div class="st">Pregunta a todos los proveedores como en la pestaña General de la app. Se recuerda la última respuesta al recargar.</div>
+      <div class="iahint" id="iah"></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input id="iaQ" placeholder="Escribe tu pregunta…" aria-label="Pregunta a la IA"
+          style="flex:1;border:1px solid var(--linea);border-radius:12px;padding:11px 13px;font-size:.9rem;background:#fff;min-width:0">
+        <button class="b pr" id="iaGo" style="border-radius:12px;padding:0 16px;font-size:.85rem">ENVIAR</button>
+      </div>
+      <div class="iaM" id="iaBox"></div>
+    </div>
+  </div>
+
+  <!-- AJUSTES -->
+  <div class="secpane" data-pane="ajustes" style="flex-direction:column">
+    <div class="tarj">
+      <h3>🏷️ Descuentos por marca</h3>
+      <div class="st">El precio mostrado ya los aplica (se recalcula al instante)</div>
+      <div id="ajD"></div>
+    </div>
+    <div class="tarj" style="margin-top:12px">
+      <h3>⚡ Prompts rápidos</h3>
+      <div class="st">Chips ⚡N del asistente (solo los rellenos). Se guardan al recargar.</div>
+      <div id="ajP" style="margin-top:8px"></div>
+    </div>
+    <div class="tarj" style="margin-top:12px">
+      <h3>🔔 Avisos de bajada</h3>
+      <div class="st">Mismo motor de push que la app real, con pruebas</div>
+      <div class="ajF"><span>Avisos push</span><button class="b act" id="ajSwp" type="button">Sí</button></div>
+      <div class="ajF"><span>Chequeo cada</span>
+        <select id="ajHoras" style="border:1px solid var(--linea);border-radius:10px;padding:8px 10px;font-weight:700;font-size:.85rem;background:#fff"></select></div>
+      <div class="ajF"><span>Caída considerada</span>
+        <select id="ajDias" style="border:1px solid var(--linea);border-radius:10px;padding:8px 10px;font-weight:700;font-size:.85rem;background:#fff"></select></div>
+      <div class="ajF" id="ajTest" style="cursor:pointer"><span>Aviso de prueba</span>
+        <span style="color:var(--verde);font-weight:700">🔔 Probar</span></div>
+      <div id="ajAlertas"></div>
+    </div>
+    <div class="tarj" style="margin-top:12px">
+      <h3>⚙️ Datos</h3>
+      <div class="ajF"><span>Caché IndexedDB · caduca en</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          <input id="ajTtl" type="number" min="1" max="72" value="12"
+            style="width:56px;border:1px solid var(--linea);border-radius:10px;padding:8px;text-align:right;font-weight:700;background:#fff"> h</span></div>
+      <div class="ajF" id="ajCache" style="cursor:pointer"><span>Limpiar caché</span>
+        <span style="color:var(--rojo);font-weight:700">🗑️ Limpiar</span></div>
+    </div>
+    <div class="tarj" style="margin-top:12px">
+      <h3>📋 Registro de actividad</h3>
+      <div class="st">Tabs API/Push igual que Config de la app real</div>
+      <div style="display:flex;gap:6px;padding:10px 0">
+        <button class="ch act" data-log="api" type="button">API</button>
+        <button class="ch" data-log="push" type="button">Push</button>
+      </div>
+      <div id="ajLog"></div>
+    </div>
+    <div class="tarj" style="margin-top:12px">
+      <h3>🧩 Otros</h3>
+      <div class="ajF"><span>Versión</span><span style="color:var(--sub)" id="ajVer"></span></div>
+      <div class="ajF" id="ajUpd" style="cursor:pointer"><span>Actualización de la app</span>
+        <span style="color:var(--verde);font-weight:700">Comprobar</span></div>
+    </div>
+  </div>
+</div>
+
+<nav class="mtbs">
+  <button data-v="resumen" class="act"><span style="display:block;font-size:1.1rem">📊</span>Resumen</button>
+  <button data-v="favoritas"><span style="display:block;font-size:1.1rem">⭐</span>Favoritas</button>
+  <button data-v="ia"><span style="display:block;font-size:1.1rem">✨</span>IA</button>
+  <button data-v="ajustes"><span style="display:block;font-size:1.1rem">⚙️</span>Ajustes</button>
+</nav>
+
+<div class="velo" id="velo"></div>
+<section class="fich" id="fich" role="dialog" aria-label="Ficha de estación">
+  <div class="asa"></div>
+  <div class="fh"><span class="tt" id="ftt">—</span><span class="sb" id="fsb">—</span></div>
+  <div id="fbody" style="overflow-y:auto"></div>
+</section>
+<div class="snk" id="snk"></div>
+
+<script src="../_lib/mock.js"></script>
+<script>
+(function(){
+'use strict';
+var ST={prov:'Madrid',comb:'Gasolina 95 E5',vist:'resumen',rang:30,sel:null,fav:{},rf:14,ordK:'precio',ordDir:1};
+GLM.de('Madrid').forEach(function(e){ST.fav[e.id]=!!e.fav});
+function snack(m){var s=document.getElementById('snk');s.textContent=m;s.classList.add('snk-vis');
+  clearTimeout(s._t);s._t=setTimeout(function(){s.classList.remove('snk-vis')},2400)}
+GLM.snack=snack;   // helpers del mock (avisoPush…) usan el mismo UI
+
+document.getElementById('hoyTxt').textContent='datos cerrados hoy · Ministerio';
+document.getElementById('selProv').innerHTML=GLM.PROVINCIAS.map(function(p){return '<option'+(p===ST.prov?' selected':'')+'>'+p+'</option>'}).join('');
+function pSelComb(){
+  var disp=GLM.combDisponibles(ST.prov);   // solo combustibles con datos: el crash del E10 vivía aquí
+  if(disp.length&&disp.indexOf(ST.comb)<0)ST.comb=disp[0];
+  document.getElementById('selComb').innerHTML=disp.map(function(c){return '<option'+(c===ST.comb?' selected':'')+'>'+c+'</option>'}).join('');
+}
+document.getElementById('selProv').addEventListener('change',function(){ST.prov=this.value;pSelComb();renderAll()});
+document.getElementById('selComb').addEventListener('change',function(){ST.comb=this.value;renderAll()});
+
+/* ---- series elegidas: favoritas (estado real) + 2 más baratas ---- */
+function seriesAct(){
+  var l=GLM.de(ST.prov).filter(function(e){return e.precios[ST.comb]!=null});
+  var fav=l.filter(function(e){return ST.fav[e.id]}).slice(0,3);
+  l.sort(function(a,b){return GLM.precioFinal(a,ST.comb)-GLM.precioFinal(b,ST.comb)});
+  var baratas=l.slice(0,2);
+  var out=[];var usado={};
+  fav.concat(baratas).forEach(function(e){
+    if(usado[e.id])return;usado[e.id]=1;
+    out.push(e);
+  });
+  return out.slice(0,5);
+}
+var PALETA=['#0b6ef0','#c62828','#0a8a3c','#b26a00','#7c3aed'];
+
+/* ---- KPIs ---- */
+function kpis(){
+  var l=GLM.de(ST.prov).filter(function(e){return e.precios[ST.comb]!=null});
+  if(!l.length){   // guard: sin datos no hay NaN ni crash (pasaba al elegir un combustible vacío)
+    document.getElementById('kpis').innerHTML=
+      '<div class="kpi" style="grid-column:1/-1"><span class="e">Sin datos</span>'+
+      '<div class="v">— <small>€/L</small></div><div class="x">Ninguna estación publica '+
+      (GLM.COMBUSTIBLES_CORTOS[ST.comb]||ST.comb)+' en '+ST.prov+'. Cambia de combustible arriba.</div></div>';
+    document.getElementById('chartZone').innerHTML='';
+    document.getElementById('chSt').textContent='—';
+    document.getElementById('legend').innerHTML='';
+    return;
+  }
+  var media=l.reduce(function(t,e){return t+GLM.precioFinal(e,ST.comb)},0)/l.length;
+  l.sort(function(a,b){return GLM.precioFinal(a,ST.comb)-GLM.precioFinal(b,ST.comb)});
+  var top=l[0];
+  var ser=GLM.historico(top,ST.comb,30),r=GLM.resumen(ser);
+  var s7=ser.slice(-7),s30=ser.slice(-30);
+  var media7=s7.length?s7.reduce(function(t,s){return t+s.p},0)/s7.length:0,
+      media30=s30.length?s30.reduce(function(t,s){return t+s.p},0)/s30.length:0;
+  var deltaProv=media7-media30;
+  var nfav=GLM.de(ST.prov).filter(function(e){return ST.fav[e.id]}).length;
+  document.getElementById('kpis').innerHTML=
+   '<div class="kpi"><span class="e">Media '+GLM.COMBUSTIBLES_CORTOS[ST.comb]+' · '+ST.prov+'</span>'+
+    '<div class="v">'+GLM.fmt(media)+' <small>€/L</small></div><div class="x">semáforo entre '+l.length+' estaciones</div></div>'+
+    '<div class="kpi"><span class="e">Tendencia 30 días</span><div class="v" style="color:'+(deltaProv<0?'var(--verde)':'var(--rojo)')+'">'+
+    (deltaProv<0?'▼ ':'▲ ')+GLM.fmt(Math.abs(deltaProv))+'</div><div class="x">media 7d vs media 30d de la más barata</div></div>'+
+    '<div class="kpi"><span class="e">Mejor estación hoy</span><div class="v mr"><span class="lm" style="background:'+GLM.colorMarca(top.marca)+'">'+top.marca.slice(0,2)+'</span>'+
+    GLM.fmt(GLM.precioFinal(top,ST.comb))+' <small>€/L</small></div><div class="x">'+top.marca+' · '+top.localidad+' · '+GLM.fmt2(top.dist)+' km</div></div>'+
+    '<div class="kpi"><span class="e">Vigiladas ⭐</span><div class="v">'+nfav+'</div>'+
+    '<div class="x">con aviso si bajan en 14 días</div></div>';
+}
+
+/* ---- gráfica comparada multi-serie ---- */
+var on={};
+function drawChart(){
+  var series=seriesAct();
+  if(!series.length){document.getElementById('chartZone').innerHTML='<p style="color:var(--sub)">Sin datos.</p>';return;}
+  var w=document.getElementById('chartZone').clientWidth||640,h=300;
+  var ulti=series.map(function(e){return GLM.historico(e,ST.comb,ST.rang)});
+  var lo=1e9,hi=-1e9;
+  ulti.forEach(function(s){s.forEach(function(p){lo=Math.min(lo,p.p);hi=Math.max(hi,p.p)})});
+  var lo2=Math.max(0.4,lo-0.012*Math.max(1,hi-lo)),hi2=hi+0.012*Math.max(1,hi-lo);
+  var span=hi2-lo2;
+  var padL=52,padR=14,padT=12,padB=26;
+  var g3=5;
+  var gr='';
+  for(var j=0;j<=g3;j++){
+    var v=hi2-j/g3*span,y=padT+j/g3*(h-padT-padB);
+    gr+='<line x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(w-padR)+'" y2="'+y.toFixed(1)+'" stroke="#eef1f4"/>'+
+      '<text x="'+(padL-6)+'" y="'+(y+3).toFixed(1)+'" text-anchor="end" class="axisT">'+v.toFixed(3).replace('.', ',')+'</text>';
+  }
+  var nmax=Math.max.apply(null,ulti.map(function(s){return s.length}));
+  var paths='',lbl='';
+  ulti.forEach(function(s,si){
+    var e=series[si];
+    var col=PALETA[si%PALETA.length];
+    var d='';
+    s.forEach(function(p,i){
+      var x=padL+i/(s.length-1)*(w-padL-padR),y=padT+(1-(p.p-lo2)/span)*(h-padT-padB);
+      d+=(i?'L':'M')+x.toFixed(2)+','+y.toFixed(2);
+    });
+    var op=on[e.id]===false?0.15:0.95;
+    paths+='<path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="2.4" opacity="'+op+'" data-ser="'+e.id+'"/>';
+  });
+  var paso=Math.max(1,Math.floor(nmax/4));
+  var primer=ulti[0];
+  for(var k=0;k<nmax;k+=paso){
+    var xx=padL+k/(nmax-1)*(w-padL-padR);
+    var ff=primer[Math.min(primer.length-1,k)];
+    lbl+='<text x="'+xx.toFixed(1)+'" y="'+(h-8)+'" text-anchor="middle" class="axisT">'+(ff?ff.f.slice(0,-5):'')+'</text>';
+  }
+  document.getElementById('chartZone').innerHTML='<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:auto">'+gr+paths+lbl+'</svg>';
+  document.getElementById('chSt').textContent=ST.comb+' · '+ST.prov+' · '+ST.rang+' días. '+
+    'Un día sin precio publicado no significa precio constante: las series tienen huecos como en la app real.';
+  document.getElementById('legend').innerHTML=series.map(function(e,i){
+    var col=PALETA[i%PALETA.length];
+    return '<button class="leg'+(on[e.id]===false?' off':'')+'" data-tg="'+e.id+'">'+
+      '<span class="sw" style="background:'+col+'"></span>'+e.marca+' · '+GLM.fmt(GLM.precioFinal(e,ST.comb))+'</button>';
+  }).join('');
+}
+document.getElementById('legend').addEventListener('click',function(e){
+  var b=e.target.closest('[data-tg]');if(!b)return;
+  var id=b.dataset.tg;on[id]=on[id]===false?true:false;drawChart();
+});
+
+/* ---- alertas ---- */
+function alertasZ(){
+  document.getElementById('zonaAl').innerHTML=GLM.alertasPush.map(function(a){
+    var bd=a.tipo==='caida';
+    return '<div class="al"><div class="ic '+(bd?'bd':'su')+'">'+(bd?'▼ ':'▲ ')+'</div>'+
+      '<div><div class="tt">'+a.est+'</div><div class="tx">'+a.txt+'</div></div><span class="q">'+a.hora+'</span></div>';
+  }).join('');
+}
+
+/* ---- favoritas tabla ---- */
+function tablaF(){
+  var l=GLM.de(ST.prov).filter(function(e){return ST.fav[e.id]});
+  var conD=GLM.de(ST.prov).filter(function(e){return e.precios[ST.comb]!=null});
+  var media=conD.length?conD.reduce(function(t,e){return t+GLM.precioFinal(e,ST.comb)},0)/conD.length:0;
+  /* media con divisor correcto: las estaciones CON datos (antes dividía por el total) */
+  var CLAVE={precio:function(v){return v.p==null?1e9:v.p},delta:function(v){return v.d==null?1e9:v.d},media:function(v){return v.m==null?1e9:v.m}};
+  var clave=CLAVE[ST.ordK]||CLAVE.precio;
+  var list=l.map(function(e){
+    var p=GLM.precioFinal(e,ST.comb);
+    if(p==null)return {e:e,p:null,d:null,m:null,t:null,fav:ST.fav[e.id]};
+    var s=GLM.historico(e,ST.comb,30),r=GLM.resumen(s);
+    return {e:e,p:p,d:GLM.tendencia(e,ST.comb).d,m:r.media,t:GLM.tendencia(e,ST.comb),fav:ST.fav[e.id]};
+  });
+  list.sort(function(a,b){return ST.ordDir*(clave(a)-clave(b))});   // sin dato al final, no NaN
+  document.getElementById('tblSt').textContent=l.length+' estaciones · comparadas con la media provincial ('+GLM.fmt(media)+' €/L)';
+  function thCl(k){return ST.ordK===k?(ST.ordDir===1?' class="ordA"':' class="ordD"'):''}
+  document.getElementById('tblF').innerHTML='<thead><tr>'+
+    '<th></th><th>Estación</th>'+
+    '<th'+thCl('precio')+' data-k="precio">Precio</th>'+
+    '<th'+thCl('delta')+' data-k="delta">Variación hoy</th>'+
+    '<th'+thCl('media')+' data-k="media">Media 30d</th></tr></thead><tbody>'+
+    list.map(function(f){
+      var e=f.e;
+      var dif=f.p==null?null:f.p-media;
+      var precio=f.p==null?'<td class="px" style="color:var(--sub)">— sin dato</td>':
+        '<td class="px nivel-'+GLM.nivel(f.p)+'">'+GLM.fmt(f.p)+'<div class="dr" style="'+(dif<0?'color:var(--verde)':'color:var(--rojo)')+'">'+
+        (dif<0?'−':'+')+GLM.fmt(Math.abs(dif))+' vs media</div></td>';
+      var delta=f.p==null?'<td style="color:var(--sub)">—</td>':
+        '<td style="color:'+(f.d<0?'var(--verde)':'var(--rojo)')+';font-weight:700">'+(f.d<0?'▼':'▲')+' '+
+        GLM.fmt(Math.abs(f.d))+' ('+Math.abs(GLM.tendencia(e,ST.comb).pct)+'%)</td>';
+      var m30=f.p==null?'<td style="color:var(--sub)">—</td>':'<td>'+GLM.fmt(f.m)+' €/L</td>';
+      return '<tr data-abre="'+e.id+'">'+
+        '<td><button class="fvS'+(f.fav?' on':'')+'" data-fav="'+e.id+'" aria-label="Favorita" title="Quitar de vigiladas">'+(f.fav?'★':'☆')+'</button></td>'+
+        '<td><span class="lm" style="background:'+GLM.colorMarca(e.marca)+'">'+e.marca.slice(0,2)+'</span>'+e.marca+
+        '<div class="dr">'+e.direccion+' · '+e.localidad+'</div></td>'+
+        precio+delta+m30+'</tr>';
+    }).join('')+'</tbody>';
+  if(!l.length)document.getElementById('tblF').insertAdjacentHTML('afterend',
+    '<p style="color:var(--sub);font-size:.85rem;margin:10px 0 0">Aún no vigilas ninguna estación: abre la ficha de cualquiera y pulsa ☆ AÑADIR.</p>');
+}
+document.getElementById('tblF').addEventListener('click',function(e){
+  var f=e.target.closest('[data-fav]');
+  if(f){ST.favTog(f.dataset.fav);e.stopPropagation();return}
+  var th=e.target.closest('[data-k]');
+  if(th){if(ST.ordK===th.dataset.k)ST.ordDir=-ST.ordDir;else{ST.ordK=th.dataset.k;ST.ordDir=1}tablaF();return}
+  var tr=e.target.closest('[data-abre]');if(tr)abre(tr.dataset.abre);
+});
+
+/* ---- ficha de estación (la app real la abre desde la tabla y el chat) ---- */
+var velo=document.getElementById('velo'),fich=document.getElementById('fich');
+function abre(id,noShow){
+  ST.sel=id;
+  var e=GLM.de(ST.prov).filter(function(x){return x.id===id})[0];if(!e)return;
+  document.getElementById('ftt').textContent=e.marca;
+  document.getElementById('fsb').textContent=e.direccion+' · '+e.localidad+' · '+GLM.fmt2(e.dist)+' km';
+  var pie='<div class="tablaP">'+Object.keys(e.precios).map(function(c){var pp=GLM.precioFinal(e,c);
+      return '<div class="trP"><span>'+c+'</span><b class="'+(pp==null?'':('nivel-'+GLM.nivel(pp)))+'">'+
+        (pp==null?'— sin dato':GLM.fmt(pp)+' €/L')+'</b></div>'}).join('')+'</div>'+
+    '<div class="accX"><button class="pri" data-fr="1">🧭 Cómo llegar</button>'+
+    '<button data-fav-f="'+e.id+'">'+(ST.fav[e.id]?'★ Quitar':'☆ Vigilar')+'</button>'+
+    '<button data-fa="1" style="color:var(--rojo)">🔔 Alerta</button></div>';
+  var cuerpo;
+  if(e.precios[ST.comb]==null){
+    /* sin datos del combustible activo: sin gráfica ni histórico (como la app real) */
+    cuerpo='<p style="font-size:.88rem;color:var(--sub);padding:14px 18px">Sin datos de '+
+      (GLM.COMBUSTIBLES_CORTOS[ST.comb]||ST.comb)+' en esta estación: la gráfica y el histórico no están disponibles. '+
+      'Cambia de combustible arriba para verlos.</p>'+pie;
+  } else {
+    var p=GLM.precioFinal(e,ST.comb),r=GLM.resumen(GLM.historico(e,ST.comb,ST.rf));
+    cuerpo='<div class="cpg"><div><div class="g nivel-'+GLM.nivel(p)+'">'+GLM.fmt(p)+'</div>'+
+      '<div class="un">€/L · precio con descuentos</div></div>'+
+      '<div class="dn" style="color:'+(r.delta<0?'var(--verde)':'var(--rojo)')+'">'+(r.delta<0?'▼':'▲')+' '+GLM.fmt(Math.abs(r.delta))+
+      '<small>hoy vs ayer</small><small style="color:var(--tinta)">min '+GLM.fmt(r.min)+' · max '+GLM.fmt(r.max)+'</small></div></div>'+
+      '<div class="rwg">'+GLM.RANGOS.map(function(d){return '<button class="'+(ST.rf===d?'act':'')+'" data-rg="'+d+'">'+d+' d</button>'}).join('')+'</div>'+
+      '<div class="chartw">'+GLM.chart(GLM.historico(e,ST.comb,ST.rf),{w:340,h:140})+'</div>'+pie;
+  }
+  document.getElementById('fbody').innerHTML=cuerpo;
+  document.getElementById('fbody').querySelectorAll('[data-rg]').forEach(function(b){
+    b.addEventListener('click',function(){ST.rf=+b.dataset.rg;abre(e.id,true)})});
+  var bf=document.getElementById('fbody').querySelector('[data-fav-f]');
+  if(bf)bf.addEventListener('click',function(){ST.favTog(e.id)});
+  var fr=document.getElementById('fbody').querySelector('[data-fr]');
+  if(fr)fr.addEventListener('click',function(){snack('Maqueta: abriría rutas')});
+  var fa=document.getElementById('fbody').querySelector('[data-fa]');
+  if(fa)fa.addEventListener('click',function(){
+    GLM.avisoPush(e.marca+' vigilada','te avisaremos si '+GLM.COMBUSTIBLES_CORTOS[ST.comb]+' baja 3 jornadas seguidas')});
+  if(!noShow){fich.classList.add('vis');velo.classList.add('vis')}
+}
+function fCierra(){fich.classList.remove('vis');velo.classList.remove('vis');ST.sel=null;renderAll()}
+velo.addEventListener('click',fCierra);
+ST.favTog=function(id){ST.fav[id]=!ST.fav[id];GLM.favSet(id,ST.fav[id]);snack(ST.fav[id]?'⭐ Vigilada: te avisaremos si baja':'Quitada de vigiladas');
+  renderAll();if(ST.sel===id)abre(id,true)};
+
+/* ---- IA resumen ---- */
+var CHATK=GLM.chatKit('v07');
+function iaPinta(m){
+  document.getElementById('iaBox').innerHTML='<div class="iaMeta">'+GLM.escHtml(m.meta)+'</div>'+GLM.md(m.md);
+}
+function iaGenera(q,metaBase){
+  var l=GLM.de(ST.prov).filter(function(e){return e.precios[ST.comb]!=null});
+  var rp=GLM.chatRespuesta(q||'¿Cuál es la más barata?',l,ST.comb);
+  var meta=metaBase||('✨ IA · '+(GLM.PROVINCIAS.indexOf(ST.prov)+1)+' de tus pestañas · 1,3 s');
+  CHATK.borrar();
+  if(q) CHATK.add({r:'user',md:q,meta:''});
+  CHATK.add({r:'assistant',md:rp,meta:meta});
+  iaPinta({md:rp,meta:meta});
+}
+function iaResumen(){
+  var h=CHATK.get(), ult=h.length?h[h.length-1]:null;
+  if(ult&&ult.r==='assistant') iaPinta(ult);
+  else iaGenera();
+}
+function pintaChips(){
+  document.getElementById('iah').innerHTML=GLM.chipsPrompts('ch');
+}
+pintaChips();
+document.getElementById('iah').addEventListener('click',function(e){
+  var b=e.target.closest('[data-pr]'); if(!b) return;
+  iaGenera(GLM.PROMPTS[+b.getAttribute('data-pr')],'✨ IA · respuesta · 1,4 s');
+});
+/* input libre (la pestaña General de la app real también lo permite) */
+document.getElementById('iaGo').addEventListener('click',function(){
+  var v=document.getElementById('iaQ').value.trim();if(!v)return;
+  document.getElementById('iaQ').value='';
+  iaGenera(v,'✨ IA · respuesta · 1,3 s');
+});
+document.getElementById('iaQ').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('iaGo').click()});
+document.getElementById('iaBorra').addEventListener('click',function(){
+  CHATK.borrar(); iaGenera(); snack('🗑️ Conversación borrada');
+});
+
+/* ---- arriba ---- */
+function goPane(v){
+  ST.vist=v;
+  document.querySelectorAll('.mtbs button').forEach(function(x){x.classList.toggle('act',x.dataset.v===v)});
+  document.querySelectorAll('.secpane').forEach(function(p){p.classList.toggle('act',p.dataset.pane===v)});
+  if(v==='favoritas')tablaF();
+}
+document.getElementById('bLista').addEventListener('click',function(){snack('En la app real saltarías a la vista lista/mapa con esta selección mantenida')});
+document.getElementById('bPush').addEventListener('click',function(){goPane('ajustes');snack('🔔 Config de avisos: intervalo, días y prueba abajo')});
+document.getElementById('bAj').addEventListener('click',function(){goPane('ajustes')});
+document.getElementById('bVerTodas').addEventListener('click',function(){goPane('ajustes');pLog('push')});
+
+/* nav móvil */
+document.querySelector('.mtbs').addEventListener('click',function(e){
+  var b=e.target.closest('[data-v]');if(!b)return;
+  goPane(b.dataset.v);
+  if(ST.vist==='favoritas')tablaF();
+});
+
+/* ---- ajustes (igual que Config de la app real) ---- */
+function pintaDesc(){
+  document.getElementById('ajD').innerHTML=GLM.descuentos.map(function(d,i){
+    return '<div class="ajF"><span>'+d.marca+'</span><span style="display:flex;align-items:center;gap:6px">'+
+      '<input data-d="'+i+'" type="number" step="0.5" min="0" max="30" value="'+d.cent+'" '+
+      'style="width:60px;border:1px solid var(--linea);border-radius:10px;padding:8px;text-align:right;font-weight:700;background:#fff"> c/L</span></div>';
+  }).join('');
+}
+pintaDesc();
+document.getElementById('ajD').addEventListener('input',function(e){
+  var i=e.target.dataset&&e.target.dataset.d;
+  if(i===undefined||i==='')return;
+  GLM.descuentos[+i].cent=Math.max(0,+e.target.value||0);
+  GLM.descGuarda();
+  renderAll();
+});
+function pintaPromptsCfg(){
+  document.getElementById('ajP').innerHTML=GLM.PROMPTS.map(function(p,i){
+    return '<div style="margin-bottom:6px"><span style="font-size:.7rem;color:var(--sub)">⚡'+(i+1)+'</span>'+
+      '<textarea data-pr="'+i+'" rows="2" placeholder="Vacío = sin chip" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--linea);border-radius:10px;background:#fff;font:inherit;resize:vertical">'+GLM.escHtml(p)+'</textarea></div>';
+  }).join('');
+}
+pintaPromptsCfg();
+document.getElementById('ajP').addEventListener('input',function(e){
+  var i=e.target.getAttribute&&e.target.getAttribute('data-pr');
+  if(i===null||i===undefined) return;
+  GLM.PROMPTS[+i]=e.target.value; GLM.promptsGuarda(); pintaChips();
+});
+function horaAhora(){
+  var d=new Date();
+  return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+':'+('0'+d.getSeconds()).slice(-2);
+}
+var selH=document.getElementById('ajHoras'),selD=document.getElementById('ajDias');
+selH.innerHTML=Array.apply(null,Array(24)).map(function(_,i){return '<option value="'+(i+1)+'"'+((i+1)===8?' selected':'')+'>'+(i+1)+' h</option>'}).join('');
+selD.innerHTML=[1,2,3,5,7,14,30,60,90].map(function(d){return '<option value="'+d+'"'+(d===3?' selected':'')+'>'+d+' días seguidos bajando</option>'}).join('');
+document.getElementById('ajSwp').addEventListener('click',function(){
+  this.classList.toggle('act');this.textContent=this.classList.contains('act')?'Sí':'No';
+  snack(this.classList.contains('act')?'🔔 Avisos encendidos':'Avisos apagados')});
+function pintaAlertas(){
+  document.getElementById('ajAlertas').innerHTML=GLM.alertasPush.map(function(a){
+    return '<div class="ajF"><span style="font-size:.86rem">'+(a.tipo==='caida'?'📉':'📈')+' <b>'+a.est+'</b> · '+a.txt+'</span>'+
+      '<span style="color:var(--sub);font-size:.78rem;white-space:nowrap">'+a.hora+'</span></div>';
+  }).join('');
+}
+pintaAlertas();
+document.getElementById('ajTest').addEventListener('click',function(){
+  var a=GLM.alertasPush[0];
+  GLM.avisoPush(a.est+' '+a.txt,'llenando 50 L ahorras '+GLM.fmt2(GLM.deposito(50,1.479,1.412))+' €');
+  pintaAlertas();pLog();
+});
+document.getElementById('ajCache').addEventListener('click',function(){
+  GLM.logApi.unshift({t:GLM.hoyCorto+' '+horaAhora(),d:'—',s:'caché limpiada',url:'IndexedDB'});
+  snack('🗑️ Caché limpiada (simulada)');pLog();
+});
+document.getElementById('ajTtl').addEventListener('change',function(){snack('Caducidad de caché: '+this.value+' h')});
+document.getElementById('ajVer').textContent=GLM.VERSION;
+document.getElementById('ajUpd').addEventListener('click',function(){snack('✅ Estás en la última versión ('+GLM.VERSION+')')});
+
+/* registro de actividad (tabs API/Push) */
+var logTab='api';
+function pLog(tab){
+  logTab=tab||logTab;
+  document.querySelectorAll('#v-ajs [data-log], [data-pane="ajustes"] [data-log]').forEach(function(b){
+    b.classList.toggle('act',b.dataset.log===logTab)});
+  var filas;
+  if(logTab==='api'){
+    filas=GLM.logApi.map(function(l){
+      return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:.78rem;padding:6px 0;border-top:1px dashed var(--linea)">'+
+        '<span style="color:var(--sub);font-weight:600">'+l.t+' · '+l.url+'</span><b style="font-size:.7rem;color:'+
+        (l.s.indexOf('ERROR')>=0?'var(--rojo)':'var(--verde)')+'">'+l.s+(l.d&&l.d!=='—'?' · '+l.d:'')+'</b></div>';
+    });
+  } else {
+    filas=GLM.logPush.map(function(l){
+      return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:.78rem;padding:6px 0;border-top:1px dashed var(--linea)">'+
+        '<span style="color:var(--sub);font-weight:600">'+l.t+'</span><b style="font-size:.7rem">'+l.s+'</b></div>';
+    });
+  }
+  document.getElementById('ajLog').innerHTML=filas.join('');
+}
+document.querySelector('[data-pane="ajustes"]').addEventListener('click',function(e){
+  var b=e.target.closest('[data-log]');if(b)pLog(b.dataset.log);
+});
+pLog('api');
+
+function renderAll(){kpis();drawChart();alertasZ();tablaF();iaResumen()}
+window.addEventListener('resize',drawChart);
+pSelComb();
+renderAll();
+window.PT_VALID='v07';
+/* asas para el validador/sondeo (mismo patrón que PT_VALID) */
+window.PT_PROBE={ST:ST,abreFicha:abre,render:renderAll,cierra:fCierra};
+})();
+</script>
+</body>
+</html>

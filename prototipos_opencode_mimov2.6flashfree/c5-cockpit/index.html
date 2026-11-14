@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>C5 · Cockpit — Prototipo</title>
+<link rel="stylesheet" href="../comun/base.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="ck" id="ck">
+
+  <!-- Rail izquierdo: filtros + KPIs (en móvil: sheet) -->
+  <aside class="ck-rail" id="ckRail">
+    <div class="ck-brand">⛽ Gasolineras</div>
+
+    <div class="ck-block">
+      <div class="ck-lbl">Ubicación</div>
+      <div class="ck-prov">📍 Madrid · 1.287 estaciones</div>
+      <button class="ck-geo" id="ckGeo">🎯 Usar mi ubicación</button>
+    </div>
+
+    <div class="ck-block">
+      <div class="ck-lbl">Combustible</div>
+      <div class="ck-fuel-list" id="ckFuelList"></div>
+    </div>
+
+    <div class="ck-block">
+      <div class="ck-lbl">Filtros</div>
+      <input class="ck-search" id="ckSearch" placeholder="🔍 Buscar marca, calle…">
+      <div class="ck-toggle-row"><span>Solo favoritas</span><label class="ck-sw"><input type="checkbox" id="ckFavs"><span></span></label></div>
+      <div class="ck-toggle-row"><span>24 h únicamente</span><label class="ck-sw"><input type="checkbox"><span></span></label></div>
+    </div>
+
+    <div class="ck-block ck-kpis">
+      <div class="ck-kpi"><span class="ck-kpi-v" id="ckMedia">1,478</span><span class="ck-kpi-l">media €/L</span></div>
+      <div class="ck-kpi"><span class="ck-kpi-v good" id="ckMin">1,439</span><span class="ck-kpi-l">más barata</span></div>
+      <div class="ck-kpi"><span class="ck-kpi-v" id="ckVar">▼3,2¢</span><span class="ck-kpi-l">7 días</span></div>
+    </div>
+
+    <div class="ck-block ck-ai-mini">
+      <div class="ck-lbl">🤖 Asistente</div>
+      <button class="ck-ai-open" id="ckAiOpen">Abrir chat IA →</button>
+    </div>
+  </aside>
+
+  <!-- Centro: mapa + toggle -->
+  <section class="ck-center">
+    <div class="ck-center-bar">
+      <div class="ck-viewtabs">
+        <button class="ck-vt active" data-cv="mapa">🗺️ Mapa</button>
+        <button class="ck-vt" data-cv="lista">📋 Lista</button>
+        <button class="ck-vt" data-cv="ambos">◫ Ambos</button>
+      </div>
+      <select class="ck-style" id="ckStyle"><option>Satélite</option><option>Calle</option><option>Oscuro</option><option>Topográfico</option></select>
+    </div>
+    <div class="ck-workspace" id="ckWorkspace">
+      <div class="ck-map" id="ckMap"></div>
+      <div class="ck-list" id="ckList"></div>
+    </div>
+  </section>
+
+  <!-- Derecha: detalle (siempre visible en escritorio) -->
+  <aside class="ck-detail" id="ckDetail">
+    <div class="ck-detail-empty" id="ckDetailEmpty">
+      <div class="ck-de-emoji">📍</div>
+      <p>Selecciona una estación en el mapa o la lista para ver su detalle e histórico.</p>
+    </div>
+    <div class="ck-detail-content" id="ckDetailContent" style="display:none"></div>
+  </aside>
+
+  <!-- Panel IA desplegable (desde la derecha) -->
+  <div class="ck-ai-panel" id="ckAiPanel" data-open="no">
+    <div class="ck-ai-head"><span>🤖 Asistente IA</span><button id="ckAiClose">✕</button></div>
+    <div class="ck-ai-chips" id="ckAiChips"></div>
+    <div class="ck-ai-msgs" id="ckAiMsgs"></div>
+    <div class="ck-ai-input"><input type="text" id="ckAiInput" placeholder="Pregunta por precios, tendencias…"><button id="ckAiSend">➤</button></div>
+  </div>
+
+  <!-- Barra inferior solo en móvil -->
+  <nav class="ck-mnav" id="ckMnav">
+    <button class="ck-mn active" data-cm="mapa">🗺️<span>Mapa</span></button>
+    <button class="ck-mn" data-cm="rail">⚙️<span>Filtros</span></button>
+    <button class="ck-mn" data-cm="detalle">📋<span>Detalle</span></button>
+    <button class="ck-mn" data-cm="ia">🤖<span>IA</span></button>
+  </nav>
+</div>
+
+<script src="../comun/datos.js"></script>
+<script src="../comun/ui.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

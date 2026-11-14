@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>C6 · Gesture — Prototipo</title>
+<link rel="stylesheet" href="../comun/base.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="gs" id="gs">
+
+  <!-- Barra superior con indicador de páginas -->
+  <header class="gs-top">
+    <div class="gs-top-row">
+      <button class="gs-loc" id="gsLoc">📍 Madrid</button>
+      <div class="gs-dots" id="gsDots"></div>
+      <button class="gs-ia" id="gsIaBtn">🤖</button>
+    </div>
+  </header>
+
+  <!-- Chips combustible (en flujo, bajo la cabecera) -->
+  <div class="gs-chips scroll-x" id="gsChips"></div>
+
+  <!-- Contenedor deslizable -->
+  <div class="gs-track" id="gsTrack">
+    <!-- 0: Favoritas -->
+    <section class="gs-page" data-pg="0">
+      <div class="gs-page-head"><h2>★ Favoritas</h2><p>Desliza para ver la lista y el mapa</p></div>
+      <div class="gs-fav-cards" id="gsFavCards"></div>
+    </section>
+
+    <!-- 1: Lista (más baratas) -->
+    <section class="gs-page active" data-pg="1">
+      <div class="gs-page-head"><h2>⛽ Más baratas</h2><p>Toca una tarjeta · desliza ← para el mapa</p></div>
+      <div class="gs-stack" id="gsStack"></div>
+      <div class="gs-rest" id="gsRest"></div>
+    </section>
+
+    <!-- 2: Mapa -->
+    <section class="gs-page" data-pg="2">
+      <div class="gs-page-map" id="gsMapPage"></div>
+      <div class="gs-map-hint">Desliza → para volver a la lista</div>
+    </section>
+  </div>
+
+  <!-- Pull-to-refresh -->
+  <div class="gs-ptr" id="gsPtr"><span class="gs-ptr-ico">⟳</span><span class="gs-ptr-txt">Suelta para actualizar</span></div>
+
+  <!-- Nav inferior -->
+  <nav class="gs-nav">
+    <button class="gs-n" id="gsNavMap">🗺️<span>Mapa</span></button>
+    <button class="gs-n active" id="gsNavList">📋<span>Lista</span></button>
+    <button class="gs-n" id="gsNavFav">★<span>Favoritas</span></button>
+  </nav>
+
+  <!-- Sheet detalle -->
+  <div class="gs-backdrop" id="gsBackdrop"></div>
+  <div class="gs-sheet" id="gsSheet" data-open="no">
+    <div class="gs-grab"><span></span></div>
+    <button class="gs-close" id="gsClose">✕</button>
+    <div class="gs-sheet-body scroll-y" id="gsSheetBody"></div>
+  </div>
+
+  <!-- IA overlay -->
+  <div class="gs-ia-overlay" id="gsIaOv">
+    <div class="gs-iao-head"><span>🤖 Asistente</span><button id="gsIaClose">✕</button></div>
+    <div class="gs-iao-msgs" id="gsIaMsgs"></div>
+    <div class="gs-iao-input"><input type="text" id="gsIaInput" placeholder="Pregunta…"><button id="gsIaSend">➤</button></div>
+  </div>
+</div>
+
+<script src="../comun/datos.js"></script>
+<script src="../comun/ui.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

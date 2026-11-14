@@ -1,0 +1,85 @@
+[
+  {
+    "f": "v1-sheet.html",
+    "app": "25/25",
+    "extra": "5/7",
+    "faltanApp": [],
+    "faltanExtra": [
+      "Persistencia (localStorage)",
+      "Deep links / pantalla"
+    ]
+  },
+  {
+    "f": "v2-map.html",
+    "app": "25/25",
+    "extra": "4/7",
+    "faltanApp": [],
+    "faltanExtra": [
+      "Comparador",
+      "Persistencia (localStorage)",
+      "Deep links / pantalla"
+    ]
+  },
+  {
+    "f": "v3-cards.html",
+    "app": "25/25",
+    "extra": "4/7",
+    "faltanApp": [],
+    "faltanExtra": [
+      "Comparador",
+      "Deep links / pantalla",
+      "Sheets arrastrables"
+    ]
+  },
+  {
+    "f": "v4-desktop.html",
+    "app": "25/25",
+    "extra": "5/7",
+    "faltanApp": [],
+    "faltanExtra": [
+      "Deep links / pantalla",
+      "Sheets arrastrables"
+    ]
+  },
+  {
+    "f": "v5-ia.html",
+    "app": "25/25",
+    "extra": "5/7",
+    "faltanApp": [],
+    "faltanExtra": [
+      "Comparador",
+      "Deep links / pantalla"
+    ]
+  },
+  {
+    "f": "v6-drive.html",
+    "app": "25/25",
+    "extra": "5/7",
+    "faltanApp": [],
+    "faltanExtra": [
+      "Comparador",
+      "Persistencia (localStorage)"
+    ]
+  },
+  {
+    "f": "v7-compare.html",
+    "app": "25/25",
+    "extra": "5/7",
+    "faltanApp": [],
+    "faltanExtra": [
+      "Persistencia (localStorage)",
+      "Deep links / pantalla"
+    ]
+  },
+  {
+    "f": "v8-plan.html",
+    "app": "25/25",
+    "extra": "4/7",
+    "faltanApp": [],
+    "faltanExtra": [
+      "Comparador",
+      "Deep links / pantalla",
+      "Sheets arrastrables"
+    ]
+  }
+]

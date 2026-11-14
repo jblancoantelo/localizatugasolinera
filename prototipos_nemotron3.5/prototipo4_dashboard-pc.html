@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Precios Gasolina - Prototipo 4 Dashboard PC</title>
+  <meta name="description" content="Prototipo 4: Dashboard optimizado para PC/desktop">
+  <meta name="theme-color" content="#1a73e8">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="icons/icon-192.svg">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    /* Estilos prototipo 4 - Dashboard PC */
+    html { font-size: 16px; }
+    .app { padding: 1rem; max-width: 1800px; margin: 0 auto; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+    .page-header h1 { margin: 0; font-size: 1.25rem; color: #1a73e8; }
+    .page-header span { font-size: 0.75rem; color: #666; }
+    
+    /* Toolbar horizontal para PC */
+    .toolbar { background: #fff; padding: 0.8rem 1.2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border-radius: 8px; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+    .toolbar-groups { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+    .filter-group { flex: 0 0 auto; display: flex; align-items: center; gap: 0.4rem; }
+    .filter-group-label { display: none; font-size: 0.6rem; color: #555; white-space: nowrap; }
+    select { padding: 0.4rem 0.6rem; font-size: 0.75rem; min-width: 180px; background: #fff; border: 1px solid #ddd; border-radius: 6px; }
+    .btn { padding: 0.5rem 0.8rem; font-size: 0.7rem; background: #1a73e8; color: #fff; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+    .btn-primary { background: #1a73e8; }
+    .btn-del { background: #f20; color: #fff; }
+    .actions-group { margin-left: auto; display: flex; align-items: center; gap: 0.5rem; }
+    .price-legend { display: flex; align-items: center; gap: 1.5rem; font-size: 0.7rem; }
+    .price-legend span { display: inline-block; width: 1.3rem; height: 1.3rem; border-radius: 50%; flex-shrink: 0; }
+    .dot.g { background: #2e7d32; } .dot.o { background: #f57c00; } .dot.r { background: #b71c1c; }
+    .search-row { flex: 1; margin: 0; background: #f8f9fa; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid #ddd; display: flex; align-items: center; }
+    .search-row.hide { display: none; }
+    .search-row input { flex: 1; padding: 0; border: none; font-size: 0.7rem; background: transparent; }
+    .no-province-msg { padding: 2rem; text-align: center; color: #555; font-size: 0.9rem; }
+    
+    /* Content area - grid PC */
+    .content { display: grid; grid-template-areas:
+      "map table both"
+      "map ia ia"
+      . gap: 1rem; margin-bottom: 1.5rem; }
+    @media (max-width: 1200px) {
+      .content { grid-template-areas:
+        "map table"
+        "map ia"; }
+    }
+    @media (max-width: 768px) {
+      .content { grid-template-areas: "map" "table" "both" "ia"; }
+    }
+    
+    /* Map area */
+    .map-area { background: #fff; border-radius: 8px; padding: 1rem; grid-area: map; min-height: 400px; position: relative; }
+    .map-area canvas { width: 100%; height: 100%; }
+    
+    /* Table area */
+    .table-area { background: #fff; border-radius: 8px; padding: 1rem; grid-area: table; overflow-x: auto; }
+    .table-wrap { overflow-x: auto; }
+    .table-wrap table { width: 100%; border-collapse: collapse; min-width: 600px; font-size: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .table-wrap th, .table-wrap td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #eee; text-align: left; vertical-align: top; }
+    .table-wrap th { background: #f8f9fa; font-weight: bold; position: sticky; top: 0; }
+    .table-wrap th[data-col="Precio"] { color: #1a73e8; }
+    
+    /* Both area */
+    .both-table-area { background: #fff; border-radius: 8px; padding: 1rem; grid-area: both; overflow-x: auto; }
+    .both-table-wrap { overflow-x: auto; }
+    .both-table-wrap table { width: 100%; border-collapse: collapse; min-width: 800px; font-size: 0.65rem; }
+    .both-table-wrap th, .both-table-wrap td { padding: 0.4rem 0.5rem; border-bottom: 1px solid #eee; }
+    .both-table-wrap th { background: #f8f9fa; font-weight: bold; white-space: nowrap; }
+    
+    /* IA area */
+    .ia-area { background: #fff; border-radius: 8px; padding: 1rem; grid-area: ia; }
+    .ia-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; padding-bottom: 0.5rem; border-bottom: 1px solid #eee; }
+    .ia-header h2 { margin: 0; font-size: 0.85rem; color: #1a73e8; }
+    .ia-close-btn { width: 24px; height: 24px; font-size: 0.8rem; padding: 0; background: none; border: none; color: #555; cursor: pointer; }
+    .ia-provider-tabs { display: flex; overflow-x: auto; gap: 0.3rem; background: #f0f0f0; padding: 0.3rem 0.4rem; border-radius: 6px; margin-bottom: 0.5rem; }
+    .ia-provider-tab { flex: 0 0 auto; padding: 0.4rem 0.6rem; font-size: 0.65rem; background: #fff; border: 1px solid #ddd; border-radius: 6px; white-space: nowrap; }
+    .ia-provider-tab.active { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+    .ia-provider-panel { display: none; }
+    .ia-provider-panel.active { display: block; }
+    .ia-chat { height: 300px; background: #f8f9fa; border-radius: 6px; padding: 0.5rem; font-size: 0.65; overflow-y: auto; }
+    .ia-messages { height: 200px; overflow-y: auto; padding-right: 0.3rem; font-size: 0.6rem; }
+    .ia-message.user { background: #e3f2fd; padding: 0.3rem 0.4rem; border-radius: 6px; margin: 0.2rem 0; max-width: 90%; margin-left: auto; }
+    .ia-message.assistant { background: #f1f8e9; padding: 0.3rem 0.4rem; border-radius: 6px; margin: 0.2rem 0.3rem 0.4rem 0.3rem; max-width: 90%; }
+    .ia-message meta { font-size: 0.45rem; color: #888; margin-bottom: 0.1rem; display: block; }
+    .ia-input-row { display: flex; gap: 0.3rem; margin-top: 0.3rem; flex-wrap: wrap; }
+    .ia-input-row input { flex: 1; min-width: 200px; padding: 0.3rem 0.4rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.65rem; }
+    .ia-input-row button { padding: 0.3rem 0.5rem; font-size: 0.65rem; min-width: 36px; }
+    .ia-status { font-size: 0.5rem; color: #888; margin-top: 0.2rem; }
+    .ia-clear-btn { padding: 0.3rem 0.4rem; font-size: 0.5rem; background: #f8f9fa; border: 1px solid #ddd; border-radius: 6px; }
+    
+    /* Bottom tabs */
+    .bottom-tabs { padding: 0.6rem 1.2rem; background: #f8f9fa; border-radius: 8px; display: flex; gap: 0.3rem; }
+    .bottom-tab { flex: 0 0 auto; padding: 0.4rem 0.6rem; font-size: 0.65rem; text-align: center; min-width: 50px; }
+    .bottom-tab.active { background: #1a73e8; color: #fff; }
+    
+    /* Config */
+    .config-card { padding: 0.8rem; margin-bottom: 0.5rem; background: #fff; border-radius: 8px; font-size: 0.75rem; }
+    .config-card h3 { margin: 0 0 0.5rem 0; font-size: 0.8rem; }
+    .config-desc { font-size: 0.65rem; color: #666; margin-bottom: 0.5rem; }
+    
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .both-table-wrap table { min-width: 600px; }
+    }
+    @media (max-width: 992px) {
+      .filter-group { flex: 1 1 180px; }
+      .bottom-tabs { overflow-x: auto; }
+    }
+    @media (max-width: 768px) {
+      html { font-size: 14px; }
+      .toolbar { padding: 0.5rem; }
+      .bottom-tab { padding: 0.3rem 0.4rem; font-size: 0.55rem; min-width: 40px; }
+      .price-legend { gap: 0.8rem; font-size: 0.55rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1>Precios Gasolina España</h1>
+      <span>Versión demo · Datos en tiempo real</span>
+    </div>
+
+    <!-- Toolbar horizontal para PC -->
+    <div class="toolbar">
+      <div class="toolbar-groups">
+        <div class="filter-group">
+          <button class="btn" id="favToggleBtn" title="Favoritos">☆</button>
+          <button class="btn" id="pushNotifBtn" title="Notificaciones">🔔</button>
+          <button class="btn btn-primary" id="geolocBtn">📍</button>
+          <input type="number" id="maxDistance" min="1" placeholder="km" style="width:40px;font-size:0.7rem">
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">⛽</span>
+          <select id="fuelFilter" style="min-width:180px"><option value="">Todos</option><option value="Gasolina 95 E5">Gasolina 95 E5</option><option value="Gasóleo A">Gasóleo A</option></select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">📍</span>
+          <select id="provFilter" style="min-width:150px"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">🏘️</span>
+          <select id="locFilter" style="min-width:150px"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">🏷️</span>
+          <button class="btn" id="brandFilterBtn">Todas</button>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">🗺️</span>
+          <select id="mapStyle">
+            <option value="street">Calle</option>
+            <option value="satellite" selected>Satélite</option>
+          </select>
+          <span class="filter-sep"></span>
+          <button class="btn" id="searchToggleBtn" title="Buscar">🔍</button>
+        </div>
+        <div class="filter-group">
+          <button class="btn" id="resetFiltersBtn" title="Limpiar filtros" style="font-size:0.85rem">✕</button>
+        </div>
+        <div class="filter-group actions-group">
+          <div class="price-legend" id="legend"><span><span class="dot g"></span> <1.50</span><span><span class="dot o"></span> 1.50–1.70</span><span><span class="dot r"></span> >1.70</span></div>
+        </div>
+      </div>
+      <div class="search-row hide" id="searchRow">
+        <input type="text" id="search" placeholder="Buscar localidad, calle o marca...">
+      </div>
+    </div>
+
+    <!-- Content Area con grid PC -->
+    <div class="content" id="contentArea">
+      <!-- Mapa -->
+      <div class="map-area" id="map"></div>
+      <!-- Tabla -->
+      <div class="table-area">
+        <div class="table-wrap">
+          <table id="table">
+            <thead>
+              <tr>
+                <th data-col="Rótulo">Marca</th>
+                <th data-col="Precio">Precio</th>
+                <th data-col="Distancia">Distancia</th>
+                <th data-col="Localidad">Localidad</th>
+                <th data-col="Dirección">Calle</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Ambos -->
+      <div class="both-table-area" id="bothTableArea">
+        <div class="both-table-wrap">
+          <table id="tableBoth">
+            <thead>
+              <tr>
+                <th data-col="Rótulo">Marca</th>
+                <th data-col="Precio">Precio</th>
+                <th data-col="Distancia">Distancia</th>
+                <th data-col="Localidad">Localidad</th>
+                <th data-col="Dirección">Calle</th>
+              </tr>
+            </thead>
+            <tbody id="tableBothBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- IA Area -->
+      <div class="ia-area" id="iaArea">
+        <div class="ia-header">
+          <h2>🤖 Asistente IA</h2>
+          <button class="ia-close-btn" id="iaClosePcBtn">✕</button>
+        </div>
+        <div class="ia-container">
+          <div class="ia-provider-tabs" id="iaProviderPcTabs">
+            <button class="ia-provider-tab active" data-iaprovider="general">General</button>
+            <button class="ia-provider-tab" data-iaprovider="groq">Groq</button>
+            <button class="ia-provider-tab" data-iaprovider="mistral">Mistral</button>
+            <button class="ia-provider-tab" data-iaprovider="openrouter">OpenRouter</button>
+            <button class="ia-provider-tab" data-iaprovider="llm7">LLM7.io</button>
+            <button class="ia-provider-tab" data-iaprovider="nvidia">NVIDIA</button>
+            <button class="ia-provider-tab" data-iaprovider="google">Google Gemini</button>
+            <button class="ia-provider-tab" data-iaprovider="chrome-nano">Chrome Nano</button>
+          </div>
+          
+          <div class="ia-provider-panel active" data-iapanel="general">
+            <div class="ia-config">
+              <span style="font-size:0.5rem;color:#888">🚀 Misma pregunta a todos los proveedores visibles, en paralelo</span>
+              <span id="iaStatusGeneralPc" style="font-size:0.4rem;color:#999"></span>
+              <button class="ia-clear-btn" data-iaclear="general" title="Borrar el historial">🗑</button>
+            </div>
+            <div class="ia-chat">
+              <div class="ia-messages" id="iaMessagesGeneralPc"></div>
+              <div class="ia-input-row">
+                <input type="text" id="iaInputGeneralPc" placeholder="Pregunta a todos los proveedores...">
+                <button id="iaSendGeneralPc">Enviar</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="ia-provider-panel" data-iapanel="groq">
+            <div class="ia-config">
+              <label><select id="iaModelGroqPc"><option value="qwen/qwen3.8-27b" selected>Qwen 3.8 27B</option><option value="openai/gpt-oss-20b">GPT-OSS 20B</option></select></label>
+              <button class="ia-refresh-btn" id="iaRefreshModelsGroqPc">🔄</button>
+              <span id="iaStatusGroqPc" style="font-size:0.4rem;color:#999">⚠️ Sin API Key</span>
+              <button class="ia-clear-btn" data-iaclear="groq" title="Borrar el historial">🗑</button>
+            </div>
+            <div class="ia-chat">
+              <div class="ia-messages" id="iaMessagesGroqPc"></div>
+              <div class="ia-input-row">
+                <input type="text" id="iaInputGroqPc" placeholder="Escribe un mensaje...">
+                <button id="iaSendGroqPc">Enviar</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="ia-provider-panel" data-iapanel="mistral">
+            <div class="ia-config">
+              <label><select id="iaModelMistralPc"><option value="open-mistral-nemo" selected>Mistral Nemo</option><option value="ministral-8b-latest">Ministral 8B</option></select></label>
+              <button class="ia-refresh-btn" id="iaRefreshModelsMistralPc">🔄</button>
+              <span id="iaStatusMistralPc" style="font-size:0.4rem;color:#999">⚠️ Sin API Key</span>
+              <button class="ia-clear-btn" data-iaclear="mistral" title="Borrar el historial">🗑</button>
+            </div>
+            <div class="ia-chat">
+              <div class="ia-messages" id="iaMessagesMistralPc"></div>
+              <div class="ia-input-row">
+                <input type="text" id="iaInputMistralPc" placeholder="Escribe un mensaje...">
+                <button id="iaSendMistralPc">Enviar</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="ia-provider-panel" data-iapanel="openrouter">
+            <div class="ia-config">
+              <label><select id="iaModelOpenrouterPc"><option value="nvidia/nemotron-3-ultra-550b-a55b:free" selected>Nemotron 3 Ultra (gratis)</option></select></label>
+              <button class="ia-refresh-btn" id="iaRefreshModelsOpenrouterPc">🔄</button>
+              <span id="iaStatusOpenrouterPc" style="font-size:0.4rem;color:#999">⚠️ Sin API Key</span>
+              <button class="ia-clear-btn" data-iaclear="openrouter" title="Borrar el historial">🗑</button>
+            </div>
+            <div class="ia-chat">
+              <div class="ia-messages" id="iaMessagesOpenrouterPc"></div>
+              <div class="ia-input-row">
+                <input type="text" id="iaInputOpenrouterPc" placeholder="Escribe un mensaje...">
+                <button id="iaSendOpenrouterPc">Enviar</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="ia-provider-panel" data-iapanel="llm7">
+            <div class="ia-config">
+              <label><select id="iaModelLlm7Pc"><option value="codestral-latest" selected>Codestral Latest</option><option value="GLM-5.3-Flash">GLM 5.3 Flash</option></select></label>
+              <button class="ia-refresh-btn" id="iaRefreshModelsLlm7Pc">🔄</button>
+              <span id="iaStatusLlm7Pc" style="font-size:0.4rem;color:#888">ℹ️ Sin clave: acceso anónimo</span>
+              <button class="ia-clear-btn" data-iaclear="llm7" title="Borrar el historial">🗑</button>
+            </div>
+            <div class="ia-chat">
+              <div class="ia-messages" id="iaMessagesLlm7Pc"></div>
+              <div class="ia-input-row">
+                <input type="text" id="iaInputLlm7Pc" placeholder="Escribe un mensaje...">
+                <button id="iaSendLlm7Pc">Enviar</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="ia-provider-panel" data-iapanel="nvidia">
+            <div class="ia-config">
+              <label><select id="iaModelNvidiaPc"><option value="nvidia/nemotron-3-ultra-550b-a55b" selected>Nemotron 3 Ultra 550B</option></select></label>
+              <button class="ia-refresh-btn" id="iaRefreshModelsNvidiaPc">🔄</button>
+              <span id="iaStatusNvidiaPc" style="font-size:0.4rem;color:#999">✅ Proxy por defecto</span>
+              <button class="ia-clear-btn" data-iaclear="nvidia" title="Borrar el historial">🗑</button>
+            </div>
+            <div class="ia-chat">
+              <div class="ia-messages" id="iaMessagesNvidiaPc"></div>
+              <div class="ia-input-row">
+                <input type="text" id="iaInputNvidiaPc" placeholder="Escribe un mensaje...">
+                <button id="iaSendNvidiaPc">Enviar</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="ia-provider-panel" data-iapanel="google">
+            <div class="ia-config">
+              <label><select id="iaModelGooglePc"><option value="gemini-3.8-flash" selected>Gemini 3.8 Flash</option></select></label>
+              <button class="ia-refresh-btn" id="iaRefreshModelsGooglePc">🔄</button>
+              <span id="iaStatusGooglePc" style="font-size:0.4rem;color:#999">⚠️ Sin API Key</span>
+              <button class="ia-clear-btn" data-iaclear="google" title="Borrar el historial">🗑</button>
+            </div>
+            <div class="ia-chat">
+              <div class="ia-messages" id="iaMessagesGooglePc"></div>
+              <div class="ia-input-row">
+                <input type="text" id="iaInputGooglePc" placeholder="Escribe un mensaje...">
+                <button id="iaSendGooglePc">Enviar</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="ia-provider-panel" data-iapanel="chrome-nano">
+            <div class="ia-config">
+              <span style="font-size:0.5rem;color:#888">🤖 Gemini Nano en Chrome</span>
+              <button class="ia-clear-btn" data-iaclear="chrome-nano" title="Borrar el historial">🗑</button>
+            </div>
+            <div class="ia-chat">
+              <div class="ia-messages" id="iaMessagesChromeNanoPc"></div>
+              <div class="ia-input-row">
+                <input type="text" id="iaInputChromeNanoPc" placeholder="Escribe un mensaje...">
+                <button id="iaSendChromeNanoPc">Enviar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Tabs -->
+    <div class="bottom-tabs">
+      <button class="bottom-tab active" data-tab="tab-map"><span class="tab-icon">🗺️</span> Mapa</button>
+      <button class="bottom-tab" data-tab="tab-table"><span class="tab-icon">☰</span> Tabla</button>
+      <button class="bottom-tab" data-tab="tab-both"><span class="tab-icon">⊞</span> Ambos</button>
+      <button class="bottom-tab" data-tab="tab-ia"><span class="tab-icon">🤖</span> IA</button>
+    </div>
+  </div>
+
+  <script src="js/state.js"></script>
+  <script src="js/helpers.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/table.js"></script>
+  <script src="js/controls.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/chart-core.js"></script>
+  <script src="js/chart-engine.js"></script>
+  <script src="js/push-notifications.js"></script>
+  <script src="js/ai-chat.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Datos fake para PC - más estaciones y provincias
+      const estacionesFalso = [
+        { Rótulo: 'SHELL', Localidad: 'Madrid', Dirección: 'Calle Alcalá 283', 'Precio Gasolina 95 E5': 1.659, 'Precio Gasoleo A': 1.529 },
+        { Rótulo: 'REPSOL', Localidad: 'Madrid', Dirección: 'Calle León 45', 'Precio Gasolina 95 E5': 1.635, 'Precio Gasoleo A': 1.515 },
+        { Rótulo: 'CEPSA', Localidad: 'Barcelona', Dirección: 'Avenida Diagonal 157', 'Precio Gasolina 95 E5': 1.682, 'Precio Gasoleo A': 1.547 },
+        { Rótulo: 'GALP', Localidad: 'Sevilla', Dirección: 'Calle San Francisco 12', 'Precio Gasolina 95 E5': 1.668, 'Precio Gasoleo A': 1.533 },
+        { Rótulo: 'BP', Localidad: 'Valencia', Dirección: 'Carrera 4 88', 'Precio Gasolina 95 E5': 1.647, 'Precio Gasoleo A': 1.518 },
+        { Rótulo: 'Total', Localidad: 'Málaga', Dirección: 'Corte Inglés 55', 'Precio Gasolina 95 E5': 1.675, 'Precio Gasoleo A': 1.542 },
+        { Rótulo: 'Optimax', Localidad: 'Madrid', Dirección: 'Paseo de la Castellana 15', 'Precio Gasolina 95 E5': 1.620, 'Precio Gasoleo A': 1.505 },
+        { Rótulo: 'IAI', Localidad: 'Sevilla', Dirección: 'Av. Kansai 30', 'Precio Gasolina 95 E5': 1.690, 'Precio Gasoleo A': 1.555 },
+        { Rótulo: 'COOP', Localidad: 'Zaragoza', Dirección: 'Calle Alfonso 10', 'Precio Gasolina 95 E5': 1.665, 'Precio Gasoleo A': 1.530 },
+        { Rótulo: 'Petronor', Localidad: 'Bilbao', Dirección: 'Abando 22', 'Precio Gasolina 95 E5': 1.688, 'Precio Gasoleo A': 1.550 },
+        { Rótulo: 'Iberdrola', Localidad: 'Las Palmas', Dirección: 'Avenida Castillo 45', 'Precio Gasolina 95 E5': 1.702, 'Precio Gasoleo A': 1.565 },
+        { Rótulo: 'Galpões', Localidad: 'Vigo', Dirección: 'Rúa do Porto 12', 'Precio Gasolina 95 E5': 1.655, 'Precio Gasoleo A': 1.520 },
+      ];
+      
+      const provinciasFalso = [
+        { id: 'md', name: 'Madrid' },
+        { id: 'bc', name: 'Barcelona' },
+        { id: 'sv', name: 'Sevilla' },
+        { id: 'va', name: 'Valencia' },
+        { id: 'ml', name: 'Málaga' },
+        { id: 'za', name: 'Zaragoza' },
+        { id: 'bi', name: 'Bilbao' },
+        { id: 'lp', name: 'Las Palmas' },
+        { id: 'vg', name: 'Vigo' },
+      ];
+      
+      STATE.provinces = provinciasFalso;
+      STATE.data = estacionesFalso;
+      STATE.filtered = estacionesFalso;
+      
+      // Poblar provincia
+      const provSelect = document.getElementById('provFilter');
+      provinciasFalso.forEach(prov => {
+        const opt = document.createElement('option');
+        opt.value = prov.id;
+        opt.textContent = prov.name;
+        provSelect.appendChild(opt);
+      });
+      
+      // Inicializar
+      renderTable(estacionesFalso);
+      document.getElementById('bothTableArea').style.display = 'none';
+      
+      // Event: cambio de provincia
+      provSelect.addEventListener('change', function() {
+        const prov = this.value;
+        if (!prov) {
+          STATE.filtered = [...estacionesFalso];
+        } else {
+          STATE.filtered = estacionesFalso.filter(st => 
+            st.Localidad === prov || st.Dirección.includes(prov)
+          );
+        }
+        renderTable(STATE.filtered);
+        document.getElementById('bothTableArea').style.display = 'none';
+      });
+      
+      // Event: reset
+      document.getElementById('resetFiltersBtn').addEventListener('click', function() {
+        STATE.filtered = [...estacionesFalso];
+        renderTable(STATE.filtered);
+        document.getElementById('bothTableArea').style.display = 'none';
+        document.getElementById('searchRow').classList.add('hide');
+      });
+      
+      // Event: geolocalización
+      document.getElementById('geolocBtn').addEventListener('click', function() {
+        STATE.filtered = estacionesFalso.slice(0, 6);
+        renderTable(STATE.filtered);
+        document.getElementById('bothTableArea').style.display = 'none';
+        alert('Ubicación simulada - mostramos 6 estaciones más cercanas');
+      });
+      
+      // Event: tabs bottom
+      document.querySelectorAll('.bottom-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+          const tabId = this.dataset.tab;
+          document.querySelectorAll('.bottom-tab').forEach(t => t.classList.remove('active'));
+          this.classList.add('active');
+          
+          document.getElementById('contentArea').querySelectorAll('[id$="Area"]').forEach(area => {
+            area.style.display = 'none';
+          });
+          
+          if (tabId === 'tab-both') {
+            document.getElementById('bothTableArea').style.display = 'block';
+          } else if (tabId === 'tab-table') {
+            document.querySelector('.table-area').style.display = 'block';
+          } else if (tabId === 'tab-map') {
+            // Mapa
+          }
+        });
+      });
+      
+      // Event: IA tabs PC
+      document.querySelectorAll('.ia-provider-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+          const provider = this.dataset.iaprovider;
+          document.querySelectorAll('.ia-provider-tab').forEach(t => t.classList.remove('active'));
+          this.classList.add('active');
+          
+          document.querySelectorAll('.ia-provider-panel').forEach(p => p.classList.remove('active'));
+          document.querySelector(`[data-iapanel="${provider}"]`).classList.add('active');
+        });
+      });
+      
+      // Event: IA close PC
+      document.getElementById('iaClosePcBtn').addEventListener('click', function() {
+        document.getElementById('iaArea').style.display = 'none';
+      });
+      
+      // Event: IA send general PC
+      document.getElementById('iaSendGeneralPc').addEventListener('click', function() {
+        const input = document.getElementById('iaInputGeneralPc');
+        const query = input.value.trim();
+        if (!query) return;
+        
+        addAiMessagePc(query, 'user');
+        input.value = '';
+        
+        setTimeout(() => {
+          addAiMessagePc('Respuesta simulada PC sobre: ' + query, 'assistant');
+        }, 500);
+      });
+      
+      function addAiMessagePc(text, role) {
+        const messagesDiv = document.getElementById(`iaMessages${role === 'user' ? 'GeneralPc' : ''}`) || document.getElementById('iaMessagesGeneralPc');
+        if (!messagesDiv) return;
+        
+        const div = document.createElement('div');
+        div.className = `ia-message ${role}`;
+        div.innerHTML = `
+          <div style="font-size:0.5rem;margin-bottom:0.1rem">${role === 'user' ? 'Tú:' : 'IA:'}</div>
+          <div style="font-size:0.45rem;line-height:1.3;">${text}</div>
+          <div style="font-size:0.35rem;color:#888;margin-top:0.1em"> ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+        `;
+        messagesDiv.appendChild(div);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
+      
+      function renderTable(data) {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem">No hay estaciones con estos filtros</td></tr>';
+          return;
+        }
+        
+        data.forEach((st, i) => {
+          const tr = document.createElement('tr');
+          const precio = st['Precio Gasolina 95 E5'] || 0;
+          tr.innerHTML = `
+            <td>${st.Rótulo}</td>
+            <td>${precio.toFixed(3).replace('.', ',')} €/L</td>
+            <td>${(5 + Math.random()*10).toFixed(1)} km</td>
+            <td>${st.Localidad}</td>
+            <td>${st.Dirección}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+      
+      // Inicializar area IA visible
+      document.getElementById('iaArea').style.display = 'block';
+    });
+  </script>
+</body>
+</html>

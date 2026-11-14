@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Precios Gasolina - Prototipo 9 Vista Rápida</title>
+  <meta name="description" content="Prototipo 9: Vista rápida de estación">
+  <meta name="theme-color" content="#1a73e8">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="icons/icon-192.svg">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    /* Vista rápida - prototipo 9 */
+    .app { padding: 0.5rem; background: #fafafa; }
+    .toolbar { background: #fff; padding: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 0.5rem; }
+    .toolbar-groups { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: stretch; }
+    .filter-group { flex: 1 1 150px; min-width: 150px; }
+    .filter-group-label { display: block; font-size: 0.55rem; color: #555; margin-bottom: 0.2rem; font-weight: bold; }
+    select { width: 100%; padding: 0.3rem 0.4rem; font-size: 0.55rem; background: #fff; border: 1px solid #ddd; border-radius: 4px; }
+    .btn { padding: 0.3rem 0.5rem; font-size: 0.55rem; background: #1a73e8; color: #fff; border: none; border-radius: 4px; cursor: pointer; flex: 0; white-space: nowrap; }
+    .btn-primary { background: #1a73e8; }
+    .btn-del { background: #f20; color: #fff; }
+    .actions-group { margin-top: 0.3rem; padding-top: 0.3rem; border-top: 1px solid #eee; }
+    .price-legend { display: flex; gap: 1rem; align-items: center; font-size: 0.55rem; }
+    .price-legend span { display: inline-block; width: 0.8rem; height: 0.8rem; border-radius: 50%; flex-shrink: 0; }
+    .dot.g { background: #2e7d32; } .dot.o { background: #f57c00; } .dot.r { background: #b71c1c; }
+    .search-row { margin-top: 0.3rem; background: #f8f9fa; padding: 0.3rem; border-radius: 6px; font-size: 0.55rem; }
+    .search-row.hide { display: none; }
+    .search-row input { width: 100%; padding: 0.2rem 0.3rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.55rem; background: #fafafa; }
+    .no-province-msg { padding: 1.5rem; text-align: center; color: #555; font-size: 0.75rem; }
+    .online-badge { display: inline-block; padding: 0.2rem 0.5rem; background: #4caf50; color: #000; font-size: 0.5rem; border-radius: 4px; margin-left: 0.5rem; }
+    .offline-badge { display: inline-block; padding: 0.2rem 0.5rem; background: #ff9800; color: #000; font-size: 0.5rem; border-radius: 4px; margin-left: 0.5rem; }
+    
+    /* Quick view area */
+    .quick-area { background: #fff; border-radius: 8px; padding: 0.5rem; margin-bottom: 0.5rem; max-width: 400px; margin-left: auto; margin-right: auto; }
+    .quick-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; padding-bottom: 0.3rem; border-bottom: 1px solid #eee; }
+    .quick-header h2 { margin: 0; font-size: 0.75rem; color: #1a73e8; }
+    .quick-close-btn { width: 24px; height: 24px; font-size: 0.8rem; padding: 0; background: none; border: none; color: #555; cursor: pointer; }
+    
+    /* Station info */
+    .quick-station { background: #f8f9fa; border-radius: 6px; padding: 0.5rem; margin-bottom: 0.5rem; }
+    .quick-station h3 { margin: 0 0 0.3rem 0; font-size: 0.85rem; color: #1a73e8; }
+    .quick-station p { margin: 0.1rem 0; font-size: 0.55rem; color: #555; }
+    .quick-station p strong { color: #333; }
+    
+    /* Fuels list */
+    .fuels-list { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.3rem; }
+    .fuel-item { display: flex; justify-content: space-between; align-items: baseline; padding: 0.2rem 0; border-bottom: 1px solid #eee; font-size: 0.5rem; }
+    .fuel-item:last-child { border-bottom: none; }
+    .fuel-name { color: #555; }
+    .fuel-price { font-weight: bold; color: #1a73e8; }
+    .fuel-price.low { color: #2e7d32; }
+    .fuel-price.medium { color: #f57c00; }
+    .fuel-price.high { color: #b71c1c; }
+    
+    /* Comparison button */
+    .comp-btn { width: 100%; padding: 0.5rem; font-size: 0.6rem; background: #1a73e8; color: #fff; border: none; border-radius: 6px; cursor: pointer; text-align: center; margin-top: 0.3rem; }
+    
+    /* Table */
+    .table-area { background: #fff; border-radius: 6px; padding: 0.4rem; }
+    .table-wrap { overflow-x: auto; }
+    .table-wrap table { width: 100%; border-collapse: collapse; margin-top: 0.2rem; font-size: 0.5rem; }
+    .table-wrap th, .table-wrap td { padding: 0.3rem; border-bottom: 1px solid #eee; text-align: left; }
+    .table-wrap th { background: #f5f5f5; font-weight: bold; }
+    
+    /* Bottom tabs */
+    .bottom-tabs { padding: 0.4rem; background: #f8f9fa; border-radius: 8px; margin-top: 0.3rem; display: flex; overflow-x: auto; gap: 0.1rem; }
+    .bottom-tab { flex: 0 0 auto; padding: 0.3rem 0.4rem; font-size: 0.5rem; text-align: center; min-width: 36px; }
+    .bottom-tab.active { background: #1a73e8; color: #fff; }
+    
+    /* Config */
+    .config-card { padding: 0.3rem; margin-bottom: 0.2rem; background: #fff; border-radius: 6px; font-size: 0.55rem; }
+    .config-card h3 { margin: 0 0 0.2rem 0; font-size: 0.6rem; }
+    .config-desc { font-size: 0.45rem; color: #666; margin-bottom: 0.2rem; }
+    
+    /* Responsive */
+    @media (min-width: 400px) {
+      .filter-group { min-width: 110px; }
+    }
+    @media (min-width: 500px) {
+      .bottom-tabs { overflow-x: visible; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-groups">
+        <div class="filter-group">
+          <button class="btn" id="favToggleBtn" title="Favoritos">☆</button>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">⛽<span class="label-text"> Combustible</span></span>
+          <select id="fuelFilter" style="max-width:130px;font-size:0.55rem"><option value="">Todos</option><option value="Gasolina 95 E5">Gasolina 95 E5</option></select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">📍<span class="label-text"> Provincia</span></span>
+          <select id="provFilter" style="max-width:110px;font-size:0.55rem"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">🏘️<span class="label-text"> Localidad</span></span>
+          <select id="locFilter" style="max-width:110px;font-size:0.55rem"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">🏷️<span class="label-text"> Marca</span></span>
+          <button class="btn" id="brandFilterBtn">Todas</button>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">🗺️<span class="label-text"> Mapa</span></span>
+          <select id="mapStyle">
+            <option value="street">Calle</option>
+            <option value="satellite" selected>Satélite</option>
+          </select>
+          <span class="filter-sep"></span>
+          <button class="btn" id="searchToggleBtn" title="Buscar">🔍</button>
+        </div>
+        <div class="filter-group">
+          <button class="btn" id="resetFiltersBtn" title="Limpiar filtros" style="font-size:0.7rem">✕</button>
+        </div>
+        <div class="filter-group actions-group">
+          <div class="price-legend" id="legend"><span><span class="dot g"></span> <1.50</span><span><span class="dot o"></span> 1.50–1.70</span><span><span class="dot r"></span> >1.70</span></div>
+        </div>
+      </div>
+      <div class="search-row hide" id="searchRow">
+        <input type="text" id="search" placeholder="Buscar estación por marca, localidad o calle..." style="width:100%;padding:0.2rem;font-size:0.55rem;border-radius:4px">
+      </div>
+    </div>
+
+    <!-- Quick View Area -->
+    <div class="quick-area" id="quickArea">
+      <div class="quick-header">
+        <h2>📡 Estación Seleccionada</h2>
+        <button class="quick-close-btn" id="quickCloseBtn">✕</button>
+      </div>
+      <div class="quick-station" id="quickStation">
+        <!-- Station info generada por JS -->
+      </div>
+      <div class="fuels-list" id="fuelsList">
+        <!-- Fuel items generados por JS -->
+      </div>
+      <button class="comp-btn" id="compareBtn">Comparar con otras estaciones</button>
+    </div>
+
+    <!-- Content Table -->
+    <div class="content" id="contentArea">
+      <div class="table-area">
+        <div class="table-wrap">
+          <table id="table">
+            <thead>
+              <tr>
+                <th data-col="Rótulo">Marca</th>
+                <th data-col="Precio">Precio</th>
+                <th data-col="Distancia">Distancia</th>
+                <th data-col="Localidad">Localidad</th>
+                <th data-col="Dirección">Calle</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="both-table-area" id="bothTableArea" style="display:none">
+        <div class="both-table-wrap">
+          <table id="tableBoth">
+            <thead>
+              <tr>
+                <th data-col="Rótulo">Marca</th>
+                <th data-col="Precio">Precio</th>
+                <th data-col="Distancia">Distancia</th>
+                <th data-col="Localidad">Localidad</th>
+                <th data-col="Dirección">Calle</th>
+              </tr>
+            </thead>
+            <tbody id="tableBothBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Tabs -->
+    <div class="bottom-tabs">
+      <button class="bottom-tab active" data-tab="tab-map"><span class="tab-icon">🗺️</span> Mapa</button>
+      <button class="bottom-tab" data-tab="tab-table"><span class="tab-icon">☰</span> Tabla</button>
+      <button class="bottom-tab" data-tab="tab-both"><span class="tab-icon">⊞</span> Ambos</button>
+    </div>
+  </div>
+
+  <script src="js/state.js"></script>
+  <script src="js/helpers.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/table.js"></script>
+  <script src="js/controls.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/chart-core.js"></script>
+  <script src="js/chart-engine.js"></script>
+  <script src="js/push-notifications.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Datos fake para vista rápida
+      const estacionesFalso = [
+        { Rótulo: 'SHELL', Localidad: 'Madrid', Dirección: 'Calle Alcalá 283', 'Precio Gasolina 95 E5': 1.659, 'Precio Gasoleo A': 1.529, favorito: true },
+        { Rótulo: 'REPSOL', Localidad: 'Madrid', Dirección: 'Calle León 45', 'Precio Gasolina 95 E5': 1.635, 'Precio Gasoleo A': 1.515, favorito: false },
+        { Rótulo: 'CEPSA', Localidad: 'Barcelona', Dirección: 'Avenida Diagonal 157', 'Precio Gasolina 95 E5': 1.682, 'Precio Gasoleo A': 1.547, favorito: true },
+        { Rótulo: 'GALP', Localidad: 'Sevilla', Dirección: 'Calle San Francisco 12', 'Precio Gasolina 95 E5': 1.668, 'Precio Gasoleo A': 1.533, favorito: false },
+        { Rótulo: 'BP', Localidad: 'Valencia', Dirección: 'Carrera 4 88', 'Precio Gasolina 95 E5': 1.647, 'Precio Gasoleo A': 1.518, favorito: true },
+        { Rótulo: 'Total', Localidad: 'Málaga', Dirección: 'Corte Inglés 55', 'Precio Gasolina 95 E5': 1.675, 'Precio Gasoleo A': 1.542, favorito: false },
+        { Rótulo: 'Optimax', Localidad: 'Madrid', Dirección: 'Paseo de la Castellana 15', 'Precio Gasolina 95 E5': 1.620, 'Precio Gasoleo A': 1.505, favorito: true },
+        { Rótulo: 'IAI', Localidad: 'Sevilla', Dirección: 'Av. Kansai 30', 'Precio Gasolina 95 E5': 1.690, 'Precio Gasoleo A': 1.555, favorito: false },
+      ];
+      
+      const provinciasFalso = [
+        { id: 'md', name: 'Madrid' },
+        { id: 'bc', name: 'Barcelona' },
+        { id: 'sv', name: 'Sevilla' },
+        { id: 'va', name: 'Valencia' },
+        { id: 'ml', name: 'Málaga' },
+      ];
+      
+      STATE.provinces = provinciasFalso;
+      STATE.data = estacionesFalso;
+      STATE.filtered = estacionesFalso;
+      STATE.favorites = estacionesFalso.filter(st => st.favorito);
+      
+      // Poblar provincia
+      const provSelect = document.getElementById('provFilter');
+      provinciasFalso.forEach(prov => {
+        const opt = document.createElement('option');
+        opt.value = prov.id;
+        opt.textContent = prov.name;
+        provSelect.appendChild(opt);
+      });
+      
+      // Inicializar
+      renderTable(estacionesFalso);
+      document.getElementById('bothTableArea').style.display = 'none';
+      document.getElementById('quickArea').style.display = 'none';
+      
+      // Event: cambio de provincia
+      provSelect.addEventListener('change', function() {
+        const prov = this.value;
+        if (!prov) {
+          STATE.filtered = [...estacionesFalso];
+        } else {
+          STATE.filtered = estacionesFalso.filter(st => 
+            st.Localidad === prov || st.Dirección.includes(prov)
+          );
+        }
+        renderTable(STATE.filtered);
+      });
+      
+      // Event: reset
+      document.getElementById('resetFiltersBtn').addEventListener('click', function() {
+        STATE.filtered = [...estacionesFalso];
+        renderTable(STATE.filtered);
+        document.getElementById('bothTableArea').style.display = 'none';
+        document.getElementById('searchRow').classList.add('hide');
+      });
+      
+      // Event: search
+      document.getElementById('search').addEventListener('input', function() {
+        const term = this.value.trim().toLowerCase();
+        if (!term) {
+          renderTable(estacionesFalso);
+          return;
+        }
+        const filtered = estacionesFalso.filter(st => 
+          st.Rótulo.toLowerCase().includes(term) || 
+          st.Localidad.toLowerCase().includes(term) || 
+          st.Dirección.toLowerCase().includes(term)
+        );
+        renderTable(filtered);
+      });
+      
+      // Event: fav toggle
+      document.getElementById('favToggleBtn').addEventListener('click', function() {
+        const quickArea = document.getElementById('quickArea');
+        if (quickArea.style.display === 'none' || !quickArea.style.display) {
+          quickArea.style.display = 'block';
+        } else {
+          quickArea.style.display = 'none';
+        }
+      });
+      
+      // Event: quick close
+      document.getElementById('quickCloseBtn').addEventListener('click', function() {
+        document.getElementById('quickArea').style.display = 'none';
+      });
+      
+      // Event: compare button
+      document.getElementById('compareBtn').addEventListener('click', function() {
+        alert('Función de comparación activada - seleccionaría otras estaciones para comparar precios');
+      });
+      
+      // Open quick view for a station
+      function abrirVistaRapida(station) {
+        const quickArea = document.getElementById('quickArea');
+        const quickStation = document.getElementById('quickStation');
+        const fuelsList = document.getElementById('fuelsList');
+        
+        quickArea.style.display = 'block';
+        
+        // Station info
+        quickStation.innerHTML = `
+          <h3>${station.Rótulo}</h3>
+          <p><strong>Localidad:</strong> ${station.Localidad}</p>
+          <p><strong>Dirección:</strong> ${station.Dirección}</p>
+          <p><strong>Distancia:</strong> ${(5 + Math.random()*10).toFixed(1)} km</p>
+        `;
+        
+        // Fuels list
+        fuelsList.innerHTML = '';
+        const fuels = ['Precio Gasolina 95 E5', 'Precio Gasoleo A'];
+        fuels.forEach(fuel => {
+          const price = station[fuel] || 0;
+          const priceClass = price < 1.5 ? 'low' : price < 1.7 ? 'medium' : 'high';
+          const fuelName = fuel.replace('Precio ', '').replace(' E5', ' E5').replace(' Gasoleo A', ' Gasóleo A');
+          
+          const fuelItem = document.createElement('div');
+          fuelItem.className = 'fuel-item';
+          fuelItem.innerHTML = `
+            <span class="fuel-name">${fuelName}</span>
+            <span class="fuel-price ${priceClass}">${price.toFixed(3).replace('.', ',')} €/L</span>
+          `;
+          fuelsList.appendChild(fuelItem);
+        });
+      }
+      
+      function renderTable(data) {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:1rem">No hay estaciones con estos filtros</td></tr>';
+          return;
+        }
+        
+        data.forEach((st, i) => {
+          const tr = document.createElement('tr');
+          const precio = st['Precio Gasolina 95 E5'] || 0;
+          tr.innerHTML = `
+            <td>${st.Rótulo}</td>
+            <td>${precio.toFixed(3).replace('.', ',')} €/L</td>
+            <td>${(5 + Math.random()*10).toFixed(1)} km</td>
+            <td>${st.Localidad}</td>
+            <td>${st.Dirección}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+    });
+  </script>
+</body>
+</html>

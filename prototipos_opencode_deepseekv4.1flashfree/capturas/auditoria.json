@@ -1,0 +1,434 @@
+[
+  {
+    "file": "v1-sheet.html",
+    "check": "datos fake",
+    "ok": true,
+    "note": "6 tarjetas · 8 precios"
+  },
+  {
+    "file": "v1-sheet.html",
+    "check": "cambio de combustible",
+    "ok": true,
+    "note": "precios recalculados"
+  },
+  {
+    "file": "v1-sheet.html",
+    "check": "búsqueda",
+    "ok": true,
+    "note": "1 resultados"
+  },
+  {
+    "file": "v1-sheet.html",
+    "check": "favoritos",
+    "ok": true,
+    "note": "6 → 7 favoritos"
+  },
+  {
+    "file": "v1-sheet.html",
+    "check": "detalle + histórico",
+    "ok": true,
+    "note": "ficha + histórico"
+  },
+  {
+    "file": "v1-sheet.html",
+    "check": "chat IA",
+    "ok": true,
+    "note": "2 mensajes"
+  },
+  {
+    "file": "v1-sheet.html",
+    "check": "config completa",
+    "ok": true,
+    "note": "8 tarjetas · precio 1.509 → 1.439"
+  },
+  {
+    "file": "v1-sheet.html",
+    "check": "tema claro/oscuro",
+    "ok": true,
+    "note": "light → dark"
+  },
+  {
+    "file": "v1-sheet.html",
+    "check": "sin errores de consola",
+    "ok": true,
+    "note": "0 errores"
+  },
+  {
+    "file": "v2-map.html",
+    "check": "datos fake",
+    "ok": true,
+    "note": "22 tarjetas · 32 precios"
+  },
+  {
+    "file": "v2-map.html",
+    "check": "cambio de combustible",
+    "ok": true,
+    "note": "precios recalculados"
+  },
+  {
+    "file": "v2-map.html",
+    "check": "búsqueda",
+    "ok": true,
+    "note": "9 resultados"
+  },
+  {
+    "file": "v2-map.html",
+    "check": "favoritos",
+    "ok": true,
+    "note": "6 → 5 favoritos"
+  },
+  {
+    "file": "v2-map.html",
+    "check": "detalle + histórico",
+    "ok": true,
+    "note": "ficha + histórico"
+  },
+  {
+    "file": "v2-map.html",
+    "check": "chat IA",
+    "ok": true,
+    "note": "2 mensajes"
+  },
+  {
+    "file": "v2-map.html",
+    "check": "config completa",
+    "ok": true,
+    "note": "8 tarjetas · precio 1.509 → 1.439"
+  },
+  {
+    "file": "v2-map.html",
+    "check": "tema claro/oscuro",
+    "ok": true,
+    "note": "light → dark"
+  },
+  {
+    "file": "v2-map.html",
+    "check": "sin errores de consola",
+    "ok": true,
+    "note": "0 errores"
+  },
+  {
+    "file": "v3-cards.html",
+    "check": "datos fake",
+    "ok": true,
+    "note": "8 tarjetas · 14 precios"
+  },
+  {
+    "file": "v3-cards.html",
+    "check": "cambio de combustible",
+    "ok": true,
+    "note": "precios recalculados"
+  },
+  {
+    "file": "v3-cards.html",
+    "check": "búsqueda",
+    "ok": true,
+    "note": "1 resultados"
+  },
+  {
+    "file": "v3-cards.html",
+    "check": "favoritos",
+    "ok": true,
+    "note": "6 → 5 favoritos"
+  },
+  {
+    "file": "v3-cards.html",
+    "check": "detalle + histórico",
+    "ok": true,
+    "note": "ficha + histórico"
+  },
+  {
+    "file": "v3-cards.html",
+    "check": "chat IA",
+    "ok": true,
+    "note": "2 mensajes"
+  },
+  {
+    "file": "v3-cards.html",
+    "check": "config completa",
+    "ok": true,
+    "note": "8 tarjetas · precio 1.509 → 1.439"
+  },
+  {
+    "file": "v3-cards.html",
+    "check": "tema claro/oscuro",
+    "ok": true,
+    "note": "light → dark"
+  },
+  {
+    "file": "v3-cards.html",
+    "check": "sin errores de consola",
+    "ok": true,
+    "note": "0 errores"
+  },
+  {
+    "file": "v4-desktop.html",
+    "check": "datos fake",
+    "ok": true,
+    "note": "11 tarjetas · 14 precios"
+  },
+  {
+    "file": "v4-desktop.html",
+    "check": "cambio de combustible",
+    "ok": true,
+    "note": "precios recalculados"
+  },
+  {
+    "file": "v4-desktop.html",
+    "check": "búsqueda",
+    "ok": true,
+    "note": "1 resultados"
+  },
+  {
+    "file": "v4-desktop.html",
+    "check": "favoritos",
+    "ok": true,
+    "note": "6 → 5 favoritos"
+  },
+  {
+    "file": "v4-desktop.html",
+    "check": "detalle + histórico",
+    "ok": true,
+    "note": "ficha + histórico"
+  },
+  {
+    "file": "v4-desktop.html",
+    "check": "chat IA",
+    "ok": true,
+    "note": "2 mensajes"
+  },
+  {
+    "file": "v4-desktop.html",
+    "check": "config completa",
+    "ok": true,
+    "note": "8 tarjetas · precio 1.509 → 1.439"
+  },
+  {
+    "file": "v4-desktop.html",
+    "check": "tema claro/oscuro",
+    "ok": true,
+    "note": "light → dark"
+  },
+  {
+    "file": "v4-desktop.html",
+    "check": "sin errores de consola",
+    "ok": true,
+    "note": "0 errores"
+  },
+  {
+    "file": "v5-ia.html",
+    "check": "datos fake",
+    "ok": true,
+    "note": "8 tarjetas · 49 precios"
+  },
+  {
+    "file": "v5-ia.html",
+    "check": "cambio de combustible",
+    "ok": true,
+    "note": "cambia (el precio antiguo sigue en pantalla)"
+  },
+  {
+    "file": "v5-ia.html",
+    "check": "búsqueda",
+    "ok": true,
+    "note": "3 resultados"
+  },
+  {
+    "file": "v5-ia.html",
+    "check": "favoritos",
+    "ok": true,
+    "note": "6 → 5 favoritos"
+  },
+  {
+    "file": "v5-ia.html",
+    "check": "detalle + histórico",
+    "ok": true,
+    "note": "ficha + histórico"
+  },
+  {
+    "file": "v5-ia.html",
+    "check": "chat IA",
+    "ok": true,
+    "note": "2 mensajes"
+  },
+  {
+    "file": "v5-ia.html",
+    "check": "config completa",
+    "ok": true,
+    "note": "8 tarjetas · precio 1.509 → 1.439"
+  },
+  {
+    "file": "v5-ia.html",
+    "check": "tema claro/oscuro",
+    "ok": true,
+    "note": "light → dark"
+  },
+  {
+    "file": "v5-ia.html",
+    "check": "sin errores de consola",
+    "ok": true,
+    "note": "0 errores"
+  },
+  {
+    "file": "v6-drive.html",
+    "check": "datos fake",
+    "ok": true,
+    "note": "20 tarjetas · 23 precios"
+  },
+  {
+    "file": "v6-drive.html",
+    "check": "cambio de combustible",
+    "ok": true,
+    "note": "cambia (el precio antiguo sigue en pantalla)"
+  },
+  {
+    "file": "v6-drive.html",
+    "check": "búsqueda",
+    "ok": true,
+    "note": "11 resultados"
+  },
+  {
+    "file": "v6-drive.html",
+    "check": "favoritos",
+    "ok": true,
+    "note": "6 → 7 favoritos"
+  },
+  {
+    "file": "v6-drive.html",
+    "check": "detalle + histórico",
+    "ok": true,
+    "note": "ficha + histórico"
+  },
+  {
+    "file": "v6-drive.html",
+    "check": "chat IA",
+    "ok": true,
+    "note": "2 mensajes"
+  },
+  {
+    "file": "v6-drive.html",
+    "check": "config completa",
+    "ok": true,
+    "note": "8 tarjetas · precio 1.509 → 1.439"
+  },
+  {
+    "file": "v6-drive.html",
+    "check": "tema claro/oscuro",
+    "ok": true,
+    "note": "dark → light"
+  },
+  {
+    "file": "v6-drive.html",
+    "check": "sin errores de consola",
+    "ok": true,
+    "note": "0 errores"
+  },
+  {
+    "file": "v7-compare.html",
+    "check": "datos fake",
+    "ok": true,
+    "note": "25 tarjetas · 41 precios"
+  },
+  {
+    "file": "v7-compare.html",
+    "check": "cambio de combustible",
+    "ok": true,
+    "note": "cambia (el precio antiguo sigue en pantalla)"
+  },
+  {
+    "file": "v7-compare.html",
+    "check": "búsqueda",
+    "ok": true,
+    "note": "12 resultados"
+  },
+  {
+    "file": "v7-compare.html",
+    "check": "favoritos",
+    "ok": true,
+    "note": "6 → 5 favoritos"
+  },
+  {
+    "file": "v7-compare.html",
+    "check": "detalle + histórico",
+    "ok": true,
+    "note": "ficha + histórico"
+  },
+  {
+    "file": "v7-compare.html",
+    "check": "chat IA",
+    "ok": true,
+    "note": "2 mensajes"
+  },
+  {
+    "file": "v7-compare.html",
+    "check": "config completa",
+    "ok": true,
+    "note": "8 tarjetas · precio 1.509 → 1.439"
+  },
+  {
+    "file": "v7-compare.html",
+    "check": "tema claro/oscuro",
+    "ok": true,
+    "note": "light → dark"
+  },
+  {
+    "file": "v7-compare.html",
+    "check": "sin errores de consola",
+    "ok": true,
+    "note": "0 errores"
+  },
+  {
+    "file": "v8-plan.html",
+    "check": "datos fake",
+    "ok": true,
+    "note": "10 tarjetas · 31 precios"
+  },
+  {
+    "file": "v8-plan.html",
+    "check": "cambio de combustible",
+    "ok": true,
+    "note": "cambia (el precio antiguo sigue en pantalla)"
+  },
+  {
+    "file": "v8-plan.html",
+    "check": "búsqueda",
+    "ok": true,
+    "note": "1 resultados"
+  },
+  {
+    "file": "v8-plan.html",
+    "check": "favoritos",
+    "ok": true,
+    "note": "6 → 5 favoritos"
+  },
+  {
+    "file": "v8-plan.html",
+    "check": "detalle + histórico",
+    "ok": true,
+    "note": "ficha + histórico"
+  },
+  {
+    "file": "v8-plan.html",
+    "check": "chat IA",
+    "ok": true,
+    "note": "2 mensajes"
+  },
+  {
+    "file": "v8-plan.html",
+    "check": "config completa",
+    "ok": true,
+    "note": "8 tarjetas · precio 1.509 → 1.439"
+  },
+  {
+    "file": "v8-plan.html",
+    "check": "tema claro/oscuro",
+    "ok": true,
+    "note": "light → dark"
+  },
+  {
+    "file": "v8-plan.html",
+    "check": "sin errores de consola",
+    "ok": true,
+    "note": "0 errores"
+  }
+]

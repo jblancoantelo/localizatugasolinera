@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Precios Gasolina - Prototipo 2</title>
+  <meta name="description" content="Prototipo 2: Panel dual con tabs responsivos">
+  <meta name="theme-color" content="#1a73e8">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="icons/icon-192.svg">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    /* Estilos prototipo 2 - enfocado en dual-view */
+    .app { padding: 0.5rem; }
+    .toolbar { background: #fff; padding: 0.7rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 0.5rem; }
+    .toolbar-groups { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: stretch; }
+    .filter-group { flex: 1 1 140px; min-width: 140px; }
+    .filter-group-label { display: block; font-size: 0.6rem; color: #555; margin-bottom: 0.2rem; }
+    select { width: 100%; padding: 0.4rem; font-size: 0.65rem; background: #fff; border: 1px solid #ddd; border-radius: 4px; }
+    .btn { padding: 0.4rem 0.6rem; font-size: 0.65rem; background: #1a73e8; color: #fff; border: none; border-radius: 4px; cursor: pointer; flex: 0; }
+    .btn-primary { background: #1a73e8; }
+    .btn-del { background: #f20; color: #fff; }
+    .actions-group { margin-top: 0.3rem; padding-top: 0.3rem; border-top: 1px solid #eee; }
+    .price-legend span { display: inline-block; width: 1rem; height: 1rem; border-radius: 50%; margin-right: 0.2rem; flex-shrink: 0; }
+    .dot.g { background: #2e7d32; } .dot.o { background: #f57c00; } .dot.r { background: #b71c1c; }
+    .search-row { margin-top: 0.3rem; background: #f8f9fa; padding: 0.3rem; border-radius: 4px; font-size: 0.65rem; }
+    .search-row.hide { display: none; }
+    .no-province-msg { padding: 1.5rem; text-align: center; color: #555; font-size: 0.8rem; }
+    
+    /* Content area con grid responsivo */
+    .content { display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 0.5rem; }
+    @media (min-width: 500px) {
+      .content { grid-template-columns: 1fr 1fr; }
+    }
+    @media (min-width: 768px) {
+      .content { grid-template-columns: 2fr 1fr; }
+    }
+    
+    /* Table area */
+    .table-area { background: #fff; border-radius: 8px; padding: 0.5rem; }
+    .table-wrap { overflow-x: auto; }
+    .table-wrap table { width: 100%; border-collapse: collapse; margin-top: 0.3rem; font-size: 0.65rem; }
+    .table-wrap th, .table-wrap td { padding: 0.4rem; border-bottom: 1px solid #eee; text-align: left; }
+    .table-wrap th { background: #f5f5f5; font-weight: bold; }
+    
+    /* Both area */
+    .both-table-area { background: #fff; border-radius: 8px; padding: 0.5rem; display: none; }
+    .both-table-area.active { display: block; }
+    .both-table-wrap { overflow-x: auto; }
+    .both-table-wrap table { width: 100%; border-collapse: collapse; min-width: 600px; font-size: 0.6rem; }
+    .both-table-wrap th, .both-table-wrap td { padding: 0.3rem; border-bottom: 1px solid #eee; }
+    .both-table-wrap th { background: #f5f5f5; font-weight: bold; white-space: nowrap; }
+    
+    /* Bottom tabs */
+    .bottom-tabs { padding: 0.5rem; background: #f8f9fa; border-radius: 8px; margin-top: 0.5rem; display: flex; overflow-x: auto; gap: 0.2rem; }
+    .bottom-tab { flex: 0 0 auto; padding: 0.4rem 0.5rem; font-size: 0.6rem; text-align: center; min-width: 44px; }
+    .bottom-tab.active { background: #1a73e8; color: #fff; }
+    
+    /* IA area */
+    .ia-area { margin-top: 0.5rem; }
+    .ia-container { background: #fff; border-radius: 8px; padding: 0.5rem; }
+    .ia-provider-tabs { display: flex; overflow-x: auto; gap: 0.2rem; background: #f0f0f0; padding: 0.2rem; border-radius: 6px; margin-bottom: 0.3rem; }
+    .ia-provider-tab { flex: 0 0 auto; padding: 0.3rem 0.4rem; font-size: 0.55rem; background: #fff; border: 1px solid #ddd; border-radius: 5px; white-space: nowrap; }
+    .ia-provider-tab.active { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+    .ia-provider-panel { display: none; }
+    .ia-provider-panel.active { display: block; }
+    .ia-chat { background: #f8f9fa; border-radius: 6px; padding: 0.5rem; font-size: 0.6rem; }
+    .ia-messages { height: 100px; overflow-y: auto; padding-right: 0.3rem; }
+    .ia-input-row { display: flex; gap: 0.2rem; margin-top: 0.3rem; flex-wrap: wrap; }
+    .ia-input-row input { flex: 1; min-width: 80px; padding: 0.3rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.55rem; }
+    .ia-input-row button { padding: 0.3rem 0.4rem; font-size: 0.55rem; }
+    .ia-status { font-size: 0.45rem; color: #888; margin-top: 0.2rem; }
+    .ia-clear-btn { padding: 0.2rem 0.3rem; font-size: 0.45rem; background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; }
+    
+    /* Config */
+    .config-card { padding: 0.5rem; margin-bottom: 0.3rem; background: #fff; border-radius: 6px; font-size: 0.65rem; }
+    .config-card h3 { margin: 0 0 0.3rem 0; font-size: 0.7rem; }
+    .config-desc { font-size: 0.5rem; color: #666; margin-bottom: 0.3rem; }
+    
+    /* Responsive */
+    @media (min-width: 400px) {
+      .filter-group { min-width: 110px; }
+    }
+    @media (min-width: 600px) {
+      .bottom-tabs { overflow-x: visible; }
+      .bottom-tab { min-width: 50px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-groups">
+        <div class="filter-group">
+          <button class="btn" id="favToggleBtn" title="Favoritos">☆</button>
+          <button class="btn" id="pushNotifBtn" title="Notificaciones">🔔</button>
+          <button class="btn btn-primary" id="geolocBtn">📍</button>
+          <input type="number" id="maxDistance" min="1" placeholder="km" style="width:30px;font-size:0.65rem">
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">⛽<span class="label-text"> Combustible</span></span>
+          <select id="fuelFilter" style="max-width:110px;font-size:0.65rem"><option value="">Todos</option><option value="Gasolina 95 E5">Gasolina 95 E5</option></select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">📍<span class="label-text"> Provincia</span></span>
+          <select id="provFilter" style="max-width:90px;font-size:0.65rem"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">🏘️<span class="label-text"> Localidad</span></span>
+          <select id="locFilter" style="max-width:90px;font-size:0.65rem"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">🏷️<span class="label-text"> Marca</span></span>
+          <button class="btn" id="brandFilterBtn">Todas</button>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">🗺️<span class="label-text"> Mapa</span></span>
+          <select id="mapStyle">
+            <option value="street">Calle</option>
+            <option value="satellite" selected>Satélite</option>
+          </select>
+          <span class="filter-sep"></span>
+          <button class="btn" id="searchToggleBtn" title="Buscar">🔍</button>
+        </div>
+        <div class="filter-group">
+          <button class="btn" id="resetFiltersBtn" title="Limpiar filtros" style="font-size:0.75rem">✕</button>
+        </div>
+        <div class="filter-group actions-group">
+          <div class="price-legend" id="legend"><span><span class="dot g"></span> <1.50</span><span><span class="dot o"></span> 1.50–1.70</span><span><span class="dot r"></span> >1.70</span></div>
+        </div>
+      </div>
+      <div class="search-row hide" id="searchRow">
+        <input type="text" id="search" placeholder="Buscar localidad, calle o marca..." style="width:100%;padding:0.3rem;font-size:0.65rem;border-radius 4px">
+      </div>
+    </div>
+
+    <!-- Content Area con grid -->
+    <div class="content" id="contentArea">
+      <!-- Tabla -->
+      <div class="table-area">
+        <div class="table-wrap">
+          <table id="table">
+            <thead>
+              <tr>
+                <th data-col="Rótulo">Marca</th>
+                <th data-col="Precio">Precio</th>
+                <th data-col="Distancia">Distancia</th>
+                <th data-col="Localidad">Localidad</th>
+                <th data-col="Dirección">Calle</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Ambos -->
+      <div class="both-table-area" id="bothTableArea">
+        <div class="both-table-wrap">
+          <table id="tableBoth">
+            <thead>
+              <tr>
+                <th data-col="Rótulo">Marca</th>
+                <th data-col="Precio">Precio</th>
+                <th data-col="Distancia">Distancia</th>
+                <th data-col="Localidad">Localidad</th>
+                <th data-col="Dirección">Calle</th>
+              </tr>
+            </thead>
+            <tbody id="tableBothBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Tabs -->
+    <div class="bottom-tabs">
+      <button class="bottom-tab active" data-tab="tab-map"><span class="tab-icon">🗺️</span> Mapa</button>
+      <button class="bottom-tab" data-tab="tab-table"><span class="tab-icon">☰</span> Tabla</button>
+      <button class="bottom-tab" data-tab="tab-both"><span class="tab-icon">⊞</span> Ambos</button>
+    </div>
+  </div>
+
+  <script src="js/state.js"></script>
+  <script src="js/helpers.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/table.js"></script>
+  <script src="js/controls.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/chart-core.js"></script>
+  <script src="js/chart-engine.js"></script>
+  <script src="js/push-notifications.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Datos fake ampliados
+      const estacionesFalso = [
+        { Rótulo: 'SHELL', Localidad: 'Madrid', Dirección: 'Calle Alcalá 283', 'Precio Gasolina 95 E5': 1.659, 'Precio Gasoleo A': 1.529 },
+        { Rótulo: 'REPSOL', Localidad: 'Madrid', Dirección: 'Calle León 45', 'Precio Gasolina 95 E5': 1.635, 'Precio Gasoleo A': 1.515 },
+        { Rótulo: 'CEPSA', Localidad: 'Barcelona', Dirección: 'Avenida Diagonal 157', 'Precio Gasolina 95 E5': 1.682, 'Precio Gasoleo A': 1.547 },
+        { Rótulo: 'GALP', Localidad: 'Sevilla', Dirección: 'Calle San Francisco 12', 'Precio Gasolina 95 E5': 1.668, 'Precio Gasoleo A': 1.533 },
+        { Rótulo: 'BP', Localidad: 'Valencia', Dirección: 'Carrera 4 88', 'Precio Gasolina 95 E5': 1.647, 'Precio Gasoleo A': 1.518 },
+        { Rótulo: 'Total', Localidad: 'Málaga', Dirección: 'Corte Inglés 55', 'Precio Gasolina 95 E5': 1.675, 'Precio Gasoleo A': 1.542 },
+        { Rótulo: 'Optimax', Localidad: 'Madrid', Dirección: 'Paseo de la Castellana 15', 'Precio Gasolina 95 E5': 1.620, 'Precio Gasoleo A': 1.505 },
+        { Rótulo: 'IAI', Localidad: 'Sevilla', Dirección: 'Av. Kansai 30', 'Precio Gasolina 95 E5': 1.690, 'Precio Gasoleo A': 1.555 },
+      ];
+      
+      const provinciasFalso = [
+        { id: 'md', name: 'Madrid' },
+        { id: 'bc', name: 'Barcelona' },
+        { id: 'sv', name: 'Sevilla' },
+        { id: 'va', name: 'Valencia' },
+        { id: 'ml', name: 'Málaga' },
+      ];
+      
+      STATE.provinces = provinciasFalso;
+      STATE.data = estacionesFalso;
+      STATE.filtered = estacionesFalso;
+      
+      // Poblar provincia
+      const provSelect = document.getElementById('provFilter');
+      provinciasFalso.forEach(prov => {
+        const opt = document.createElement('option');
+        opt.value = prov.id;
+        opt.textContent = prov.name;
+        provSelect.appendChild(opt);
+      });
+      
+      // Inicializar vistas
+      renderTable(estacionesFalso);
+      document.getElementById('bothTableArea').style.display = 'none';
+      
+      // Event: cambio de provincia
+      provSelect.addEventListener('change', function() {
+        const prov = this.value;
+        if (!prov) {
+          STATE.filtered = [...estacionesFalso];
+        } else {
+          STATE.filtered = estacionesFalso.filter(st => 
+            st.Localidad === prov || st.Dirección.includes(prov)
+          );
+        }
+        renderTable(STATE.filtered);
+        document.getElementById('bothTableArea').style.display = 'none';
+      });
+      
+      // Event: reset
+      document.getElementById('resetFiltersBtn').addEventListener('click', function() {
+        STATE.filtered = [...estacionesFalso];
+        renderTable(STATE.filtered);
+        document.getElementById('bothTableArea').style.display = 'none';
+        document.getElementById('searchRow').classList.add('hide');
+      });
+      
+      // Event: geolocalización
+      document.getElementById('geolocBtn').addEventListener('click', function() {
+        STATE.filtered = estacionesFalso.slice(0, 4);
+        renderTable(STATE.filtered);
+        document.getElementById('bothTableArea').style.display = 'none';
+        alert('Ubicación simulada - mostramos 4 estaciones más cercanas');
+      });
+      
+      // Event: tabs bottom
+      document.querySelectorAll('.bottom-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+          const tabId = this.dataset.tab;
+          // Quitar active de todos
+          document.querySelectorAll('.bottom-tab').forEach(t => t.classList.remove('active'));
+          this.classList.add('active');
+          
+          // Mostrar/ocultar areas según tab
+          document.getElementById('contentArea').querySelectorAll('[id$="Area"]').forEach(area => {
+            area.style.display = 'none';
+          });
+          
+          if (tabId === 'tab-both') {
+            document.getElementById('bothTableArea').style.display = 'block';
+          } else if (tabId === 'tab-table') {
+            document.querySelector('.table-area').style.display = 'block';
+          } else if (tabId === 'tab-map') {
+            // Mapa se renderiza después
+          }
+        });
+      });
+      
+      function renderTable(data) {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem">No hay estaciones con estos filtros</td></tr>';
+          return;
+        }
+        // Si es "ambos", también poblar la tabla dual
+        const tbodyBoth = document.getElementById('tableBothBody');
+        tbodyBoth.innerHTML = '';
+        
+        data.forEach((st, i) => {
+          const tr = document.createElement('tr');
+          const precio = st['Precio Gasolina 95 E5'] || 0;
+          tr.innerHTML = `
+            <td>${st.Rótulo}</td>
+            <td>${precio.toFixed(3).replace('.', ',')} €/L</td>
+            <td>${(5 + Math.random()*10).toFixed(1)} km</td>
+            <td>${st.Localidad}</td>
+            <td>${st.Dirección}</td>
+          `;
+          tbody.appendChild(tr);
+          // También para tabla dual
+          const trBoth = document.createElement('tr');
+          trBoth.innerHTML = `
+            <td>${st.Rótulo}</td>
+            <td>${precio.toFixed(3).replace('.', ',')} €/L</td>
+            <td>${(5 + Math.random()*10).toFixed(1)} km</td>
+            <td>${st.Localidad}</td>
+            <td>${st.Dirección}</td>
+          `;
+          tbodyBoth.appendChild(trBoth);
+        });
+        
+        // Mostrar u ocultar tabla dual según qué tab esté activo
+        const activeTab = document.querySelector('.bottom-tab.active')?.dataset.tab;
+        if (activeTab === 'tab-both') {
+          document.getElementById('bothTableArea').style.display = 'block';
+        } else {
+          document.getElementById('bothTableArea').style.display = 'none';
+        }
+      }
+    });
+  </script>
+</body>
+</html>

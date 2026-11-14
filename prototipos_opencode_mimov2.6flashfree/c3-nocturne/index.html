@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>C3 · Nocturne — Prototipo</title>
+<link rel="stylesheet" href="../comun/base.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="nox" id="nox">
+
+  <!-- Cabecera -->
+  <header class="nx-top">
+    <div class="nx-top-row">
+      <div>
+        <div class="nx-kicker">Precio Gasolina 95 · Madrid</div>
+        <div class="nx-media"><span id="nxMedia">1,478</span> €/L <span class="nx-var" id="nxVar">▼ 3,2 ¢</span></div>
+      </div>
+      <button class="nx-bell" id="nxBell">🔔</button>
+    </div>
+    <div class="nx-hint" id="nxHint">Repostar hoy sale barato · mínimo de la semana</div>
+  </header>
+
+  <!-- Carrusel de acciones rápidas -->
+  <div class="nx-quick scroll-x" id="nxQuick"></div>
+
+  <!-- Vistas -->
+  <main class="nx-views">
+    <section class="nx-view active" id="nv-lista">
+      <div class="nx-sect-title">Estaciones cerca</div>
+      <div class="nx-cards" id="nxCards"></div>
+    </section>
+
+    <section class="nx-view" id="nv-mapa">
+      <div class="nx-map" id="nxMap"></div>
+    </section>
+
+    <section class="nx-view" id="nv-ia">
+      <div class="nx-ia-head">🤖 Asistente nocturno</div>
+      <div class="nx-ia-msgs" id="nxIaMsgs"></div>
+      <div class="nx-ia-input"><input type="text" id="nxIaInput" placeholder="Pregunta…"><button id="nxIaSend">➤</button></div>
+    </section>
+
+    <section class="nx-view" id="nv-ajustes">
+      <div class="nx-cards" id="nxSettings"></div>
+    </section>
+  </main>
+
+  <!-- Nav inferior XXL -->
+  <nav class="nx-nav" id="nxNav">
+    <button class="nx-n active" data-nv="lista"><b>📋</b><span>Lista</span></button>
+    <button class="nx-n" data-nv="mapa"><b>🗺️</b><span>Mapa</span></button>
+    <button class="nx-n" data-nv="ia"><b>🤖</b><span>IA</span></button>
+    <button class="nx-n" data-nv="ajustes"><b>⚙️</b><span>Ajustes</span></button>
+  </nav>
+
+  <!-- Sheet detalle -->
+  <div class="nx-backdrop" id="nxBackdrop"></div>
+  <div class="nx-sheet" id="nxSheet" data-open="no">
+    <div class="nx-grab"><span></span></div>
+    <button class="nx-close" id="nxClose">✕</button>
+    <div class="nx-sheet-body scroll-y" id="nxSheetBody"></div>
+  </div>
+</div>
+
+<script src="../comun/datos.js"></script>
+<script src="../comun/ui.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

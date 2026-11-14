@@ -1,0 +1,128 @@
+/* =============================================================
+   Base compartida de los prototipos (window.UI)
+   Variables de tema + mapa fake + gráfica + toast + preview móvil
+   ============================================================= */
+:root {
+  --acento: #1a73e8;
+  --acento-suave: #e8f0fe;
+  --barata: #1e8e3e;
+  --media: #f9a825;
+  --cara: #d93025;
+  --fav: #f9a825;
+  --bg: #f0f2f5;
+  --tarjeta: #ffffff;
+  --texto: #1a1a2e;
+  --texto-2: #5f6368;
+  --borde: #e0e3e7;
+  --sombra: 0 1px 3px rgba(0,0,0,.08), 0 4px 14px rgba(0,0,0,.06);
+  --radio: 14px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --nav-h: 58px;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg); color: var(--texto);
+  overscroll-behavior-y: none;
+}
+button { font-family: inherit; }
+.ico { display: inline-flex; width: 1.25em; height: 1.25em; }
+.ico svg { width: 100%; height: 100%; fill: currentColor; }
+
+/* --- Vista previa en marco de móvil (galería) --- */
+html.preview-phone, html.preview-phone body {
+  height: 100vh; overflow: hidden; background: #111318;
+  display: flex; align-items: center; justify-content: center;
+}
+html.preview-phone body {
+  width: var(--prev-w, 390px); height: var(--prev-h, 844px);
+  margin: 0 auto; border-radius: 30px; overflow: hidden;
+  box-shadow: 0 0 0 10px #22252c, 0 20px 60px rgba(0,0,0,.55);
+  position: relative;
+}
+
+/* ================= MAPA FAKE ================= */
+.mf-wrap { position: relative; width: 100%; height: 100%; overflow: hidden; background: #f3efe6; }
+.mf-bg { position: absolute; inset: 0; width: 100%; height: 100%; transition: transform .45s cubic-bezier(.2,.7,.3,1); }
+.mf-wrap.mf-zoom .mf-bg { transform: scale(1.6); }
+.mf-markers { position: absolute; inset: 0; }
+.mf-pin {
+  position: absolute; transform: translate(-50%, -100%);
+  border: none; background: none; padding: 0; cursor: pointer;
+  transition: transform .2s, filter .2s;
+}
+.mf-pin-price {
+  display: block; background: var(--pin, #d93025); color: #fff;
+  font-weight: 700; font-size: 11px; padding: 3px 7px; border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.3); white-space: nowrap;
+  border: 2px solid #fff;
+}
+.mf-pin::after {
+  content: ''; display: block; width: 2px; height: 7px; margin: 0 auto;
+  background: var(--pin, #d93025);
+}
+.mf-pin:hover { transform: translate(-50%, -100%) scale(1.12); z-index: 5; }
+.mf-pin.sel { transform: translate(-50%, -100%) scale(1.22); z-index: 6; }
+.mf-pin.sel .mf-pin-price { box-shadow: 0 0 0 3px rgba(26,115,232,.45), 0 4px 10px rgba(0,0,0,.35); }
+.mf-pin.fav .mf-pin-price::after { content: ' ★'; }
+.mf-me {
+  position: absolute; width: 16px; height: 16px; transform: translate(-50%, -50%);
+  background: #1a73e8; border: 3px solid #fff; border-radius: 50%;
+  box-shadow: 0 0 0 8px rgba(26,115,232,.18), 0 2px 6px rgba(0,0,0,.3);
+  animation: mePulse 2.4s infinite;
+}
+@keyframes mePulse { 0%,100% { box-shadow: 0 0 0 6px rgba(26,115,232,.18), 0 2px 6px rgba(0,0,0,.3);} 50% { box-shadow: 0 0 0 13px rgba(26,115,232,.08), 0 2px 6px rgba(0,0,0,.3);} }
+.mf-ctrl { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; gap: 6px; z-index: 7; }
+.mf-btn {
+  width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--borde);
+  background: rgba(255,255,255,.92); color: #333; font-size: 17px; cursor: pointer;
+  box-shadow: var(--sombra); line-height: 1;
+}
+.mf-btn:active { transform: scale(.94); }
+.mf-attrib {
+  position: absolute; left: 8px; bottom: 6px; font-size: 9px; color: #777;
+  background: rgba(255,255,255,.7); padding: 1px 6px; border-radius: 6px; z-index: 7;
+}
+
+/* ================= GRÁFICA SVG ================= */
+.g-svg { width: 100%; height: 100%; display: block; }
+.g-grid { stroke: var(--borde); stroke-width: 1; stroke-dasharray: 3 4; }
+.g-lab { font-size: 10px; fill: var(--texto-2); }
+.g-dot { fill: var(--acento); animation: gDot .4s backwards; }
+@keyframes gDot { from { opacity: 0; transform: scale(.2); } }
+.g-line { stroke-dasharray: 1400; stroke-dashoffset: 1400; animation: gDraw 1.1s ease forwards; }
+@keyframes gDraw { to { stroke-dashoffset: 0; } }
+.g-tag rect { fill: var(--texto); }
+.g-tag text { fill: #fff; font-size: 11px; font-weight: 700; }
+.g-vacio { color: var(--texto-2); font-size: .8rem; padding: 1rem; text-align: center; }
+
+/* ================= TOAST ================= */
+.proto-toast {
+  position: fixed; left: 50%; bottom: calc(var(--nav-h) + 18px + var(--safe-bottom));
+  transform: translateX(-50%) translateY(16px);
+  background: #22252c; color: #fff; padding: 9px 16px; border-radius: 999px;
+  font-size: .8rem; opacity: 0; pointer-events: none; transition: all .28s; z-index: 9999;
+  max-width: 88%; text-align: center; box-shadow: 0 6px 20px rgba(0,0,0,.35);
+}
+.proto-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ================= BADGE MARCA ================= */
+.badge-marca {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--c, #888); color: #fff; border-radius: 50%;
+  font-weight: 800; letter-spacing: -.02em; flex-shrink: 0;
+}
+
+/* ================= SCROLL SUAVE / BARRAS ================= */
+.scroll-y { overflow-y: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+.scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.scroll-x::-webkit-scrollbar { display: none; }
+
+/* Utilidad para marcar el más barato */
+.chip-barata {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: rgba(30,142,62,.12); color: var(--barata);
+  font-size: .62rem; font-weight: 700; padding: 2px 7px; border-radius: 999px;
+}

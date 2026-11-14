@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prototipos — Gasolineras · OpenCode DeepSeek V4.1 Flash</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;background:#eef1f5;color:#0d1620;min-height:100vh;padding:24px 16px 60px}
+.wrap{max-width:1100px;margin:0 auto}
+header h1{font-size:1.5rem;letter-spacing:-.02em}
+header p{color:#55677a;margin:.4rem 0 1rem;font-size:.92rem;max-width:70ch;line-height:1.55}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));margin-top:16px}
+.card{background:#fff;border:1px solid #e1e7ee;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:.6rem;box-shadow:0 1px 2px rgba(13,22,32,.06)}
+.card.new{border-color:#0b62d6;box-shadow:0 4px 14px rgba(13,22,32,.08)}
+.card .tag{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:.2rem .55rem;border-radius:99px;width:fit-content}
+.t-base{background:#e3f7ee;color:#00875a}.t-map{background:#e7f0fd;color:#0b62d6}.t-dec{background:#f1eafe;color:#6d28d9}
+.t-desk{background:#e8edf3;color:#334155}.t-ia{background:#fff5e0;color:#b26a00}.t-drv{background:#fdeaea;color:#cf2b2b}
+.t-new{background:#0b62d6;color:#fff}
+.t-plan{background:#e7f0fd;color:#0b62d6}
+.card h2{font-size:1.12rem}.card p{font-size:.85rem;color:#55677a;line-height:1.5;flex:1}
+.card ul{font-size:.78rem;color:#27364a;line-height:1.7;padding-left:1rem}
+.card a{display:block;text-align:center;background:#0b62d6;color:#fff;font-weight:800;text-decoration:none;padding:.7rem;border-radius:12px;margin-top:.4rem}
+.card a:hover{filter:brightness(1.1)}
+.mk{border-radius:14px;height:118px;position:relative;overflow:hidden;border:1px solid #e1e7ee;background:#f2f5f8}
+.mk i{position:absolute;display:block}
+.mk b{font-weight:800}
+/* v1: lista + mapa en escritorio */
+.mk-split{display:grid;grid-template-columns:44% 1fr}
+.mk-split .l{padding:10px;display:flex;flex-direction:column;gap:6px;background:#fff;border-right:1px solid #e1e7ee}
+.mk-split .l i{height:13px;border-radius:5px;background:#dbe4ee}
+.mk-split .l i:first-child{background:#bcd6f7}
+.mk-split .r{background:#eae5da}
+.mk-split .r u{position:absolute;width:11px;height:11px;border-radius:50%;border:2.5px solid #fff;background:#0b62d6;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+/* v2: mapa primero */
+.mk-map{background:#eae5da}
+.mk-map i.pin{width:11px;height:11px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.mk-map i.pill{left:10px;top:10px;width:48%;height:16px;border-radius:99px;background:rgba(255,255,255,.92);border:1px solid #e1e7ee}
+.mk-map i.sht{left:8px;right:8px;bottom:-8px;height:46px;border-radius:13px 13px 0 0;background:#fff;box-shadow:0 -4px 14px rgba(13,22,32,.12)}
+/* v3: feed de ahorro (oscuro) */
+.mk-save{background:#0e1420}
+.mk-save i.hero{left:10px;right:10px;top:10px;height:54px;border-radius:12px;border:1px solid rgba(0,135,90,.55);background:radial-gradient(120% 130% at 100% 0%,rgba(0,135,90,.55),transparent 60%),linear-gradient(150deg,#17293d,#101a29)}
+.mk-save b.amt{position:absolute;left:20px;top:24px;color:#4ade80;font-size:1.05rem;letter-spacing:-.02em}
+.mk-save i.row{left:10px;right:10px;height:12px;border-radius:6px;background:#1c2636}
+/* v4: consola 3 columnas */
+.mk-console{display:grid;grid-template-columns:52px 1fr 64px}
+.mk-console .rail{background:#fff;border-right:1px solid #e1e7ee;padding:8px 6px;display:flex;flex-direction:column;gap:5px}
+.mk-console .rail i{height:8px;border-radius:4px;background:#dbe4ee}
+.mk-console .cen{padding:9px 8px;display:flex;flex-direction:column;gap:5px;background:#f7f9fb}
+.mk-console .cen i{height:10px;border-radius:4px;background:#dbe4ee}
+.mk-console .cen i:first-child{background:#bcd6f7}
+.mk-console .insp{background:#fff;border-left:1px solid #e1e7ee;padding:8px 6px;display:flex;flex-direction:column;gap:5px}
+.mk-console .insp i{height:24px;border-radius:6px;background:#dbe4ee}
+/* v5: copiloto IA */
+.mk-chat{background:#fff;padding:10px;display:flex;flex-direction:column;gap:8px}
+.mk-chat i{height:17px;border-radius:10px 10px 3px 10px;background:#0b62d6}
+.mk-chat i.resp{height:26px;border-radius:10px 10px 10px 3px;background:#dbe4ee}
+.mk-chat i.card2{border-left:3px solid #00875a}
+/* v6: modo repostaje (oscuro) */
+.mk-drive{background:#0b0b0f;display:flex;align-items:center;justify-content:center}
+.mk-drive b.p{color:#fff;font-size:1.5rem;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.mk-drive i.step{left:10px;right:10px;top:10px;height:12px;border-radius:6px;background:#1f1f29}
+.mk-drive i.btn{left:10px;right:10px;bottom:10px;height:26px;border-radius:10px;background:#00875a}
+/* v7: comparador con veredicto */
+.mk-verd{background:#fff;padding:10px;display:flex;flex-direction:column;gap:8px}
+.mk-verd i.hero{border:1px solid #a8e0c8;background:radial-gradient(120% 130% at 100% 0%,rgba(0,135,90,.28),transparent 60%),#f4fbf7;height:38px;border-radius:10px}
+.mk-verd b.ok{position:absolute;left:18px;top:20px;color:#00875a;font-size:.78rem}
+.mk-verd i.bar{height:11px;border-radius:5px;background:#dbe4ee}
+.mk-verd i.bar.g{background:#b7e6cf}
+/* v8: planificador de repostaje */
+.mk-plan{background:linear-gradient(150deg,#fff,#eef6ff);padding:10px;display:grid;grid-template-columns:46px 1fr;gap:8px;align-items:center}
+.mk-plan .ring{position:static;width:46px;height:46px;border-radius:50%;border:6px solid #0b62d6;border-right-color:#dbe4ee;grid-row:span 2}
+.mk-plan .lvl{position:static;font-size:.82rem;font-weight:800;color:#0d1620;letter-spacing:-.02em}
+.mk-plan .days{display:flex;gap:3px;grid-column:2;align-items:flex-end;height:32px}
+.mk-plan .days i{flex:1;height:18px;border-radius:4px;background:#dbe4ee}
+.mk-plan .days i.on{background:#00875a;height:30px}
+.mk-plan .cta{grid-column:1/-1;height:13px;border-radius:7px;background:#0b62d6}
+footer{margin-top:26px;color:#55677a;font-size:.82rem;line-height:1.7;max-width:96ch}
+code{background:#e8edf3;padding:.1rem .35rem;border-radius:6px;color:#0b62d6}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<h1>&#9981; Prototipos OpenCode &mdash; DeepSeek V4.1 Flash &middot; nueva UX Gasolineras</h1>
+<p>8 dise&ntilde;os responsive navegables con <b>datos falsos</b> (29 estaciones, hist&oacute;rico sint&eacute;tico determinista). Abren con doble clic, sin servidor ni red.
+En m&oacute;vil se ven a pantalla completa; en PC cada uno adapta el layout (columnas, rail, inspector). Todos comparten el sistema de dise&ntilde;o <code>assets/proto.css</code> (Petrol UI 2.0) y los mismos datos (<code>assets/proto-data.js</code>),
+as&iacute; que las diferencias que notes son de <b>dise&ntilde;o</b>, no de datos.</p>
+</header>
+<div class="grid">
+<div class="card"><span class="tag t-base">v1 &middot; Base &middot; menor riesgo</span>
+<div class="mk mk-split"><div class="l"><i></i><i></i><i></i><i></i></div><div class="r"><u style="left:30%;top:30%"></u><u style="left:62%;top:52%"></u><u style="left:44%;top:72%"></u></div></div>
+<h2>v1 &middot; Evoluci&oacute;n</h2>
+<p>La app actual, ordenada. Filtros en chips y KPIs, lista y mapa lado a lado en escritorio (42/58) y detalle en bottom-sheet arrastrable con hist&oacute;rico.</p>
+<ul><li>Sin pesta&ntilde;as nuevas: mismo mapa de la PWA</li><li>Escritorio: lista + mapa sin cambiar de vista</li><li>Barra de comparaci&oacute;n r&aacute;pida (2&ndash;3 estaciones)</li></ul>
+<a href="v1-sheet.html">Abrir v1 &middot; Evoluci&oacute;n &rarr;</a></div>
+<div class="card"><span class="tag t-map">v2 &middot; Mapa</span>
+<div class="mk mk-map"><i class="pin" style="left:24%;top:30%;background:#00875a"></i><i class="pin" style="left:56%;top:52%;background:#c26b00"></i><i class="pin" style="left:74%;top:26%;background:#c62828"></i><i class="pin" style="left:40%;top:66%;background:#00875a"></i><i class="pill"></i><i class="sht"></i></div>
+<h2>v2 &middot; Mapa primero</h2>
+<p>El mapa ES la pantalla. Todo lo dem&aacute;s flota encima y se aparta: chips, FABs y un sheet arrastrable (peek &rarr; medio &rarr; completo) que sustituye a las pesta&ntilde;as.</p>
+<ul><li>Men&uacute; lateral para las vistas secundarias</li><li>FABs: GPS y solo favoritas</li><li>Para explorar conduciendo o a pie</li></ul>
+<a href="v2-map.html">Abrir v2 &middot; Mapa primero &rarr;</a></div>
+<div class="card"><span class="tag t-dec">v3 &middot; Decisi&oacute;n &middot; dark-first</span>
+<div class="mk mk-save"><i class="hero"></i><b class="amt">&minus;4,20 &euro; hoy</b><i class="row" style="top:74px"></i><i class="row" style="top:92px"></i></div>
+<h2>v3 &middot; Feed de ahorro</h2>
+<p>Deja de ser una lista de precios y pasa a ser &laquo;mi gasolina&raquo;: cu&aacute;nto cuesta repostar hoy, d&oacute;nde, cu&aacute;nto ahorras y por qu&eacute;. Orientado a decidir.</p>
+<ul><li>Hero con el ahorro del d&iacute;a</li><li>Feed con el porqu&eacute; de cada precio</li><li>Tema oscuro por defecto</li></ul>
+<a href="v3-cards.html">Abrir v3 &middot; Feed de ahorro &rarr;</a></div>
+<div class="card"><span class="tag t-desk">v4 &middot; Escritorio</span>
+<div class="mk mk-console"><div class="rail"><i></i><i></i><i></i><i></i><i></i></div><div class="cen"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="insp"><i></i><i></i><i></i></div></div>
+<h2>v4 &middot; Consola de escritorio</h2>
+<p>Para 1280&ndash;1920 px: filtros a la izquierda, tabla densa o mapa en el centro e inspector fijo a la derecha. Nada se abre encima de nada, salvo el command palette.</p>
+<ul><li>3 columnas fijas + KPIs siempre visibles</li><li>Command palette (Ctrl+K)</li><li>Degrada a m&oacute;vil sin perder nada</li></ul>
+<a href="v4-desktop.html">Abrir v4 &middot; Consola &rarr;</a></div>
+<div class="card"><span class="tag t-ia">v5 &middot; IA</span>
+<div class="mk mk-chat"><i style="align-self:flex-end;width:54%"></i><i class="resp" style="width:76%"></i><i class="resp card2" style="width:64%"></i></div>
+<h2>v5 &middot; Copiloto IA</h2>
+<p>El chat deja de ser una pesta&ntilde;a escondida y pasa a ser la app: respuestas con estaciones citadas, gr&aacute;fica y mapa, contexto inspeccionable y tiempo por proveedor.</p>
+<ul><li>Tarjetas de estaci&oacute;n dentro del chat</li><li>Contexto que se manda al modelo, a la vista</li><li>La misma pregunta a varios proveedores a la vez</li></ul>
+<a href="v5-ia.html">Abrir v5 &middot; Copiloto IA &rarr;</a></div>
+<div class="card"><span class="tag t-drv">v6 &middot; Conducci&oacute;n</span>
+<div class="mk mk-drive"><i class="step"></i><b class="p">1,429 &euro;</b><i class="btn"></i></div>
+<h2>v6 &middot; Modo repostaje (una mano)</h2>
+<p>La app en el soporte del coche: un paso = una decisi&oacute;n, todo pulsable en el tercio inferior, botones de 56&ndash;72 px y modo AMOLED para la noche.</p>
+<ul><li>Pasos guiados: repostar en 3 toques</li><li>Precios enormes, legibles de un vistazo</li><li>Decide con minutos de desv&iacute;o y &euro;/hora</li></ul>
+<a href="v6-drive.html">Abrir v6 &middot; Repostaje &rarr;</a></div>
+<div class="card"><span class="tag t-plan">v7 &middot; Comparador</span>
+<div class="mk mk-verd"><i class="hero"></i><b class="ok">&#10003; Ahorro neto &middot; 4,20 &euro;</b><i class="bar g" style="width:44%"></i><i class="bar" style="width:78%"></i><i class="bar" style="width:60%"></i></div>
+<h2>v7 &middot; Comparador con veredicto</h2>
+<p>Elige 2&ndash;3 estaciones y la app dicta sentencia: ahorro NETO = diferencia de precio &times; litros &minus; coste del desv&iacute;o. Con tabla de rankings, gr&aacute;fica superpuesta y el &laquo;por qu&eacute; gana&raquo;.</p>
+<ul><li>Veredicto en &euro; netos, no solo precio</li><li>Desv&iacute;o contado con tu consumo real</li><li>Selector con b&uacute;squeda y orden</li></ul>
+<a href="v7-compare.html">Abrir v7 &middot; Comparador &rarr;</a></div>
+<div class="card new"><span class="tag t-new">v8 &middot; Nuevo &middot; planificador</span>
+<div class="mk mk-plan"><i class="ring"></i><b class="lvl">12,0 L &middot; 188 km</b><div class="days"><i></i><i></i><i></i><i class="on"></i><i></i><i></i><i></i></div><i class="cta"></i></div>
+<h2>v8 &middot; Planificador de repostaje</h2>
+<p>La app decide por ti <b>cu&aacute;ndo</b> repostar: cruza el nivel del dep&oacute;sito, tu consumo y la previsi&oacute;n de 7 d&iacute;as para se&ntilde;alar la ventana m&aacute;s barata, con presupuesto mensual y agenda.</p>
+<ul><li>&laquo;Reposta el mi&eacute;rcoles&raquo; en vez de una lista</li><li>Hist&oacute;rico + previsi&oacute;n en la misma gr&aacute;fica</li><li>Ahorro por dep&oacute;sito y por mes</li></ul>
+<a href="v8-plan.html">Abrir v8 &middot; Planificador &rarr;</a></div>
+</div>
+<footer>
+<b>C&oacute;mo validar cada prototipo (2 min):</b> 1) cambia de combustible (chips o desplegable) &rarr; precios y lista se recalculan &middot;
+2) abre una estaci&oacute;n &rarr; hist&oacute;rico con la gr&aacute;fica y el tooltip al pasar el rat&oacute;n &middot; 3) marca &#9734; en dos estaciones y activa &laquo;solo favoritas&raquo; &middot;
+4) prueba el tema claro/oscuro y los descuentos por marca en Ajustes &middot; 5) en v7 elige 2&ndash;3 estaciones y mueve litros/consumo para ver cambiar el veredicto &middot;
+6) en v8 baja el nivel del dep&oacute;sito y cambia el presupuesto: la fecha recomendada, la agenda y el ahorro se recalculan.<br>
+Validaci&oacute;n autom&aacute;tica (Playwright): <code>node prototipos_opencode_deepseekv4.1flashfree/_validar.mjs</code> &rarr; capturas e <code>informe.json</code> en <code>capturas/</code>, sin errores de consola.<br>
+Carpeta <code>prototipos_opencode_deepseekv4.1flashfree/</code> &middot; independiente de la app (no toca <code>sw.js</code>, tests ni <code>ASSETS</code>).
+</footer>
+</div>
+</body>
+</html>
