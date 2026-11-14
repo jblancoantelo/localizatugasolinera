@@ -1,5 +1,39 @@
 # Mejoras realizadas — Precios Gasolina España
 
+## 2026-11-14 — Comparar el coste real de repostar en tus favoritas
+
+### Por qué hacía falta
+Saber que una gasolinera está a 1,455 €/L y otra a 1,475 €/L no responde a la
+pregunta que uno se hace antes de repostar: **cuánto me cuesta llenar el
+depósito**. Había que abrir el detalle de cada estación y multiplicar a mano.
+El comparador pone ese número en una sola vista, con el combustible que ya
+tienes filtrado.
+
+### Qué se hizo
+- Botón **🧮** en el toolbar, junto a la campana, que abre una modal centrada.
+- Coge las **5 primeras favoritas** y deja cambiar cuántas entran con −/+
+  (o escribiendo el número); el valor se recuerda entre sesiones.
+- Litros editables con **25 L** por defecto; cambiar el litraje recalcula los
+  totales al momento y también se guarda.
+- Usa el precio de `getSelectedFuelPrice()`, o sea **el filtro de combustible
+  activo y los descuentos por marca**, igual que la tabla.
+- Ordena las tarjetas de más barata a más cara, marca la más barata en verde y
+  la más cara en rojo, y resume el ahorro en € y %.
+- Si una favorita es de otra provincia, se buscan sus datos en la caché de esa
+  provincia y, si no está, se piden a la API sin cambiar la provincia cargada.
+
+### Lo que se evitó a propósito
+No se reutiliza el panel de detalle para el comparador: es una comparación
+**entre** estaciones, no la ficha de una, y necesita su propio espacio con los
+controles de litros y número de favoritas. Tampoco se comparan todas las
+gasolineras de la provincia: el objetivo es decidir entre las que ya te
+interesan, y así el cálculo no depende de tener una provincia cargada.
+
+### Tests
+- 223 tests (216 HTTP + 7 file://) en verde, 7 nuevos en el Comparador: botón,
+  aviso sin favoritas, orden y extremos con datos sembrados, litros ×2,
+  persistencia del litraje, contador 5→2→3, combustible del filtro y cierre.
+
 ## 2026-11-08 — El TTL de caché se recuerda entre sesiones
 
 ### Por qué hacía falta

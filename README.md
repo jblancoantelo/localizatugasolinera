@@ -77,6 +77,13 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 - Filtro "solo favoritos" en toolbar
 - Las notificaciones push monitorizan exclusivamente las estaciones favoritas
 
+### 🧮 Comparador de litros
+- Botón **🧮** en el toolbar, junto a la campana: abre una modal que calcula lo que cuesta repostar **X litros** (25 por defecto, editable) en tus estaciones favoritas
+- Coge las **5 primeras favoritas** y permite subir o bajar cuántas entran en la comparación (−/+ o escribiendo el número)
+- Usa el **combustible del filtro activo** (y muestra el combustible real de cada estación si el filtro es un grupo o "Todos"); aplica los descuentos por marca
+- Ordena de **más barata a más cara**, marca los extremos y resume el ahorro en € y % frente a la más cara
+- Los litros y el número de favoritas **se recuerdan** entre sesiones (`gasolineras_state`); las favoritas de otras provincias se resuelven desde la caché o la API sin cambiar la provincia cargada
+
 ### 📱 Progressive Web App (PWA)
 - Service Worker con caché de assets para funcionamiento offline parcial
 - **Precaché generado**: la lista `ASSETS` de `sw.js` no se escribe a mano, se genera con `node scripts/sync-sw-assets.mjs` a partir de lo que referencian `index.html` y `manifest.json` (así un script o icono nuevo nunca se queda fuera)
@@ -117,7 +124,7 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 ```powershell
 npm install                # playwright + web-push
 
-npm test                   # 216 tests (209 HTTP + 7 file://) - suite completa
+npm test                   # 223 tests (216 HTTP + 7 file://) - suite completa
 node check-syntax.mjs      # sintaxis de todo el JS (incluye el <script> inline del HTML)
 npm run bump               # regenera ASSETS de sw.js + incrementa APP_VERSION y BUILD_TIME
 npm run sync-assets        # solo regenera la lista ASSETS de sw.js
@@ -147,6 +154,7 @@ npm run check-assets       # verifica ASSETS sin escribir (sale con 1 si no cuad
 | `js/storage.js` | localStorage, `createRingLog()`, tabs de caché y de logs |
 | `js/ai-chat.js` | Chat IA: proveedores, catálogo de modelos, contexto, histórico y formato de la respuesta (`renderAiMarkdown()`) |
 | `js/push-notifications.js` | Suscripción Web Push + log de eventos |
+| `js/compare.js` | Comparador de precios por litros: modal de favoritas, resolución de sus datos y cálculo de totales |
 | `js/main.js` | Eventos, arranque y restauración de estado |
 | `sw.js` | Caché, periodicsync, `checkPrices()`, notificaciones + `APP_VERSION` |
 | `workers/` | Worker de Cloudflare que hace de proxy de NVIDIA |
@@ -167,7 +175,7 @@ npm run check-assets       # verifica ASSETS sin escribir (sale con 1 si no cuad
 | Notificaciones | Web Push API + Periodic Background Sync |
 | Service Worker | Cache-first + Network-first híbrido, precaché generado por script |
 | Chat IA | Pestaña **General** (misma pregunta a todos los proveedores visibles, en paralelo) + 7 proveedores (Groq, Mistral, OpenRouter, LLM7.io, NVIDIA vía Worker, Google Gemini, Chrome Built-in AI) |
-| Tests | Playwright (216 tests, servidor HTTP inline) |
+| Tests | Playwright (223 tests, servidor HTTP inline) |
 | Desarrollo | [OpenCode](https://opencode.ai) con modelos DeepSeek (libres) |
 
 ---

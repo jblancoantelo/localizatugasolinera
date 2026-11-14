@@ -19,7 +19,7 @@ node docs/test/full_test.mjs
 ### Qué hace el script:
 - Inicia servidor HTTP en :8080 sirviendo desde la raíz del proyecto
 - Lanza Chromium headless
-- Ejecuta 216 tests: 209 contra HTTP + 7 contra `file://`
+- Ejecuta 223 tests: 216 contra HTTP + 7 contra `file://`
 - Empieza por la sección 17 (build), que lee ficheros del disco sin abrir el navegador
 - Cierra servidor y navegador automáticamente
 - Exit code 0 = todo OK, 1 = algún fallo
@@ -140,7 +140,7 @@ node docs/test/full_test.mjs
 
 ## Resultados actuales
 
-**216 tests — 216 ✅ 0 ❌**
+**223 tests — 223 ✅ 0 ❌**
 
 | Grupo | HTTP | file:// |
 |-------|------|---------|
@@ -168,7 +168,8 @@ node docs/test/full_test.mjs
 | Chat IA (sección 15) | 127 ✅ | — |
 | Ring logs (sección 16) | 7 ✅ | — |
 | Build (sección 17) | 4 ✅ | — |
-| **Total** | **209 ✅** | **7 ✅** |
+| Comparador de litros (sección 18) | 7 ✅ | — |
+| **Total** | **216 ✅** | **7 ✅** |
 
 ## 15. Chat IA (automatizado)
 
@@ -316,6 +317,25 @@ Lee los ficheros del disco antes de lanzar Chromium (4 tests):
 - Los iconos del `manifest.json` llevan `?v=<APP_VERSION>`: sin la query Chrome
   (sobre todo Android) reutiliza el bitmap del icono cacheado por URL y el
   lanzador se queda con la imagen antigua. Lo escribe `bump-version.mjs`
+
+## 18. Comparador de precios por litros (automatizado)
+
+El comparador vive en `js/compare.js` y se prueba con **datos sembrados** en
+`STATE.data` (los tests de caché dejan la provincia vacía), así que no depende
+de la red. 7 tests:
+
+- Botón `#compareBtn` visible, con **solo el icono 🧮**, inmediatamente después
+  de `#pushNotifBtn` en el toolbar
+- Sin favoritas: el modal se abre, avisa de que no hay favoritas, desactiva el
+  contador y se cierra
+- Con 5 favoritas: una tarjeta por cada una, **de más barata a más cara**,
+  marcando la primera (`.cheapest`) y la última (`.priciest`)
+- Con 50 L los totales son exactamente el doble que con 25 L (tolerancia 0,01 €)
+- El litraje se guarda en `gasolineras_state` (`compareLiters`)
+- El contador de favoritas baja a 2 y sube a 3, y el DOM lo refleja
+- Usa el combustible del filtro activo (`getSelectedFuelName()`) y se cierra con ✕
+
+Al terminar se restauran favoritas, datos, combustible, litros y contador.
 
 ## 13. Validación de claves IA (verificación manual asistida)
 

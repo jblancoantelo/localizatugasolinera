@@ -654,6 +654,8 @@ async function testHTTP(browser, server) {
 
   await testAiChat(page);
 
+  await testCompare(page);
+
   await ctx.close();
 }
 // ============================================================================
@@ -2171,6 +2173,173 @@ async function testAiChat(page) {
 }
 
 
+
+// ============================================================================
+// 18. Comparador de precios por litros (botón 🧮)
+// ============================================================================
+async function testCompare(page) {
+  console.log('\n## 🧮 Comparador de litros');
+
+  // --- Botón: solo icono, justo al lado de la campana ---
+  const btn = await page.evaluate(() => {
+    const b = document.getElementById('compareBtn');
+    return b ? {
+      visible: !!b.offsetParent,
+      icon: b.textContent.trim(),
+      nextToBell: b.previousElementSibling && b.previousElementSibling.id === 'pushNotifBtn',
+      title: b.title
+    } : null;
+  });
+  log('Comparador', 'Botón 🧮 visible junto a la campana y solo con icono',
+    !!btn && btn.visible && btn.icon === '🧮' && btn.nextToBell,
+    btn ? `icono="${btn.icon}" juntoCampana=${btn.nextToBell}` : 'no existe');
+
+  // --- Sin favoritas: aviso y contador desactivado ---
+  const empty = await page.evaluate(async () => {
+    const prev = STATE.favorites.slice();
+    STATE.favorites = [];
+    await openCompareModal();
+    const modal = document.getElementById('compareModal');
+    const out = {
+      shown: modal.classList.contains('show'),
+      text: document.getElementById('compareBody').textContent,
+      disabled: document.getElementById('compareCount').disabled
+    };
+    closeCompareModal();
+    out.closed = !modal.classList.contains('show') && !document.getElementById('compareOverlay').classList.contains('show');
+    STATE.favorites = prev;
+    return out;
+  });
+  log('Comparador', 'Sin favoritas avisa, desactiva el contador y se cierra',
+    empty.shown && /favorit/i.test(empty.text) && empty.disabled && empty.closed,
+    `shown=${empty.shown} disabled=${empty.disabled} closed=${empty.closed}`);
+
+  // --- Con favoritas: una tarjeta por favorita, ordenadas y extremos marcados ---
+  // Los tests de caché dejan STATE.data vacío, así que aquí se siembran cinco
+  // estaciones de prueba: el comparador debe usar los datos ya cargados y no
+  // tocar la red.
+  const seeded = await page.evaluate(async () => {
+    const prev = {
+      favorites: STATE.favorites.slice(),
+      data: STATE.data,
+      prov: STATE.selectedProv,
+      fuel: STATE.selectedFuel,
+      liters: STATE.compareLiters,
+      count: STATE.compareCount
+    };
+    const stations = [
+      { IDEESS: '9001', 'Rótulo': 'Barata', Localidad: 'Madrid', 'Dirección': 'Calle A', Provincia: 'Madrid', 'Precio Gasolina 95 E5': '1,400', 'Precio Gasoleo A': '1,300' },
+      { IDEESS: '9002', 'Rótulo': 'Media', Localidad: 'Getafe', 'Dirección': 'Calle B', Provincia: 'Madrid', 'Precio Gasolina 95 E5': '1,500', 'Precio Gasoleo A': '1,400' },
+      { IDEESS: '9003', 'Rótulo': 'Cara', Localidad: 'Alcalá', 'Dirección': 'Calle C', Provincia: 'Madrid', 'Precio Gasolina 95 E5': '1,600', 'Precio Gasoleo A': '1,500' },
+      { IDEESS: '9004', 'Rótulo': 'Cuarta', Localidad: 'Leganés', 'Dirección': 'Calle D', Provincia: 'Madrid', 'Precio Gasolina 95 E5': '1,450', 'Precio Gasoleo A': '1,350' },
+      { IDEESS: '9005', 'Rótulo': 'Quinta', Localidad: 'Móstoles', 'Dirección': 'Calle E', Provincia: 'Madrid', 'Precio Gasolina 95 E5': '1,550', 'Precio Gasoleo A': '1,450' }
+    ];
+    STATE.data = stations;
+    STATE.selectedProv = 'Madrid';
+    STATE.favorites = stations.map(d => d.IDEESS);
+    STATE.selectedFuel = '';
+    STATE.compareLiters = 25;
+    STATE.compareCount = 5;
+    await openCompareModal();
+    const cards = [...document.querySelectorAll('#compareBody .compare-card')].map(c => ({
+      id: c.dataset.id,
+      total: c.dataset.total === '' ? null : Number(c.dataset.total),
+      price: c.dataset.price === '' ? null : Number(c.dataset.price),
+      fuel: c.dataset.fuel,
+      cheapest: c.classList.contains('cheapest'),
+      priciest: c.classList.contains('priciest')
+    }));
+    return { ids: STATE.favorites.slice(), cards, prev, shown: document.getElementById('compareModal').classList.contains('show') };
+  });
+  const priced = seeded.cards.filter(c => c.total !== null);
+  const sortedOk = priced.every((c, i) => i === 0 || priced[i - 1].total <= c.total);
+  const extremesOk = priced.length < 2 || (priced[0].cheapest && priced[priced.length - 1].priciest);
+  log('Comparador', 'Una tarjeta por favorita, de más barata a más cara y con extremos marcados',
+    seeded.shown && seeded.cards.length === 5 && priced.length === 5 && sortedOk && extremesOk,
+    `tarjetas=${seeded.cards.length} conPrecio=${priced.length} orden=${sortedOk} extremos=${extremesOk}`);
+
+  // --- Litros: doblar el litraje dobla los totales y se guarda en localStorage ---
+  const litersRes = await page.evaluate(async () => {
+    const input = document.getElementById('compareLiters');
+    const read = () => [...document.querySelectorAll('#compareBody .compare-card')]
+      .map(c => c.dataset.total === '' ? null : Number(c.dataset.total));
+    const before = read();
+    input.value = '50';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 120));
+    const after = read();
+    const saved = JSON.parse(localStorage.getItem('gasolineras_state') || '{}');
+    return { before, after, state: STATE.compareLiters, saved: saved.compareLiters };
+  });
+  const doubles = litersRes.before.length === litersRes.after.length &&
+    litersRes.before.every((v, i) => v === null
+      ? litersRes.after[i] === null
+      : Math.abs(litersRes.after[i] - v * 2) <= 0.01);
+  log('Comparador', 'Con 50 L los totales son el doble que con 25 L',
+    doubles, `antes=${litersRes.before.join('/')} después=${litersRes.after.join('/')}`);
+  log('Comparador', 'El litraje se guarda en gasolineras_state',
+    litersRes.state === 50 && litersRes.saved === 50,
+    `STATE=${litersRes.state} localStorage=${litersRes.saved}`);
+
+  // --- Nº de favoritas: 5 → 2 → 3 tarjetas ---
+  const countRes = await page.evaluate(async () => {
+    const input = document.getElementById('compareCount');
+    const read = () => document.querySelectorAll('#compareBody .compare-card').length;
+    input.value = '2';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 160));
+    const two = read();
+    input.value = '3';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 160));
+    return { two, three: read(), state: STATE.compareCount };
+  });
+  log('Comparador', 'El número de favoritas se puede subir y bajar',
+    countRes.two === 2 && countRes.three === 3 && countRes.state === 3,
+    `2→${countRes.two} 3→${countRes.three} STATE=${countRes.state}`);
+
+  // --- Combustible: usa el filtro activo y cierra con ✕ ---
+  const fuelRes = await page.evaluate(async () => {
+    const prev = STATE.selectedFuel;
+    const st = STATE.data.find(d => String(d.IDEESS) === STATE.favorites[0]);
+    const fuel = getFirstFuelName(st);
+    STATE.selectedFuel = fuel;
+    await openCompareModal();
+    const out = {
+      fuel,
+      line: document.getElementById('compareFuelLine').textContent,
+      fuels: [...document.querySelectorAll('#compareBody .compare-card')].map(c => c.dataset.fuel)
+    };
+    document.getElementById('compareClose').click();
+    out.closed = !document.getElementById('compareModal').classList.contains('show') &&
+      !document.getElementById('compareOverlay').classList.contains('show');
+    STATE.selectedFuel = prev;
+    return out;
+  });
+  const fuelOk = fuelRes.line.includes(fuelRes.fuel) &&
+    fuelRes.fuels.some(f => f === fuelRes.fuel) &&
+    fuelRes.fuels.every(f => f === fuelRes.fuel || f === '');
+  log('Comparador', 'Usa el combustible del filtro activo y cierra con ✕',
+    !!fuelRes.fuel && fuelOk && fuelRes.closed,
+    `filtro="${fuelRes.fuel}" línea="${fuelRes.line}" fuels=${fuelRes.fuels.join('/')} closed=${fuelRes.closed}`);
+
+  // --- Restaurar estado de la app ---
+  await page.evaluate(prev => {
+    STATE.favorites = prev.favorites;
+    STATE.data = prev.data;
+    STATE.selectedProv = prev.prov;
+    STATE.selectedFuel = prev.fuel;
+    STATE.compareLiters = prev.liters;
+    STATE.compareCount = prev.count;
+    saveState();
+  }, seeded.prev);
+  await page.evaluate(() => {
+    const l = document.getElementById('compareLiters');
+    const c = document.getElementById('compareCount');
+    if (l) l.value = String(STATE.compareLiters);
+    if (c) c.value = String(STATE.compareCount);
+  });
+}
 
 // ============================================================================
 // 16. Ring logs — createRingLog() + logs de API y push

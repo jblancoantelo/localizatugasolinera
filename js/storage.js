@@ -162,6 +162,8 @@ function saveState() {
       pageSize: s.pageSize,
       favorites: s.favorites,
       showFavoritesOnly: s.showFavoritesOnly,
+      compareLiters: s.compareLiters,
+      compareCount: s.compareCount,
       userLat: s.userLat,
       userLng: s.userLng,
       checkInterval: s.checkInterval,

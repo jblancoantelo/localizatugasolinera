@@ -398,6 +398,100 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 #brandFilterDropdown input[type="checkbox"] { margin-right: 5px; cursor: pointer; }
 #brandFilterDropdown .selectAll { border-bottom: 1px solid #eee; font-weight: 600; }
 
+/* === Comparador de precios por litros === */
+.compare-overlay {
+  display: none; position: fixed; inset: 0; z-index: 20000;
+  background: rgba(0, 0, 0, 0.35);
+}
+.compare-overlay.show { display: block; }
+.compare-modal {
+  display: none; position: fixed; z-index: 20001;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: min(620px, calc(100vw - 1rem));
+  max-height: min(86vh, 700px); overflow-y: auto;
+  background: #fff; border-radius: 12px;
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.28);
+  padding: 0.7rem 0.9rem 0.9rem;
+}
+.compare-modal.show { display: block; }
+.compare-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem; }
+.compare-head h3 { font-size: 0.92rem; color: #1a1a2e; }
+.compare-close {
+  background: none; border: none; cursor: pointer; color: #999;
+  font-size: 1rem; line-height: 1; padding: 0.2rem 0.3rem; border-radius: 4px;
+}
+.compare-close:hover { background: #f0f0f0; color: #333; }
+.compare-controls {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.7rem;
+  padding: 0.45rem 0.55rem; background: #f7f9fc;
+  border-radius: 8px; margin-bottom: 0.45rem;
+}
+.compare-field {
+  display: flex; flex-direction: column; gap: 0.15rem;
+  font-size: 0.6rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.02em; color: #888;
+}
+.compare-field input {
+  width: 70px; padding: 0.25rem 0.35rem;
+  border: 1px solid #d0d0d0; border-radius: 5px;
+  font-size: 0.8rem; font-weight: 500; color: #1a1a2e; text-transform: none;
+}
+.compare-field input:focus {
+  border-color: #1a73e8; outline: none;
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
+}
+.compare-field input:disabled { background: #eee; color: #aaa; }
+.compare-stepper { display: flex; align-items: center; }
+.compare-stepper button {
+  width: 27px; height: 30px; border: 1px solid #d0d0d0; background: #fff;
+  color: #333; font-size: 0.9rem; line-height: 1; cursor: pointer;
+}
+.compare-stepper button:first-child { border-radius: 5px 0 0 5px; }
+.compare-stepper button:last-child { border-radius: 0 5px 5px 0; }
+.compare-stepper button:hover:not(:disabled) { background: #eef4ff; color: #1a73e8; }
+.compare-stepper button:disabled { background: #f2f2f2; color: #bbb; cursor: default; }
+.compare-stepper input {
+  width: 46px; height: 30px; text-align: center;
+  border-left: none; border-right: none; border-radius: 0;
+}
+#compareCountHint {
+  font-size: 0.58rem; font-weight: 400; text-transform: none;
+  letter-spacing: 0; color: #999;
+}
+.compare-fuel-line { font-size: 0.68rem; color: #666; margin-bottom: 0.45rem; }
+.compare-body { display: flex; flex-direction: column; gap: 0.35rem; }
+.compare-card {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.4rem 0.5rem; background: #fff;
+  border: 1px solid #e8e8e8; border-left: 4px solid #d5d5d5;
+  border-radius: 8px;
+}
+.compare-card.cheapest { border-left-color: #2e7d32; background: #f3fbf4; }
+.compare-card.priciest { border-left-color: #b71c1c; }
+.compare-card.noprice { opacity: 0.75; }
+.compare-rank { flex: 0 0 1.1rem; text-align: center; font-size: 0.8rem; font-weight: 700; color: #777; }
+.compare-main { flex: 1; min-width: 0; }
+.compare-name { font-size: 0.78rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.compare-sub { font-size: 0.64rem; color: #777; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.compare-price-line { font-size: 0.66rem; color: #555; margin-top: 0.1rem; }
+.compare-dto { color: #2e7d32; font-weight: 600; }
+.compare-total { flex: 0 0 auto; text-align: right; }
+.compare-total strong { display: block; font-size: 0.92rem; color: #1a1a2e; white-space: nowrap; }
+.compare-diff { font-size: 0.6rem; color: #888; white-space: nowrap; }
+.compare-diff.cheapest { color: #2e7d32; font-weight: 700; }
+.compare-diff.priciest { color: #b71c1c; }
+.compare-diff.none { color: #b71c1c; }
+.compare-loading, .compare-empty { text-align: center; color: #777; font-size: 0.75rem; padding: 1.2rem 0.5rem; }
+.compare-empty-icon { font-size: 1.6rem; margin-bottom: 0.3rem; }
+.compare-empty p { margin-bottom: 0.2rem; }
+.compare-empty-hint { color: #999; font-size: 0.68rem; }
+.compare-summary {
+  font-size: 0.72rem; color: #333; margin-top: 0.5rem;
+  background: #f7f9fc; border-radius: 8px; padding: 0.45rem 0.55rem;
+}
+.compare-warn { color: #b71c1c; }
+.compare-note { font-size: 0.61rem; color: #999; margin-top: 0.4rem; line-height: 1.35; }
+
 /* === Leaflet overrides === */
 .leaflet-popup-content { font-size: 0.85rem; line-height: 1.4; margin: 10px 14px; }
 .leaflet-popup-content strong { display: block; margin-bottom: 3px; font-size: 0.95rem; }
@@ -440,6 +534,10 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
   .filter-group select, .filter-group input { max-width: 65px; }
   #mapStyle { max-width: 125px; }
   .table-wrap table { width: max-content; min-width: 100%; }
+  .compare-modal { padding: 0.6rem 0.6rem 0.7rem; max-height: 92vh; }
+  .compare-card { gap: 0.35rem; padding: 0.35rem 0.4rem; }
+  .compare-controls { gap: 0.45rem; }
+  .compare-total strong { font-size: 0.84rem; }
 }
 
 @media (hover: none) and (pointer: coarse) {
