@@ -1,3 +1,5 @@
+> 🚀 **[Abrir la aplicación → https://jblancoantelo.github.io/localizatugasolinera/](https://jblancoantelo.github.io/localizatugasolinera/)**
+
 # Gasolineras — Precios de Gasolina en España
 
 Aplicación web progresiva (PWA) para consultar **precios de carburantes en estaciones de servicio de España** en tiempo real, usando datos oficiales del [Geoportal de Hidrocarburos](https://geoportalgasolineras.es/) del Ministerio para la Transición Ecológica.
