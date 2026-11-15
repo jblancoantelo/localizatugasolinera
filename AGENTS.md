@@ -371,6 +371,7 @@ Orden actual de grupos:
 - El precio sale de `getSelectedFuelPrice()`/`getSelectedFuelName()`: respeta el filtro de combustible y los descuentos por marca. Si el filtro es un grupo o «Todos», cada tarjeta muestra el combustible real usado, porque no tiene por qué ser el mismo.
 - Datos de cada favorita: primero `STATE.data` (la provincia cargada); si no está, `getCachedProvinceData(rec.provinceName)` y, si no hay caché, `apiFetch(FiltroProvincia/<id>)` + `cacheProvinceData()`. Se guarda **una promesa por provincia** en `_cmpProvince`: 5 favoritas de la misma provincia hacen una sola petición.
 - Cambiar los litros solo repinta (`cmpRender()`); cambiar el nº de favoritas puede requerir `cmpEnsure()` para cargar las nuevas. Cerrar el modal invalida la carga en curso con `_cmpToken`.
+- **No se hace foco en `#compareLiters` al abrir**: en móvil saltaría el teclado. Los controles van con `align-items: flex-start` para que «Litros» y «Favoritas» queden a la misma altura.
 - Los tests **siembran `STATE.data`** con estaciones de prueba: la suite de caché deja la provincia vacía y el comparador no debe depender de la red. Ver sección 18 del `TEST_PLAN.md`.
 
 ### Tabla — columnas

@@ -83,6 +83,7 @@ Aplicación web progresiva (PWA) para consultar **precios de carburantes en esta
 - Usa el **combustible del filtro activo** (y muestra el combustible real de cada estación si el filtro es un grupo o "Todos"); aplica los descuentos por marca
 - Ordena de **más barata a más cara**, marca los extremos y resume el ahorro en € y % frente a la más cara
 - Los litros y el número de favoritas **se recuerdan** entre sesiones (`gasolineras_state`); las favoritas de otras provincias se resuelven desde la caché o la API sin cambiar la provincia cargada
+- Al abrirse **no se enfoca el campo de litros**, así en el móvil no salta el teclado; los controles van alineados arriba y los iconos del toolbar se ven más grandes en pantallas pequeñas
 
 ### 📱 Progressive Web App (PWA)
 - Service Worker con caché de assets para funcionamiento offline parcial

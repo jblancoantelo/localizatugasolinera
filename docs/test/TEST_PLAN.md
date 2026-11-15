@@ -327,7 +327,7 @@ de la red. 7 tests:
 - Botón `#compareBtn` visible, con **solo el icono 🧮**, inmediatamente después
   de `#pushNotifBtn` en el toolbar
 - Sin favoritas: el modal se abre, avisa de que no hay favoritas, desactiva el
-  contador y se cierra
+  contador, **no deja el foco en los litros** (no salta el teclado) y se cierra
 - Con 5 favoritas: una tarjeta por cada una, **de más barata a más cara**,
   marcando la primera (`.cheapest`) y la última (`.priciest`)
 - Con 50 L los totales son exactamente el doble que con 25 L (tolerancia 0,01 €)

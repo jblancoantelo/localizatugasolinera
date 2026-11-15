@@ -2203,16 +2203,17 @@ async function testCompare(page) {
     const out = {
       shown: modal.classList.contains('show'),
       text: document.getElementById('compareBody').textContent,
-      disabled: document.getElementById('compareCount').disabled
+      disabled: document.getElementById('compareCount').disabled,
+      focused: document.activeElement ? document.activeElement.id : ''
     };
     closeCompareModal();
     out.closed = !modal.classList.contains('show') && !document.getElementById('compareOverlay').classList.contains('show');
     STATE.favorites = prev;
     return out;
   });
-  log('Comparador', 'Sin favoritas avisa, desactiva el contador y se cierra',
-    empty.shown && /favorit/i.test(empty.text) && empty.disabled && empty.closed,
-    `shown=${empty.shown} disabled=${empty.disabled} closed=${empty.closed}`);
+  log('Comparador', 'Sin favoritas avisa, desactiva el contador, no enfoca los litros y se cierra',
+    empty.shown && /favorit/i.test(empty.text) && empty.disabled && empty.focused !== 'compareLiters' && empty.closed,
+    `shown=${empty.shown} disabled=${empty.disabled} foco=${empty.focused || 'ninguno'} closed=${empty.closed}`);
 
   // --- Con favoritas: una tarjeta por favorita, ordenadas y extremos marcados ---
   // Los tests de caché dejan STATE.data vacío, así que aquí se siembran cinco

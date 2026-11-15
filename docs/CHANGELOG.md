@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## [2026-11-15] — Ajustes de UI del comparador: alineación, teclado e iconos
+
+| Cambio | Detalle |
+|--------|---------|
+| `css/styles.css` | `.compare-controls` pasa a `align-items: flex-start`: las etiquetas «Litros» y «Favoritas» quedan a la misma altura. En ≤768 px los iconos del toolbar (`#favToggleBtn`, `#pushNotifBtn`, `#compareBtn`, `#geolocBtn`, `#searchToggleBtn`, `#resetFiltersBtn`) suben a 0.95 rem y los emoji de `.filter-group-label` a 0.8 rem |
+| `js/compare.js` | `openCompareModal()` ya **no** hace foco en `#compareLiters`: en móvil abría el teclado nada más abrir la modal |
+| `docs/test/full_test.mjs` | El test 18.2 comprueba además que al abrir el foco **no** queda en los litros |
+| `README.md`, `docs/test/TEST_PLAN.md`, `docs/mejoras-petrol.md`, `AGENTS.md` | Notas de alineación, teclado e iconos |
+
+### Verificación
+
+- `node check-syntax.mjs`: 21/21 ficheros OK
+- Suite completa: **223 tests** (216 HTTP + 7 file://) en verde
+- `APP_VERSION` 45 → **46**
+
+---
+
 ## [2026-11-14] — Comparador de precios por litros en las favoritas
 
 | Cambio | Detalle |

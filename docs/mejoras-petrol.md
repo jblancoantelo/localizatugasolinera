@@ -21,6 +21,9 @@ tienes filtrado.
   la más cara en rojo, y resume el ahorro en € y %.
 - Si una favorita es de otra provincia, se buscan sus datos en la caché de esa
   provincia y, si no está, se piden a la API sin cambiar la provincia cargada.
+- Al abrir no se enfoca el campo de litros (en el móvil saltaría el teclado); los
+  controles quedan alineados arriba y los iconos del toolbar se ven más grandes
+  en pantallas pequeñas.
 
 ### Lo que se evitó a propósito
 No se reutiliza el panel de detalle para el comparador: es una comparación

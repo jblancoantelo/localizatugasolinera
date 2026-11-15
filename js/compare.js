@@ -122,8 +122,6 @@ async function openCompareModal() {
   cmpLoading();
   document.getElementById('compareOverlay').classList.add('show');
   document.getElementById('compareModal').classList.add('show');
-  const litersEl = document.getElementById('compareLiters');
-  if (litersEl) litersEl.focus();
   await cmpRefresh();
 }
 

@@ -49,6 +49,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 .filter-group .btn-primary:hover { background: #1557b0; }
 .filter-group .btn-primary.locating { background: #1557b0; }
 .filter-group .btn-active, .filter-group .btn.active { background: #fff8e1; color: #f9a825; border-color: #f9a825; }
+#resetFiltersBtn { font-size: 0.85rem; }
 
 .search-row {
   padding: 0.2rem 0.5rem 0.3rem;
@@ -422,7 +423,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 }
 .compare-close:hover { background: #f0f0f0; color: #333; }
 .compare-controls {
-  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.7rem;
+  display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.7rem;
   padding: 0.45rem 0.55rem; background: #f7f9fc;
   border-radius: 8px; margin-bottom: 0.45rem;
 }
@@ -518,6 +519,10 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
   .filter-group input, .filter-group select { font-size: 0.65rem; padding: 0.15rem 0.25rem; max-width: 85px; }
   #mapStyle { max-width: 125px; }
   .filter-group .btn { font-size: 0.62rem; padding: 0.15rem 0.3rem; }
+  /* Iconos del toolbar más grandes en móvil: los emoji se leen mejor y no
+     afectan a los botones con texto (marca, limpiar) porque se apuntan por id. */
+  #favToggleBtn, #pushNotifBtn, #compareBtn, #geolocBtn, #searchToggleBtn, #resetFiltersBtn { font-size: 0.95rem; }
+  .filter-group-label { font-size: 0.8rem; }
   .search-row { padding: 0.1rem 0.3rem 0.2rem; }
   .search-row input { font-size: 0.7rem; padding: 0.2rem 0.35rem; }
   .table-wrap th { font-size: 0.6rem; padding: 0.2rem 0.15rem; }
