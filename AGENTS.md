@@ -356,6 +356,8 @@ Orden actual de grupos:
 6. ✕ Limpiar filtros
 7. (actions-group con leyenda de precios)
 
+Los emoji de los grupos van en `<span class="filter-ico">` y el texto en `<span class="label-text">`: en móvil el texto se oculta (`.filter-group-label .label-text { display: none }`) y el icono se agranda a 1 rem sin afectar al texto de escritorio.
+
 ### Search toggle (🔍)
 - **`#searchToggleBtn`** en el grupo Mapa, tras separador `.filter-sep`
 - Muestra/oculta `.search-row` (que empieza oculto con clase `.hide`)

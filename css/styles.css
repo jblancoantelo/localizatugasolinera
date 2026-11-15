@@ -28,6 +28,9 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
   font-size: 0.6rem; font-weight: 600; text-transform: uppercase;
   letter-spacing: 0.02em; color: #888; white-space: nowrap;
 }
+/* El emoji de cada filtro va en su propio span para poder agrandarlo sin
+   tocar el tamaño del texto en mayúsculas de al lado. */
+.filter-ico { font-size: 0.9rem; line-height: 1; vertical-align: -1px; }
 
 .filter-sep { display: inline-block; width: 1px; height: 14px; background: #d0d0d0; margin: 0 2px; flex-shrink: 0; }
 .filter-group input, .filter-group select {
@@ -297,7 +300,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
 /* === Price legend === */
 .price-legend { display: inline-flex; gap: 0.35rem; font-size: 0.7rem; color: #777; align-items: center; }
 .price-legend span { display: inline-flex; align-items: center; gap: 2px; }
-.dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; }
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
 .dot.g { background: #2e7d32; border: 1px solid #2e7d32; }
 .dot.o { background: #f57c00; border: 1px solid #f57c00; }
 .dot.r { background: #b71c1c; border: 1px solid #b71c1c; }
@@ -523,6 +526,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; c
      afectan a los botones con texto (marca, limpiar) porque se apuntan por id. */
   #favToggleBtn, #pushNotifBtn, #compareBtn, #geolocBtn, #searchToggleBtn, #resetFiltersBtn { font-size: 0.95rem; }
   .filter-group-label { font-size: 0.8rem; }
+  .filter-ico { font-size: 1rem; }
   .search-row { padding: 0.1rem 0.3rem 0.2rem; }
   .search-row input { font-size: 0.7rem; padding: 0.2rem 0.35rem; }
   .table-wrap th { font-size: 0.6rem; padding: 0.2rem 0.15rem; }

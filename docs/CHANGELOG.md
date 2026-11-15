@@ -4,7 +4,8 @@
 
 | Cambio | Detalle |
 |--------|---------|
-| `css/styles.css` | `.compare-controls` pasa a `align-items: flex-start`: las etiquetas «Litros» y «Favoritas» quedan a la misma altura. En ≤768 px los iconos del toolbar (`#favToggleBtn`, `#pushNotifBtn`, `#compareBtn`, `#geolocBtn`, `#searchToggleBtn`, `#resetFiltersBtn`) suben a 0.95 rem y los emoji de `.filter-group-label` a 0.8 rem |
+| `css/styles.css` | `.compare-controls` pasa a `align-items: flex-start`: las etiquetas «Litros» y «Favoritas» quedan a la misma altura. En ≤768 px los iconos del toolbar (`#favToggleBtn`, `#pushNotifBtn`, `#compareBtn`, `#geolocBtn`, `#searchToggleBtn`, `#resetFiltersBtn`) suben a 0.95 rem. Los emoji de combustible, provincia, localidad, marca y mapa van en `.filter-ico` (0.9 rem, 1 rem en móvil) y los puntos verde/amarillo/rojo de la leyenda pasan de 6 a 7 px |
+| `index.html` | El emoji de cada filtro se envuelve en `<span class="filter-ico">` para agrandarlo sin tocar el texto en mayúsculas; se quita el `style` inline del botón ✕ |
 | `js/compare.js` | `openCompareModal()` ya **no** hace foco en `#compareLiters`: en móvil abría el teclado nada más abrir la modal |
 | `docs/test/full_test.mjs` | El test 18.2 comprueba además que al abrir el foco **no** queda en los litros |
 | `README.md`, `docs/test/TEST_PLAN.md`, `docs/mejoras-petrol.md`, `AGENTS.md` | Notas de alineación, teclado e iconos |
@@ -12,8 +13,8 @@
 ### Verificación
 
 - `node check-syntax.mjs`: 21/21 ficheros OK
-- Suite completa: **223 tests** (216 HTTP + 7 file://) en verde
-- `APP_VERSION` 45 → **46**
+- Suite completa: **223 tests** (216 HTTP + 7 file://) en verde en el primer commit de UI; el segundo ajuste (tamaños de iconos y puntos) es solo CSS/HTML y no se volvió a pasar por petición expresa
+- `APP_VERSION`: 45 → **47** (46 con el primer ajuste y 47 con el segundo)
 
 ---
 
