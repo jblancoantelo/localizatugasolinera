@@ -1,5 +1,60 @@
 # CHANGELOG
 
+## [2026-11-15] — Ajustes de UI del comparador: alineación, teclado e iconos
+
+| Cambio | Detalle |
+|--------|---------|
+| `css/styles.css` | `.compare-controls` pasa a `align-items: flex-start`: las etiquetas «Litros» y «Favoritas» quedan a la misma altura. En ≤768 px los iconos del toolbar (`#favToggleBtn`, `#pushNotifBtn`, `#compareBtn`, `#geolocBtn`, `#searchToggleBtn`, `#resetFiltersBtn`) suben a 0.95 rem. Los emoji de combustible, provincia, localidad, marca y mapa van en `.filter-ico` (0.9 rem, 1 rem en móvil) y los puntos verde/amarillo/rojo de la leyenda pasan de 6 a 7 px |
+| `index.html` | El emoji de cada filtro se envuelve en `<span class="filter-ico">` para agrandarlo sin tocar el texto en mayúsculas; se quita el `style` inline del botón ✕ |
+| `js/compare.js` | `openCompareModal()` ya **no** hace foco en `#compareLiters`: en móvil abría el teclado nada más abrir la modal |
+| `docs/test/full_test.mjs` | El test 18.2 comprueba además que al abrir el foco **no** queda en los litros |
+| `README.md`, `docs/test/TEST_PLAN.md`, `docs/mejoras-petrol.md`, `AGENTS.md` | Notas de alineación, teclado e iconos |
+
+### Verificación
+
+- `node check-syntax.mjs`: 21/21 ficheros OK
+- Suite completa: **223 tests** (216 HTTP + 7 file://) en verde en el primer commit de UI; el segundo ajuste (tamaños de iconos y puntos) es solo CSS/HTML y no se volvió a pasar por petición expresa
+- `APP_VERSION`: 45 → **47** (46 con el primer ajuste y 47 con el segundo)
+
+---
+
+## [2026-11-14] — Comparador de precios por litros en las favoritas
+
+| Cambio | Detalle |
+|--------|---------|
+| `js/compare.js` | **Nuevo**. Modal del comparador: coge las N primeras favoritas, resuelve sus datos (provincia ya cargada → caché → API), aplica el combustible del filtro activo y calcula el total de X litros. Ordena de más barata a más cara y resume el ahorro |
+| `index.html` | Botón **🧮** junto a la campana (solo icono) + markup del modal (`compareOverlay`, `compareModal`, litros, contador de favoritas y cuerpo) + `<script src="js/compare.js">` antes de `main.js` |
+| `css/styles.css` | Estilos del comparador: overlay y modal centrados (`z-index` 20000/20001), tarjetas con extremos en verde/rojo, stepper de favoritas y ajustes en ≤480 px |
+| `js/state.js`, `js/storage.js`, `js/main.js` | `STATE.compareLiters: 25` y `STATE.compareCount: 5` entran en `saveState()`/`loadState()`; `initCompare()` engancha los eventos al arrancar |
+| `docs/test/full_test.mjs` | **Nuevos tests 18.1-18.7**: botón icono junto a la campana, aviso sin favoritas, 5 tarjetas ordenadas con extremos, 50 L duplica los totales, litraje persistido en `gasolineras_state`, contador de favoritas 5→2→3 y combustible del filtro + cierre con ✕ |
+| `README.md`, `docs/test/TEST_PLAN.md`, `docs/mejoras-petrol.md`, `AGENTS.md` | Funcionalidad, convenios y contadores a **223 tests** (216 HTTP + 7 file://) |
+
+### Por qué hacía falta
+
+Comparar dos o tres gasolineras obligaba a abrir cada detalle y multiplicar a
+mano el precio por los litros. El comparador lo hace en una sola vista, con el
+combustible que ya tienes filtrado y tus favoritas, que es justo lo que se
+consulta al decidir dónde repostar.
+
+### Decisiones
+
+- El número de favoritas y el litraje viven en `STATE` y en `gasolineras_state`:
+  el ajuste se recuerda tras F5 como el TTL de caché.
+- Las favoritas de otras provincias se resuelven con `getCachedProvinceData()`
+  y, si no hay caché, con una llamada a la API por provincia; así no hace falta
+  cambiar de provincia para comparar.
+- Si el filtro es un grupo o «Todos», cada tarjeta muestra el combustible real
+  que se ha usado (`getSelectedFuelName()`), para que el total no sea ambiguo.
+- Sin favoritas el modal explica cómo marcarlas y desactiva el contador.
+
+### Verificación
+
+- `node check-syntax.mjs`: 21/21 ficheros OK
+- Suite completa: **223 tests** (216 HTTP + 7 file://), 7 nuevos
+- `APP_VERSION` 44 → **45** (nuevo asset `js/compare.js` en `ASSETS`)
+
+---
+
 ## [2026-11-08] — El TTL de caché deja de resetearse a 12 h al reabrir la app
 
 | Cambio | Detalle |

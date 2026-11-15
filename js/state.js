@@ -9,6 +9,7 @@ const STATE = {
   selectedId: null, activeTab: 'tab-both', selectedTile: 'satellite',
   discounts: {}, page: 1, pageSize: 30, maxDistance: '',
   favorites: [], showFavoritesOnly: false, historyDays: 14,
+  compareLiters: 25, compareCount: 5,
   provinces: [], provinceIdMap: {},
   booting: true,
   pushNotificationsEnabled: false, pushOnPriceRise: false, checkInterval: 8, priceFallDays: 14, priceCheckMode: 'average', cacheTtl: 12,
