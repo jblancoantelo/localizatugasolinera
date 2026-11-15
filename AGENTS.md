@@ -356,12 +356,25 @@ Orden actual de grupos:
 6. ✕ Limpiar filtros
 7. (actions-group con leyenda de precios)
 
+Los emoji de los grupos van en `<span class="filter-ico">` y el texto en `<span class="label-text">`: en móvil el texto se oculta (`.filter-group-label .label-text { display: none }`) y el icono se agranda a 1 rem sin afectar al texto de escritorio.
+
 ### Search toggle (🔍)
 - **`#searchToggleBtn`** en el grupo Mapa, tras separador `.filter-sep`
 - Muestra/oculta `.search-row` (que empieza oculto con clase `.hide`)
 - Al abrir, hace foco automático en el input (`#search`)
 - Al resetear filtros, también se oculta la fila de búsqueda
 - El separador `.filter-sep` es una línea vertical de 1px, se oculta en ≤768px
+
+### Comparador de litros (🧮)
+- Botón `#compareBtn` en el primer `filter-group`, **justo después de `#pushNotifBtn`**, solo con el icono 🧮 (`title` = "Comparar precios por litros").
+- `js/compare.js` se carga **antes de `main.js`**; `main.js` llama a `initCompare()` con el resto de listeners.
+- Coge `STATE.favorites.slice(0, STATE.compareCount)` (5 por defecto). El nº de favoritas se cambia con `#compareCount` o con los botones `#compareCountMinus`/`#compareCountPlus`, siempre acotado a las que haya.
+- Litros en `#compareLiters`: 25 por defecto, rango 1–1000. `STATE.compareLiters` y `STATE.compareCount` van en `saveState()`/`loadState()`; si añades otro ajuste del comparador, hazlo igual (ver "Persistencia estado tras F5").
+- El precio sale de `getSelectedFuelPrice()`/`getSelectedFuelName()`: respeta el filtro de combustible y los descuentos por marca. Si el filtro es un grupo o «Todos», cada tarjeta muestra el combustible real usado, porque no tiene por qué ser el mismo.
+- Datos de cada favorita: primero `STATE.data` (la provincia cargada); si no está, `getCachedProvinceData(rec.provinceName)` y, si no hay caché, `apiFetch(FiltroProvincia/<id>)` + `cacheProvinceData()`. Se guarda **una promesa por provincia** en `_cmpProvince`: 5 favoritas de la misma provincia hacen una sola petición.
+- Cambiar los litros solo repinta (`cmpRender()`); cambiar el nº de favoritas puede requerir `cmpEnsure()` para cargar las nuevas. Cerrar el modal invalida la carga en curso con `_cmpToken`.
+- **No se hace foco en `#compareLiters` al abrir**: en móvil saltaría el teclado. Los controles van con `align-items: flex-start` para que «Litros» y «Favoritas» queden a la misma altura.
+- Los tests **siembran `STATE.data`** con estaciones de prueba: la suite de caché deja la provincia vacía y el comparador no debe depender de la red. Ver sección 18 del `TEST_PLAN.md`.
 
 ### Tabla — columnas
 - **Tabla** (`.table-area`): Marca, Precio, Distancia, Localidad, Calle (5 columnas, sin Provincia)
@@ -375,8 +388,8 @@ Orden actual de grupos:
 ### Tests
 - Ubicación: `docs/test/full_test.mjs`
 - Plan: `docs/test/TEST_PLAN.md`
-- 214 tests totales (207 HTTP + 7 file://)
-- Secciones: 1-12 UI, 13 claves IA (manual), 14 push, 15 chat IA, 16 ring logs, 17 build (`ASSETS`/`APP_VERSION`/`?v=` de los iconos)
+- 223 tests totales (216 HTTP + 7 file://)
+- Secciones: 1-12 UI, 13 claves IA (manual), 14 push, 15 chat IA, 16 ring logs, 17 build (`ASSETS`/`APP_VERSION`/`?v=` de los iconos), 18 comparador de litros
 - Test de persistencia F5: selecciona provincia, recarga página, verifica que se restauró
 - Servidor HTTP inline (no requiere procesos externos)
 - `docs/test/validate.mjs` está **marcado como legado y no se ejecuta**: usa los `data-tab` en camelCase (`tabMap`) de antes del kebab-case y daría falsos fallos. `docs/test/server.js` es solo el servidor para depuración manual, la suite levanta el suyo.
@@ -510,6 +523,7 @@ node -e "const h=require('http'),fs=require('fs');h.createServer((q,r)=>{let p=q
 | `js/ai-chat.js` | Chat IA: proveedores, claves cifradas, catálogo de modelos, contexto, histórico para la IA, `renderAiMarkdown()` e historial de conversaciones por proveedor |
 | `js/main.js` | Event listeners, restauración de estado, push notifications |
 | `js/push-notifications.js` | Gestión suscripción Web Push (subscribe/unsubscribe) + `PUSH_LOG_RING` + logPushEvent |
+| `js/compare.js` | Comparador de precios por litros: modal de favoritas, resolución de datos por provincia y cálculo de totales |
 | `sw.js` | Service Worker (caché, periodicsync, checkPrices, notificationclick) + sendPushLog() + `APP_VERSION`/`ASSETS` |
 | `scripts/bump-version.mjs` | Regenera `ASSETS` e incrementa `APP_VERSION` + `BUILD_TIME` |
 | `scripts/sync-sw-assets.mjs` | Genera el bloque `ASSETS` de `sw.js` desde `index.html` + `manifest.json` |

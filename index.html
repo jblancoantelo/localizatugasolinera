@@ -31,27 +31,28 @@
       <div class="filter-group">
         <button class="btn" id="favToggleBtn" title="Favoritos">☆</button>
         <button class="btn" id="pushNotifBtn" title="Notificaciones">🔔</button>
+        <button class="btn" id="compareBtn" title="Comparar precios por litros" aria-label="Comparar precios por litros">🧮</button>
         <button class="btn btn-primary" id="geolocBtn">📍</button>
         <input type="number" id="maxDistance" min="1" placeholder="km" style="width:50px">
       </div>
       <div class="filter-group">
-        <span class="filter-group-label">⛽<span class="label-text"> Combustible</span></span>
+        <span class="filter-group-label"><span class="filter-ico">⛽</span><span class="label-text"> Combustible</span></span>
         <select id="fuelFilter" style="max-width:100px"><option value="">Todos</option></select>
       </div>
       <div class="filter-group">
-        <span class="filter-group-label">📍<span class="label-text"> Provincia</span></span>
+        <span class="filter-group-label"><span class="filter-ico">📍</span><span class="label-text"> Provincia</span></span>
         <select id="provFilter" style="max-width:90px"><option value="">Todas</option></select>
       </div>
       <div class="filter-group">
-        <span class="filter-group-label">🏘️<span class="label-text"> Localidad</span></span>
+        <span class="filter-group-label"><span class="filter-ico">🏘️</span><span class="label-text"> Localidad</span></span>
         <select id="locFilter" style="max-width:90px"><option value="">Todas</option></select>
       </div>
       <div class="filter-group">
-        <span class="filter-group-label">🏷️<span class="label-text"> Marca</span></span>
+        <span class="filter-group-label"><span class="filter-ico">🏷️</span><span class="label-text"> Marca</span></span>
         <button class="btn" id="brandFilterBtn">Todas</button>
       </div>
       <div class="filter-group">
-        <span class="filter-group-label">🗺️<span class="label-text"> Mapa</span></span>
+        <span class="filter-group-label"><span class="filter-ico">🗺️</span><span class="label-text"> Mapa</span></span>
         <select id="mapStyle">
           <option value="street">Calle</option>
           <option value="cycling">Ciclismo</option>
@@ -68,7 +69,7 @@
         <button class="btn" id="searchToggleBtn" title="Buscar">🔍</button>
       </div>
       <div class="filter-group">
-        <button class="btn" id="resetFiltersBtn" title="Limpiar filtros" style="font-size:0.85rem">✕</button>
+        <button class="btn" id="resetFiltersBtn" title="Limpiar filtros">✕</button>
       </div>
       <div class="filter-group actions-group">
         <div class="price-legend" id="legend"><span><span class="dot g"></span> &lt;1.50</span><span><span class="dot o"></span> 1.50–1.70</span><span><span class="dot r"></span> &gt;1.70</span></div>
@@ -435,6 +436,32 @@
     <button class="bottom-tab" data-tab="tab-ia"><span class="tab-icon">🤖</span> IA</button>
     <button class="bottom-tab" data-tab="tab-config"><span class="tab-icon">⚙️</span> Config</button>
   </div>
+
+  <div class="compare-overlay" id="compareOverlay"></div>
+  <div class="compare-modal" id="compareModal" role="dialog" aria-modal="true" aria-labelledby="compareTitle">
+    <div class="compare-head">
+      <h3 id="compareTitle">🧮 Comparar precios</h3>
+      <button class="compare-close" id="compareClose" title="Cerrar" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="compare-controls">
+      <label class="compare-field" for="compareLiters">
+        <span>Litros</span>
+        <input type="number" id="compareLiters" min="1" max="1000" step="1" inputmode="decimal" value="25">
+      </label>
+      <div class="compare-field">
+        <span>Favoritas</span>
+        <div class="compare-stepper">
+          <button type="button" id="compareCountMinus" aria-label="Menos favoritas">−</button>
+          <input type="number" id="compareCount" min="1" step="1" value="5" aria-label="Número de favoritas a comparar">
+          <button type="button" id="compareCountPlus" aria-label="Más favoritas">+</button>
+        </div>
+        <small id="compareCountHint"></small>
+      </div>
+    </div>
+    <div class="compare-fuel-line" id="compareFuelLine"></div>
+    <div class="compare-body" id="compareBody"></div>
+    <div class="compare-foot" id="compareFoot"></div>
+  </div>
 </div>
 <script src="js/state.js"></script>
 <script src="js/helpers.js"></script>
@@ -449,6 +476,7 @@
 <script src="js/chart-engine.js"></script>
 <script src="js/push-notifications.js"></script>
 <script src="js/ai-chat.js"></script>
+<script src="js/compare.js"></script>
 <script src="js/main.js"></script>
 <script>
 if (location.protocol.startsWith('http')) {

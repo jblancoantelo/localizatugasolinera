@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('clearPushLogBtn')?.addEventListener('click', clearPushLog);
   initCacheTabs();
   initLogTabs();
+  initCompare();
   document.getElementById('favToggleBtn').addEventListener('click', () => {
     STATE.showFavoritesOnly = !STATE.showFavoritesOnly;
     STATE.page = 1;
@@ -211,6 +212,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (saved.sortDir) STATE.sortDir = saved.sortDir;
     if (saved.selectedProv) STATE.selectedProv = saved.selectedProv;
     if (saved.showFavoritesOnly !== undefined) STATE.showFavoritesOnly = !!saved.showFavoritesOnly;
+    if (typeof saved.compareLiters === 'number' && saved.compareLiters > 0) STATE.compareLiters = saved.compareLiters;
+    if (typeof saved.compareCount === 'number' && saved.compareCount > 0) STATE.compareCount = saved.compareCount;
     if (saved.activeTab) setActiveTab(saved.activeTab);
     if (saved.selectedTile) { document.getElementById('mapStyle').value = saved.selectedTile; setTileLayer(saved.selectedTile); }
     if (saved.mapCenter && saved.mapZoom) {
