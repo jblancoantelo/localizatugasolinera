@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Juan Blanco Antelo — Localiza tu Gasolinera
+
 // ============================================================================
 // DATOS FAKE — Prototipos de diseño Gasolineras
 // Datos inventados para validar interfaz y navegación. NO son datos reales.
