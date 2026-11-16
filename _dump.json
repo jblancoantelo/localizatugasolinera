@@ -1,0 +1,1852 @@
+{
+  "prototipo1-mapa-hojas": {
+    "titulo": "Prototipo 1 · Mapa + hojas — Gasolineras",
+    "acciones": [],
+    "vistas": [
+      "ambos",
+      "config",
+      "ia",
+      "lista",
+      "mapa"
+    ],
+    "tabs": [
+      "Histórico",
+      "Precios"
+    ],
+    "selects": [
+      {
+        "id": "histFuel",
+        "opts": 0,
+        "label": "Combustible del histórico"
+      },
+      {
+        "id": "histDias",
+        "opts": 0,
+        "label": "Días del histórico"
+      }
+    ],
+    "inputs": [
+      {
+        "id": "buscador",
+        "type": "search",
+        "ph": "Busca localidad, calle o marca"
+      },
+      {
+        "id": "iaInput",
+        "type": "text",
+        "ph": "Pregunta sobre precios, estaci"
+      }
+    ],
+    "canvases": [
+      "histCanvas"
+    ],
+    "panels": [],
+    "ids": [
+      "agarreDetalle",
+      "agarreLista",
+      "agarreOpciones",
+      "ambosContador",
+      "ambosMapa",
+      "aviso",
+      "btnCargarMas",
+      "btnCentrar",
+      "btnEstilo",
+      "btnLimpiarBusqueda",
+      "btnOrdenHoja",
+      "btnRefrescar",
+      "btnUbicacion",
+      "btnZoomMas",
+      "btnZoomMenos",
+      "buscador",
+      "configLista",
+      "contenido",
+      "detCompartir",
+      "detFav",
+      "detMarca",
+      "detMeta",
+      "detPanelHistorico",
+      "detPanelPrecios",
+      "detPrecio",
+      "detRuta",
+      "detTitulo",
+      "detalleCerrar",
+      "filaChips",
+      "histCanvas",
+      "histDias",
+      "histFuel",
+      "histResumen",
+      "histTooltip",
+      "hojaDetalle",
+      "hojaLista",
+      "hojaOpciones",
+      "hojaSub",
+      "hojaTitulo",
+      "iaCabecera",
+      "iaEnviar",
+      "iaForm",
+      "iaInput",
+      "iaMensajes",
+      "iaPills",
+      "infoDatos",
+      "infoTexto",
+      "leyenda",
+      "listaContador",
+      "listaHoja",
+      "listaTarjetas",
+      "mapa",
+      "mapaFondo",
+      "mapaMarcadores",
+      "navInferior",
+      "navSuperior",
+      "opcCuerpo",
+      "opcPie",
+      "opcTitulo",
+      "opcionesCerrar",
+      "paginacion",
+      "segOrdenLista",
+      "tablaCuerpo",
+      "tablaEstaciones",
+      "velo",
+      "vista-ambos",
+      "vista-config",
+      "vista-ia",
+      "vista-lista",
+      "vista-mapa"
+    ],
+    "botones": 104,
+    "textoLargo": 1799,
+    "errores": []
+  },
+  "prototipo2-escritorio-sala-de-control": {
+    "titulo": "Gasolineras · Sala de control — prototipo de escritorio",
+    "acciones": [
+      "abrir-detalle",
+      "alternar-lista",
+      "cerrar-detalle",
+      "desplegable",
+      "detalle-tab",
+      "favorito",
+      "geolocalizar",
+      "limpiar-busqueda",
+      "marcador",
+      "ordenar",
+      "pagina",
+      "refrescar",
+      "solo-favoritos",
+      "vista",
+      "zoom"
+    ],
+    "vistas": [
+      "config",
+      "datos",
+      "dual",
+      "ia",
+      "mapa"
+    ],
+    "tabs": [
+      "historico",
+      "info"
+    ],
+    "selects": [
+      {
+        "id": "mapaEstilo",
+        "opts": 4,
+        "label": ""
+      },
+      {
+        "id": "ordenLista",
+        "opts": 5,
+        "label": ""
+      }
+    ],
+    "inputs": [
+      {
+        "id": "buscador",
+        "type": "text",
+        "ph": "Busca estación, localidad o ma"
+      },
+      {
+        "id": "iaInput",
+        "type": "text",
+        "ph": "Pregunta lo que quieras sobre "
+      }
+    ],
+    "canvases": [],
+    "panels": [],
+    "ids": [
+      "actualizado",
+      "asaTexto",
+      "avisos",
+      "btnFavoritos",
+      "btnPush",
+      "buscador",
+      "buscadorCaja",
+      "chipCombVal",
+      "chipCombustible",
+      "chipFiltros",
+      "chipProvincia",
+      "chipProvinciaVal",
+      "configGrid",
+      "desplegable",
+      "detalleAcciones",
+      "detalleDir",
+      "detalleNombre",
+      "detallePanelHist",
+      "detallePanelInfo",
+      "detallePrecio",
+      "escenario",
+      "favNum",
+      "filtrosNum",
+      "i-campana",
+      "i-cerrar",
+      "i-compartir",
+      "i-config",
+      "i-diana",
+      "i-dual",
+      "i-estrella",
+      "i-filtro",
+      "i-flecha",
+      "i-ia",
+      "i-info",
+      "i-lupa",
+      "i-mapa",
+      "i-mas",
+      "i-menos",
+      "i-papelera",
+      "i-rayo",
+      "i-refrescar",
+      "i-ruta",
+      "i-tabla",
+      "i-tendencia",
+      "i-ubicacion",
+      "iaBarra",
+      "iaForm",
+      "iaInput",
+      "iaMensajes",
+      "iaTabs",
+      "infoBarata",
+      "infoEstaciones",
+      "infoMedia",
+      "leyenda",
+      "listaCuenta",
+      "listaCuerpo",
+      "mapaCaja",
+      "mapaCargando",
+      "mapaEstilo",
+      "mapaLienzo",
+      "mapaMarcadores",
+      "mapaMundo",
+      "mapaSvg",
+      "mapaVacio",
+      "nextPage",
+      "ordenLista",
+      "pageInfo",
+      "paginacion",
+      "panelDetalle",
+      "panelLista",
+      "prevPage",
+      "pushPunto",
+      "rail",
+      "resumenMapa",
+      "sugerencias",
+      "tabDetalleHist",
+      "tabDetalleInfo",
+      "tablaCuenta",
+      "tablaScroll"
+    ],
+    "botones": 65,
+    "textoLargo": 1613,
+    "errores": []
+  },
+  "prototipo3-lista-tarjetas": {
+    "titulo": "Prototipo 3 · Lista primero — Gasolineras",
+    "acciones": [
+      "24h",
+      "combustible",
+      "distancia",
+      "favoritas",
+      "filtros",
+      "marcas"
+    ],
+    "vistas": [],
+    "tabs": [
+      "Chrome",
+      "General",
+      "Google Gemini",
+      "Groq",
+      "Histórico",
+      "LLM7.io",
+      "Mistral",
+      "NVIDIA",
+      "OpenRouter",
+      "Precios"
+    ],
+    "selects": [
+      {
+        "id": "fProvincia",
+        "opts": 16,
+        "label": ""
+      },
+      {
+        "id": "fLocalidad",
+        "opts": 10,
+        "label": ""
+      },
+      {
+        "id": "fCombustible",
+        "opts": 6,
+        "label": ""
+      },
+      {
+        "id": "histCombustible",
+        "opts": 0,
+        "label": "Combustible"
+      },
+      {
+        "id": "ajPageSize",
+        "opts": 7,
+        "label": "Estaciones por página0 = mostr"
+      },
+      {
+        "id": "ajModo",
+        "opts": 3,
+        "label": "Modo de comparaciónMediaÚltimo"
+      }
+    ],
+    "inputs": [
+      {
+        "id": "buscador",
+        "type": "search",
+        "ph": "Busca localidad, calle o marca"
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "fDistancia",
+        "type": "range",
+        "ph": ""
+      },
+      {
+        "id": "fSoloFav",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "chatInput",
+        "type": "text",
+        "ph": "Pregunta por precios, estacion"
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "ajCacheTtl",
+        "type": "number",
+        "ph": ""
+      },
+      {
+        "id": "ajPushOn",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "ajIntervalo",
+        "type": "number",
+        "ph": ""
+      },
+      {
+        "id": "ajDiasBajada",
+        "type": "number",
+        "ph": ""
+      },
+      {
+        "id": "ajSubidas",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "ajPass",
+        "type": "password",
+        "ph": "••••••"
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      }
+    ],
+    "canvases": [],
+    "panels": [],
+    "ids": [
+      "accionCompartir",
+      "accionFavorito",
+      "accionIr",
+      "accionLlamar",
+      "ajActualizar",
+      "ajCacheTtl",
+      "ajCargarClaves",
+      "ajDiasBajada",
+      "ajIntervalo",
+      "ajLimpiarCache",
+      "ajModo",
+      "ajPageSize",
+      "ajPass",
+      "ajProbarPush",
+      "ajPushOn",
+      "ajSubidas",
+      "ajustesCuerpo",
+      "app",
+      "aviso",
+      "barraOrden",
+      "btnMas",
+      "buscador",
+      "buscadorLimpiar",
+      "cabecera",
+      "capaAjustes",
+      "capaChat",
+      "capaDetalle",
+      "capaFiltros",
+      "cargandoLista",
+      "chatEnviar",
+      "chatForm",
+      "chatInput",
+      "chatLimpiar",
+      "chatMensajes",
+      "chatSugerencias",
+      "chips",
+      "colLista",
+      "colMapa",
+      "cuentaResultados",
+      "detalleCabecera",
+      "detalleCombustible",
+      "detalleDelta",
+      "detalleDireccion",
+      "detalleHorario",
+      "detalleLocalidad",
+      "detalleMarca",
+      "detalleNombre",
+      "detallePrecio",
+      "detalleScroll",
+      "detalleTablaPrecios",
+      "detalleTelefono",
+      "dpanelHistorico",
+      "dpanelPrecios",
+      "estadoVacio",
+      "fAplicar",
+      "fCombustible",
+      "fDistancia",
+      "fDistanciaValor",
+      "fLimpiar",
+      "fLocalidad",
+      "fMarcas",
+      "fProvincia",
+      "fSoloFav",
+      "fabFiltros",
+      "fabFiltrosBadge",
+      "fabIa",
+      "graficaCaja",
+      "graficaHistorico",
+      "graficaTooltip",
+      "histCombustible",
+      "histDias",
+      "historicoResumen",
+      "listaTarjetas",
+      "mapa",
+      "mapaAgua",
+      "mapaContador",
+      "mapaManchas",
+      "mapaMarcadores",
+      "mapaViales",
+      "mapaVolver",
+      "mapaYo",
+      "navInferior",
+      "notaDescuentos",
+      "pieLista",
+      "pillsProveedor",
+      "scrollLista",
+      "segLista",
+      "segMapa",
+      "sheetAjustes",
+      "sheetChat",
+      "sheetDetalle",
+      "sheetFiltros",
+      "tituloAjustes",
+      "tituloChat",
+      "tituloFiltros",
+      "ubicacionTexto",
+      "vacioLimpiar"
+    ],
+    "botones": 109,
+    "textoLargo": 1928,
+    "errores": []
+  },
+  "prototipo4-modo-noche-conduccion": {
+    "titulo": "Gasolineras · Modo noche y conducción",
+    "acciones": [],
+    "vistas": [
+      "ajustes",
+      "favoritas",
+      "ia",
+      "lista",
+      "mapa"
+    ],
+    "tabs": [
+      "Chrome IA",
+      "General",
+      "Google Gemini",
+      "Groq",
+      "LLM7.io",
+      "Mistral",
+      "NVIDIA",
+      "OpenRouter"
+    ],
+    "selects": [
+      {
+        "id": "selProv",
+        "opts": 16,
+        "label": "Provincia\n        MadridBarcel"
+      },
+      {
+        "id": "selLocalidad",
+        "opts": 10,
+        "label": "Localidad\n        Todas las lo"
+      },
+      {
+        "id": "selCombustible",
+        "opts": 6,
+        "label": "Combustible\n        Gasolina 9"
+      },
+      {
+        "id": "selOrden",
+        "opts": 3,
+        "label": "Ordenar por\n        \n         "
+      },
+      {
+        "id": "selPagina",
+        "opts": 7,
+        "label": "Resultados por página\n        "
+      },
+      {
+        "id": "selOrdenDef",
+        "opts": 3,
+        "label": "Orden por defecto\n            "
+      },
+      {
+        "id": "discMarca",
+        "opts": 15,
+        "label": ""
+      },
+      {
+        "id": "detCombSel",
+        "opts": 0,
+        "label": "Combustible"
+      },
+      {
+        "id": "detDiasSel",
+        "opts": 0,
+        "label": "Periodo"
+      }
+    ],
+    "inputs": [
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "rngDist",
+        "type": "range",
+        "ph": ""
+      },
+      {
+        "id": "chkFavoritos",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "inpBusqueda",
+        "type": "search",
+        "ph": "Localidad, calle o marca…"
+      },
+      {
+        "id": "iaInput",
+        "type": "text",
+        "ph": "Pregunta sobre precios, tenden"
+      },
+      {
+        "id": "swTema",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "swConduccion",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "swDescuentos",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "number",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "number",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "number",
+        "ph": ""
+      },
+      {
+        "id": "discValor",
+        "type": "number",
+        "ph": "€/L"
+      },
+      {
+        "id": "cacheTtl",
+        "type": "number",
+        "ph": ""
+      },
+      {
+        "id": "swPushBajada",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "swPushSubida",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "pushIntervalo",
+        "type": "number",
+        "ph": ""
+      },
+      {
+        "id": "pushDias",
+        "type": "number",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "radio",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "radio",
+        "ph": ""
+      },
+      {
+        "id": "iaPass",
+        "type": "password",
+        "ph": "Contraseña"
+      },
+      {
+        "id": "",
+        "type": "password",
+        "ph": "API Key"
+      },
+      {
+        "id": "",
+        "type": "password",
+        "ph": "API Key"
+      },
+      {
+        "id": "",
+        "type": "password",
+        "ph": "API Key"
+      },
+      {
+        "id": "",
+        "type": "password",
+        "ph": "API Key"
+      },
+      {
+        "id": "",
+        "type": "password",
+        "ph": "API Key"
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": "Prompt 1"
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": "Prompt 2"
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": "Prompt 3"
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": "Prompt 4"
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": "Prompt 5"
+      }
+    ],
+    "canvases": [],
+    "panels": [],
+    "ids": [
+      "app",
+      "atajos",
+      "avisos",
+      "btnAplicarFiltros",
+      "btnBuscarAct",
+      "btnConduccion",
+      "btnFiltros",
+      "btnIaFlotante",
+      "btnLimpiar",
+      "btnLimpiarCache",
+      "btnMarcas",
+      "btnTema",
+      "cabProvincia",
+      "cabResumen",
+      "cabecera",
+      "cacheIdb",
+      "cacheLs",
+      "cacheTtl",
+      "cargando",
+      "cdFav",
+      "cdHud",
+      "cdIr",
+      "cdSalir",
+      "chkFavoritos",
+      "conduccionAcciones",
+      "cuerpo",
+      "detCerrar",
+      "detCombLbl",
+      "detCombSel",
+      "detDelta",
+      "detDiasSel",
+      "detDir",
+      "detDist",
+      "detFav",
+      "detFav2",
+      "detGrafica",
+      "detHorario",
+      "detIr",
+      "detMarca",
+      "detMax",
+      "detMin",
+      "detPrecio",
+      "detTabla",
+      "detalle",
+      "discAdd",
+      "discList",
+      "discMarca",
+      "discValor",
+      "distValor",
+      "dock",
+      "estadoAct",
+      "filtrosBadge",
+      "hud",
+      "iaCargar",
+      "iaClaves",
+      "iaForm",
+      "iaHilo",
+      "iaInput",
+      "iaPass",
+      "iaPassEstado",
+      "iaPills",
+      "iaPrompts",
+      "iconoTema",
+      "inpBusqueda",
+      "lista",
+      "listaPie",
+      "listaPrompts",
+      "logApi",
+      "logPush",
+      "mapa",
+      "mapaCapa",
+      "mapaCentrar",
+      "mapaLeyenda",
+      "mapaMas",
+      "mapaMenos",
+      "mapaSvg",
+      "marcadores",
+      "marcasChecks",
+      "marcasCount",
+      "marcasLista",
+      "marcasNinguna",
+      "marcasTodas",
+      "panelAjustes",
+      "panelFiltros",
+      "panelIA",
+      "panelLista",
+      "panelMapa",
+      "pfCerrar",
+      "provVisibles",
+      "pushDias",
+      "pushIntervalo",
+      "pushProbar",
+      "rngDist",
+      "rsBarata",
+      "rsMedia",
+      "rsNum",
+      "selCombustible",
+      "selLocalidad",
+      "selOrden",
+      "selOrdenDef",
+      "selPagina",
+      "selProv",
+      "swConduccion",
+      "swDescuentos",
+      "swPushBajada",
+      "swPushSubida",
+      "swTema",
+      "tabLogApi",
+      "tabLogPush",
+      "velo",
+      "versionApp"
+    ],
+    "botones": 105,
+    "textoLargo": 1753,
+    "errores": []
+  },
+  "prototipo5-split-comparador": {
+    "titulo": "Prototipo 5 · Split sincronizado + comparador · Gasolineras",
+    "acciones": [],
+    "vistas": [],
+    "tabs": [
+      "Histórico",
+      "Información",
+      "⚡ Groq",
+      "✨ Google Gemini",
+      "🆓 LLM7.io",
+      "🌬️ Mistral",
+      "🔀 OpenRouter",
+      "🚀 General",
+      "🟩 NVIDIA",
+      "🤖 Chrome Built-in A"
+    ],
+    "selects": [
+      {
+        "id": "fProvincia",
+        "opts": 17,
+        "label": "Provincia\n        Todas las pr"
+      },
+      {
+        "id": "fLocalidad",
+        "opts": 10,
+        "label": "Localidad\n        TodasAlcalá "
+      },
+      {
+        "id": "fCombustible",
+        "opts": 7,
+        "label": "Combustible\n        TodosGasol"
+      },
+      {
+        "id": "mapaEstilo",
+        "opts": 4,
+        "label": "Estilo del mapa\n            \n "
+      },
+      {
+        "id": "ordenSel",
+        "opts": 6,
+        "label": "Ordenar por\n              \n   "
+      },
+      {
+        "id": "pageSizeSel",
+        "opts": 7,
+        "label": "Resultados por página153050100"
+      },
+      {
+        "id": "detFuel",
+        "opts": 0,
+        "label": "Combustible"
+      },
+      {
+        "id": "detDias",
+        "opts": 7,
+        "label": "Días\n                \n        "
+      },
+      {
+        "id": "",
+        "opts": 4,
+        "label": "Modeloqwen/qwen3.8-27bopenai/g"
+      },
+      {
+        "id": "",
+        "opts": 5,
+        "label": "Modeloopen-mistral-nemoministr"
+      },
+      {
+        "id": "",
+        "opts": 2,
+        "label": "Modelonvidia/nemotron-3-ultra-"
+      },
+      {
+        "id": "",
+        "opts": 4,
+        "label": "Modelocodestral-latestGLM-5.3-"
+      },
+      {
+        "id": "",
+        "opts": 7,
+        "label": "Modelonvidia/nemotron-3-ultra-"
+      },
+      {
+        "id": "",
+        "opts": 4,
+        "label": "Modelogemini-3.8-flashgemini-3"
+      },
+      {
+        "id": "",
+        "opts": 1,
+        "label": "ModeloGemini Nano (local)"
+      },
+      {
+        "id": "ajPageSize",
+        "opts": 7,
+        "label": ""
+      }
+    ],
+    "inputs": [
+      {
+        "id": "fDistancia",
+        "type": "number",
+        "ph": "km"
+      },
+      {
+        "id": "buscar",
+        "type": "search",
+        "ph": "Buscar localidad, calle o marc"
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": "Pregunta a todos los proveedor"
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": "Escribe un mensaje…"
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": "Escribe un mensaje…"
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": "Escribe un mensaje…"
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": "Escribe un mensaje…"
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": "Escribe un mensaje…"
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": "Escribe un mensaje…"
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": "Escribe un mensaje…"
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "number",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "number",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "number",
+        "ph": ""
+      },
+      {
+        "id": "ajCacheTtl",
+        "type": "number",
+        "ph": ""
+      },
+      {
+        "id": "ajPush",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "ajPushSube",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "ajPushIntervalo",
+        "type": "number",
+        "ph": ""
+      },
+      {
+        "id": "ajPushDias",
+        "type": "number",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "password",
+        "ph": "Contraseña"
+      },
+      {
+        "id": "",
+        "type": "password",
+        "ph": "API Key"
+      },
+      {
+        "id": "",
+        "type": "password",
+        "ph": "API Key"
+      },
+      {
+        "id": "",
+        "type": "password",
+        "ph": "API Key"
+      },
+      {
+        "id": "",
+        "type": "password",
+        "ph": "API Key"
+      },
+      {
+        "id": "",
+        "type": "password",
+        "ph": "API Key"
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "checkbox",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": ""
+      },
+      {
+        "id": "",
+        "type": "text",
+        "ph": ""
+      },
+      {
+        "id": "popoverBuscar",
+        "type": "search",
+        "ph": "Filtrar marcas…"
+      }
+    ],
+    "canvases": [
+      "detGrafica"
+    ],
+    "panels": [
+      "chrome-nano",
+      "general",
+      "google",
+      "groq",
+      "llm7",
+      "mistral",
+      "nvidia",
+      "openrouter"
+    ],
+    "ids": [
+      "ajActEstado",
+      "ajAddDesc",
+      "ajBuscarAct",
+      "ajCacheTtl",
+      "ajCargarClaves",
+      "ajIaAviso",
+      "ajLimpiarCache",
+      "ajLimpiarLog",
+      "ajPageSize",
+      "ajPush",
+      "ajPushDias",
+      "ajPushEstado",
+      "ajPushIntervalo",
+      "ajPushProbar",
+      "ajPushSube",
+      "app",
+      "atajos",
+      "avisos",
+      "barraComparar",
+      "bcComparar",
+      "bcHint",
+      "bcMiniaturas",
+      "bcQuitar",
+      "bcTexto",
+      "btnAjustesRapido",
+      "btnFavoritos",
+      "btnLimpiar",
+      "btnLimpiarBusqueda",
+      "btnPresetLista",
+      "btnPresetMapa",
+      "btnPresetSplit",
+      "btnPush",
+      "btnSeguirHover",
+      "btnVerMapa",
+      "btnZoomMas",
+      "btnZoomMenos",
+      "btnZoomReset",
+      "buscar",
+      "cargandoLista",
+      "chips",
+      "contador",
+      "cuerpoTabla",
+      "detCargando",
+      "detCerrar",
+      "detDias",
+      "detFuel",
+      "detGrafica",
+      "detPanelHist",
+      "detPanelInfo",
+      "detResumen",
+      "detSub",
+      "detTabHist",
+      "detTabInfo",
+      "detTitulo",
+      "divisor",
+      "estadoVacio",
+      "evLimpiar",
+      "fCombustible",
+      "fDistancia",
+      "fLocalidad",
+      "fMarcas",
+      "fProvincia",
+      "hoja",
+      "hojaCerrar",
+      "hojaCuerpo",
+      "hojaFondo",
+      "hojaTitulo",
+      "lienzo",
+      "listaScroll",
+      "mapaCaja",
+      "mapaCapa",
+      "mapaContador",
+      "mapaEstilo",
+      "mapaHint",
+      "mapaPopup",
+      "marcadores",
+      "navInferior",
+      "ordenSel",
+      "pageSizeSel",
+      "paginacion",
+      "panelDetalle",
+      "panelLista",
+      "panelMapa",
+      "peekAgarre",
+      "popoverAplicar",
+      "popoverBuscar",
+      "popoverListaMarcas",
+      "popoverMarcas",
+      "popoverNinguna",
+      "popoverTodas",
+      "tabla",
+      "zona",
+      "zonaAjustes",
+      "zonaIA"
+    ],
+    "botones": 122,
+    "textoLargo": 2537,
+    "errores": []
+  },
+  "prototipo6-gestos-atajos": {
+    "titulo": "Prototipo 6 · Gestos y atajos — Gasolineras",
+    "acciones": [],
+    "vistas": [
+      "ambos",
+      "config",
+      "ia",
+      "lista",
+      "mapa"
+    ],
+    "tabs": [
+      "Histórico",
+      "Precios",
+      "ambos",
+      "lista",
+      "mapa"
+    ],
+    "selects": [
+      {
+        "id": "histFuel",
+        "opts": 0,
+        "label": "Combustible del histórico"
+      },
+      {
+        "id": "histDias",
+        "opts": 0,
+        "label": "Días del histórico"
+      }
+    ],
+    "inputs": [
+      {
+        "id": "buscador",
+        "type": "search",
+        "ph": "Busca localidad, calle o marca"
+      },
+      {
+        "id": "iaInput",
+        "type": "text",
+        "ph": "Pregunta sobre precios, estaci"
+      },
+      {
+        "id": "paletaInput",
+        "type": "text",
+        "ph": "Escribe un comando o el nombre"
+      }
+    ],
+    "canvases": [
+      "histCanvas"
+    ],
+    "panels": [],
+    "ids": [
+      "agarreDetalle",
+      "agarreLista",
+      "agarreOpciones",
+      "ambosContador",
+      "ambosMapa",
+      "aviso",
+      "ayuda",
+      "ayudaCerrar",
+      "ayudaCuerpo",
+      "ayudaEntendido",
+      "ayudaTitulo",
+      "btnAyudaGestos",
+      "btnAyudaMapa",
+      "btnCentrar",
+      "btnHojaCiclo",
+      "btnLimpiarBusqueda",
+      "btnPaleta",
+      "btnZoomMas",
+      "btnZoomMenos",
+      "buscador",
+      "carril",
+      "configLista",
+      "contenido",
+      "detCompartir",
+      "detFav",
+      "detLlamar",
+      "detMarca",
+      "detMeta",
+      "detPanelHistorico",
+      "detPanelPrecios",
+      "detPrecio",
+      "detRuta",
+      "detTitulo",
+      "detalleCerrar",
+      "filaChips",
+      "histCanvas",
+      "histDias",
+      "histFuel",
+      "histResumen",
+      "histTooltip",
+      "hojaDetalle",
+      "hojaLista",
+      "hojaOpciones",
+      "hojaSub",
+      "hojaTitulo",
+      "iaCabecera",
+      "iaEnviar",
+      "iaForm",
+      "iaInput",
+      "iaMensajes",
+      "iaPills",
+      "iaPrompts",
+      "indicador",
+      "infoDatos",
+      "infoTexto",
+      "leyenda",
+      "listaHoja",
+      "listaScroll",
+      "listaTarjetas",
+      "mapa",
+      "mapaFondo",
+      "mapaMarcadores",
+      "menuContexto",
+      "navInferior",
+      "navSuperior",
+      "opcCuerpo",
+      "opcPie",
+      "opcTitulo",
+      "opcionesCerrar",
+      "paginacion",
+      "paleta",
+      "paletaCerrar",
+      "paletaInput",
+      "paletaLista",
+      "panel-ambos",
+      "panel-lista",
+      "panel-mapa",
+      "tablaCuerpo",
+      "tablaEstaciones",
+      "tirar",
+      "tirarTexto",
+      "velo",
+      "vista-config",
+      "vista-ia"
+    ],
+    "botones": 141,
+    "textoLargo": 1687,
+    "errores": []
+  },
+  "prototipo7-asistente-decisiones": {
+    "titulo": "Prototipo 7 · Asistente por decisiones — Gasolineras",
+    "acciones": [
+      "ir-explorar"
+    ],
+    "vistas": [
+      "config",
+      "explorar",
+      "ia",
+      "inicio",
+      "mapa"
+    ],
+    "tabs": [],
+    "selects": [
+      {
+        "id": "filtroProv",
+        "opts": 16,
+        "label": "Provincia\n            MadridBa"
+      },
+      {
+        "id": "filtroFuel",
+        "opts": 6,
+        "label": "Combustible\n            Gasoli"
+      }
+    ],
+    "inputs": [
+      {
+        "id": "filtroTexto",
+        "type": "search",
+        "ph": "Localidad, calle o marca"
+      },
+      {
+        "id": "iaInput",
+        "type": "text",
+        "ph": "Pregunta por precios, estacion"
+      }
+    ],
+    "canvases": [],
+    "panels": [],
+    "ids": [
+      "aviso",
+      "cabeceraChip",
+      "cabeceraSub",
+      "configLista",
+      "contenido",
+      "detCerrar",
+      "detCompartir",
+      "detCuerpo",
+      "detFav",
+      "detLlamar",
+      "detMarca",
+      "detMeta",
+      "detPrecio",
+      "detRuta",
+      "detTitulo",
+      "detalle",
+      "explorarLista",
+      "filtroFuel",
+      "filtroProv",
+      "filtroTexto",
+      "iaCabecera",
+      "iaEnviar",
+      "iaForm",
+      "iaInput",
+      "iaMensajes",
+      "iaPills",
+      "lienzoAsistente",
+      "mapaFondo",
+      "mapaLeyenda",
+      "mapaMarcadores",
+      "mapaPrincipal",
+      "mapaResumen",
+      "mapaRuta",
+      "navPrincipal",
+      "vista-config",
+      "vista-explorar",
+      "vista-ia",
+      "vista-inicio",
+      "vista-mapa"
+    ],
+    "botones": 49,
+    "textoLargo": 738,
+    "errores": []
+  },
+  "prototipo8-panel-de-datos": {
+    "titulo": "Prototipo 8 · Panel de datos — Gasolineras",
+    "acciones": [],
+    "vistas": [
+      "config",
+      "estaciones",
+      "ia",
+      "mapa",
+      "panel"
+    ],
+    "tabs": [],
+    "selects": [
+      {
+        "id": "selProv",
+        "opts": 16,
+        "label": "ProvinciaMadridBarcelonaValenc"
+      },
+      {
+        "id": "selFuel",
+        "opts": 6,
+        "label": "CombustibleGasolina 95 E5Gasol"
+      },
+      {
+        "id": "selDias",
+        "opts": 6,
+        "label": "Periodo7 días14 días30 días60 "
+      },
+      {
+        "id": "fichaFuel",
+        "opts": 0,
+        "label": "Combustible"
+      },
+      {
+        "id": "fichaDias",
+        "opts": 0,
+        "label": "Periodo"
+      }
+    ],
+    "inputs": [
+      {
+        "id": "buscar",
+        "type": "search",
+        "ph": "Busca marca, localidad o calle"
+      },
+      {
+        "id": "iaInput",
+        "type": "text",
+        "ph": "Pregunta sobre precios, tenden"
+      }
+    ],
+    "canvases": [
+      "cvEvolucion",
+      "cvTramos",
+      "fichaCanvas"
+    ],
+    "panels": [],
+    "ids": [
+      "aviso",
+      "buscar",
+      "configLista",
+      "cvEvolucion",
+      "cvTramos",
+      "estSub",
+      "ficha",
+      "fichaCanvas",
+      "fichaCerrar",
+      "fichaComparar",
+      "fichaDias",
+      "fichaFav",
+      "fichaFuel",
+      "fichaMarca",
+      "fichaMeta",
+      "fichaPrecio",
+      "fichaPrecios",
+      "fichaResumen",
+      "fichaTitulo",
+      "iaCabecera",
+      "iaForm",
+      "iaInput",
+      "iaMensajes",
+      "iaPills",
+      "iaPrompts",
+      "iaSub",
+      "mapa",
+      "mapaFondo",
+      "mapaLeyenda",
+      "mapaMarcadores",
+      "mapaSub",
+      "nav",
+      "ordenEst",
+      "panelRejilla",
+      "selDias",
+      "selFuel",
+      "selProv",
+      "tablaCuerpo",
+      "tablaEst",
+      "topbarSub",
+      "v-config",
+      "v-estaciones",
+      "v-ia",
+      "v-mapa",
+      "v-panel",
+      "velo",
+      "vistas"
+    ],
+    "botones": 76,
+    "textoLargo": 2705,
+    "errores": []
+  }
+}

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- Copyright (C) 2026 Juan Blanco Antelo - Localiza tu Gasolinera (prototipos de diseno) -->
+
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>prototipos_opencode_glm5.3flash · galería de rediseños</title>
+<style>
+:root{--tinta:#101826;--sub:#5d6b7c;--fondo:#f2f4f7;--tarj:#fff;--linea:#dfe5ec;--pri:#0b6ef0;--verde:#0a8a3c}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:system-ui,'Segoe UI',Roboto,sans-serif;background:var(--fondo);color:var(--tinta);padding:0 0 60px}
+.hero{padding:26px 18px 20px;max-width:1080px;margin:0 auto}
+.hero h1{margin:0 0 8px;font-size:1.5rem;letter-spacing:-.4px}
+.hero p{margin:0;color:var(--sub);font-size:.92rem;line-height:1.55}
+.hero .lvl{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.hero .lvl span{font-size:.72rem;font-weight:700;background:#fff;border:1px solid var(--linea);border-radius:99px;padding:5px 11px}
+.grid{max-width:1080px;margin:0 auto;padding:8px 18px;display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.tarj{background:var(--tarj);border:1px solid var(--linea);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px;text-decoration:none;color:inherit;transition:transform .12s,box-shadow .12s;min-width:0}
+.tarj:hover{transform:translateY(-3px);box-shadow:0 10px 26px rgba(16,32,54,.10)}
+.tarj .up{display:flex;align-items:center;gap:10px}
+.tarj .num{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;color:#fff;font-weight:800;flex-shrink:0}
+.tarj h3{margin:0;font-size:1rem;line-height:1.2}
+.tarj .hi{font-size:.84rem;color:var(--sub);line-height:1.45;margin:0}
+.tarj .pts{display:flex;flex-wrap:wrap;gap:6px}
+.tarj .pts span{font-size:.66rem;font-weight:700;border-radius:7px;padding:3px 7px;background:#eef2f7;color:#3c4a5a}
+.tarj .pts span.bueno{background:#e7f7ee;color:var(--verde)}
+.tarj .go{margin-top:auto;display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:.85rem;color:var(--pri)}
+.foot{max-width:1080px;margin:26px auto 0;padding:0 18px;color:var(--sub);font-size:.8rem;line-height:1.6}
+.foot b{color:var(--tinta)}
+@media (max-width:520px){.grid{grid-template-columns:1fr}.hero h1{font-size:1.25rem}}
+</style>
+</head>
+<body>
+<div class="hero">
+  <h1>prototipos_opencode_glm5.3flash — 8 rediseños de Localiza tu Gasolinera</h1>
+  <p>Cada carpeta es una maqueta <b>funcional</b> con datos fake (idénticos entre prototipos, generados con semilla en <code>_lib/mock.js</code>) para comparar diseños sin sesgo. Todas se abren con doble clic en su <code>index.html</code> — sin servidor ni dependencias. Prueba cada una en móvil real (o el simulador del inspector) y en monitor de PC.</p>
+  <div class="lvl"><span>📱 mobile-first</span><span>🖥️ versión PC cuidada</span><span>⭐ favoritas · histórico · IA · push · mapa</span><span>🔌 online/offline</span></div>
+</div>
+
+<div class="grid">
+  <a class="tarj" href="v01-tarjetas-chips/index.html">
+    <div class="up"><div class="num" style="background:#0b6ef0">v01</div><h3>Tarjetas + chips</h3></div>
+    <p class="hi">La evolución más directa de la app actual: tarjetas con precio gigante, hero de la más barata y ficha con calculadora de depósito.</p>
+    <div class="pts"><span class="bueno">cambio mínimo</span><span>fácil de portar</span><span>calculadora 💡</span></div>
+    <span class="go">Abrir prototipo →</span>
+  </a>
+
+  <a class="tarj" href="v02-mapa-hoja/index.html">
+    <div class="up"><div class="num" style="background:#0f6b4f">v02</div><h3>Mapa voraz + hoja arrastrable</h3></div>
+    <p class="hi">El mapa es el protagonista; la lista vive en una hoja con 3 snaps (estilo Google Maps/Uber). Clic en un pin y se resalta su tarjeta.</p>
+    <div class="pts"><span class="bueno">más vivo en móvil</span><span>gestos</span><span>riesgo: coste de desarrollo</span></div>
+    <span class="go">Abrir prototipo →</span>
+  </a>
+
+  <a class="tarj" href="v03-material/index.html">
+    <div class="up"><div class="num" style="background:#4759d8">v03</div><h3>Material 3 expresivo</h3></div>
+    <p class="hi">Píldora indicadora en la barra inferior, tarjetas de 24 px de radio, chips material y modo oscuro automático según el sistema.</p>
+    <div class="pts"><span>look moderno</span><span class="bueno">se adapta al OS</span><span>parece app nativa</span></div>
+    <span class="go">Abrir prototipo →</span>
+  </a>
+
+  <a class="tarj" href="v04-escritorio-denso/index.html">
+    <div class="up"><div class="num" style="background:#8a4fd9">v04</div><h3>Escritorio denso (3 columnas)</h3></div>
+    <p class="hi">La respuesta clara al PC: sidebar de filtros + lista densa + mapa y ficha permanentes. En móvil se apila con pestañas propias.</p>
+    <div class="pts"><span class="bueno">mejor para monitor</span><span>tabla fina</span><span>menos "app", más herramienta</span></div>
+    <span class="go">Abrir prototipo →</span>
+  </a>
+
+  <a class="tarj" href="v05-noche-conduccion/index.html">
+    <div class="up"><div class="num" style="background:#181c24">v05</div><h3>Modo noche / conducción</h3></div>
+    <p class="hi">AMOLED puro, tipografía enorme, objetivos de 50 px y sparkline por tarjeta. Pensado para usar de noche y con una mano.</p>
+    <div class="pts"><span>caso de uso concreto</span><span>contraste alto</span><span>botón grande de ruta 🧭</span></div>
+    <span class="go">Abrir prototipo →</span>
+  </a>
+
+  <a class="tarj" href="v06-contraste/index.html">
+    <div class="up"><div class="num" style="background:#c9a400">v06</div><h3>Contraste brutal</h3></div>
+    <p class="hi">Sin sombras, bordes gruesos, ranking con podio (#1–#3 destacado) y el precio como titular. Neobrutalismo accesible.</p>
+    <div class="pts"><span class="bueno">semántica de ranking clara</span><span>rápido de escanear</span><span>diseño polarizante</span></div>
+    <span class="go">Abrir prototipo →</span>
+  </a>
+
+  <a class="tarj" href="v07-torre-control/index.html">
+    <div class="up"><div class="num" style="background:#c05e0b">v07</div><h3>Torre de control (analítica)</h3></div>
+    <p class="hi">Dashboard PC con KPIs (media, tendencia, mejor estación), series comparadas activables, alertas recientes e IA resumida. En móvil, 3 pestañas.</p>
+    <div class="pts"><span class="bueno">para quien compara</span><span>multi-serie</span><span>orientado a decidir</span></div>
+    <span class="go">Abrir prototipo →</span>
+  </a>
+
+  <a class="tarj" href="v08-flujo/index.html">
+    <div class="up"><div class="num" style="background:#0a8a5c">v08</div><h3>Flujo móvil con pila de pantallas</h3></div>
+    <p class="hi">Home con resumen diario, lista, ficha e histórico como pantallas propias con animaciones; en PC se previsualiza en un marco de teléfono.</p>
+    <div class="pts"><span class="bueno">navegación tipo app nativa</span><span>onboarding</span><span>pantallas dedicadas</span></div>
+    <span class="go">Abrir prototipo →</span>
+  </a>
+</div>
+
+<div class="foot">
+  <p><b>Qué llevan todos:</b> provincias y localidades de ejemplo, varios combustibles conmutables con recálculo, favoritas persistentes en la sesión, histórico con rango 7/14/30 días (y más en algunos), chat IA con respuestas por palabra clave, descuentos por marca visibles, aviso push simulado y mapas SVG fake con pines coloreados por precio (verde &lt;1,50 € · ámbar 1,50–1,70 € · rojo &gt;1,70 €, igual que la app actual).</p>
+  <p><b>Validación:</b> los 8 prototipos se abren con Chromium headless mediante <code>node prototipos_opencode_glm5.3flash/_validar.mjs</code> (móvil 390×844 y PC 1440×900, capturas en <code>_capturas/</code>). Además, cada bloque inline pasa <code>node --check</code>.</p>
+  <p><b>Pasadas:</b> 1ª — v01–v08 (8 ideas distintas); 2ª — revisión con Playwright y pulido de los fallos encontrados; 3ª — sin más ideas nuevas de diseño: el plan de integración del ganador está en el <b>README.md</b> de esta carpeta.</p>
+</div>
+</body>
+</html>

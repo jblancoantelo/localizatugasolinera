@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#1a73e8">
+<title>Prototipo 3 · Lista primero — Gasolineras</title>
+<!-- =========================================================================
+     PROTOTIPO 3 — "Lista primero"
+     Rediseño mobile-first de la app "Gasolineras": la pantalla inicial es una
+     lista táctil de tarjetas con el PRECIO como protagonista, y el mapa es una
+     vista secundaria a pantalla completa.
+     Sin recursos externos: mapa en SVG/CSS, iconos SVG inline.
+     Se abre por file:// con scripts clásicos (sin módulos).
+     ========================================================================= -->
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ==================== COLUMNA IZQUIERDA: LISTA ==================== -->
+  <section class="col-lista" id="colLista" aria-label="Listado de estaciones">
+
+    <!-- Cabecera fija: ubicación + segmentado Lista/Mapa + buscador + chips -->
+    <header class="cabecera" id="cabecera">
+      <div class="cabecera-fila">
+        <div class="ubicacion">
+          <span class="ubicacion-pin" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z" fill="currentColor"/></svg>
+          </span>
+          <span class="ubicacion-textos">
+            <span class="ubicacion-mini">Tu ubicación</span>
+            <strong class="ubicacion-ciudad" id="ubicacionTexto">Madrid</strong>
+          </span>
+        </div>
+
+        <!-- Segmentado de vista. data-shot="vista" en el botón que cambia de vista -->
+        <div class="segmentado segmentado-vista" role="group" aria-label="Cambiar vista">
+          <button type="button" class="seg" id="segLista" aria-pressed="true">Lista</button>
+          <button type="button" class="seg" id="segMapa" aria-pressed="false">Mapa</button>
+        </div>
+      </div>
+
+      <div class="buscador">
+        <span class="buscador-lupa" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M10.5 3a7.5 7.5 0 1 0 4.55 13.46l4.24 4.25 1.42-1.42-4.25-4.24A7.5 7.5 0 0 0 10.5 3Zm0 2a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11Z" fill="currentColor"/></svg>
+        </span>
+        <input id="buscador" class="buscador-input" type="search" inputmode="search"
+               placeholder="Busca localidad, calle o marca" autocomplete="off"
+               aria-label="Buscar localidad, calle o marca">
+        <button type="button" class="buscador-x" id="buscadorLimpiar" hidden aria-label="Borrar búsqueda">
+          <svg viewBox="0 0 24 24" width="18" height="18"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6 6.4 5Z" fill="currentColor"/></svg>
+        </button>
+      </div>
+
+      <!-- Chips de filtros activos (scroll horizontal), generados por JS -->
+      <div class="chips" id="chips" role="list" aria-label="Filtros activos"></div>
+    </header>
+
+    <!-- Fila de ordenación. No se desplaza con la lista: queda pegada arriba -->
+    <div class="barra-orden" id="barraOrden">
+      <span class="barra-orden-cuenta" id="cuentaResultados">—</span>
+      <div class="segmentado segmentado-orden" role="group" aria-label="Ordenar resultados">
+        <button type="button" class="seg" data-orden="precio-asc">Precio ↑</button>
+        <button type="button" class="seg" data-orden="precio-desc">Precio ↓</button>
+        <button type="button" class="seg" data-orden="distancia">Distancia</button>
+      </div>
+    </div>
+
+    <!-- Contenedor con scroll: grupos con cabecera pegajosa -->
+    <div class="scroll-lista" id="scrollLista">
+      <div id="listaTarjetas" class="lista-tarjetas" aria-live="polite"></div>
+
+      <!-- Estado de carga: skeletons -->
+      <div class="esqueletos" id="cargandoLista" hidden>
+        <p class="cargando-texto">Cargando precios…</p>
+        <div class="esqueleto-tarjeta"></div>
+        <div class="esqueleto-tarjeta"></div>
+        <div class="esqueleto-tarjeta"></div>
+      </div>
+
+      <!-- Estado vacío -->
+      <div class="estado-vacio" id="estadoVacio" hidden>
+        <div class="estado-vacio-icono" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="42" height="42"><path d="M4 4h10a4 4 0 0 1 4 4v1h1.2a2 2 0 0 1 1.9 1.4l.8 2.6H20v5a1 1 0 0 1-1 1h-1a2 2 0 1 1-4 0H9a2 2 0 1 1-4 0H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm2 4v3h5V8H6Zm7 0v3h3V8a2 2 0 0 0-2-2h-1v2Z" fill="currentColor"/></svg>
+        </div>
+        <h3>No hay estaciones con estos filtros</h3>
+        <p>Prueba a ampliar la distancia, cambiar de combustible o quitar marcas.</p>
+        <button type="button" class="btn-fantasma" id="vacioLimpiar">Limpiar filtros</button>
+      </div>
+
+      <button type="button" class="btn-mas" id="btnMas" hidden>Mostrar más estaciones</button>
+      <div class="pie-lista" id="pieLista"></div>
+    </div>
+  </section>
+
+  <!-- ==================== MAPA (columna derecha en PC / pantalla completa en móvil) ==================== -->
+  <section class="col-mapa" id="colMapa" aria-label="Mapa de estaciones">
+    <div class="mapa" id="mapa">
+      <svg class="mapa-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <!-- Manchas de "edificios/zonas" y red de viales: patrón de FAKE.mapa -->
+        <g id="mapaManchas" class="mapa-manchas"></g>
+        <g id="mapaViales" class="mapa-viales"></g>
+        <path id="mapaAgua" class="mapa-agua" d=""></path>
+      </svg>
+
+      <div class="mapa-marcadores" id="mapaMarcadores"></div>
+
+      <!-- Posición del usuario -->
+      <div class="mapa-yo" id="mapaYo" title="Tu ubicación">
+        <span class="mapa-yo-pulso"></span>
+        <span class="mapa-yo-punto"></span>
+      </div>
+
+      <!-- Leyenda de precios -->
+      <div class="mapa-leyenda" aria-hidden="true">
+        <span class="leyenda-item"><i class="leyenda-punto verde"></i>&lt; 1,50 €</span>
+        <span class="leyenda-item"><i class="leyenda-punto naranja"></i>1,50–1,70 €</span>
+        <span class="leyenda-item"><i class="leyenda-punto rojo"></i>&gt; 1,70 €</span>
+      </div>
+
+      <!-- Botón volver (solo móvil, vista mapa) -->
+      <button type="button" class="mapa-volver" id="mapaVolver">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M15.5 4 7 12l8.5 8 1.4-1.4L10 12l6.9-6.6L15.5 4Z" fill="currentColor"/></svg>
+        Volver a la lista
+      </button>
+
+      <!-- Contador flotante de resultados en el mapa -->
+      <div class="mapa-contador" id="mapaContador">—</div>
+    </div>
+  </section>
+
+  <!-- ==================== NAVEGACIÓN INFERIOR (5 destinos) ==================== -->
+  <nav class="nav-inferior" id="navInferior" aria-label="Navegación principal">
+    <button type="button" class="nav-btn activo" data-destino="lista">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path d="M3 5h18v3H3V5Zm0 5.5h18v3H3v-3ZM3 16h12v3H3v-3Z" fill="currentColor"/></svg>
+      <span>Lista</span>
+    </button>
+    <button type="button" class="nav-btn" data-destino="mapa" data-shot="vista">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path d="M9 3 3 5.2v15.6l6-2.2 6 2.2 6-2.2V3l-6 2.2L9 3Zm0 2.2 4 1.5v11.6l-4-1.5V5.2Zm6 1.5 4-1.5v11.6l-4 1.5V6.7Z" fill="currentColor"/></svg>
+      <span>Mapa</span>
+    </button>
+    <button type="button" class="nav-btn" data-destino="ia">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2 9.8 8.1 4 10.3l5.8 2.2L12 18.6l2.2-6.1L20 10.3l-5.8-2.2L12 2Zm6 12.5-1.1 3-3 1.1 3 1.1 1.1 3 1.1-3 3-1.1-3-1.1-1.1-3Z" fill="currentColor"/></svg>
+      <span>IA</span>
+    </button>
+    <button type="button" class="nav-btn" data-destino="favoritas">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.7l5.9-.8L12 3.5Z" fill="currentColor"/></svg>
+      <span>Favoritas</span>
+    </button>
+    <button type="button" class="nav-btn" data-destino="ajustes">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 8.5A3.5 3.5 0 1 0 12 15.5 3.5 3.5 0 0 0 12 8.5Zm0 2A1.5 1.5 0 1 1 12 13.5 1.5 1.5 0 0 1 12 10.5ZM10.6 2h2.8l.4 2.4 1.5.6 2-1.4 2 2-1.4 2 .6 1.5 2.4.4v2.8l-2.4.4-.6 1.5 1.4 2-2 2-2-1.4-1.5.6-.4 2.4h-2.8l-.4-2.4-1.5-.6-2 1.4-2-2 1.4-2-.6-1.5L2 13.4v-2.8l2.4-.4.6-1.5-1.4-2 2-2 2 1.4 1.5-.6L10.6 2Z" fill="currentColor"/></svg>
+      <span>Ajustes</span>
+    </button>
+  </nav>
+
+  <!-- Botón flotante de IA (acceso rápido sin pasar por la nav) -->
+  <button type="button" class="fab-ia" id="fabIa" aria-label="Abrir asistente IA">
+    <svg viewBox="0 0 24 24" width="24" height="24"><path d="M12 2 9.8 8.1 4 10.3l5.8 2.2L12 18.6l2.2-6.1L20 10.3l-5.8-2.2L12 2Z" fill="currentColor"/></svg>
+  </button>
+
+  <!-- Botón flotante de filtros en móvil (la hoja de filtros no siempre está en pantalla) -->
+  <button type="button" class="fab-filtros" id="fabFiltros" aria-label="Abrir filtros">
+    <svg viewBox="0 0 24 24" width="22" height="22"><path d="M3 5h18v2H3V5Zm3 6h12v2H6v-2Zm3 6h6v2H9v-2Z" fill="currentColor"/></svg>
+    <span class="fab-filtros-badge" id="fabFiltrosBadge" hidden>0</span>
+  </button>
+
+  <!-- ==================== HOJA: FILTROS ==================== -->
+  <div class="capa-sheet" id="capaFiltros" hidden>
+    <div class="sheet-fondo" data-cerrar="filtros"></div>
+    <div class="sheet sheet-filtros" id="sheetFiltros" role="dialog" aria-modal="true" aria-labelledby="tituloFiltros">
+      <div class="sheet-tirador" data-arrastre="filtros"><span></span></div>
+      <div class="sheet-cabecera">
+        <h2 id="tituloFiltros">Filtros</h2>
+        <button type="button" class="btn-cerrar" data-cerrar="filtros" aria-label="Cerrar filtros">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6 6.4 5Z" fill="currentColor"/></svg>
+        </button>
+      </div>
+
+      <div class="sheet-cuerpo">
+        <div class="campo">
+          <label class="campo-etiqueta" for="fProvincia">Provincia</label>
+          <select id="fProvincia" class="select-grande"></select>
+        </div>
+        <div class="campo">
+          <label class="campo-etiqueta" for="fLocalidad">Localidad</label>
+          <select id="fLocalidad" class="select-grande"></select>
+        </div>
+        <div class="campo">
+          <label class="campo-etiqueta" for="fCombustible">Combustible</label>
+          <select id="fCombustible" class="select-grande"></select>
+        </div>
+
+        <div class="campo">
+          <span class="campo-etiqueta">Marcas</span>
+          <div class="marcas-caja" id="fMarcas"></div>
+        </div>
+
+        <div class="campo">
+          <label class="campo-etiqueta" for="fDistancia">Distancia máxima
+            <b id="fDistanciaValor">Sin límite</b>
+          </label>
+          <input type="range" id="fDistancia" class="slider" min="1" max="50" step="1" value="50">
+          <div class="slider-marcas"><span>1 km</span><span>25 km</span><span>50+ km</span></div>
+        </div>
+
+        <div class="campo campo-switch">
+          <label class="switch-fila" for="fSoloFav">
+            <span>Solo favoritas</span>
+            <input type="checkbox" id="fSoloFav">
+            <i class="switch" aria-hidden="true"></i>
+          </label>
+        </div>
+      </div>
+
+      <div class="sheet-pie">
+        <button type="button" class="btn-primario-grande" id="fAplicar">Ver 14 estaciones</button>
+        <button type="button" class="btn-texto" id="fLimpiar">Limpiar filtros</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== HOJA: DETALLE DE ESTACIÓN ==================== -->
+  <div class="capa-sheet" id="capaDetalle" hidden>
+    <div class="sheet-fondo" data-cerrar="detalle"></div>
+    <div class="sheet sheet-detalle" id="sheetDetalle" role="dialog" aria-modal="true" aria-labelledby="detalleNombre">
+      <div class="sheet-tirador" data-arrastre="detalle"><span></span></div>
+
+      <!-- Cabecera con el color del precio (verde/ámbar/rojo) -->
+      <div class="detalle-cabecera" id="detalleCabecera">
+        <button type="button" class="detalle-cerrar" data-cerrar="detalle" aria-label="Cerrar detalle">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6 6.4 5Z" fill="currentColor"/></svg>
+        </button>
+        <div class="detalle-cabecera-textos">
+          <span class="detalle-marca" id="detalleMarca">Repsol</span>
+          <h2 id="detalleNombre">Repsol Avenida de América</h2>
+        </div>
+        <!-- Precio dominante + delta del día -->
+        <div class="detalle-precio-caja">
+          <div class="detalle-precio" id="detallePrecio">1,589 €</div>
+          <div class="detalle-delta" id="detalleDelta">—</div>
+          <div class="detalle-combustible" id="detalleCombustible">Gasolina 95 E5</div>
+        </div>
+      </div>
+
+      <div class="detalle-scroll" id="detalleScroll">
+        <!-- Datos de contacto -->
+        <ul class="detalle-datos">
+          <li>
+            <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z" fill="currentColor"/></svg>
+            <span><b id="detalleDireccion">—</b><br><small id="detalleLocalidad">—</small></span>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 10.6 4 2.4-.9 1.6L11 13.9V6h2v6.6Z" fill="currentColor"/></svg>
+            <span id="detalleHorario">—</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" width="18" height="18"><path d="M6.6 3c.6 0 1.1.4 1.3 1l.9 2.5c.1.5 0 1-.3 1.3L7 9.4a12 12 0 0 0 5.6 5.6l1.6-1.6c.3-.3.8-.4 1.3-.3l2.5.9c.6.2 1 .7 1 1.3v2.4c0 .8-.7 1.4-1.4 1.3C10.8 18.4 5.6 13.2 4.6 6.4 4.5 5.7 5.1 5 5.8 5h.8V3Z" fill="currentColor"/></svg>
+            <span id="detalleTelefono">—</span>
+          </li>
+        </ul>
+
+        <!-- Acciones grandes: objetivos táctiles cómodos para el pulgar -->
+        <div class="detalle-acciones">
+          <button type="button" class="accion" id="accionFavorito">
+            <svg viewBox="0 0 24 24" width="22" height="22"><path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.7l5.9-.8L12 3.5Z" fill="currentColor"/></svg>
+            <span>Favorito</span>
+          </button>
+          <button type="button" class="accion" id="accionIr">
+            <svg viewBox="0 0 24 24" width="22" height="22"><path d="M21.7 2.3 2.9 9.6c-.9.4-.9 1.6 0 1.9l6.8 2.6 2.6 6.8c.3.9 1.5.9 1.9 0l7.3-18.8c.3-.8-.5-1.6-1.3-1.3ZM10.6 12.6 5.4 10.6l13.9-5.4-8.7 7.4Z" fill="currentColor"/></svg>
+            <span>Cómo llegar</span>
+          </button>
+          <button type="button" class="accion" id="accionCompartir">
+            <svg viewBox="0 0 24 24" width="22" height="22"><path d="M18 16.1c-.8 0-1.5.3-2 .8l-6.1-3.6c.1-.3.1-.6.1-.9s0-.6-.1-.9L16 8c.5.5 1.2.8 2 .8a2.9 2.9 0 1 0-2.9-2.9c0 .3 0 .6.1.9L9.1 10.4A2.9 2.9 0 1 0 6 15c.8 0 1.5-.3 2-.8l6.1 3.6c-.1.3-.1.5-.1.8a2.9 2.9 0 1 0 3-2.5Z" fill="currentColor"/></svg>
+            <span>Compartir</span>
+          </button>
+          <button type="button" class="accion" id="accionLlamar">
+            <svg viewBox="0 0 24 24" width="22" height="22"><path d="M6.6 3c.6 0 1.1.4 1.3 1l.9 2.5c.1.5 0 1-.3 1.3L7 9.4a12 12 0 0 0 5.6 5.6l1.6-1.6c.3-.3.8-.4 1.3-.3l2.5.9c.6.2 1 .7 1 1.3v2.4c0 .8-.7 1.4-1.4 1.3C10.8 18.4 5.6 13.2 4.6 6.4 4.5 5.7 5.1 5 5.8 5h.8V3Z" fill="currentColor"/></svg>
+            <span>Llamar</span>
+          </button>
+        </div>
+
+        <!-- Pestañas: Precios / Histórico -->
+        <div class="detalle-tabs" role="tablist">
+          <button type="button" class="detalle-tab activo" role="tab" aria-selected="true" data-dtab="precios">Precios</button>
+          <button type="button" class="detalle-tab" role="tab" aria-selected="false" data-dtab="historico">Histórico</button>
+        </div>
+
+        <!-- Panel: todos los precios. El más barato va resaltado -->
+        <div class="detalle-panel" id="dpanelPrecios">
+          <table class="tabla-precios">
+            <thead><tr><th>Combustible</th><th>Precio</th><th>Con descuento</th></tr></thead>
+            <tbody id="detalleTablaPrecios"></tbody>
+          </table>
+          <p class="nota-descuentos" id="notaDescuentos"></p>
+        </div>
+
+        <!-- Panel: histórico con gráfica SVG -->
+        <div class="detalle-panel" id="dpanelHistorico" hidden>
+          <div class="historico-controles">
+            <label class="mini-campo">
+              <span>Combustible</span>
+              <select id="histCombustible" class="select-mini"></select>
+            </label>
+            <div class="dias-grupo" id="histDias" role="group" aria-label="Días de histórico"></div>
+          </div>
+          <div class="grafica-caja" id="graficaCaja">
+            <svg id="graficaHistorico" class="grafica-svg" viewBox="0 0 340 170"
+                 role="img" aria-label="Evolución del precio"></svg>
+            <div class="grafica-tooltip" id="graficaTooltip" hidden></div>
+          </div>
+          <p class="historico-resumen" id="historicoResumen"></p>
+        </div>
+
+        <div class="detalle-final" aria-hidden="true"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== HOJA: CHAT IA ==================== -->
+  <div class="capa-sheet" id="capaChat" hidden>
+    <div class="sheet-fondo" data-cerrar="chat"></div>
+    <div class="sheet sheet-chat" id="sheetChat" role="dialog" aria-modal="true" aria-labelledby="tituloChat">
+      <div class="sheet-tirador" data-arrastre="chat"><span></span></div>
+      <div class="sheet-cabecera">
+        <h2 id="tituloChat">Asistente IA</h2>
+        <button type="button" class="btn-cerrar" data-cerrar="chat" aria-label="Cerrar chat">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6 6.4 5Z" fill="currentColor"/></svg>
+        </button>
+      </div>
+
+      <!-- Pills de proveedor (scroll horizontal) -->
+      <div class="pills-proveedor" id="pillsProveedor" role="tablist" aria-label="Proveedor de IA"></div>
+
+      <div class="chat-mensajes" id="chatMensajes" aria-live="polite"></div>
+
+      <div class="chat-sugerencias" id="chatSugerencias"></div>
+
+      <form class="chat-envio" id="chatForm">
+        <button type="button" class="chat-adjunto" id="chatLimpiar" aria-label="Borrar conversación">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M6 7h12v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7Zm3-4h6l1 2H8l1-2ZM4 6h16v1H4V6Z" fill="currentColor"/></svg>
+        </button>
+        <input id="chatInput" class="chat-input" type="text" placeholder="Pregunta por precios, estaciones…" autocomplete="off" aria-label="Mensaje para la IA">
+        <button type="submit" class="chat-enviar" id="chatEnviar" aria-label="Enviar mensaje">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M3 20.5 21 12 3 3.5v6.6l12 1.9-12 1.9v6.6Z" fill="currentColor"/></svg>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== HOJA: AJUSTES (acordeón) ==================== -->
+  <div class="capa-sheet" id="capaAjustes" hidden>
+    <div class="sheet-fondo" data-cerrar="ajustes"></div>
+    <div class="sheet sheet-ajustes" id="sheetAjustes" role="dialog" aria-modal="true" aria-labelledby="tituloAjustes">
+      <div class="sheet-tirador" data-arrastre="ajustes"><span></span></div>
+      <div class="sheet-cabecera">
+        <h2 id="tituloAjustes">Ajustes</h2>
+        <button type="button" class="btn-cerrar" data-cerrar="ajustes" aria-label="Cerrar ajustes">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6 6.4 5Z" fill="currentColor"/></svg>
+        </button>
+      </div>
+      <div class="sheet-cuerpo" id="ajustesCuerpo"></div>
+    </div>
+  </div>
+
+  <!-- Aviso flotante (toast) -->
+  <div class="aviso" id="aviso" role="status" aria-live="polite" hidden></div>
+</div>
+
+<!-- Contrato de datos compartido entre los prototipos -->
+<script src="../shared/datos-fake.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Prototipo v6 · Modo repostaje (una mano) · Gasolineras</title>
+<link rel="stylesheet" href="assets/proto.css">
+<style>
+  /* ==========================================================================
+     v6 · Modo repostaje (una mano)
+     La app en el soporte del coche. Principios:
+       · un paso = una decisión; nunca dos cosas que tocar a la vez
+       · zona del pulgar: todo lo pulsable vive en el tercio inferior
+       · botones de 56-72 px y precios enormes, legibles de un vistazo
+       · modo AMOLED (negro puro) y tipografía XL para el coche de noche
+       · "minutos de desvío" y €/hora de ahorro: lo que de verdad decide
+     ========================================================================== */
+  .v6-content { display: flex; }
+  .v6-left { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+
+  /* --- Barra de pasos ---------------------------------------------------- */
+  .steps { flex: 0 0 auto; display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s3) var(--s2); background: var(--surface); border-bottom: 1px solid var(--line); }
+  .steps .step { flex: 1 1 0; display: flex; flex-direction: column; gap: 5px; }
+  .steps .step i { height: 5px; border-radius: 99px; background: var(--surface-3); display: block; }
+  .steps .step.done i { background: var(--brand); }
+  .steps .step.now i { background: var(--brand); }
+  .steps .step span { font-size: var(--t-3xs); font-weight: 700; color: var(--fg-3); text-transform: uppercase; letter-spacing: .05em; }
+  .steps .step.now span { color: var(--brand); }
+
+  /* --- Contenido de cada paso ------------------------------------------- */
+  .v6-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--s4) var(--s3) var(--s3); display: flex; flex-direction: column; gap: var(--s3); }
+  .v6-q { font-size: var(--t-2xl); font-weight: 800; letter-spacing: -.02em; }
+  .v6-hint { font-size: var(--t-xs); color: var(--fg-2); }
+  .v6-max { max-width: 620px; width: 100%; margin: 0 auto; }
+
+  /* --- Selector de combustible (táctil grande) -------------------------- */
+  .fuelgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2); }
+  .fuelgrid button {
+    min-height: 92px; border-radius: var(--r-lg); border: 2px solid var(--line); background: var(--surface);
+    display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between;
+    padding: var(--s3); gap: 2px; transition: all var(--dur) var(--ease);
+  }
+  .fuelgrid button .fg-name { font-size: var(--t-md); font-weight: 800; }
+  .fuelgrid button .fg-price { font-size: var(--t-lg); font-weight: 800; font-variant-numeric: tabular-nums; color: var(--fg-2); }
+  .fuelgrid button .fg-sub { font-size: var(--t-3xs); color: var(--fg-3); }
+  .fuelgrid button.on { border-color: var(--brand); background: var(--brand-soft); }
+  .fuelgrid button.on .fg-name, .fuelgrid button.on .fg-price { color: var(--brand); }
+
+  /* --- Importe ---------------------------------------------------------- */
+  .amtgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s2); }
+  .amtgrid button {
+    min-height: 78px; border-radius: var(--r-lg); border: 2px solid var(--line); background: var(--surface);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    font-size: var(--t-2xl); font-weight: 800; font-variant-numeric: tabular-nums;
+    transition: all var(--dur) var(--ease);
+  }
+  .amtgrid button span { font-size: var(--t-2xs); font-weight: 600; color: var(--fg-3); }
+  .amtgrid button.on { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+  .amtgrid button.on span { color: var(--brand); }
+
+  /* --- Opciones (paso 2) ------------------------------------------------ */
+  .minimap { position: relative; height: 168px; border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--line); flex: 0 0 auto; }
+  .optgrid { display: flex; flex-direction: column; gap: var(--s2); }
+  .opt {
+    display: flex; align-items: center; gap: var(--s3); width: 100%; text-align: left;
+    padding: var(--s3); min-height: 96px; border-radius: var(--r-lg);
+    border: 2px solid var(--line); background: var(--surface); transition: all var(--dur) var(--ease);
+  }
+  .opt.on { border-color: var(--brand); background: var(--brand-soft); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .opt .o-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .opt .o-tag { font-size: var(--t-3xs); font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--brand); }
+  .opt .o-name { font-size: var(--t-lg); font-weight: 800; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .opt .o-meta { font-size: var(--t-xs); color: var(--fg-2); }
+  .opt .o-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .opt .o-price { font-size: var(--t-3xl); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.04em; line-height: 1; }
+  .opt .o-save { font-size: var(--t-2xs); font-weight: 700; }
+  .opt .o-save.ok { color: var(--ok); }
+  .opt .o-save.dim { color: var(--fg-3); }
+
+  /* --- Navegación (paso 3) --------------------------------------------- */
+  .v6-nav { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: var(--s3); padding: var(--s4); text-align: center; background: #04070a; color: #fff; }
+  .v6-nav .turn { width: 118px; height: 118px; border-radius: 50%; display: grid; place-items: center;
+    background: rgba(255, 255, 255, .08); border: 2px solid rgba(255, 255, 255, .16); }
+  .v6-nav .turn .ico { --ico: 66px; color: #7ab7ff; }
+  .v6-nav .dist { font-size: 4.6rem; font-weight: 800; letter-spacing: -.045em; line-height: .95; font-variant-numeric: tabular-nums; }
+  .v6-nav .meta { font-size: var(--t-xl); color: rgba(255, 255, 255, .72); font-weight: 600; }
+  .v6-nav .target { margin-top: var(--s3); padding: var(--s3) var(--s4); border-radius: var(--r-lg);
+    background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .13); display: flex; flex-direction: column; gap: 4px; align-items: center; }
+  .v6-nav .target b { font-size: var(--t-3xl); font-weight: 800; letter-spacing: -.03em; }
+  .v6-nav .target span { font-size: var(--t-sm); color: rgba(255, 255, 255, .7); }
+  .v6-nav .navflags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  .v6-nav .nflag { font-size: var(--t-2xs); font-weight: 700; padding: 5px 10px; border-radius: 99px;
+    background: rgba(255, 255, 255, .1); color: rgba(255, 255, 255, .85); }
+  .v6-nav .nflag.warn { background: rgba(240, 180, 41, .18); color: #f0b429; }
+  .v6-nav .nflag.ok { background: rgba(57, 211, 159, .16); color: #39d39f; }
+
+  /* --- Surtidor (paso 4) ------------------------------------------------ */
+  .bigfield { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
+  .bigfield .bf-label { font-size: var(--t-md); font-weight: 700; }
+  .bigfield .bf-hint { font-size: var(--t-2xs); color: var(--fg-3); }
+  .spin { display: flex; align-items: center; gap: var(--s2); }
+  .spin button { width: 56px; height: 56px; border-radius: var(--r-full); background: var(--surface-2); display: grid; place-items: center; font-size: var(--t-2xl); font-weight: 700; }
+  .spin button:active { transform: scale(.94); }
+  .spin input {
+    width: 128px; text-align: center; font-size: var(--t-2xl); font-weight: 800; font-variant-numeric: tabular-nums;
+    background: var(--surface-3); border: 2px solid transparent; border-radius: var(--r-md); padding: 10px 6px; outline: none;
+  }
+  .spin input:focus { border-color: var(--brand); background: var(--surface); }
+  .quickliters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .quickliters button { min-height: 46px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface); font-weight: 800; font-variant-numeric: tabular-nums; }
+  .quickliters button.on { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+  .totalhero { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); }
+  .totalhero .th-val { font-size: 3.1rem; font-weight: 800; letter-spacing: -.045em; font-variant-numeric: tabular-nums; line-height: 1; }
+
+  /* --- Final ------------------------------------------------------------ */
+  .done-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--s3); padding: var(--s4) 0 var(--s2); }
+  .done-hero .ok-orb { width: 92px; height: 92px; border-radius: 50%; display: grid; place-items: center; color: #fff;
+    background: linear-gradient(160deg, var(--ok), #00a86f); box-shadow: 0 12px 30px rgba(0, 168, 111, .3); }
+  .done-hero .ok-orb .ico { --ico: 46px; }
+  .done-hero .dh-total { font-size: 3.4rem; font-weight: 800; letter-spacing: -.045em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .savespark { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); color: var(--ok); }
+
+  /* --- Zona del pulgar -------------------------------------------------- */
+  .thumb {
+    flex: 0 0 auto; display: flex; align-items: center; gap: var(--s2);
+    padding: var(--s3) var(--s3) calc(var(--s3) + var(--safe-b));
+    background: var(--glass); backdrop-filter: saturate(1.4) blur(14px); border-top: 1px solid var(--line);
+  }
+  .thumb .thumb-btn {
+    flex: 0 0 auto; width: 62px; height: 62px; border-radius: var(--r-lg); background: var(--surface-2);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    font-size: var(--t-3xs); font-weight: 700; color: var(--fg-2);
+  }
+  .thumb .thumb-btn .ico { --ico: 22px; }
+  .thumb .thumb-btn:active { transform: scale(.95); }
+  #cta {
+    min-height: 62px; border-radius: var(--r-lg); font-size: var(--t-xl); font-weight: 800;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  }
+  #cta small { font-size: var(--t-3xs); font-weight: 600; opacity: .85; }
+
+  /* --- Columna lateral (escritorio) ------------------------------------ */
+  .v6-side { display: none; }
+  .v6-side-in { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--s4) var(--s4) var(--s5); display: flex; flex-direction: column; gap: var(--s3); }
+  .refuel { display: flex; align-items: center; gap: var(--s3); padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+  .refuel .rf-main { flex: 1 1 auto; min-width: 0; }
+  .refuel .rf-name { font-size: var(--t-sm); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .refuel .rf-sub { font-size: var(--t-2xs); color: var(--fg-2); }
+  .refuel .rf-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+
+  /* --- Voz ------------------------------------------------------------- */
+  .voice-wrap { display: flex; flex-direction: column; align-items: center; gap: var(--s4); padding: var(--s5) 0 var(--s3); text-align: center; }
+  .mic-orb { width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; color: #fff;
+    background: linear-gradient(150deg, var(--brand), var(--brand-2)); box-shadow: 0 12px 34px rgba(11, 98, 214, .35); position: relative; }
+  .mic-orb .ico { --ico: 42px; }
+  .mic-orb::after { content: ''; position: absolute; inset: -10px; border-radius: 50%; border: 2px solid var(--brand-line); animation: orb 1.8s infinite; }
+  @keyframes orb { 0% { transform: scale(.9); opacity: .8; } 100% { transform: scale(1.25); opacity: 0; } }
+  .wave { display: flex; align-items: flex-end; gap: 3px; height: 46px; }
+  .wave i { width: 4px; border-radius: 99px; background: var(--brand); animation: wv 900ms infinite ease-in-out; }
+  @keyframes wv { 0%, 100% { height: 8px; opacity: .55; } 50% { height: var(--h, 34px); opacity: 1; } }
+  .voice-text { font-size: var(--t-2xl); font-weight: 700; min-height: 2.4em; }
+  .caret { display: inline-block; width: 8px; height: 1.05em; background: var(--brand); vertical-align: -3px; animation: blink 1s steps(2) infinite; border-radius: 1px; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* --- Modo AMOLED y tipografía XL ------------------------------------- */
+  body.amoled { --bg: #000; --bg-2: #000; --surface: #070a0d; --surface-2: #0d1116; --surface-3: #141a21;
+    --glass: rgba(0, 0, 0, .86); --line: #1b232c; --line-2: #2a3540; }
+  body.amoled .v6-nav { background: #000; }
+  body.amoled #cta { box-shadow: 0 0 0 1px var(--brand-line); }
+
+  /* --- Escritorio ------------------------------------------------------- */
+  @media (min-width: 1024px) {
+    .v6-content { display: grid; grid-template-columns: minmax(0, 1fr) 384px; grid-template-rows: minmax(0, 1fr); }
+    .v6-side { display: flex; flex-direction: column; grid-column: 2; grid-row: 1; border-left: 1px solid var(--line); background: var(--bg-2); }
+    .v6-side > .topbar { background: var(--surface); min-height: 54px; padding: var(--s2) var(--s4); backdrop-filter: none; }
+    .v6-side > .topbar .topbar-title { font-size: var(--t-md); }
+    .v6-scroll { padding: var(--s5) var(--s6) var(--s4); }
+    .thumb { justify-content: center; }
+    .thumb > * { max-width: 620px; }
+    .thumb { padding-inline: var(--s6); }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="statusbar only-mobile">
+    <span>18:23</span>
+    <span class="sb-right">
+      <span class="ico" data-ico="signal"></span><span class="ico" data-ico="battery"></span>
+    </span>
+  </div>
+
+  <header class="topbar">
+    <button class="iconbtn" data-toast="Volvería a la vista normal (mock)" data-toast-icon="arrowLeft" title="Salir del modo repostaje"><span data-ico="arrowLeft"></span></button>
+    <div class="grow">
+      <div class="topbar-title">Modo repostaje</div>
+      <div class="topbar-sub truncate" id="headSub">Paso 1 de 4 · todo al alcance del pulgar</div>
+    </div>
+    <button class="iconbtn" id="amoledBtn" title="Modo AMOLED (negro puro)"><span data-ico="power"></span></button>
+    <button class="iconbtn" data-theme-toggle title="Tema"></button>
+  </header>
+
+  <div class="content v6-content">
+    <div class="v6-left">
+      <div class="steps" id="steps"></div>
+
+      <!-- ============ Paso 1 · combustible y cuánto ============ -->
+      <section class="pane on" data-panel="fuel">
+        <div class="v6-scroll">
+          <div class="v6-max">
+            <h1 class="v6-q">¿Qué repostas y cuánto?</h1>
+            <p class="v6-hint mt1">Toca una vez. El copiloto calcula los litros con el precio de la estación que elijas.</p>
+
+            <div class="fuelgrid mt4" id="fuelGrid"></div>
+
+            <div class="amtgrid mt3" id="amtGrid"></div>
+
+            <div class="card mt3">
+              <div class="field-row" style="min-height:40px">
+                <div><div class="fr-label">Litros estimados</div><div class="fr-hint">Con el precio de la mejor opción de hoy</div></div>
+                <div class="bold num" id="litersEst" style="font-size:var(--t-xl)">—</div>
+              </div>
+              <div class="field-row" style="min-height:40px">
+                <div><div class="fr-label">Depósito</div><div class="fr-hint">Se cambia en ⋯ Más → Ajustes del modo</div></div>
+                <div class="bold num" id="tankVal">50 L</div>
+              </div>
+              <div class="field-row" style="min-height:40px">
+                <div><div class="fr-label">Media de Madrid hoy</div><div class="fr-hint">Precio final con descuentos de marca</div></div>
+                <div class="bold num" id="avgVal">—</div>
+              </div>
+            </div>
+
+            <div class="banner info mt3" style="border-radius:var(--r-md); padding:var(--s3); display:flex; gap:var(--s2); align-items:flex-start">
+              <span class="ico sm" data-ico="info"></span>
+              <span class="small">Si vas con prisa, el paso 2 te enseña también la opción <strong>sin desviarte</strong>: a veces gana por minutos, no por céntimos.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Paso 2 · dónde ============ -->
+      <section class="pane" data-panel="where">
+        <div class="v6-scroll">
+          <div class="v6-max">
+            <h1 class="v6-q">Elige dónde parar</h1>
+            <p class="v6-hint mt1">Ordenadas por lo que te cuesta el viaje, no solo por precio.</p>
+
+            <div class="minimap mt3" id="whereMap">
+              <div class="pm" data-map-host></div>
+              <select class="select-native" id="mapStyle6" aria-label="Vista del mapa" style="position:absolute;z-index:6;top:8px;right:8px;width:auto;max-width:150px;min-height:32px;font-size:var(--t-3xs)"></select>
+            </div>
+
+            <div class="optgrid mt3" id="optGrid"></div>
+
+            <button class="btn lg block soft mt2" id="moreOpts"><span class="ico sm" data-ico="list"></span>Ver las 11 de Madrid</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Paso 3 · en camino ============ -->
+      <section class="pane" data-panel="drive">
+        <div class="v6-nav">
+          <div class="turn"><span class="ico" data-ico="navigate"></span></div>
+          <div class="dist" id="navDist">—</div>
+          <div class="meta" id="navMeta">—</div>
+          <div class="target">
+            <b id="navPrice">—</b>
+            <span id="navStation">—</span>
+          </div>
+          <div class="navflags" id="navFlags"></div>
+          <p class="tiny" style="color:rgba(255,255,255,.45); max-width:32ch">
+            Pantalla encendida mientras navegas. El precio objetivo se compara con el que teclees en el surtidor.
+          </p>
+        </div>
+      </section>
+
+      <!-- ============ Paso 4 · surtidor ============ -->
+      <section class="pane" data-panel="pump">
+        <div class="v6-scroll">
+          <div class="v6-max">
+            <h1 class="v6-q">En el surtidor</h1>
+            <p class="v6-hint mt1">Teclea lo que marca la máquina. Si no coincide con la app, te lo decimos.</p>
+
+            <div class="card mt3">
+              <div class="bigfield">
+                <div>
+                  <div class="bf-label">Precio del surtidor</div>
+                  <div class="bf-hint" id="appPriceHint">—</div>
+                </div>
+                <div class="spin">
+                  <button data-price="-0.001" aria-label="Menos">−</button>
+                  <input id="pumpPrice" inputmode="decimal" value="1.389" aria-label="Precio por litro">
+                  <button data-price="0.001" aria-label="Más">+</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="bigfield">
+                <div>
+                  <div class="bf-label">Litros repostados</div>
+                  <div class="bf-hint" id="litersHint">—</div>
+                </div>
+                <div class="spin">
+                  <button data-liters="-1" aria-label="Menos">−</button>
+                  <input id="pumpLiters" inputmode="decimal" value="35.0" aria-label="Litros">
+                  <button data-liters="1" aria-label="Más">+</button>
+                </div>
+              </div>
+              <div class="quickliters mt3" id="quickLiters"></div>
+            </div>
+
+            <div class="card">
+              <div class="totalhero">
+                <div>
+                  <div class="bf-label">Total a pagar</div>
+                  <div class="bf-hint" id="totalHint">—</div>
+                </div>
+                <div class="th-val" id="pumpTotal">—</div>
+              </div>
+            </div>
+
+            <div id="pumpWarn"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Paso 5 · listo ============ -->
+      <section class="pane" data-panel="done">
+        <div class="v6-scroll">
+          <div class="v6-max">
+            <div class="done-hero">
+              <span class="ok-orb"><span class="ico" data-ico="check"></span></span>
+              <div>
+                <div class="bold" style="font-size:var(--t-2xl)">Repostaje guardado</div>
+                <div class="v6-hint mt1" id="doneSub">—</div>
+              </div>
+              <div class="dh-total" id="doneTotal">—</div>
+            </div>
+
+            <div class="kpis" id="doneKpis"></div>
+
+            <div class="card">
+              <div class="card-title"><span class="ico sm" data-ico="trendDown"></span>Ahorro acumulado</div>
+              <div class="savespark mt2" id="doneSpark"></div>
+              <p class="tiny dim mt2" id="doneNote">—</p>
+            </div>
+
+            <div class="chips wrap">
+              <button class="chip" data-toast="Recibo compartido (mock)" data-toast-icon="share"><span class="ico xs" data-ico="share"></span>Compartir ahorro</button>
+              <button class="chip" data-sheet-open="log"><span class="ico xs" data-ico="bookmark"></span>Mis repostajes</button>
+              <button class="chip" data-toast="Nota: puedes exportar el histórico a CSV desde Config (mock)" data-toast-icon="download"><span class="ico xs" data-ico="download"></span>Exportar</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Zona del pulgar ============ -->
+      <footer class="thumb">
+        <button class="thumb-btn" id="voiceBtn" title="Dictar">
+          <span class="ico" data-ico="mic"></span>Hablar
+        </button>
+        <button class="btn primary grow" id="cta">
+          <span id="ctaLabel">Ver dónde repostar</span>
+          <small id="ctaSub">Paso 1 · combustible y cuánto</small>
+        </button>
+        <button class="thumb-btn" id="moreBtn" title="Más">
+          <span class="ico" data-ico="grid"></span>Más
+        </button>
+      </footer>
+    </div>
+
+    <!-- ============ Columna lateral (escritorio) ============ -->
+    <aside class="v6-side">
+      <header class="topbar">
+        <span class="topbar-title">Mis repostajes</span>
+        <div class="spacer"></div>
+        <button class="iconbtn" id="sideNew" title="Nuevo repostaje"><span data-ico="plus"></span></button>
+      </header>
+      <div class="v6-side-in" data-log-host></div>
+    </aside>
+  </div>
+</div>
+
+<!-- ===================== Sheet: más opciones (menú) ===================== -->
+<div class="sheet" data-sheet="more" id="moreSheet">
+  <div class="sheet-head"><span class="sheet-grab"></span>
+    <h2>Más</h2>
+    <div class="spacer"></div>
+    <button class="iconbtn" data-sheet-close><span data-ico="close"></span></button>
+  </div>
+  <div class="sheet-body">
+    <div class="list">
+      <button class="row-item tap" data-sheet-open="log"><span class="brandlogo sm" style="background:var(--brand-soft);color:var(--brand)"><span class="ico sm" data-ico="bookmark"></span></span>
+        <span class="ri-main"><span class="ri-title">Mis repostajes</span><span class="ri-sub">Ahorro acumulado y registro del mes</span></span>
+        <span class="ico sm dim" data-ico="chevronRight"></span></button>
+      <button class="row-item tap" data-sheet-open="set"><span class="brandlogo sm" style="background:var(--surface-3);color:var(--fg-2)"><span class="ico sm" data-ico="sliders"></span></span>
+        <span class="ri-main"><span class="ri-title">Ajustes del modo</span><span class="ri-sub">AMOLED, tipografía XL, voz, depósito</span></span>
+        <span class="ico sm dim" data-ico="chevronRight"></span></button>
+      <button class="row-item tap" data-sheet-open="opts"><span class="brandlogo sm" style="background:var(--surface-3);color:var(--fg-2)"><span class="ico sm" data-ico="list"></span></span>
+        <span class="ri-main"><span class="ri-title">Todas las estaciones</span><span class="ri-sub">11 con diésel en Madrid, ordenadas por precio</span></span>
+        <span class="ico sm dim" data-ico="chevronRight"></span></button>
+      <button class="row-item tap" id="moreIa"><span class="brandlogo sm" style="background:var(--brand-soft);color:var(--brand)"><span class="ico sm" data-ico="sparkles"></span></span>
+        <span class="ri-main"><span class="ri-title">Copiloto IA</span><span class="ri-sub">Precios, histórico y ahorro con citas clicables</span></span>
+        <span class="ico sm dim" data-ico="chevronRight"></span></button>
+      <button class="row-item tap" id="moreCfg"><span class="brandlogo sm" style="background:var(--surface-3);color:var(--fg-2)"><span class="ico sm" data-ico="gear"></span></span>
+        <span class="ri-main"><span class="ri-title">Ajustes de la app</span><span class="ri-sub">Descuentos, caché, paginación, logs, push y claves</span></span>
+        <span class="ico sm dim" data-ico="chevronRight"></span></button>
+      <button class="row-item tap" data-toast="Avísame si el precio baja 2 ¢ en 24 h (mock)" data-toast-icon="bell"><span class="brandlogo sm" style="background:var(--surface-3);color:var(--fg-2)"><span class="ico sm" data-ico="bell"></span></span>
+        <span class="ri-main"><span class="ri-title">Aviso de precio</span><span class="ri-sub">Notificación push en este móvil</span></span>
+        <span class="ico sm dim" data-ico="chevronRight"></span></button>
+    </div>
+    <div class="divider"></div>
+    <p class="tiny dim">El modo repostaje se abre solo cuando estás a menos de 2 km de una estación favorita (en la app real: <span class="mono">periodicSync</span> + geocerca).</p>
+  </div>
+</div>
+
+<!-- ===================== Sheet: todas las estaciones ==================== -->
+<div class="sheet" data-sheet="opts" id="optsSheet">
+  <div class="sheet-head"><span class="sheet-grab"></span>
+    <h2>Todas las estaciones</h2>
+    <div class="spacer"></div>
+    <button class="iconbtn" data-sheet-close><span data-ico="close"></span></button>
+  </div>
+  <div class="sheet-body">
+    <div class="field pill mb2" style="margin:0 0 var(--s2)"><span class="ico" data-ico="search"></span><input id="optsQ" data-opt-search type="search" placeholder="Marca, calle o localidad…" aria-label="Buscar"></div>
+    <div class="chips wrap" id="optsBrands" style="padding:0 0 var(--s2)"></div>
+    <div class="row between" style="gap:8px;margin-bottom:2px">
+      <span class="tiny muted">Distancia máx.</span>
+      <span class="badge brand" id="optsKmLabel">Sin límite</span>
+    </div>
+    <input type="range" id="optsKm" min="0" max="30" step="1" value="0" aria-label="Distancia máxima en kilómetros" style="width:100%;accent-color:var(--brand);margin-bottom:var(--s2)">
+    <div class="segmented mb2" id="optsSort" style="font-size:var(--t-3xs);margin-bottom:var(--s2)">
+      <button data-opt-sort="price" class="on">Precio</button>
+      <button data-opt-sort="distance">Cerca</button>
+      <button data-opt-sort="saving">Ahorro</button>
+    </div>
+    <div class="row between mb2" style="gap:8px">
+      <span class="tiny muted" id="optsCount">—</span>
+      <span id="optsLegend"></span>
+    </div>
+    <div class="list" id="optsList"></div>
+    <div id="optsPager"></div>
+  </div>
+</div>
+
+<!-- ===================== Sheet: mis repostajes ========================= -->
+<div class="sheet" data-sheet="log" id="logSheet">
+  <div class="sheet-head"><span class="sheet-grab"></span>
+    <h2>Mis repostajes</h2>
+    <div class="spacer"></div>
+    <button class="iconbtn" data-sheet-close><span data-ico="close"></span></button>
+  </div>
+  <div class="sheet-body" data-log-host></div>
+</div>
+
+<!-- ===================== Sheet: ajustes del modo ======================= -->
+<div class="sheet" data-sheet="set" id="setSheet">
+  <div class="sheet-head"><span class="sheet-grab"></span>
+    <h2>Ajustes del modo</h2>
+    <div class="spacer"></div>
+    <button class="iconbtn" data-sheet-close><span data-ico="close"></span></button>
+  </div>
+  <div class="sheet-body" id="setBody"></div>
+</div>
+
+<!-- ===================== Sheet: voz ==================================== -->
+<div class="sheet wide" data-sheet="voice" id="voiceSheet">
+  <div class="sheet-head"><span class="sheet-grab"></span>
+    <h2>Dime qué necesitas</h2>
+    <div class="spacer"></div>
+    <button class="iconbtn" data-sheet-close><span data-ico="close"></span></button>
+  </div>
+  <div class="sheet-body">
+    <div class="voice-wrap">
+      <div class="mic-orb"><span class="ico" data-ico="mic"></span></div>
+      <div class="wave" id="wave"></div>
+      <div class="voice-text" id="voiceText"></div>
+      <p class="tiny dim">Frases de ejemplo: «lleno 30 €», «la más barata», «cancela el viaje».</p>
+    </div>
+  </div>
+  <div class="sheet-foot">
+    <button class="btn ghost" data-sheet-close>Cancelar</button>
+    <button class="btn primary" id="voiceUse" disabled>Aplicar</button>
+  </div>
+</div>
+
+<!-- ===================== Sheet: detalle de estación ==================== -->
+<div class="sheet" data-sheet="station" id="stationSheet">
+  <div class="sheet-head"><span class="sheet-grab"></span>
+    <h2 id="stationTitle">Estación</h2>
+    <div class="spacer"></div>
+    <button class="iconbtn" data-sheet-close><span data-ico="close"></span></button>
+  </div>
+  <div class="sheet-body" id="stationBody"></div>
+</div>
+
+<div class="proto-tag">v6 · una mano</div>
+
+<script src="assets/proto-data.js"></script>
+<script src="assets/proto-chart.js"></script>
+<script src="assets/proto-map.js"></script>
+<script src="assets/proto-ui.js"></script>
+<script src="assets/proto-features.js"></script>
+<script>
+Proto.boot();
+/* El coche de noche: por defecto oscuro, salvo que la galería pida otra cosa. */
+if (!Proto.param('theme')) Proto.theme.set('dark', false);
+
+/* ============================================================================
+   Estado
+   ========================================================================== */
+const state = {
+  step: 'fuel',
+  fuel: 'diesel',
+  amount: 30,            // € o 'full'
+  tank: 50,
+  stId: null,
+  price: null,           // precio tecleado en el surtidor
+  liters: null,          // litros finales
+  amoled: true, big: false, voice: true, warnMin: 10, pref: 'price',
+  saved: null,           // último repostaje guardado
+  q: '',                 // búsqueda de "Todas las estaciones"
+  maxKm: 0,              // filtro de distancia de la lista completa (0 = sin límite)
+  brands: [],            // marcas activas de la lista completa
+  sort: 'price',         // price | distance | saving
+  pageSize: 10,          // 0 = todas (Ajustes de la app)
+};
+
+const LIST = () => PROTO.filterStations(PROTO.STATIONS, { province: 'Madrid', fuel: state.fuel, q: state.q });
+/* El filtro de distancia se aplica a la lista completa, no a las 3 opciones
+   del surtidor: si acotas la búsqueda, no desaparece la estación de al lado. */
+const OPTS_LIST = () => PROTO.filterStations(LIST(), { maxKm: state.maxKm, brands: state.brands });
+const stats = () => PROTO.stats(LIST(), state.fuel);
+const byId = (id) => PROTO.STATIONS.find(s => s.id === id);
+const priceOf = (st, f) => PROTO.finalPrice(st, f || state.fuel);
+const eur = (v, d = 2) => PROTO.money(v, d);
+/** € a 3 decimales sin el símbolo, para €/L. */
+const perL = (v) => PROTO.money(v, 3).replace(' €', '');
+/** Minutos de coche estimados (misma estimación que usa la app para el desvío). */
+const mins = (km) => PROTO.driveMin(km);
+
+/** Las tres opciones que se ofrecen, sin repetir estación. */
+function options() {
+  const list = LIST().slice();
+  const cheapest = list.slice().sort((a, b) => priceOf(a) - priceOf(b))[0];
+  const closest = list.slice().sort((a, b) => PROTO.kmFromUser(a) - PROTO.kmFromUser(b))[0];
+  const fav = PROTO.favorites().find(s => s.province === 'Madrid' && s.prices[state.fuel] != null)
+    || list.filter(s => s.fav)[0];
+  const out = [
+    { st: cheapest, tag: 'La más barata', why: 'Mínimo de Madrid' },
+    { st: closest, tag: 'La más rápida', why: 'Sin desviarte' },
+    { st: fav, tag: 'Tu favorita', why: 'La que ya conoces' },
+  ].filter(o => o.st);
+  const seen = new Set();
+  return out.filter(o => (seen.has(o.st.id) ? false : seen.add(o.st.id)));
+}
+
+/** Litros que caben con el importe elegido (o el depósito entero). */
+function litersFor(st) {
+  const p = st ? priceOf(st) : stats().min;
+  return state.amount === 'full' ? state.tank : state.amount / p;
+}
+/** Ahorro frente a la media provincial para esos litros. */
+function saveFor(st, liters) {
+  const stt = stats();
+  return (stt.avg - priceOf(st)) * liters;
+}
+
+/* ============================================================================
+   Mis repostajes (datos falsos, coherentes con las estaciones del prototipo)
+   ========================================================================== */
+const DAY = 86400000;
+const today = Date.now();
+const REFUELS = [
+  { t: today - 3 * DAY,  stId: '28-09114', l: 38.2, p: 1.399 },
+  { t: today - 9 * DAY,  stId: '28-01993', l: 32.4, p: 1.412 },
+  { t: today - 17 * DAY, stId: '28-02390', l: 41.0, p: 1.429 },
+  { t: today - 26 * DAY, stId: '28-04210', l: 28.7, p: 1.502 },
+  { t: today - 34 * DAY, stId: '28-09114', l: 36.1, p: 1.419 },
+].map(r => ({ ...r, total: r.l * r.p, save: (stats().avg - r.p) * r.l }));
+
+const fmtDay = (t) => {
+  const d = new Date(t), n = new Date();
+  const days = Math.round((n.setHours(0, 0, 0, 0) - new Date(t).setHours(0, 0, 0, 0)) / DAY);
+  if (days <= 0) return 'hoy';
+  if (days === 1) return 'ayer';
+  if (days < 7) return 'hace ' + days + ' días';
+  return d.getDate() + '/' + (d.getMonth() + 1) + '/' + String(d.getFullYear()).slice(2);
+};
+const monthSave = () => REFUELS.filter(r => Date.now() - r.t < 31 * DAY).reduce((a, r) => a + r.save, 0);
+const monthLiters = () => REFUELS.filter(r => Date.now() - r.t < 31 * DAY).reduce((a, r) => a + r.l, 0);
+
+/* ============================================================================
+   Pasos
+   ========================================================================== */
+const STEPS = [
+  { key: 'fuel', label: 'Cuánto' },
+  { key: 'where', label: 'Dónde' },
+  { key: 'drive', label: 'Camino' },
+  { key: 'pump', label: 'Surtidor' },
+  { key: 'done', label: 'Listo' },
+];
+const stepIndex = (k) => Math.max(0, STEPS.findIndex(s => s.key === k));
+
+function renderSteps() {
+  const i = stepIndex(state.step);
+  document.getElementById('steps').innerHTML = STEPS.map((s, n) =>
+    `<div class="step ${n < i ? 'done' : ''} ${n === i ? 'now' : ''}"><i></i><span>${s.label}</span></div>`).join('');
+  document.getElementById('headSub').textContent =
+    state.step === 'drive' ? 'Navegando · no toques el móvil'
+      : `Paso ${i + 1} de ${STEPS.length} · ${STEPS[i].label.toLowerCase()}`;
+}
+
+function go(key) {
+  state.step = key;
+  document.querySelectorAll('.v6-panes .pane, .pane[data-panel]').forEach(p => p.classList.toggle('on', p.dataset.panel === key));
+  renderSteps();
+  renderCta();
+  if (key === 'where') renderWhere();
+  if (key === 'drive') renderDrive();
+  if (key === 'pump') renderPump();
+  if (key === 'done') renderDone();
+  history.replaceState(null, '', '?screen=' + key);
+}
+
+function renderCta() {
+  const cta = document.getElementById('cta'), label = document.getElementById('ctaLabel'), sub = document.getElementById('ctaSub');
+  const st = state.stId ? byId(state.stId) : null;
+  const M = {
+    fuel: ['Ver dónde repostar', `Paso 2 · ${Math.round(litersFor(null) * 10) / 10} L estimados`],
+    where: [st ? 'Navegar' : 'Elige una opción', st ? `${PROTO.dist(PROTO.kmFromUser(st))} · ${mins(PROTO.kmFromUser(st))} min` : 'Toca una tarjeta'],
+    drive: ['He llegado', 'Abrir el paso del surtidor'],
+    pump: ['Guardar repostaje', 'Se añade a Mis repostajes'],
+    done: ['Nuevo repostaje', 'Empezar de cero'],
+  }[state.step];
+  label.textContent = M[0];
+  sub.textContent = M[1];
+  cta.disabled = state.step === 'where' && !st;
+}
+
+/* ============================================================================
+   Paso 1 · combustible e importe
+   ========================================================================== */
+function renderFuel() {
+  const stt = stats();
+  document.getElementById('fuelGrid').innerHTML = ['diesel', 'g95', 'g98'].map(f => {
+    const s = PROTO.stats(LIST(), f) || stt;
+    return `<button data-fuel="${f}" class="${f === state.fuel ? 'on' : ''}">
+      <span class="fg-name">${PROTO.fuelShort(f)}</span>
+      <span class="fg-price">${perL(s.min)}</span>
+      <span class="fg-sub">mín. hoy</span>
+    </button>`;
+  }).join('');
+
+  const p = stats().min;
+  document.getElementById('amtGrid').innerHTML = [20, 30, 50, 'full'].map(a => {
+    const on = a === state.amount ? 'on' : '';
+    return a === 'full'
+      ? `<button data-amount="full" class="${on}">Lleno<span>${state.tank} L ≈ ${eur(state.tank * p)}</span></button>`
+      : `<button data-amount="${a}" class="${on}">${a} €<span>≈ ${(a / p).toFixed(1).replace('.', ',')} L</span></button>`;
+  }).join('');
+
+  document.getElementById('litersEst').textContent = (Math.round(litersFor(null) * 10) / 10).toFixed(1).replace('.', ',') + ' L';
+  document.getElementById('tankVal').textContent = state.tank + ' L';
+  document.getElementById('avgVal').textContent = eur(stt.avg, 3) + '/L';
+}
+
+/* ============================================================================
+   Paso 2 · dónde
+   ========================================================================== */
+let whereMap = null;
+function renderWhere() {
+  const stt = stats();
+  const opts = options();
+  const kmClosest = Math.min(...LIST().map(s => PROTO.kmFromUser(s)));
+  document.getElementById('optGrid').innerHTML = opts.map(o => {
+    const st = o.st, km = PROTO.kmFromUser(st), L = litersFor(st), save = saveFor(st, L);
+    const extraMin = Math.max(0, mins(km) - mins(kmClosest));
+    const perHour = extraMin > 0 ? save / (extraMin / 60) : 0;
+    const on = o.st.id === state.stId;
+    return `<button class="opt ${on}" data-pick="${st.id}">
+      <span class="brandlogo lg" style="background:${PROTO.brandMeta(st.brand).color};color:${PROTO.brandMeta(st.brand).ink}">${st.brand.slice(0, 2)}</span>
+      <span class="o-main">
+        <span class="o-tag">${o.tag}${st.fav ? ' · ★ favorita' : ''}</span>
+        <span class="o-name">${Proto.esc(Proto.shortName(st))}</span>
+        <span class="o-meta">${PROTO.dist(km)} · ${mins(km)} min${extraMin > 0 ? ` · +${extraMin} min de desvío` : ' · sin desvío'}</span>
+        <span class="o-meta">${L.toFixed(1).replace('.', ',')} L por ${eur(L * priceOf(st))}${extraMin >= state.warnMin && perHour > 0 ? ` · ${eur(perHour, 0)}/h de ahorro` : ''}</span>
+      </span>
+      <span class="o-right">
+        <span class="o-price ${PROTO.level(priceOf(st), stt.lo, stt.hi)}">${perL(priceOf(st))}</span>
+        <span class="o-save ${save > 0.05 ? 'ok' : 'dim'}">${save > 0.05 ? '−' + eur(save) : 'en la media'}</span>
+      </span>
+    </button>`;
+  }).join('');
+
+  const host = document.querySelector('#whereMap [data-map-host]');
+  whereMap = ProtoMap.create(host, {
+    stations: LIST(), fuel: state.fuel, seed: 'v6-where',
+    fit: 'stations', padding: 40, showUser: true, showLayers: false, showCtrl: true,
+  });
+  if (!window._v6MapStyle) {
+    ProtoFeat.mapStyleSelect(document.getElementById('mapStyle6'), { mapHost: host });
+    window._v6MapStyle = true;
+  }
+  if (state.stId) whereMap.select(state.stId);
+  renderCta();
+}
+
+/* ============================================================================
+   Paso 3 · navegación
+   ========================================================================== */
+function renderDrive() {
+  const st = byId(state.stId) || options()[0].st;
+  const km = PROTO.kmFromUser(st);
+  const kmClosest = Math.min(...LIST().map(s => PROTO.kmFromUser(s)));
+  const extraMin = Math.max(0, mins(km) - mins(kmClosest));
+  const L = litersFor(st), save = saveFor(st, L);
+  const perHour = extraMin > 0 ? save / (extraMin / 60) : 0;
+  document.getElementById('navDist').textContent = PROTO.dist(km);
+  const eta = new Date(Date.now() + mins(km) * 60000);
+  document.getElementById('navMeta').textContent =
+    `${mins(km)} min · llegada ${eta.getHours()}:${String(eta.getMinutes()).padStart(2, '0')}`;
+  document.getElementById('navPrice').textContent = perL(priceOf(st)) + ' /L';
+  document.getElementById('navStation').textContent = st.name + ' · ' + st.address;
+  const fresh = st.updatedMin <= 20;
+  document.getElementById('navFlags').innerHTML = [
+    fresh ? `<span class="nflag ok">Precio actualizado hace ${st.updatedMin} min</span>`
+      : `<span class="nflag warn">Precio de hace ${st.updatedMin} min: puede haber cambiado</span>`,
+    extraMin > 0 ? `<span class="nflag">+${extraMin} min de desvío</span>` : '<span class="nflag ok">Sin desvío</span>',
+    perHour > 0 ? `<span class="nflag">${eur(perHour, 0)}/h de ahorro</span>` : '',
+    `<span class="nflag">Ahorras ${eur(save)} en ${L.toFixed(1).replace('.', ',')} L</span>`,
+  ].join('');
+}
+
+/* ============================================================================
+   Paso 4 · surtidor
+   ========================================================================== */
+function renderPump() {
+  const st = byId(state.stId) || options()[0].st;
+  const app = priceOf(st);
+  const L = state.liters ?? Math.round(litersFor(st) * 10) / 10;
+  state.liters = L;
+  state.price = state.price ?? app;
+  document.getElementById('appPriceHint').textContent = `La app decía ${perL(app)} €/L hace ${st.updatedMin} min`;
+  document.getElementById('pumpPrice').value = state.price.toFixed(3).replace('.', ',');
+  document.getElementById('pumpLiters').value = L.toFixed(1).replace('.', ',');
+  document.getElementById('litersHint').textContent = `${state.amount === 'full' ? 'Depósito lleno' : 'Importe previsto ' + state.amount + ' €'} · ${L.toFixed(1).replace('.', ',')} L`;
+  document.getElementById('quickLiters').innerHTML = [10, 20, 30, 'full'].map(q =>
+    `<button data-quick="${q}" class="${(q === 'full' && state.amount === 'full') ? 'on' : ''}">${q === 'full' ? 'Lleno' : q + ' L'}</button>`).join('');
+  updateTotal();
+  renderPumpWarn(app);
+}
+function updateTotal() {
+  const total = state.price * state.liters;
+  document.getElementById('pumpTotal').textContent = eur(total);
+  document.getElementById('totalHint').textContent =
+    `${state.liters.toFixed(1).replace('.', ',')} L × ${perL(state.price)} €/L`;
+}
+function renderPumpWarn(app) {
+  const dif = state.price - app;
+  const box = document.getElementById('pumpWarn');
+  if (Math.abs(dif) < 0.0005) {
+    box.innerHTML = `<div class="banner ok" style="border-radius:var(--r-md); padding:var(--s3); display:flex; gap:var(--s2)"><span class="ico sm" data-ico="check"></span><span class="small">Coincide con la app: <strong>${perL(app)} €/L</strong>. Buen sitio para repostar.</span></div>`;
+  } else if (dif > 0) {
+    box.innerHTML = `<div class="banner warn" style="border-radius:var(--r-md); padding:var(--s3); display:flex; gap:var(--s2)"><span class="ico sm" data-ico="alert"></span><span class="small">El surtidor marca <strong>+${(dif * 1000 / 1000 * 1000).toFixed(1).replace('.', ',')} ¢/L</strong> más que la app (${perL(state.price)} frente a ${perL(app)}). Con ${state.liters.toFixed(1).replace('.', ',')} L pagas <strong>${eur(dif * state.liters)} de más</strong>: los precios del Ministerio se publican con retraso.</span></div>`;
+  } else {
+    box.innerHTML = `<div class="banner ok" style="border-radius:var(--r-md); padding:var(--s3); display:flex; gap:var(--s2)"><span class="ico sm" data-ico="trendDown"></span><span class="small">¡Mejor que la app! <strong>${perL(state.price)} €/L</strong>, ${Math.abs(dif * 100).toFixed(1).replace('.', ',')} ¢ por debajo: ahorras ${eur(Math.abs(dif) * state.liters)} extra.</span></div>`;
+  }
+  Proto.hydrateIcons(box);
+}
+
+function guardar() {
+  const st = byId(state.stId) || options()[0].st;
+  const stt = stats();
+  const liters = state.liters, price = state.price;
+  const entry = {
+    t: Date.now(), stId: st.id, l: liters, p: price,
+    total: liters * price, save: (stt.avg - price) * liters,
+  };
+  REFUELS.unshift(entry);
+  state.saved = entry;
+  go('done');
+  Proto.toast('Repostaje guardado · ' + eur(entry.total), { iconName: 'check' });
+}
+
+/* ============================================================================
+   Paso 5 · resumen
+   ========================================================================== */
+function renderDone() {
+  const e = state.saved || REFUELS[0];
+  const st = byId(e.stId);
+  const L = e.l;
+  document.getElementById('doneSub').textContent = `${st.name} · ${fmtDay(e.t)} · ${L.toFixed(1).replace('.', ',')} L × ${perL(e.p)} €/L`;
+  document.getElementById('doneTotal').textContent = eur(e.total);
+  const stt = stats();
+  const dif = stt.avg - e.p;
+  document.getElementById('doneKpis').innerHTML = `
+    <div class="kpi ${e.save > 0 ? '' : 'flat'}">
+      <div class="k-label">Ahorro del repostaje</div>
+      <div class="k-val" style="color:${e.save > 0 ? 'var(--ok)' : 'var(--fg-3)'}">${e.save > 0 ? '+' + eur(e.save) : '—'}</div>
+      <div class="k-sub">frente a la media de Madrid (${perL(stt.avg)} €/L)</div>
+    </div>
+    <div class="kpi hero">
+      <div class="k-label">Ahorro del mes</div>
+      <div class="k-val">${eur(monthSave())}</div>
+      <div class="k-sub">${REFUELS.filter(r => Date.now() - r.t < 31 * DAY).length} repostajes · ${monthLiters().toFixed(0)} L</div>
+    </div>
+    <div class="kpi">
+      <div class="k-label">Litros</div>
+      <div class="k-val">${L.toFixed(1).replace('.', ',')}</div>
+      <div class="k-sub">${e.p < stt.avg ? money(DifAbs(dif)) + ' por debajo de la media' : 'en la media'}</div>
+    </div>`;
+  const series = REFUELS.slice(0, 8).slice().reverse().map(r => r.save);
+  const acc = []; let a = 0;
+  series.forEach(v => { a += v; acc.push(a); });
+  document.getElementById('doneSpark').innerHTML =
+    `<div><div class="k-label tiny dim">ACUMULADO DEL MES</div><div class="bold" style="font-size:var(--t-2xl)">${eur(monthSave())}</div></div>
+     ${ProtoChart.spark(acc, { color: 'var(--ok)', w: 132, h: 42 })}`;
+  document.getElementById('doneNote').innerHTML =
+    `Si el precio del surtidor hubiera sido la media de la provincia, este repostaje te habría costado <strong>${eur(stt.avg * L)}</strong> en vez de ${eur(e.total)}.`;
+}
+function DifAbs(v) { return Math.abs(v); }
+function money(v) { return (v * 100).toFixed(1).replace('.', ',') + ' ¢/L'; }
+
+/* ============================================================================
+   Mis repostajes (lateral + sheet)
+   ========================================================================== */
+function renderLog() {
+  const mes = monthSave(), l = monthLiters();
+  const series = REFUELS.slice(0, 8).slice().reverse().map(r => r.save);
+  const acc = []; let a = 0; series.forEach(v => { a += v; acc.push(a); });
+  const html = `
+    <div class="kpis">
+      <div class="kpi hero">
+        <div class="k-label">Ahorro del mes</div>
+        <div class="k-val">${eur(mes)}</div>
+        <div class="k-sub">${l.toFixed(0)} L repostados</div>
+      </div>
+      <div class="kpi">
+        <div class="k-label">Precio medio pagado</div>
+        <div class="k-val">${perL(REFUELS.slice(0, 4).reduce((s, r) => s + r.p, 0) / Math.min(4, REFUELS.length))}</div>
+        <div class="k-sub">media de Madrid: ${perL(stats().avg)}</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="ico sm" data-ico="trendDown"></span>Ahorro acumulado</div>
+      <div class="savespark mt2" style="color:var(--ok)">
+        <span class="small muted">Últimos ${REFUELS.length} repostajes</span>
+        ${ProtoChart.spark(acc, { color: 'var(--ok)', w: 120, h: 34 })}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="ico sm" data-ico="bookmark"></span>Registro</div>
+      <div class="list mt3">
+        ${REFUELS.map(r => {
+          const st = byId(r.stId);
+          const meta = PROTO.brandMeta(st.brand);
+          return `<button class="refuel" data-open-station="${st.id}">
+            <span class="brandlogo sm" style="background:${meta.color};color:${meta.ink}">${st.brand.slice(0, 2)}</span>
+            <span class="rf-main">
+              <span class="rf-name">${Proto.esc(Proto.shortName(st))}</span>
+              <span class="rf-sub">${fmtDay(r.t)} · ${r.l.toFixed(1).replace('.', ',')} L × ${perL(r.p)} €/L</span>
+            </span>
+            <span class="rf-right">
+              <span class="bold num">${eur(r.total)}</span>
+              <span class="tiny ${r.save > 0.05 ? 'bold' : 'dim'}" style="${r.save > 0.05 ? 'color:var(--ok)' : ''}">${r.save > 0.05 ? '+' + eur(r.save) : '—'}</span>
+            </span>
+          </button>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="card flat">
+      <div class="card-title"><span class="ico sm" data-ico="info"></span>Cómo se calcula</div>
+      <p class="tiny dim mt2">El ahorro compara lo que pagaste con la media de las estaciones con precio publicado en Madrid ese día. Se guarda en el mismo dispositivo, sin cuenta ni nube.</p>
+    </div>`;
+  document.querySelectorAll('[data-log-host]').forEach(h => { h.innerHTML = html; Proto.hydrateIcons(h); });
+}
+
+/* ============================================================================
+   Ajustes del modo
+   ========================================================================== */
+function renderSet() {
+  document.getElementById('setBody').innerHTML = `
+    <div class="card">
+      <div class="card-title"><span class="ico sm" data-ico="power"></span>Coche de noche</div>
+      <label class="field-row">
+        <div><div class="fr-label">Modo AMOLED</div><div class="fr-hint">Negro puro: menos brillo y menos batería</div></div>
+        <span class="switch"><input type="checkbox" id="swAmoled" ${state.amoled ? 'checked' : ''}><span class="track"></span></span>
+      </label>
+      <label class="field-row">
+        <div><div class="fr-label">Tipografía XL</div><div class="fr-hint">Todo un 12 % más grande</div></div>
+        <span class="switch"><input type="checkbox" id="swBig" ${state.big ? 'checked' : ''}><span class="track"></span></span>
+      </label>
+      <label class="field-row">
+        <div><div class="fr-label">Dictado</div><div class="fr-hint">Botón de voz en la zona del pulgar</div></div>
+        <span class="switch"><input type="checkbox" id="swVoice" ${state.voice ? 'checked' : ''}><span class="track"></span></span>
+      </label>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="ico sm" data-ico="wallet"></span>Tu coche</div>
+      <div class="field-row mt2">
+        <div><div class="fr-label">Depósito</div><div class="fr-hint">Litros que entran con el depósito lleno</div></div>
+        <div class="stepper">
+          <button data-tank="-5" aria-label="Menos">−</button><span class="val" id="setTank">${state.tank} L</span><button data-tank="5" aria-label="Más">+</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <div><div class="fr-label">Avisar si el desvío pasa de…</div><div class="fr-hint">Minutos de más frente a la más cercana</div></div>
+        <div class="stepper">
+          <button data-warn="-5" aria-label="Menos">−</button><span class="val" id="setWarn">${state.warnMin} min</span><button data-warn="5" aria-label="Más">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="ico sm" data-ico="route"></span>Qué prioriza</div>
+      <div class="segmented mt3" id="prefSeg">
+        <button data-val="price" class="${state.pref === 'time' ? '' : 'on'}">Precio</button>
+        <button data-val="time" class="${state.pref === 'time' ? 'on' : ''}">Tiempo</button>
+      </div>
+      <p class="tiny dim mt2">Con «Tiempo» el copiloto pone delante la estación más cercana aunque cueste unos céntimos más; el paso 2 sigue enseñando las dos.</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="ico sm" data-ico="alert"></span>Recordatorio</div>
+      <p class="tiny dim mt2">Este modo no sustituye al navegador: es para el último kilómetro, con el móvil en el soporte y el coche parado antes de tocar nada.</p>
+    </div>`;
+  Proto.hydrateIcons(document.getElementById('setBody'));
+}
+
+/* ============================================================================
+   Sheets y eventos
+   ========================================================================== */
+const sheets = {};
+[['more', 'moreSheet'], ['opts', 'optsSheet'], ['log', 'logSheet'], ['set', 'setSheet'], ['voice', 'voiceSheet']]
+  .forEach(([k, id]) => {
+    sheets[k] = Proto.sheet(document.getElementById(id), k === 'voice' ? { snaps: ['half', 'full'], start: 'half' } : { snaps: ['half', 'full'], start: 'half' });
+  });
+const stationSheet = Proto.sheet(document.getElementById('stationSheet'), { snaps: ['half', 'full'], start: 'full' });
+let detailCtl = null;
+
+function openStation(id) {
+  const st = byId(id); if (!st) return;
+  document.getElementById('stationTitle').textContent = st.name;
+  detailCtl = Proto.stationDetail(document.getElementById('stationBody'), st, { fuel: state.fuel, list: LIST(), days: 14 });
+  stationSheet.open('full');
+}
+
+/* --- Voz --- */
+const VOICE = [
+  { say: 'Lleno 30 €', run: () => { state.amount = 30; renderFuel(); Proto.toast('Importe: 30 € (mock)', { iconName: 'mic' }); } },
+  { say: 'La más barata', run: () => { const o = options()[0]; state.stId = o.st.id; go('where'); Proto.toast('Elegida la más barata (mock)', { iconName: 'mic' }); } },
+  { say: 'Cancela el viaje', run: () => { go('fuel'); Proto.toast('Viaje cancelado (mock)', { iconName: 'mic' }); } },
+];
+let voiceTimer = null;
+function startVoice() {
+  const wave = document.getElementById('wave');
+  wave.innerHTML = Array.from({ length: 26 }, (_, i) =>
+    `<i style="--h:${10 + Math.round(Math.abs(Math.sin(i * 1.7)) * 30)}px;animation-delay:${(i % 7) * 90}ms"></i>`).join('');
+  const pickV = VOICE[Math.floor(Math.random() * VOICE.length)];
+  const txt = document.getElementById('voiceText');
+  let i = 0;
+  clearInterval(voiceTimer);
+  txt.innerHTML = '<span class="caret"></span>';
+  voiceTimer = setInterval(() => {
+    i++;
+    txt.innerHTML = Proto.esc(pickV.say.slice(0, i)) + (i < pickV.say.length ? '<span class="caret"></span>' : '');
+    if (i >= pickV.say.length) {
+      clearInterval(voiceTimer);
+      wave.querySelectorAll('i').forEach(b => b.style.animationPlayState = 'paused');
+      const btn = document.getElementById('voiceUse');
+      btn.disabled = false;
+      btn._action = pickV.run;
+    }
+  }, 55);
+}
+function stopVoice() {
+  clearInterval(voiceTimer);
+  const btn = document.getElementById('voiceUse');
+  btn.disabled = true;
+}
+
+/* --- Más opciones (lista completa) --- */
+const optsPager = ProtoFeat.pager(document.getElementById('optsPager'), {
+  size: state.pageSize, total: 0, label: 'estaciones',
+  onChange: () => renderOpts(),
+});
+
+function renderOptsBrands() {
+  const host = document.getElementById('optsBrands');
+  const brands = [...new Set(LIST().map(s => s.brand))].sort((a, b) => a.localeCompare(b, 'es'));
+  host.innerHTML = `<button class="chip ${state.brands.length ? '' : 'on'}" data-opt-brand="">Todas</button>` +
+    brands.map(b => `<button class="chip ${state.brands.includes(b) ? 'on' : ''}" data-opt-brand="${b}">${Proto.esc(Proto.titleCase(b))}</button>`).join('');
+}
+function renderOpts() {
+  renderOptsBrands();
+  document.querySelectorAll('#optsSort [data-opt-sort]').forEach(x => x.classList.toggle('on', x.dataset.optSort === state.sort));
+  const base = OPTS_LIST();
+  const stt = PROTO.stats(base, state.fuel) || { lo: 0, hi: 0 };
+  const all = PROTO.sortStations(base, state.sort, 'asc', state.fuel);
+  optsPager.set(all.length);
+  const list = optsPager.slice(all);
+  const host = document.getElementById('optsList');
+  document.getElementById('optsCount').textContent = `${all.length} estaciones · ${PROTO.fuelShort(state.fuel)}` +
+    (state.maxKm ? ` · ≤ ${state.maxKm} km` : '') +
+    (state.brands.length ? ` · ${state.brands.length} marca${state.brands.length === 1 ? '' : 's'}` : '');
+  document.getElementById('optsLegend').innerHTML = ProtoFeat.legend(PROTO.stats(base, state.fuel));
+  if (!list.length) {
+    ProtoFeat.empty(host, { title: 'Sin resultados', text: 'Ninguna estación coincide con la búsqueda.' });
+    return;
+  }
+  host.innerHTML = list.map(st => {
+    const km = PROTO.kmFromUser(st);
+    const L = litersFor(st), save = saveFor(st, L);
+    return `<div class="row-item tap" data-opt-detail="${st.id}" role="button" tabindex="0">
+      <span class="brandlogo sm" style="background:${PROTO.brandMeta(st.brand).color};color:${PROTO.brandMeta(st.brand).ink}">${st.brand.slice(0, 2)}</span>
+      <span class="ri-main">
+        <span class="ri-title">${Proto.esc(Proto.shortName(st))}</span>
+        <span class="ri-sub">${PROTO.dist(km)} · ${mins(km)} min · ${save > 0.05 ? 'ahorras ' + eur(save) : 'en la media'}</span>
+      </span>
+      <span class="price p-sm ${PROTO.level(priceOf(st), stt.lo, stt.hi)}">${perL(priceOf(st))}<span class="p-unit">€/L</span></span>
+      <button class="iconbtn sm ${st.fav ? 'on' : ''}" data-opt-fav="${st.id}" title="Favorito" aria-pressed="${st.fav}">${Proto.icon(st.fav ? 'starFill' : 'star', st.fav ? 'sm fill' : 'sm')}</button>
+    </div>`;
+  }).join('');
+  Proto.hydrateIcons(document.getElementById('optsList'));
+}
+document.getElementById('optsQ').addEventListener('input', (e) => {
+  state.q = e.target.value.trim();
+  optsPager.setPage(0);
+  renderOpts();
+});
+document.getElementById('optsKm').addEventListener('input', (e) => {
+  state.maxKm = +e.target.value;
+  document.getElementById('optsKmLabel').textContent = state.maxKm ? `≤ ${state.maxKm} km` : 'Sin límite';
+  optsPager.setPage(0);
+  renderOpts();
+});
+document.getElementById('optsBrands').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-opt-brand]'); if (!b) return;
+  const v = b.dataset.optBrand;
+  if (!v) state.brands = [];
+  else state.brands = state.brands.includes(v) ? state.brands.filter(x => x !== v) : [...state.brands, v];
+  optsPager.setPage(0);
+  renderOpts();
+});
+document.getElementById('optsSort').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-opt-sort]'); if (!b) return;
+  state.sort = b.dataset.optSort;
+  optsPager.setPage(0);
+  renderOpts();
+});
+document.getElementById('optsList').addEventListener('click', (e) => {
+  const fav = e.target.closest('[data-opt-fav]');
+  if (fav) {
+    e.stopPropagation();
+    const st = byId(fav.dataset.optFav);
+    if (st) {
+      st.fav = !st.fav;
+      Proto.toast(st.fav ? st.name + ' en favoritos' : 'Quitada de favoritos', { iconName: st.fav ? 'starFill' : 'star' });
+      renderOpts();
+    }
+    return;
+  }
+  const item = e.target.closest('[data-opt-detail]');
+  if (item) openStation(item.dataset.optDetail);
+});
+
+/* --- Paridad: chat IA y ajustes (capa compartida) --- */
+let iaFeat = null, cfgFeat = null;
+const reRender6 = () => { renderFuel(); renderCta(); renderWhere(); if (document.getElementById('optsSheet').classList.contains('open')) renderOpts(); };
+const iaOverlay6 = ProtoFeat.overlay({
+  title: 'Copiloto IA', icon: 'sparkles',
+  render(body) {
+    body.classList.add('pf-scroll');
+    body.innerHTML = '<div id="iaFeat"></div>';
+    iaFeat = ProtoFeat.iaPanel(document.getElementById('iaFeat'), {
+      list: () => LIST(),
+      onOpenStation: (id) => { iaOverlay6.close(); openStation(id); },
+    });
+  },
+});
+const cfgOverlay6 = ProtoFeat.overlay({
+  title: 'Ajustes', icon: 'gear',
+  render(body) {
+    body.classList.add('pf-scroll');
+    body.innerHTML = '<div id="cfgFeat"></div>';
+    cfgFeat = ProtoFeat.configPanel(document.getElementById('cfgFeat'), {
+      pageSize: state.pageSize,
+      onDiscounts: () => reRender6(),
+      onPageSize: (n) => { state.pageSize = n; optsPager.setSize(n); renderOpts(); },
+      getHiddenIa: () => (iaFeat ? iaFeat.hidden : []),
+      onIaTabs: (ids) => iaFeat && iaFeat.setHidden(ids),
+    });
+  },
+});
+document.getElementById('moreIa').addEventListener('click', () => { sheets.more.close(); iaOverlay6.open(); });
+document.getElementById('moreCfg').addEventListener('click', () => { sheets.more.close(); cfgOverlay6.open(); });
+
+/* --- Delegación de eventos --- */
+document.addEventListener('click', (e) => {
+  const cta = e.target.closest('#cta');
+  if (cta) {
+    const s = state.step;
+    if (s === 'fuel') go('where');
+    else if (s === 'where') go('drive');
+    else if (s === 'drive') { state.liters = Math.round(litersFor(byId(state.stId)) * 10) / 10; state.price = priceOf(byId(state.stId)); go('pump'); }
+    else if (s === 'pump') guardar();
+    else go('fuel');
+    return;
+  }
+
+  const fuel = e.target.closest('[data-fuel]');
+  if (fuel) { state.fuel = fuel.dataset.fuel; state.stId = null; state.price = null; state.liters = null; renderFuel(); renderCta(); return; }
+
+  const amt = e.target.closest('[data-amount]');
+  if (amt) { state.amount = amt.dataset.amount === 'full' ? 'full' : Number(amt.dataset.amount); state.liters = null; renderFuel(); renderCta(); return; }
+
+  const pick = e.target.closest('[data-pick]');
+  if (pick) {
+    state.stId = pick.dataset.pick; state.price = null; state.liters = null;
+    renderWhere(); renderCta();
+    if (whereMap) whereMap.select(state.stId);
+    Proto.toast(Proto.shortName(byId(state.stId)) + ' · ' + perL(priceOf(byId(state.stId))) + ' €/L', { iconName: 'check' });
+    return;
+  }
+
+  const sp = e.target.closest('[data-price]');
+  if (sp) {
+    state.price = Math.max(0.5, Math.round((state.price + Number(sp.dataset.price)) * 1000) / 1000);
+    document.getElementById('pumpPrice').value = state.price.toFixed(3).replace('.', ',');
+    updateTotal(); renderPumpWarn(priceOf(byId(state.stId) || options()[0].st));
+    return;
+  }
+
+  const sl = e.target.closest('[data-liters]');
+  if (sl) {
+    state.liters = Math.max(1, Math.round((state.liters + Number(sl.dataset.liters)) * 10) / 10);
+    document.getElementById('pumpLiters').value = state.liters.toFixed(1).replace('.', ',');
+    updateTotal();
+    return;
+  }
+
+  const q = e.target.closest('[data-quick]');
+  if (q) {
+    if (q.dataset.quick === 'full') { state.amount = 'full'; state.liters = state.tank; }
+    else { state.amount = Number(q.dataset.quick); state.liters = Number(q.dataset.quick) / state.price; }
+    renderPump(); return;
+  }
+
+  const sheetOpen = e.target.closest('[data-sheet-open]');
+  if (sheetOpen) {
+    const k = sheetOpen.dataset.sheetOpen;
+    if (k === 'opts') renderOpts();
+    if (k === 'log') renderLog();
+    if (k === 'set') renderSet();
+    /* Un menú se cierra al entrar en su destino: al volver no reaparece encima. */
+    Object.values(sheets).forEach(s => s.close());
+    sheets[k] && sheets[k].open(k === 'log' || k === 'set' || k === 'opts' || k === 'more' ? 'full' : 'half');
+    return;
+  }
+
+  const st = e.target.closest('[data-open-station]');
+  if (st) { openStation(st.dataset.openStation); return; }
+
+  const tank = e.target.closest('[data-tank]');
+  if (tank) { state.tank = Math.max(20, Math.min(90, state.tank + Number(tank.dataset.tank))); renderFuel(); renderSet(); return; }
+
+  const warn = e.target.closest('[data-warn]');
+  if (warn) { state.warnMin = Math.max(5, Math.min(45, state.warnMin + Number(warn.dataset.warn))); renderSet(); return; }
+
+  const pref = e.target.closest('#prefSeg button');
+  if (pref) {
+    state.pref = pref.dataset.val;
+    [...pref.parentElement.children].forEach(b => b.classList.toggle('on', b === pref));
+    Proto.toast('Prioridad: ' + (state.pref === 'time' ? 'tiempo' : 'precio'), { iconName: 'sliders' });
+    return;
+  }
+});
+
+/* --- Botones --- */
+document.getElementById('moreBtn').addEventListener('click', () => sheets.more.open('half'));
+document.getElementById('voiceBtn').addEventListener('click', () => { stopVoice(); sheets.voice.open('full'); setTimeout(startVoice, 260); });
+document.getElementById('sideNew').addEventListener('click', () => go('fuel'));
+document.getElementById('moreOpts').addEventListener('click', () => { renderOpts(); sheets.opts.open('full'); });
+document.getElementById('voiceUse').addEventListener('click', (e) => {
+  const fn = e.currentTarget._action;
+  sheets.voice.close(); stopVoice();
+  if (fn) fn();
+});
+document.getElementById('amoledBtn').addEventListener('click', (e) => {
+  state.amoled = !state.amoled;
+  setAmoled(state.amoled);
+  e.currentTarget.classList.toggle('on', state.amoled);
+  Proto.toast('Modo AMOLED ' + (state.amoled ? 'activado' : 'desactivado'), { iconName: 'power' });
+});
+function setAmoled(on) {
+  if (on && Proto.theme.get() !== 'dark') Proto.theme.set('dark');
+  document.body.classList.toggle('amoled', on);
+}
+function setBig(on) {
+  state.big = on;
+  document.documentElement.style.fontSize = on ? '112.5%' : '';
+}
+
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'swAmoled') { state.amoled = e.target.checked; setAmoled(state.amoled); document.getElementById('amoledBtn').classList.toggle('on', state.amoled); }
+  if (e.target.id === 'swBig') setBig(e.target.checked);
+  if (e.target.id === 'swVoice') { state.voice = e.target.checked; document.getElementById('voiceBtn').style.display = state.voice ? '' : 'none'; }
+});
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'pumpPrice') {
+    const v = parseFloat(String(e.target.value).replace(',', '.'));
+    if (!isNaN(v)) { state.price = v; updateTotal(); renderPumpWarn(priceOf(byId(state.stId) || options()[0].st)); }
+  }
+  if (e.target.id === 'pumpLiters') {
+    const v = parseFloat(String(e.target.value).replace(',', '.'));
+    if (!isNaN(v)) { state.liters = v; updateTotal(); }
+  }
+});
+document.addEventListener('proto:theme', () => {
+  document.getElementById('amoledBtn').classList.toggle('on', state.amoled && Proto.theme.get() === 'dark');
+  if (detailCtl) detailCtl.redraw();
+  if (whereMap) whereMap.fit(LIST(), { padding: 40 });
+});
+
+/* ============================================================================
+   Arranque
+   ========================================================================== */
+const start = Proto.param('screen');
+state.stId = options()[0].st.id;
+renderFuel();
+renderLog();
+renderSet();
+setAmoled(state.amoled);
+document.getElementById('amoledBtn').classList.toggle('on', state.amoled);
+go(STEPS.some(s => s.key === start) ? start : 'fuel');
+Proto.hydrateIcons();
+</script>
+</body>
+</html>

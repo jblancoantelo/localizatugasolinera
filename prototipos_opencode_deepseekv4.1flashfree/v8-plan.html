@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Prototipo v8 · Planificador de repostaje · Gasolineras</title>
+<link rel="stylesheet" href="assets/proto.css">
+<style>
+  /* ==========================================================================
+     v8 · Planificador de repostaje
+     --------------------------------------------------------------------------
+     La pregunta que responde: "¿cuándo reposto y cuánto me va a costar?"
+     Cruza el nivel del depósito, el consumo y la previsión de precios para
+     proponer UNA fecha, un presupuesto y una agenda. En móvil es una lectura
+     vertical; en escritorio, tres columnas (semana · plan · dinero).
+     ========================================================================== */
+
+  /* --- Cabecera --------------------------------------------------------- */
+  .topbar-title .v8-beta {
+    font-size: var(--t-3xs); font-weight: 800; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--brand); background: var(--brand-soft);
+    border: 1px solid var(--brand-line); border-radius: 99px; padding: 1px 6px;
+  }
+
+  .v8-main {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: var(--s3) var(--s3) calc(var(--s5) + var(--safe-b));
+  }
+  .v8-grid { display: flex; flex-direction: column; gap: var(--s3); }
+
+  /* --- Tarjeta base ----------------------------------------------------- */
+  .v8-card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--r-lg); box-shadow: var(--sh-1); padding: var(--s4);
+  }
+  .v8-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s3); margin-bottom: var(--s3); }
+  .v8-head h2 { font-size: var(--t-lg); font-weight: 800; letter-spacing: -.015em; line-height: 1.2; }
+  .v8-head p { font-size: var(--t-2xs); color: var(--fg-3); margin-top: 2px; }
+  .v8-head .select-native { width: auto; min-height: 34px; font-size: var(--t-xs); padding-block: 2px; }
+
+  /* --- Hero: próximo repostaje ----------------------------------------- */
+  .v8-hero {
+    position: relative; overflow: hidden;
+    border: 1px solid var(--brand-line);
+    background:
+      radial-gradient(120% 140% at 100% 0%, rgba(11, 98, 214, .17), transparent 56%),
+      radial-gradient(90% 120% at 0% 100%, rgba(0, 135, 90, .10), transparent 60%),
+      var(--surface);
+    border-radius: var(--r-xl); box-shadow: var(--sh-2);
+    padding: var(--s4);
+  }
+  .v8-hero::after {
+    content: ''; position: absolute; right: -46px; bottom: -70px; width: 190px; height: 190px;
+    border-radius: 50%; border: 26px solid rgba(11, 98, 214, .07); pointer-events: none;
+  }
+  .v8-kicker {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: var(--t-3xs); font-weight: 800; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--brand);
+  }
+  .v8-live {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: var(--t-3xs); font-weight: 700; color: var(--fg-3);
+  }
+  .v8-live i { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px var(--ok-bg); }
+  .v8-hero-main { display: flex; align-items: center; gap: var(--s4); margin-top: var(--s4); position: relative; z-index: 1; }
+
+  .v8-gauge {
+    --pct: 24;
+    flex: 0 0 auto; width: 104px; height: 104px; border-radius: 50%;
+    background: conic-gradient(var(--brand) calc(var(--pct) * 1%), var(--surface-3) 0);
+    display: grid; place-items: center; position: relative;
+    transition: background var(--dur-2) var(--ease);
+  }
+  .v8-gauge::before {
+    content: ''; position: absolute; inset: 5px; border-radius: 50%;
+    background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .v8-gauge-in { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; line-height: 1; }
+  .v8-gauge-in b { font-size: 1.65rem; font-weight: 800; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+  .v8-gauge-in span { font-size: var(--t-3xs); font-weight: 700; color: var(--fg-3); text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
+  .v8-gauge-in small { font-size: var(--t-3xs); color: var(--brand); font-weight: 800; margin-top: 4px; }
+
+  .v8-hero-copy { min-width: 0; flex: 1 1 auto; }
+  .v8-hero-copy h1 { font-size: clamp(1.3rem, 5.2vw, 1.85rem); line-height: 1.1; letter-spacing: -.035em; font-weight: 800; }
+  .v8-hero-copy h1 em { font-style: normal; color: var(--brand); }
+  .v8-hero-copy > p { font-size: var(--t-xs); color: var(--fg-2); margin-top: 7px; line-height: 1.5; }
+  .v8-hero-copy > p b { color: var(--fg); }
+
+  .v8-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--s3); position: relative; z-index: 1; }
+  .v8-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: var(--t-2xs); font-weight: 700; padding: 5px 9px; border-radius: 99px;
+    border: 1px solid var(--line); background: var(--surface-2); color: var(--fg-2);
+  }
+  .v8-pill b { color: inherit; font-weight: 800; }
+  .v8-pill.ok { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok); }
+  .v8-pill.warn { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn); }
+  .v8-pill.brand { background: var(--brand-soft); border-color: var(--brand-line); color: var(--brand); }
+
+  .v8-hero-foot { display: flex; gap: var(--s2); margin-top: var(--s4); position: relative; z-index: 1; }
+  .v8-hero-foot .btn { flex: 1 1 0; min-height: 44px; }
+  .v8-hero-foot .btn.on { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok); box-shadow: none; }
+
+  /* --- Semana ----------------------------------------------------------- */
+  .v8-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+  .v8-day {
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    min-height: 126px; padding: 9px 2px 7px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 13px;
+    transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+  }
+  .v8-day:hover { border-color: var(--line-2); }
+  .v8-day:active { transform: scale(.97); }
+  .v8-day .dow { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--fg-3); }
+  .v8-day .date { font-size: var(--t-sm); font-weight: 800; line-height: 1; }
+  .v8-day .bar { flex: 1 1 auto; width: 6px; min-height: 26px; border-radius: 99px; background: var(--surface-2); display: flex; align-items: flex-end; overflow: hidden; }
+  .v8-day .bar i { width: 100%; border-radius: 99px; background: var(--line-2); transition: height var(--dur-2) var(--ease); }
+  .v8-day .v8-price { font-size: 10px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .v8-day .v8-delta { font-size: 8px; font-weight: 700; color: var(--fg-3); }
+  .v8-day .v8-delta.down { color: var(--ok); }
+  .v8-day .v8-delta.up { color: var(--hi); }
+  .v8-day.best { border-color: var(--ok-line); background: var(--ok-bg); }
+  .v8-day.best .bar i { background: var(--ok); }
+  .v8-day.sel { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .v8-star {
+    position: absolute; top: -7px; right: -3px; width: 17px; height: 17px; border-radius: 50%;
+    background: var(--ok); color: #fff; display: grid; place-items: center;
+    font-size: 9px; box-shadow: 0 1px 4px rgba(0,0,0,.22);
+  }
+  .v8-week-note { font-size: var(--t-3xs); color: var(--fg-3); line-height: 1.5; margin-top: var(--s3); }
+
+  /* --- Gráfica ---------------------------------------------------------- */
+  .v8-chart-card canvas { width: 100%; display: block; }
+  .v8-legend { display: flex; flex-wrap: wrap; gap: 6px var(--s4); margin-top: var(--s2); }
+  .v8-lg { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-3xs); font-weight: 700; color: var(--fg-2); }
+  .v8-lg i { width: 15px; height: 2px; border-radius: 2px; background: var(--brand); }
+  .v8-lg i.dash { background: repeating-linear-gradient(90deg, var(--ok) 0 4px, transparent 4px 7px); }
+  .v8-lg i.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand); }
+
+  /* --- Presupuesto ------------------------------------------------------ */
+  .v8-budget-num { display: flex; align-items: baseline; gap: 7px; margin-bottom: 3px; }
+  .v8-budget-num b { font-size: var(--t-3xl); font-weight: 800; letter-spacing: -.045em; font-variant-numeric: tabular-nums; }
+  .v8-budget-num b.bad { color: var(--bad); }
+  .v8-budget-num span { font-size: var(--t-2xs); color: var(--fg-3); font-weight: 600; }
+  .v8-bar { height: 10px; border-radius: 99px; background: var(--surface-3); overflow: hidden; margin: 9px 0 7px; }
+  .v8-bar i { display: block; height: 100%; border-radius: 99px; background: var(--ok); transition: width var(--dur-2) var(--ease); }
+  .v8-bar.warn i { background: var(--warn); }
+  .v8-bar.bad i { background: var(--bad); }
+  .v8-budget-meta { display: flex; justify-content: space-between; gap: var(--s3); font-size: var(--t-2xs); color: var(--fg-3); }
+  .v8-budget-meta b { color: var(--fg-2); font-weight: 700; }
+  .v8-budget-hint {
+    margin-top: var(--s3); padding: 8px 10px; border-radius: 10px;
+    background: var(--surface-2); border: 1px solid var(--line);
+    font-size: var(--t-2xs); color: var(--fg-2); line-height: 1.45;
+  }
+  .v8-budget-hint.warn { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn); }
+  .v8-range-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); margin-top: var(--s3); font-size: var(--t-2xs); color: var(--fg-2); font-weight: 600; }
+  .v8-range-row b { color: var(--fg); font-weight: 800; }
+  input[type=range].v8-range { width: 100%; accent-color: var(--brand); margin-top: 3px; }
+
+  /* --- Comparativa de estaciones --------------------------------------- */
+  .v8-cmp { display: flex; flex-direction: column; gap: 6px; }
+  .v8-cmp-row {
+    display: flex; align-items: center; gap: var(--s2); width: 100%;
+    padding: 8px 9px; border: 1px solid var(--line); border-radius: 13px;
+    background: var(--surface); text-align: left;
+  }
+  .v8-cmp-row:hover { border-color: var(--line-2); background: var(--surface-2); }
+  .v8-cmp-row.best { border-color: var(--ok-line); background: var(--ok-bg); }
+  .v8-cmp-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .v8-cmp-main b { font-size: var(--t-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .v8-cmp-main small { font-size: var(--t-3xs); color: var(--fg-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .v8-cmp-row .v8-price { font-size: var(--t-md); font-weight: 800; font-variant-numeric: tabular-nums; }
+  .v8-cmp-save {
+    display: flex; align-items: baseline; gap: 5px; flex-wrap: wrap;
+    margin-top: var(--s3); padding-top: var(--s3); border-top: 1px dashed var(--line-2);
+    font-size: var(--t-2xs); color: var(--fg-3);
+  }
+  .v8-cmp-save b { font-size: var(--t-xl); color: var(--ok); letter-spacing: -.03em; }
+  .v8-cmp-save .v8-permonth { color: var(--fg-2); font-weight: 700; }
+
+  /* --- Agenda ----------------------------------------------------------- */
+  .v8-timeline ol { display: flex; flex-direction: column; }
+  .v8-tl { position: relative; display: flex; gap: 10px; padding-bottom: 15px; }
+  .v8-tl:last-child { padding-bottom: 0; }
+  .v8-tl::before { content: ''; position: absolute; left: 11px; top: 25px; bottom: 0; width: 2px; background: var(--line); }
+  .v8-tl:last-child::before { display: none; }
+  .v8-tl .v8-dot {
+    flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--surface-2); color: var(--fg-2); border: 2px solid var(--surface); z-index: 1;
+  }
+  .v8-tl .v8-dot .ico { --ico: 13px; }
+  .v8-tl .v8-tl-main { min-width: 0; padding-top: 2px; }
+  .v8-tl b { display: block; font-size: var(--t-sm); font-weight: 700; line-height: 1.3; }
+  .v8-tl p { font-size: var(--t-2xs); color: var(--fg-3); line-height: 1.45; margin-top: 1px; }
+  .v8-tl.best .v8-dot { background: var(--ok-bg); color: var(--ok); }
+  .v8-tl.warn .v8-dot { background: var(--warn-bg); color: var(--warn); }
+  .v8-tl.now .v8-dot { background: var(--brand-soft); color: var(--brand); }
+  .v8-tl.done .v8-dot { background: var(--ok); color: #fff; }
+
+  /* --- Tu coche --------------------------------------------------------- */
+  .v8-field + .v8-field { margin-top: var(--s3); padding-top: var(--s3); border-top: 1px solid var(--line); }
+  .v8-field-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); font-size: var(--t-2xs); color: var(--fg-2); font-weight: 600; }
+  .v8-field-top b { color: var(--fg); font-weight: 800; font-variant-numeric: tabular-nums; }
+  .v8-field .v8-range { margin-top: 5px; }
+
+  /* --- Escritorio ------------------------------------------------------- */
+  @media (min-width: 700px) and (max-width: 1023px) {
+    .v8-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s4); align-items: start; }
+    .v8-hero, .v8-chart-card { grid-column: 1 / -1; }
+  }
+  @media (min-width: 1024px) {
+    .v8-main { padding: var(--s4) var(--s5) var(--s6); }
+    .v8-grid {
+      display: grid; gap: var(--s4); align-items: start;
+      grid-template-columns: 300px minmax(0, 1fr) 326px;
+      grid-template-areas:
+        "week hero budget"
+        "week chart compare"
+        "timeline settings compare";
+      max-width: 1440px; margin: 0 auto;
+    }
+    .v8-week-card { grid-area: week; }
+    .v8-hero { grid-area: hero; padding: var(--s5); }
+    .v8-chart-card { grid-area: chart; }
+    .v8-budget { grid-area: budget; }
+    .v8-compare { grid-area: compare; }
+    .v8-timeline { grid-area: timeline; }
+    .v8-settings { grid-area: settings; }
+    .v8-day { min-height: 148px; }
+    .v8-gauge { width: 124px; height: 124px; }
+    .v8-gauge-in b { font-size: 2rem; }
+    .v8-hero-copy h1 { font-size: 2.1rem; }
+  }
+
+  /* Móvil muy estrecho: la semana sigue cabiendo sin scroll horizontal */
+  @media (max-width: 360px) {
+    .v8-week { gap: 3px; }
+    .v8-day { min-height: 116px; padding-inline: 1px; }
+    .v8-day .v8-price { font-size: 9px; }
+    .v8-hero { padding: var(--s3); }
+    .v8-hero-main { gap: var(--s3); }
+    .v8-gauge { width: 92px; height: 92px; }
+    .v8-gauge-in b { font-size: 1.4rem; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="statusbar only-mobile">
+    <span>9:41</span>
+    <span class="sb-right">
+      <span class="ico" data-ico="signal"></span><span class="ico" data-ico="wifiOff"></span><span class="ico" data-ico="battery"></span>
+    </span>
+  </div>
+
+  <header class="topbar">
+    <span class="topbar-title"><span class="ico" data-ico="clock" style="color:var(--brand)"></span>Planificador <span class="v8-beta">nuevo</span></span>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="dataBtn8" title="Todas las estaciones"><span data-ico="list"></span></button>
+    <button class="iconbtn" id="iaBtn8" title="Copiloto IA"><span data-ico="sparkles"></span></button>
+    <button class="iconbtn" id="cfgBtn8" title="Ajustes de la app"><span data-ico="sliders"></span></button>
+    <button class="iconbtn" data-theme-toggle title="Tema"></button>
+  </header>
+
+  <main class="v8-main">
+    <div class="v8-grid">
+
+      <!-- ============ Hero: próximo repostaje ========================== -->
+      <section class="v8-hero" aria-labelledby="heroTitle8">
+        <div class="row between" style="gap:8px">
+          <span class="v8-kicker"><span data-ico="droplet" style="--ico:14px"></span>Próximo repostaje</span>
+          <span class="v8-live"><i></i>precios de hoy</span>
+        </div>
+
+        <div class="v8-hero-main">
+          <div class="v8-gauge" id="gauge8" role="img" aria-label="Nivel del depósito">
+            <div class="v8-gauge-in">
+              <b id="gaugeVal8">12,0</b>
+              <span>litros</span>
+              <small id="gaugeKm8">187 km</small>
+            </div>
+          </div>
+          <div class="v8-hero-copy">
+            <h1 id="heroTitle8">Reposta el <em>jueves 29</em></h1>
+            <p id="heroSub8">Te quedan 12,0 L · autonomía 187 km · 5 días al ritmo actual.</p>
+          </div>
+        </div>
+
+        <div class="v8-pills" id="heroPills8"></div>
+
+        <div class="v8-hero-foot">
+          <button class="btn primary" id="planCta8" aria-pressed="false">
+            <span data-ico="bell"></span><span id="ctaTxt8">Añadir recordatorio</span>
+          </button>
+          <button class="btn ghost" id="planStations8"><span data-ico="list"></span>Ver estaciones</button>
+        </div>
+      </section>
+
+      <!-- ============ Semana ========================================== -->
+      <section class="v8-card v8-week-card">
+        <div class="v8-head">
+          <div>
+            <h2>Tu semana</h2>
+            <p>Previsión de precio para tu combustible</p>
+          </div>
+          <select class="select-native" id="fuel8" aria-label="Combustible"></select>
+        </div>
+        <div class="v8-week" id="week8" role="group" aria-label="Previsión de precios de 7 días"></div>
+        <p class="v8-week-note">La previsión cruza la tendencia real de 21 días con el patrón semanal. Es una estimación: el precio del día se confirma al publicarse.</p>
+      </section>
+
+      <!-- ============ Gráfica ========================================= -->
+      <section class="v8-card v8-chart-card">
+        <div class="v8-head">
+          <div>
+            <h2>Histórico y previsión</h2>
+            <p id="chartSub8">—</p>
+          </div>
+          <span class="badge brand lg">30 d + 7 d</span>
+        </div>
+        <canvas id="planChart8" data-h="182" aria-label="Gráfica de precio histórico y previsión"></canvas>
+        <div class="v8-legend">
+          <span class="v8-lg"><i></i>Precio real</span>
+          <span class="v8-lg"><i class="dash"></i>Previsión 7 días</span>
+          <span class="v8-lg"><i class="dot"></i>Hoy</span>
+        </div>
+      </section>
+
+      <!-- ============ Presupuesto ===================================== -->
+      <section class="v8-card v8-budget">
+        <div class="v8-head">
+          <div>
+            <h2>Presupuesto</h2>
+            <p id="budgetMonth8">Este mes</p>
+          </div>
+          <span class="badge" id="budgetBadge8">2 repostajes</span>
+        </div>
+        <div class="v8-budget-num"><b id="budgetLeft8">—</b><span id="budgetLeftLbl8">disponibles</span></div>
+        <div class="v8-bar ok" id="budgetBar8"><i style="width:0%"></i></div>
+        <div class="v8-budget-meta">
+          <span>Gastado <b id="budgetSpent8">—</b></span>
+          <span>Previsto <b id="budgetProj8">—</b></span>
+        </div>
+        <div class="v8-range-row"><span>Límite mensual</span><b id="budgetVal8">180 €</b></div>
+        <input class="v8-range" type="range" id="budgetRange8" min="80" max="300" step="10" value="180" aria-label="Presupuesto mensual">
+        <div class="v8-budget-hint" id="budgetHint8">—</div>
+      </section>
+
+      <!-- ============ Comparativa ===================================== -->
+      <section class="v8-card v8-compare" id="compare8">
+        <div class="v8-head">
+          <div>
+            <h2>Tu repostaje, al detalle</h2>
+            <p>Tu estación habitual frente a la más barata</p>
+          </div>
+          <span class="badge" id="compareBadge8">—</span>
+        </div>
+        <div class="v8-cmp" id="compareRows8"></div>
+        <div class="v8-cmp-save" id="compareSave8"></div>
+      </section>
+
+      <!-- ============ Agenda ========================================== -->
+      <section class="v8-card v8-timeline">
+        <div class="v8-head">
+          <div>
+            <h2>Agenda</h2>
+            <p>Lo que importa, en orden</p>
+          </div>
+          <span class="badge" id="agendaBadge8">7 días</span>
+        </div>
+        <ol id="agenda8"></ol>
+      </section>
+
+      <!-- ============ Tu coche ======================================== -->
+      <section class="v8-card v8-settings">
+        <div class="v8-head">
+          <div>
+            <h2>Tu coche</h2>
+            <p>El plan se ajusta a estos datos</p>
+          </div>
+          <span class="badge outline">local</span>
+        </div>
+
+        <label class="v8-field">
+          <span class="v8-field-top"><span>Depósito</span><b id="tankVal8">50 L</b></span>
+          <input class="v8-range" type="range" id="tank8" min="35" max="90" step="5" value="50" aria-label="Capacidad del depósito">
+        </label>
+        <label class="v8-field">
+          <span class="v8-field-top"><span>Nivel actual</span><b id="levelVal8">12 L</b></span>
+          <input class="v8-range" type="range" id="level8" min="5" max="45" step="1" value="12" aria-label="Combustible que queda">
+        </label>
+        <label class="v8-field">
+          <span class="v8-field-top"><span>Consumo medio</span><b id="consVal8">6,4 L/100</b></span>
+          <input class="v8-range" type="range" id="cons8" min="4" max="12" step="0.2" value="6.4" aria-label="Consumo medio por cada 100 kilómetros">
+        </label>
+        <p class="v8-week-note" style="margin-top:var(--s3)">El cálculo usa 32 km al día. Cambia el nivel para ver cómo se mueve la fecha recomendada.</p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script src="assets/proto-data.js"></script>
+<script src="assets/proto-chart.js"></script>
+<script src="assets/proto-map.js"></script>
+<script src="assets/proto-ui.js"></script>
+<script src="assets/proto-features.js"></script>
+<script>
+Proto.boot();
+
+/* ============================================================================
+   Estado y persistencia
+   ========================================================================== */
+const V8_KEY = 'proto_v8_plan';
+const V8_DAILY_KM = 32;
+const DOW_FULL = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const DOW_SHORT = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+
+const state = {
+  fuel: 'diesel',
+  tank: 50,
+  level: 12,
+  cons: 6.4,
+  budget: 180,
+  reminder: false,
+  day: null,
+  spent: 62.4,        // gasto ficticio de lo que va de mes
+};
+
+try {
+  const saved = JSON.parse(localStorage.getItem(V8_KEY) || '{}');
+  ['fuel', 'tank', 'level', 'cons', 'budget', 'reminder'].forEach(k => {
+    if (saved[k] != null) state[k] = saved[k];
+  });
+} catch (e) { /* localStorage bloqueado */ }
+
+function savePlan() {
+  try {
+    localStorage.setItem(V8_KEY, JSON.stringify({
+      fuel: state.fuel, tank: state.tank, level: state.level,
+      cons: state.cons, budget: state.budget, reminder: state.reminder,
+    }));
+  } catch (e) { /* sin persistencia */ }
+}
+
+/* ============================================================================
+   Datos y previsiones
+   ========================================================================== */
+const fmt1 = (v) => Number(v).toFixed(1).replace('.', ',');
+const fmt0 = (v) => String(Math.round(v));
+const priceTxt = (v) => v == null ? '—' : Number(v).toFixed(3).replace('.', ',');
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+function seedRand(seed) {
+  let a = 2166136261;
+  for (let i = 0; i < seed.length; i++) { a ^= seed.charCodeAt(i); a = Math.imul(a, 16777619); }
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+const stationsMadrid = () => PROTO.STATIONS
+  .filter(s => s.province === 'Madrid' && PROTO.finalPrice(s, state.fuel) != null);
+
+function bestStation() {
+  return PROTO.sortStations(stationsMadrid(), 'price', 'asc', state.fuel)[0];
+}
+
+function homeStation() {
+  const list = stationsMadrid();
+  return list.find(s => s.fav) || list.find(s => s.brand === 'REPSOL') || list[0];
+}
+
+/**
+ * Previsión determinista de 7 días para una estación y combustible.
+ * - Parte del precio en vivo y de la tendencia de los últimos 21 días.
+ * - Añade un valle suave hacia el día 3 (patrón de competencia) y ruido fijo
+ *   por estación+día: el mismo día siempre da el mismo precio.
+ */
+function forecastFor(st) {
+  if (!st) return [];
+  const hist = PROTO.series(st, state.fuel, 21);
+  if (!hist.length) return [];
+  const last = hist[hist.length - 1].price;
+  const daily = (last - hist[0].price) / Math.max(1, hist.length - 1);
+  const today = new Date(); today.setHours(12, 0, 0, 0);
+  const rnd = seedRand(st.id + '|' + state.fuel + '|' + PROTO.ddmmyyyy(today));
+  const out = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today); d.setDate(d.getDate() + i);
+    const weekend = [0, 6].includes(d.getDay()) ? 1 : 0;
+    const valley = -0.0048 * Math.sin(Math.PI * Math.min(1, i / 6));
+    const wave = Math.sin(i * 1.9 + d.getDay()) * 0.0016;
+    const noise = (rnd() - 0.5) * 0.0022;
+    let price = last + daily * i * 0.28 + valley + wave + noise + weekend * 0.0013;
+    price = Math.max(0.9, Math.round(price * 1000) / 1000);
+    out.push({ date: PROTO.ddmmyyyy(d), dow: d.getDay(), day: d.getDate(), price, live: i === 0 });
+  }
+  return out;
+}
+
+/** Calcula todo lo que depende del depósito y la previsión. */
+function calc() {
+  const st = bestStation();
+  const fc = forecastFor(st);
+  if (!st || !fc.length) return null;
+  const autonomy = state.level * 100 / state.cons;
+  const daysLeft = Math.max(0, Math.floor(autonomy / V8_DAILY_KM));
+  const reachable = fc.slice(0, Math.min(7, daysLeft + 1));
+  let bestIdx = 0;
+  reachable.forEach((f, i) => { if (f.price < reachable[bestIdx].price) bestIdx = i; });
+  if (state.day == null || state.day < 0 || state.day > 6) state.day = bestIdx;
+  return { st, fc, autonomy, daysLeft, bestIdx };
+}
+
+/* ============================================================================
+   Render
+   ========================================================================== */
+function renderFuelOptions() {
+  const sel = document.getElementById('fuel8');
+  const opts = PROTO.FUELS.filter(f => PROTO.STATIONS.some(s => s.province === 'Madrid' && s.prices[f.id] != null));
+  if (!opts.some(f => f.id === state.fuel)) state.fuel = opts[0].id;
+  sel.innerHTML = opts.map(f => `<option value="${f.id}" ${f.id === state.fuel ? 'selected' : ''}>${Proto.esc(f.name)}</option>`).join('');
+}
+
+function renderHero(c) {
+  const { fc, autonomy, daysLeft, bestIdx } = c;
+  const sel = fc[state.day], best = fc[bestIdx], today = fc[0];
+  const pct = Math.max(0, Math.min(100, state.level / state.tank * 100));
+  document.getElementById('gauge8').style.setProperty('--pct', pct);
+  document.getElementById('gaugeVal8').textContent = fmt1(state.level);
+  document.getElementById('gaugeKm8').textContent = fmt0(autonomy) + ' km';
+
+  const title = document.getElementById('heroTitle8');
+  const sub = document.getElementById('heroSub8');
+  const bestName = DOW_FULL[best.dow];
+
+  if (state.day === bestIdx) {
+    title.innerHTML = bestIdx === 0
+      ? 'Hoy es el <em>mejor día</em>'
+      : `Reposta el <em>${bestName} ${best.day}</em>`;
+    sub.innerHTML = `Te quedan <b>${fmt1(state.level)} L</b> · autonomía <b>${fmt0(autonomy)} km</b> · <b>${daysLeft} día${daysLeft === 1 ? '' : 's'}</b> al ritmo actual (${V8_DAILY_KM} km/día).`;
+  } else {
+    title.innerHTML = `${cap(DOW_FULL[sel.dow])} ${sel.day}: <em>${priceTxt(sel.price)} €/L</em>`;
+    const cents = Math.round((sel.price - best.price) * 1000) / 10;
+    sub.innerHTML = `Es <b>${cents >= 0 ? '+' : ''}${fmt1(cents)} ¢</b> frente al ${bestName} ${best.day}. El plan sigue siendo esperar al mejor día.`;
+  }
+
+  const refill = Math.max(0, state.tank - state.level);
+  const save = Math.max(0, (today.price - best.price) * refill);
+  const pills = [];
+  if (bestIdx === 0) {
+    pills.push(`<span class="v8-pill ok">${Proto.icon('check', 'xs')} Hoy ya es el mínimo de la semana</span>`);
+  } else {
+    pills.push(`<span class="v8-pill ok">${Proto.icon('trendDown', 'xs')} Ahorras <b>${PROTO.eur2(save)}</b> en el próximo depósito (${fmt0(refill)} L)</span>`);
+  }
+  if (state.day > daysLeft) {
+    pills.push(`<span class="v8-pill warn">${Proto.icon('alert', 'xs')} Ese día te quedarías sin combustible</span>`);
+  }
+  if (state.reminder) {
+    pills.push(`<span class="v8-pill brand">${Proto.icon('bell', 'xs')} Recordatorio activo</span>`);
+  }
+  document.getElementById('heroPills8').innerHTML = pills.join('');
+
+  const cta = document.getElementById('planCta8');
+  cta.classList.toggle('on', state.reminder);
+  cta.setAttribute('aria-pressed', String(state.reminder));
+  document.getElementById('ctaTxt8').textContent = state.reminder ? 'Recordatorio puesto' : 'Añadir recordatorio';
+}
+
+function renderWeek(c) {
+  const { fc, bestIdx } = c;
+  const prices = fc.map(f => f.price);
+  const min = Math.min(...prices), max = Math.max(...prices);
+  document.getElementById('week8').innerHTML = fc.map((f, i) => {
+    const h = 18 + (max === min ? 50 : (f.price - min) / (max - min) * 82);
+    const delta = Math.round((f.price - fc[0].price) * 1000) / 10;
+    const dcls = delta < -0.05 ? 'down' : delta > 0.05 ? 'up' : '';
+    const dtxt = i === 0 ? 'hoy' : `${delta > 0 ? '+' : ''}${fmt1(delta)}¢`;
+    return `<button class="v8-day ${i === bestIdx ? 'best' : ''} ${i === state.day ? 'sel' : ''}"
+      data-day="${i}" aria-pressed="${i === state.day}"
+      aria-label="${cap(DOW_FULL[f.dow])} ${f.day}, ${priceTxt(f.price)} euros por litro${i === bestIdx ? ', mejor día' : ''}">
+      ${i === bestIdx ? '<span class="v8-star" aria-hidden="true">★</span>' : ''}
+      <span class="dow">${DOW_SHORT[f.dow]}</span>
+      <span class="date">${f.day}</span>
+      <span class="bar" aria-hidden="true"><i style="height:${h}%"></i></span>
+      <span class="v8-price">${priceTxt(f.price)}</span>
+      <span class="v8-delta ${dcls}">${dtxt}</span>
+    </button>`;
+  }).join('');
+}
+
+function renderChart(c) {
+  const canvas = document.getElementById('planChart8');
+  const hist = PROTO.series(c.st, state.fuel, 30);
+  if (!hist.length) return;
+  const cs = getComputedStyle(document.documentElement);
+  const brand = cs.getPropertyValue('--brand').trim() || '#0b62d6';
+  const ok = cs.getPropertyValue('--ok').trim() || '#00875a';
+  const dates = hist.map(p => p.date).concat(c.fc.slice(1).map(p => p.date));
+  ProtoChart.draw(canvas, {
+    series: [
+      { data: hist, color: brand },
+      { data: c.fc, offset: hist.length - 1, dash: true, area: false, color: ok },
+    ],
+    xCount: hist.length + c.fc.length - 1,
+    dates,
+    avg: true,
+  });
+  document.getElementById('chartSub8').textContent =
+    `${Proto.shortName(c.st)} · ${PROTO.fuelShort(state.fuel)} · ${priceTxt(PROTO.finalPrice(c.st, state.fuel))} €/L hoy`;
+}
+
+function renderBudget(c) {
+  const refill = Math.max(0, state.tank - state.level);
+  const cost = refill * c.fc[c.bestIdx].price;
+  const now = new Date();
+  const daysMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const leftDays = daysMonth - now.getDate();
+  const extra = leftDays > 12 ? cost * 0.8 : leftDays > 4 ? cost * 0.45 : 0;
+  const projected = state.spent + cost + extra;
+  const left = state.budget - projected;
+  const ratio = Math.max(4, Math.min(100, projected / state.budget * 100));
+  const bar = document.getElementById('budgetBar8');
+  bar.className = 'v8-bar ' + (left < 0 ? 'bad' : ratio > 80 ? 'warn' : 'ok');
+  bar.firstElementChild.style.width = ratio + '%';
+
+  const leftEl = document.getElementById('budgetLeft8');
+  leftEl.textContent = (left < 0 ? '−' : '') + PROTO.eur2(Math.abs(left));
+  leftEl.classList.toggle('bad', left < 0);
+  document.getElementById('budgetLeftLbl8').textContent = left < 0 ? 'de exceso' : 'disponibles';
+  document.getElementById('budgetSpent8').textContent = PROTO.eur2(state.spent);
+  document.getElementById('budgetProj8').textContent = PROTO.eur2(projected);
+  document.getElementById('budgetVal8').textContent = PROTO.eur2(state.budget);
+  document.getElementById('budgetRange8').value = state.budget;
+  document.getElementById('budgetMonth8').textContent =
+    cap(new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(now)) + ' · quedan ' + leftDays + ' días';
+  document.getElementById('budgetBadge8').textContent = leftDays > 12 ? '2 repostajes' : '1 repostaje';
+
+  const hint = document.getElementById('budgetHint8');
+  hint.classList.toggle('warn', left < 0);
+  if (left < 0) {
+    hint.innerHTML = `Te pasarás <b>${PROTO.eur2(-left)}</b>. Repostar el ${DOW_FULL[c.fc[c.bestIdx].dow]} en la más barata recorta ${PROTO.eur2(Math.max(0, (c.fc[0].price - c.fc[c.bestIdx].price) * refill))}.`;
+  } else {
+    hint.innerHTML = `Te quedan <b>${PROTO.eur2(left)}</b> de margen. ${state.reminder ? 'El recordatorio ya está puesto.' : 'Puedes esperar al mejor día sin salirte del presupuesto.'}`;
+  }
+}
+
+function cmpRow(st, label, cls) {
+  const meta = PROTO.brandMeta(st.brand);
+  const p = PROTO.finalPrice(st, state.fuel);
+  return `<button class="v8-cmp-row ${cls}" data-open-station="${st.id}" aria-label="Abrir ficha de ${Proto.esc(st.name)}">
+    <span class="brandlogo sm" style="background:${meta.color};color:${meta.ink}">${Proto.esc(st.brand.slice(0, 2))}</span>
+    <span class="v8-cmp-main"><b>${Proto.esc(Proto.shortName(st))}</b><small>${Proto.esc(st.brand)} · ${Proto.esc(st.address)}</small></span>
+    <span class="v8-price">${priceTxt(p)}<span class="p-unit">€/L</span></span>
+    <span class="badge ${cls === 'best' ? 'ok' : ''}">${label}</span>
+  </button>`;
+}
+
+function renderCompare(c) {
+  const home = homeStation();
+  const list = PROTO.sortStations(stationsMadrid(), 'price', 'asc', state.fuel);
+  const best = list.find(s => s.id !== home.id) || home;
+  const homeP = PROTO.finalPrice(home, state.fuel);
+  const bestP = PROTO.finalPrice(best, state.fuel);
+  const diff = Math.max(0, homeP - bestP);
+  const perTank = diff * state.tank;
+  const perMonth = perTank * 2;
+
+  document.getElementById('compareRows8').innerHTML =
+    cmpRow(home, 'tu habitual', 'home') +
+    cmpRow(best, 'más barata', 'best');
+  document.getElementById('compareBadge8').textContent = `${fmt0(state.tank)} L`;
+  document.getElementById('compareSave8').innerHTML = diff > 0.0005
+    ? `<span>Ahorras</span><b>${PROTO.eur2(perTank)}</b><span>por depósito ·</span><span class="v8-permonth">${PROTO.eur2(perMonth)}/mes</span>`
+    : `<span>Ya repostas en la estación más barata de Madrid.</span>`;
+}
+
+function renderTimeline(c) {
+  const { fc, daysLeft, bestIdx } = c;
+  const today = fc[0], best = fc[bestIdx];
+  const refill = Math.max(0, state.tank - state.level);
+  const items = [];
+
+  items.push({
+    idx: 0, ico: 'droplet', cls: 'now',
+    title: `Hoy · ${DOW_FULL[today.dow]} ${today.day}`,
+    text: `Quedan ${fmt1(state.level)} L (${Math.round(state.level / state.tank * 100)} %). Autonomía ${fmt0(c.autonomy)} km.`,
+  });
+
+  if (bestIdx > 0) {
+    const diff = Math.max(0, (today.price - best.price) * refill);
+    items.push({
+      idx: bestIdx, ico: 'trendDown', cls: 'best',
+      title: `${cap(DOW_FULL[best.dow])} ${best.day} · ventana óptima`,
+      text: `${priceTxt(best.price)} €/L, ${PROTO.cents(today.price - best.price)} menos que hoy. Ahorro estimado: ${PROTO.eur2(diff)}.`,
+    });
+  }
+
+  const safeIdx = Math.min(6, daysLeft);
+  if (safeIdx > 0 && safeIdx !== bestIdx) {
+    const safe = fc[safeIdx];
+    items.push({
+      idx: safeIdx, ico: 'alert', cls: 'warn',
+      title: `${cap(DOW_FULL[safe.dow])} ${safe.day} · último día seguro`,
+      text: `Con ${V8_DAILY_KM} km/día llegarías al límite. No dejes la compra para después.`,
+    });
+  }
+
+  const weekendIdx = fc.findIndex((f, i) => i > 0 && [0, 6].includes(f.dow));
+  if (weekendIdx > 0) {
+    const w = fc[weekendIdx];
+    items.push({
+      idx: weekendIdx, ico: 'route', cls: '',
+      title: `${cap(DOW_FULL[w.dow])} ${w.day} · fin de semana`,
+      text: 'Si vas a salir, reposta antes: la previsión sube el precio en sábado y domingo.',
+    });
+  }
+
+  if (state.reminder) {
+    items.push({
+      idx: bestIdx, ico: 'bell', cls: 'done',
+      title: 'Recordatorio activo',
+      text: `Te avisaremos el ${DOW_FULL[best.dow]} ${best.day} por la mañana, antes de que abras la app.`,
+    });
+  }
+
+  const now = new Date();
+  const daysMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  items.push({
+    idx: 6, ico: 'wallet', cls: '',
+    title: `Cierre de mes · ${daysMonth} de ${new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(now)}`,
+    text: `Presupuesto de ${PROTO.eur2(state.budget)}; el plan prevé gastar ${PROTO.eur2(state.spent + refill * best.price)}.`,
+  });
+
+  items.sort((a, b) => a.idx - b.idx || a.title.localeCompare(b.title, 'es'));
+  document.getElementById('agenda8').innerHTML = items.map(it => `
+    <li class="v8-tl ${it.cls}">
+      <span class="v8-dot">${Proto.icon(it.ico, 'xs')}</span>
+      <span class="v8-tl-main"><b>${it.title}</b><p>${it.text}</p></span>
+    </li>`).join('');
+  document.getElementById('agendaBadge8').textContent = `${items.length} hitos`;
+}
+
+function renderSettings() {
+  document.getElementById('tank8').value = state.tank;
+  document.getElementById('tankVal8').textContent = `${fmt0(state.tank)} L`;
+  const level = document.getElementById('level8');
+  level.max = Math.max(6, state.tank - 5);
+  level.value = state.level;
+  document.getElementById('levelVal8').textContent = `${fmt1(state.level)} L`;
+  document.getElementById('cons8').value = state.cons;
+  document.getElementById('consVal8').textContent = `${fmt1(state.cons)} L/100`;
+}
+
+let chartRaf = 0;
+function renderAll() {
+  state.tank = Math.min(90, Math.max(35, +state.tank));
+  state.level = Math.min(state.tank - 5, Math.max(5, +state.level));
+  state.cons = Math.min(12, Math.max(4, +state.cons));
+  state.budget = Math.min(300, Math.max(80, +state.budget));
+  if (!PROTO.FUELS.some(f => f.id === state.fuel)) state.fuel = 'diesel';
+
+  renderFuelOptions();
+  const c = calc();
+  if (!c) return;
+  renderHero(c);
+  renderWeek(c);
+  renderBudget(c);
+  renderCompare(c);
+  renderTimeline(c);
+  renderSettings();
+  cancelAnimationFrame(chartRaf);
+  chartRaf = requestAnimationFrame(() => renderChart(c));
+  savePlan();
+}
+
+/* ============================================================================
+   Paridad funcional: explorador, copiloto y Config
+   ========================================================================== */
+let dataFeat8 = null, iaFeat8 = null;
+
+function openExplorer(id) {
+  document.querySelectorAll('.pf-overlay.on').forEach(e => e.classList.remove('on'));
+  dataOverlay8.open();
+  if (id) setTimeout(() => { if (dataFeat8) dataFeat8.openDetail(id); }, 180);
+}
+
+const dataOverlay8 = ProtoFeat.overlay({
+  title: 'Todas las estaciones', icon: 'list',
+  render(body) {
+    body.classList.add('pf-scroll');
+    body.innerHTML = '<div id="dataFeat8" style="display:flex;flex:1;min-height:0"></div>';
+    dataFeat8 = ProtoFeat.explorer(document.getElementById('dataFeat8'), {
+      list: () => PROTO.STATIONS,
+      fuel: state.fuel,
+      province: 'Madrid',
+      pageSize: 10,
+    });
+  },
+});
+
+const iaOverlay8 = ProtoFeat.overlay({
+  title: 'Copiloto IA', icon: 'sparkles',
+  render(body) {
+    body.classList.add('pf-scroll');
+    body.innerHTML = '<div id="iaFeat8"></div>';
+    iaFeat8 = ProtoFeat.iaPanel(document.getElementById('iaFeat8'), {
+      list: () => stationsMadrid(),
+      onOpenStation: (id) => { iaOverlay8.close(); openExplorer(id); },
+    });
+  },
+});
+
+const cfgOverlay8 = ProtoFeat.overlay({
+  title: 'Ajustes de la app', icon: 'gear',
+  render(body) {
+    body.classList.add('pf-scroll');
+    body.innerHTML = '<div id="cfgFeat8"></div>';
+    ProtoFeat.configPanel(document.getElementById('cfgFeat8'), {
+      onDiscounts: () => { renderAll(); if (dataFeat8) dataFeat8.refresh(); },
+      getHiddenIa: () => (iaFeat8 ? iaFeat8.hidden : []),
+      onIaTabs: (ids) => { if (iaFeat8) iaFeat8.setHidden(ids); },
+    });
+  },
+});
+
+/* ============================================================================
+   Eventos
+   ========================================================================== */
+document.getElementById('fuel8').addEventListener('change', (e) => {
+  state.fuel = e.target.value;
+  state.day = null;
+  renderAll();
+});
+document.getElementById('tank8').addEventListener('input', (e) => {
+  state.tank = +e.target.value;
+  if (state.level > state.tank - 5) state.level = state.tank - 5;
+  state.day = null;
+  renderAll();
+});
+document.getElementById('level8').addEventListener('input', (e) => {
+  state.level = +e.target.value;
+  state.day = null;
+  renderAll();
+});
+document.getElementById('cons8').addEventListener('input', (e) => {
+  state.cons = +e.target.value;
+  state.day = null;
+  renderAll();
+});
+document.getElementById('budgetRange8').addEventListener('input', (e) => {
+  state.budget = +e.target.value;
+  renderAll();
+});
+document.getElementById('week8').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-day]');
+  if (!b) return;
+  state.day = +b.dataset.day;
+  renderAll();
+});
+document.getElementById('planCta8').addEventListener('click', () => {
+  state.reminder = !state.reminder;
+  renderAll();
+  Proto.toast(state.reminder ? 'Recordatorio puesto para el mejor día' : 'Recordatorio quitado', {
+    iconName: state.reminder ? 'bell' : 'bell',
+  });
+});
+document.getElementById('planStations8').addEventListener('click', () => openExplorer());
+document.getElementById('compare8').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-open-station]');
+  if (b) openExplorer(b.dataset.openStation);
+});
+document.getElementById('dataBtn8').addEventListener('click', () => openExplorer());
+document.getElementById('iaBtn8').addEventListener('click', () => iaOverlay8.open());
+document.getElementById('cfgBtn8').addEventListener('click', () => cfgOverlay8.open());
+
+document.addEventListener('proto:theme', () => renderAll());
+let resizeT = 0;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeT);
+  resizeT = setTimeout(renderAll, 160);
+});
+
+/* Arranque */
+renderAll();
+</script>
+</body>
+</html>

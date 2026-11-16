@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Prototipo 11 · Modo Conducción — Gasolineras</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="toprow">
+      <div class="marca">MODO CONDUCCIÓN</div>
+      <select id="prov" aria-label="Provincia"></select>
+    </div>
+    <div class="pills">
+      <div class="pill-group">
+        <button class="pill active" data-comb="auto">Auto</button>
+        <button class="pill" data-comb="Gasolina 95 E5">95</button>
+        <button class="pill" data-comb="Gasolina 98 E5">98</button>
+        <button class="pill" data-comb="Gasóleo A">Diésel</button>
+        <button class="pill" data-comb="Gasóleo Premium">Diésel+</button>
+      </div>
+      <button class="pill-toggle" id="modoAhorro" aria-pressed="false">Ahorro</button>
+      <button class="pill-toggle" id="soloFav" aria-pressed="false">★ Favoritas</button>
+    </div>
+    <div class="rango-row">
+      <label for="km">A menos de <strong id="kmVal">5 km</strong></label>
+      <input id="km" type="range" min="1" max="15" step="1" value="5">
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="hero" id="hero">
+      <div class="hero-head">
+        <div class="hero-badge">MEJOR AHORA</div>
+        <div class="hero-dist" id="heroDist">—</div>
+      </div>
+      <div class="hero-marca" id="heroMarca">—</div>
+      <div class="hero-nombre" id="heroNombre">—</div>
+      <div class="hero-dir" id="heroDir">—</div>
+      <div class="hero-precio-wrap">
+        <div class="hero-precio" id="heroPrecio">—</div>
+        <div class="hero-unidad">€/L</div>
+      </div>
+      <div class="hero-meta">
+        <div class="hm"><span>Con descuento</span><strong id="heroDesc">—</strong></div>
+        <div class="hm"><span>Horario</span><strong id="heroHor">—</strong></div>
+        <div class="hm"><span>Localidad</span><strong id="heroLoc">—</strong></div>
+      </div>
+      <div class="hero-acciones">
+        <button class="btn-ir" id="btnIr">CÓMO LLEGAR</button>
+        <button class="btn-det" id="btnDet">VER DETALLE</button>
+        <button class="btn-fav" id="btnFavHero" aria-pressed="false">★</button>
+      </div>
+    </section>
+
+    <section class="carousel" id="carousel">
+      <div class="car-head">
+        <span>Otras opciones cerca</span>
+        <span id="carCnt">0</span>
+      </div>
+      <div class="car-track" id="carTrack"></div>
+    </section>
+
+    <section class="info-bar">
+      <span id="infoTxt">Buscando las mejores opciones...</span>
+      <span id="infoCnt">0 resultados</span>
+    </section>
+  </main>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-velo" id="modalVelo"></div>
+  <div class="modal-panel">
+    <header class="modal-head">
+      <div>
+        <div class="modal-marca" id="mMarca">—</div>
+        <h2 id="mNombre">—</h2>
+        <p id="mDir">—</p>
+      </div>
+      <button id="mCerrar">✕</button>
+    </header>
+    <div class="modal-body">
+      <div class="m-grid">
+        <div class="mcard"><span>Precio/L</span><strong id="mPrecio">—</strong></div>
+        <div class="mcard"><span>Distancia</span><strong id="mDist">—</strong></div>
+        <div class="mcard"><span>Con descuento</span><strong id="mDesc">—</strong></div>
+        <div class="mcard"><span>Horario</span><strong id="mHor">—</strong></div>
+      </div>
+      <div class="m-sec">
+        <h3>Precios por combustible</h3>
+        <div class="m-list" id="mList"></div>
+      </div>
+      <div class="m-sec">
+        <h3>Acciones rápidas</h3>
+        <div class="m-acc">
+          <button class="m-btn primary" id="mIr">Cómo llegar</button>
+          <button class="m-btn" id="mFav">Añadir/quitar favorito</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="../shared/datos-fake.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

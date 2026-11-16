@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Prototipo v4 · Consola de escritorio · Gasolineras</title>
+<link rel="stylesheet" href="assets/proto.css">
+<style>
+  /* ==========================================================================
+     v4 · Consola de escritorio
+     Diseñada para 1280-1920 px: filtros a la izquierda, tabla densa en el
+     centro (o mapa / ambos) e inspector fijo a la derecha. Nada se abre "encima"
+     de nada salvo el command palette (Ctrl+K). Degrada a móvil sin perder nada.
+     ========================================================================== */
+  .app { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+  .shell { display: grid; grid-template-columns: 264px minmax(0, 1fr) 384px; min-height: 0; }
+  .rail { border-right: 1px solid var(--line); background: var(--surface); overflow-y: auto; min-height: 0; }
+  .center { display: flex; flex-direction: column; align-items: stretch; min-width: 0; min-height: 0; background: var(--bg); }
+  .inspector { border-left: 1px solid var(--line); background: var(--surface); overflow-y: auto; min-height: 0; }
+  .statusbar2 {
+    display: flex; align-items: center; gap: var(--s3); padding: 5px var(--s3);
+    font-size: var(--t-3xs); color: var(--fg-2); background: var(--surface-2); border-top: 1px solid var(--line);
+  }
+  .statusbar2 .sb-ok { color: var(--ok); font-weight: 700; }
+
+  .fgroup { border-bottom: 1px solid var(--line); padding: var(--s3) var(--s4); }
+  .fgroup h3 { font-size: var(--t-3xs); font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--fg-3); margin-bottom: var(--s2); }
+  .rail .check { min-height: 34px; font-size: var(--t-sm); }
+  .kpi-strip { display: flex; gap: var(--s4); align-items: center; padding: var(--s3) var(--s4); background: var(--surface); border-bottom: 1px solid var(--line); overflow: hidden; }
+  .kpi-mini { min-width: 82px; flex: 0 0 auto; }
+  .kpi-mini .k-label { font-size: var(--t-3xs); text-transform: uppercase; letter-spacing: .05em; color: var(--fg-3); font-weight: 700; white-space: nowrap; }
+  .kpi-mini .k-val { font-size: var(--t-xl); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .filter-strip { display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s4); background: var(--surface); border-bottom: 1px solid var(--line); }
+  .filter-strip .fs-label { font-size: var(--t-3xs); text-transform: uppercase; letter-spacing: .05em; color: var(--fg-3); font-weight: 700; flex: 0 0 auto; }
+
+  .viewswitch { display: inline-flex; padding: 3px; gap: 2px; background: var(--surface-2); border-radius: var(--r-full); }
+  .viewswitch button { min-height: 30px; padding: 0 var(--s3); border-radius: var(--r-full); font-size: var(--t-xs); font-weight: 650; color: var(--fg-2); display: inline-flex; align-items: center; gap: 5px; }
+  .viewswitch button.on { background: var(--surface); color: var(--fg); box-shadow: var(--sh-1); }
+  .splitbtn { display: flex; gap: var(--s2); padding: var(--s2) var(--s3); background: var(--surface); border-bottom: 1px solid var(--line); }
+  .split { display: flex; min-height: 0; flex: 1; }
+  .split > .tablewrap { flex: 1 1 auto; }
+  .split > .mappane { position: relative; flex: 0 0 44%; border-left: 1px solid var(--line); min-height: 0; }
+  body[data-view="map"] .split > .mappane { flex: 1 1 auto; border-left: 0; }
+.mappane .map-hud { position: absolute; top: 10px; right: 10px; z-index: 6; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.mappane .map-hud select { min-height: 34px; padding: 0 8px; font-size: var(--t-xs); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--sh-1); }
+.mappane .map-hud #legend4 .chip { background: var(--surface); border-color: var(--line); box-shadow: var(--sh-1); font-size: var(--t-3xs); min-height: 28px; }
+/* La marca de prototipo, arriba a la derecha, tapaba los iconos de la topbar. */
+.proto-tag { top: auto; right: 12px; bottom: 40px; }
+  .tablewrap.full { flex: 1; }
+  /* En "Ambos" la tabla comparte espacio: se quedan las columnas imprescindibles
+     (favorito · marca · precio · distancia) y el resto se consulta en "Tabla". */
+  body[data-view="both"] #table th:nth-child(4), body[data-view="both"] #table td:nth-child(4),
+  body[data-view="both"] #table th:nth-child(n+6), body[data-view="both"] #table td:nth-child(n+6) { display: none; }
+  body[data-view="both"] #table tbody td { font-size: var(--t-xs); padding: 6px var(--s2); }
+  /* Reparto fijo + truncado: sin esto la columna Marca, que no parte, empuja
+     Precio y Distancia fuera del área visible del `.tablewrap`. */
+  body[data-view="both"] #table { table-layout: fixed; width: 100%; }
+  body[data-view="both"] #table th:nth-child(1) { width: 32px; }
+  body[data-view="both"] #table th:nth-child(3) { width: 92px; }
+  body[data-view="both"] #table th:nth-child(5) { width: 64px; }
+  body[data-view="both"] #table td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  body[data-view="both"] #table td:nth-child(2) > .row { min-width: 0; }
+  body[data-view="both"] #table td:nth-child(2) > .row > span:last-child {
+    display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  body[data-view="both"] #table td:nth-child(3) .badge { display: none; }
+  .pm.v4 .pm-scale { top: auto; bottom: var(--s3); }
+  .pm.v4 .pm-ctrl { top: var(--s3); }
+  .pm.v4 .pm-attrib { display: none; }
+  table.data.wide tbody td { padding-top: 7px; padding-bottom: 7px; }
+  table.data tbody tr.sel td { background: var(--brand-soft); }
+  .qlabel { font-size: var(--t-3xs); color: var(--fg-3); }
+  .tabbar { display: flex; gap: 2px; padding: var(--s2) var(--s3) 0; border-bottom: 1px solid var(--line); background: var(--surface); }
+  .tabbar button { padding: var(--s2) var(--s3); font-size: var(--t-xs); font-weight: 650; color: var(--fg-2); border-bottom: 2px solid transparent; }
+  .tabbar button.on { color: var(--brand); border-color: var(--brand); }
+  .ins-body { padding: var(--s4); }
+
+  /* Command palette */
+  .cmdk-scrim { position: fixed; inset: 0; background: rgba(6, 12, 20, .45); z-index: 130; display: none; padding-top: 12vh; backdrop-filter: blur(3px); }
+  .cmdk-scrim.on { display: block; }
+  .cmdk { width: min(660px, 92vw); margin: 0 auto; background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--sh-3); overflow: hidden; border: 1px solid var(--line); }
+  .cmdk input { width: 100%; min-height: 54px; padding: 0 var(--s4); border: 0; outline: none; font-size: var(--t-lg); background: none; }
+  .cmdk-list { max-height: 46vh; overflow-y: auto; border-top: 1px solid var(--line); }
+  .cmdk-item { display: flex; align-items: center; gap: var(--s3); padding: var(--s2) var(--s4); cursor: pointer; }
+  .cmdk-item .ck-kind { font-size: var(--t-3xs); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-3); width: 74px; flex: 0 0 auto; }
+  .cmdk-item.on { background: var(--brand-soft); }
+  .cmdk-foot { display: flex; gap: var(--s4); padding: var(--s2) var(--s4); border-top: 1px solid var(--line); font-size: var(--t-3xs); color: var(--fg-3); background: var(--surface-2); }
+  kbd { font-family: var(--mono); font-size: 10px; background: var(--surface-3); border-radius: 5px; padding: 1px 5px; border: 1px solid var(--line-2); }
+
+  /* ====== Degradación: < 1280 px el inspector pasa a drawer ============== */
+  @media (max-width: 1279px) {
+    .shell { grid-template-columns: 244px minmax(0, 1fr); }
+    .inspector { position: fixed; right: 0; top: 0; bottom: 0; width: min(420px, 100%); z-index: 100; transform: translateX(100%); transition: transform var(--dur-2) var(--ease); box-shadow: var(--sh-3); }
+    .inspector.on { transform: none; }
+  }
+  /* ====== < 900 px: misma consola, una columna ========================== */
+  @media (max-width: 899px) {
+    .shell { grid-template-columns: minmax(0, 1fr); }
+    .rail { position: fixed; left: 0; top: 0; bottom: 0; width: min(320px, 88vw); z-index: 100; transform: translateX(-100%); transition: transform var(--dur-2) var(--ease); box-shadow: var(--sh-3); }
+    .rail.on { transform: none; }
+    .split { flex-direction: column; }
+    .split > .mappane { flex: 1 1 46%; border-left: 0; border-top: 1px solid var(--line); }
+    .kpi-strip { gap: var(--s4); }
+  }
+  .only-wide { display: none; }
+  @media (min-width: 1280px) { .only-wide { display: inline-flex; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ===================== BARRA SUPERIOR =============================== -->
+  <header class="topbar">
+    <span class="topbar-title"><span class="ico" data-ico="columns" style="color:var(--brand)"></span>Consola de gasolineras</span>
+    <span class="badge" id="provBadge">Madrid</span>
+
+    <div class="field pill" style="min-width:220px;max-width:420px;margin-left:var(--s4);min-height:38px">
+      <span class="ico" data-ico="search"></span>
+      <input id="q" type="search" placeholder="Filtrar por marca, calle, localidad…">
+      <span class="badge outline" id="qHint">0</span>
+    </div>
+    <button class="btn sm ghost" id="cmdkBtn" title="Buscar comandos"><span data-ico="sparkles"></span>Comandos <kbd class="only-wide">Ctrl K</kbd></button>
+
+    <div class="spacer"></div>
+    <div class="viewswitch" id="viewSwitch">
+      <button data-view="table" class="on"><span data-ico="list" class="ico sm"></span>Tabla</button>
+      <button data-view="map"><span data-ico="map" class="ico sm"></span>Mapa</button>
+      <button data-view="both"><span data-ico="columns" class="ico sm"></span>Ambos</button>
+    </div>
+    <button class="btn sm ghost" id="railBtn" title="Filtros"><span data-ico="sliders"></span>Filtros</button>
+    <button class="iconbtn" id="inspBtn" title="Inspector"><span data-ico="info"></span></button>
+    <button class="iconbtn" id="iaBtn4" title="Copiloto IA"><span data-ico="sparkles"></span></button>
+    <button class="iconbtn" data-theme-toggle title="Tema"></button>
+    <button class="iconbtn" id="cfgBtn4" title="Ajustes"><span data-ico="gear"></span></button>
+  </header>
+
+  <div class="shell">
+    <!-- ===================== RAIL DE FILTROS ============================ -->
+    <aside class="rail" id="rail">
+      <div class="fgroup">
+        <h3>Ubicación</h3>
+        <select class="select-native" id="fProv"></select>
+        <select class="select-native mt2" id="fLoc"></select>
+      </div>
+      <div class="fgroup">
+        <h3>Combustible</h3>
+        <div class="field" style="min-height:38px"><span class="ico" data-ico="droplet"></span><select id="fFuel" style="font-size:var(--t-sm)"></select></div>
+      </div>
+      <div class="fgroup">
+        <h3>Marca</h3>
+        <div id="fBrands" class="col" style="gap:0"></div>
+      </div>
+      <div class="fgroup">
+        <h3>Distancia</h3>
+        <input class="range" type="range" min="0" max="30" step="1" value="0" id="fKm">
+        <div class="row between tiny muted mt1"><span>0</span><span class="badge brand" id="fKmLabel">Sin límite</span><span>30 km</span></div>
+      </div>
+      <div class="fgroup">
+        <h3>Otros</h3>
+        <label class="check"><input type="checkbox" id="fFav"><span class="cb"><span data-ico="check" class="ico sm"></span></span>Solo favoritos</label>
+        <label class="check"><input type="checkbox" id="fCheap"><span class="cb"><span data-ico="check" class="ico sm"></span></span>Con descuento de marca</label>
+        <label class="check"><input type="checkbox" id="f24"><span class="cb"><span data-ico="check" class="ico sm"></span></span>Abiertas 24 h</label>
+        <label class="check"><input type="checkbox" id="fStale"><span class="cb"><span data-ico="check" class="ico sm"></span></span>Ocultar sin publicar hoy</label>
+      </div>
+      <div class="fgroup">
+        <h3>Guardado</h3>
+        <button class="btn sm block" data-toast="Búsqueda guardada como «Diésel barato Chamberí»"><span data-ico="bookmark" class="ico sm"></span>Guardar esta búsqueda</button>
+        <div class="col mt2" style="gap:4px">
+          <button class="row-item tap" data-preset="diesel-chamberi" style="text-align:left"><span class="ri-main"><span class="ri-title">Diésel barato Chamberí</span><span class="ri-sub">≤ 5 km · 3 marcas</span></span></button>
+          <button class="row-item tap" data-preset="g95-viaje" style="text-align:left"><span class="ri-main"><span class="ri-title">G95 para el viaje</span><span class="ri-sub">Toda la provincia</span></span></button>
+        </div>
+      </div>
+      <div class="fgroup">
+        <h3>Datos y API</h3>
+        <div class="row between small"><span class="muted">Caché</span><span class="bold" id="cacheAge">hace 8 min</span></div>
+        <div class="row between small mt1"><span class="muted">Estaciones en caché</span><span class="bold" id="cacheCount">11</span></div>
+        <div class="row between small mt1"><span class="muted">Histórico</span><span class="bold">12 series · 30 días</span></div>
+        <button class="btn sm block mt3" id="syncBtn"><span data-ico="refresh" class="ico sm"></span>Actualizar ahora</button>
+        <button class="btn sm block ghost mt1" data-toast="Caché vaciada (mock)" data-toast-icon="trash">Vaciar caché</button>
+      </div>
+    </aside>
+    <!-- ===================== CENTRO ===================================== -->
+    <section class="center">
+      <div class="kpi-strip">
+        <div class="kpi-mini"><div class="k-label">Resultados</div><div class="k-val" id="kCount">—</div></div>
+        <div class="kpi-mini"><div class="k-label">Más barata</div><div class="k-val" id="kMin" style="color:var(--lo)">—</div></div>
+        <div class="kpi-mini"><div class="k-label">Mediana</div><div class="k-val" id="kMed">—</div></div>
+        <div class="kpi-mini"><div class="k-label">Más cara</div><div class="k-val" id="kMax" style="color:var(--hi)">—</div></div>
+        <div class="kpi-mini"><div class="k-label">Diferencia</div><div class="k-val" id="kSpread">—</div></div>
+        <div class="kpi-mini"><div class="k-label">Ahorro 50 L</div><div class="k-val" id="kSave" style="color:var(--ok)">—</div></div>
+        <div class="spacer"></div>
+        <div class="col" style="gap:4px;align-items:flex-end">
+          <span class="qlabel" id="cacheLine">Caché hace 8 min · 12 series históricas</span>
+          <span class="badge brand" id="fuelBadge">Diésel A · Madrid</span>
+        </div>
+      </div>
+
+      <div class="filter-strip">
+        <span class="fs-label">Filtros activos</span>
+        <div class="chips" id="activeChips" style="padding:0"></div>
+        <div class="spacer"></div>
+        <button class="btn sm ghost" id="clearAll"><span data-ico="close" class="ico sm"></span>Limpiar todo</button>
+      </div>
+
+      <div class="splitbtn">
+        <button class="btn sm" id="sortPrice"><span data-ico="arrowDown" class="ico sm"></span>Precio</button>
+        <button class="btn sm ghost" id="sortDist">Distancia</button>
+        <button class="btn sm ghost" id="sortBrand">Marca</button>
+        <button class="btn sm ghost" id="sortUpd">Actualización</button>
+        <div class="spacer"></div>
+        <span class="tiny dim" id="selInfo">Nada seleccionado</span>
+        <button class="btn sm soft" id="cmpBtn"><span data-ico="compare" class="ico sm"></span>Comparar (0)</button>
+        <button class="btn sm" data-toast="Exportado a CSV (mock)" data-toast-icon="download"><span data-ico="download" class="ico sm"></span>CSV</button>
+        <button class="btn sm" data-toast="Enlace de la vista copiado (mock)" data-toast-icon="share"><span data-ico="share" class="ico sm"></span></button>
+      </div>
+
+      <div class="split" id="split">
+        <div class="tablewrap">
+          <table class="data wide" id="table">
+            <thead><tr>
+              <th style="width:28px"><span class="sr-only">Fav</span></th>
+              <th data-sort="brand">Marca</th><th data-sort="price" class="num">Precio</th>
+              <th class="num">Δ 14 d</th>
+              <th data-sort="distance" class="num">Dist.</th>
+              <th data-sort="locality">Localidad</th>
+              <th data-sort="rating">★</th>
+              <th>Servicios</th>
+              <th data-sort="updated" class="num">Actualizado</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="mappane hide" id="mappane"><div id="mapHost" style="position:absolute;inset:0"></div>
+          <div class="map-hud">
+            <select class="select-native" id="mapStyle4" aria-label="Vista del mapa"></select>
+            <div id="legend4"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== INSPECTOR ================================== -->
+    <aside class="inspector" id="inspector">
+      <div class="tabbar" id="inspTabs">
+        <button data-tab="st" class="on">Estación</button>
+        <button data-tab="cmp">Comparativa</button>
+        <button data-tab="hist">Histórico</button>
+        <div class="spacer"></div>
+        <button class="iconbtn sm" id="inspClose" title="Cerrar"><span data-ico="close"></span></button>
+      </div>
+      <div class="ins-body" id="inspBody"></div>
+    </aside>
+  </div>
+
+  <!-- ===================== BARRA DE ESTADO ============================= -->
+  <div class="statusbar2">
+    <span class="sb-ok">● API Ministerio: ok</span>
+    <span>GET EstacionesTerrestres/Madrid · 200 · 1.284 ms</span>
+    <span class="dim">histórico 12-10-2026 · 642 ms</span>
+    <div class="spacer"></div>
+    <span class="dim">Última sincronización <b id="lastSync">hace 8 min</b></span>
+    <span class="dim">APP_VERSION 12</span>
+    <span class="dim">208 tests ✓</span>
+  </div>
+</div>
+
+<!-- ===================== COMMAND PALETTE ================================ -->
+<div class="cmdk-scrim" id="cmdkScrim">
+  <div class="cmdk">
+    <input id="cmdkInput" placeholder="Buscar estación, acción o vista…" aria-label="Command palette">
+    <div class="cmdk-list" id="cmdkList"></div>
+    <div class="cmdk-foot"><span><kbd>↑</kbd><kbd>↓</kbd> navegar</span><span><kbd>Enter</kbd> abrir</span><span><kbd>Ctrl</kbd>+<kbd>K</kbd> cerrar</span></div>
+  </div>
+</div>
+
+<div class="proto-tag">v4 · consola escritorio</div>
+
+<script src="assets/proto-data.js"></script>
+<script src="assets/proto-chart.js"></script>
+<script src="assets/proto-map.js"></script>
+<script src="assets/proto-ui.js"></script>
+<script src="assets/proto-features.js"></script>
+<script>
+Proto.boot();
+
+/* ==========================================================================
+   Estado
+   ========================================================================== */
+const state = {
+  prov: 'Madrid', loc: '', fuel: 'diesel', brands: [], maxKm: 0,
+  fav: false, cheap: false, only24: false, noStale: false, q: '', pageSize: 0,
+  sort: 'price', dir: 'asc', view: 'table', tab: 'st', sel: null, compare: [],
+};
+const baseList = () => PROTO.filterStations(PROTO.STATIONS, { province: state.prov });
+function visible() {
+  return PROTO.filterStations(baseList(), {
+    locality: state.loc, fuel: state.fuel, brands: state.brands, maxKm: state.maxKm,
+    favoritesOnly: state.fav, cheapOnly: state.cheap, q: state.q,
+  }).filter(s => (!state.only24 || s.schedule === '24h') && (!state.noStale || s.updatedMin < 1440));
+}
+const sorted = () => PROTO.sortStations(visible(), state.sort, state.dir, state.fuel);
+
+/* ==========================================================================
+   Filtros (rail)
+   ========================================================================== */
+function fillFilters() {
+  document.getElementById('fProv').innerHTML = PROTO.PROVINCES.filter(p => PROTO.STATIONS.some(s => s.province === p.name))
+    .map(p => `<option ${p.name === state.prov ? 'selected' : ''}>${p.name}</option>`).join('');
+  const locs = [...new Set(baseList().map(s => s.city))].sort((a, b) => a.localeCompare(b, 'es'));
+  document.getElementById('fLoc').innerHTML = `<option value="">Todas las localidades</option>` + locs.map(l => `<option ${l === state.loc ? 'selected' : ''}>${l}</option>`).join('');
+  document.getElementById('fFuel').innerHTML = PROTO.FUELS.map(f => `<option value="${f.id}" ${f.id === state.fuel ? 'selected' : ''}>${f.name}</option>`).join('');
+  document.getElementById('fBrands').innerHTML = PROTO.brandsOf(baseList()).map(b =>
+    `<label class="check"><input type="checkbox" data-brand="${b}" ${state.brands.includes(b) ? 'checked' : ''}><span class="cb"><span data-ico="check" class="ico sm"></span></span>${Proto.titleCase(b)}</label>`).join('');
+  Proto.hydrateIcons(document.getElementById('fBrands'));
+}
+document.getElementById('fProv').addEventListener('change', (e) => { state.prov = e.target.value; state.loc = ''; state.brands = []; fillFilters(); refresh(); });
+document.getElementById('fLoc').addEventListener('change', (e) => { state.loc = e.target.value; refresh(); });
+document.getElementById('fFuel').addEventListener('change', (e) => { state.fuel = e.target.value; refresh(); });
+document.getElementById('fKm').addEventListener('input', (e) => { state.maxKm = +e.target.value; document.getElementById('fKmLabel').textContent = state.maxKm ? '≤ ' + state.maxKm + ' km' : 'Sin límite'; });
+document.getElementById('fKm').addEventListener('change', refresh);
+document.getElementById('fFav').addEventListener('change', (e) => { state.fav = e.target.checked; refresh(); });
+document.getElementById('fCheap').addEventListener('change', (e) => { state.cheap = e.target.checked; refresh(); });
+document.getElementById('f24').addEventListener('change', (e) => { state.only24 = e.target.checked; refresh(); });
+document.getElementById('fStale').addEventListener('change', (e) => { state.noStale = e.target.checked; refresh(); });
+document.getElementById('fBrands').addEventListener('change', (e) => {
+  const b = e.target.dataset.brand; if (!b) return;
+  state.brands = e.target.checked ? state.brands.concat(b) : state.brands.filter(x => x !== b);
+  refresh();
+});
+document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => {
+  if (b.dataset.preset === 'diesel-chamberi') Object.assign(state, { fuel: 'diesel', maxKm: 5, brands: ['REPSOL', 'BALLENOIL', 'PETROPRIX'], loc: '', fav: false, cheap: false, only24: false });
+  else Object.assign(state, { fuel: 'g95', maxKm: 0, brands: [], loc: '', fav: false, cheap: false, only24: false });
+  fillFilters(); document.getElementById('fKm').value = state.maxKm; document.getElementById('fKmLabel').textContent = state.maxKm ? '≤ ' + state.maxKm + ' km' : 'Sin límite';
+  refresh(); Proto.toast('Búsqueda aplicada');
+}));
+
+/* ==========================================================================
+   Tabla
+   ========================================================================== */
+function renderTable() {
+  const list = state.pageSize > 0 ? sorted().slice(0, state.pageSize) : sorted();
+  const stats = PROTO.stats(visible(), state.fuel);
+  const tbody = document.querySelector('#table tbody');
+  tbody.innerHTML = list.map(st => {
+    const price = PROTO.finalPrice(st, state.fuel);
+    const lvl = stats ? PROTO.level(price, stats.lo, stats.hi) : 'mid';
+    const s = PROTO.seriesStats(PROTO.series(st, state.fuel, 14)) || { diff: 0 };
+    const best = stats && price === stats.min;
+    return `<tr data-id="${st.id}" class="${st.id === state.sel ? 'sel' : ''} ${best ? 'best' : ''}">
+      <td><button class="iconbtn sm ${st.fav ? 'on' : ''}" data-fav="${st.id}" title="Favorito">${Proto.icon(st.fav ? 'starFill' : 'star', st.fav ? 'sm fill' : 'sm')}</button></td>
+      <td><span class="row" style="gap:var(--s2)"><span class="brandlogo sm" style="width:26px;height:26px;border-radius:9px;font-size:10px;background:${PROTO.brandMeta(st.brand).color};color:${PROTO.brandMeta(st.brand).ink}">${st.brand.slice(0, 2)}</span>
+        <span><span class="bold">${Proto.titleCase(st.brand)}</span> <span class="muted tiny">${Proto.esc(Proto.shortName(st))}</span></span></span></td>
+      <td class="num"><span class="price p-sm ${lvl}">${PROTO.money(price, 3).replace(' €', '')}<span class="p-unit">€/L</span></span>${best ? ' <span class="badge ok">mín</span>' : ''}</td>
+      <td class="num"><span class="delta ${s.diff < 0 ? 'down' : s.diff > 0 ? 'up' : 'flat'}">${Proto.icon(s.diff < 0 ? 'trendDown' : 'trendUp', 'xs')}${Math.abs(s.diff * 100).toFixed(1).replace('.', ',')}</span></td>
+      <td class="num">${PROTO.dist(PROTO.kmFromUser(st))}</td>
+      <td>${Proto.esc(st.city)}</td>
+      <td class="num">★ ${String(st.rating).replace('.', ',')}</td>
+      <td class="tiny muted">${st.services.slice(0, 3).join(' · ')}</td>
+      <td class="num tiny muted">${st.updatedMin < 60 ? st.updatedMin + ' min' : Math.round(st.updatedMin / 60) + ' h'}</td>
+    </tr>`;
+  }).join('');
+  document.querySelectorAll('#table thead th[data-sort]').forEach(th => {
+    th.classList.remove('asc', 'desc');
+    if (th.dataset.sort === state.sort) th.classList.add(state.dir);
+  });
+  document.getElementById('selInfo').textContent = list.length + ' de ' + baseList().length + ' estaciones' + (state.sel ? ' · 1 seleccionada' : '');
+}
+document.querySelectorAll('#table thead th[data-sort]').forEach(th => th.addEventListener('click', () => {
+  const k = th.dataset.sort;
+  if (state.sort === k) state.dir = state.dir === 'asc' ? 'desc' : 'asc';
+  else { state.sort = k; state.dir = 'asc'; }
+  renderTable(); renderKpis();
+}));
+document.querySelector('#table tbody').addEventListener('click', (e) => {
+  const f = e.target.closest('[data-fav]');
+  if (f) { const st = PROTO.STATIONS.find(s => s.id === f.dataset.fav); st.fav = !st.fav; Proto.toast(st.fav ? st.name + ' en favoritos' : 'Quitada de favoritos', { iconName: 'starFill' }); refresh(); return; }
+  const tr = e.target.closest('tr[data-id]'); if (!tr) return;
+  state.sel = tr.dataset.id;
+  renderTable(); renderInspector(); syncMap();
+});
+document.querySelector('#table tbody').addEventListener('dblclick', (e) => {
+  const tr = e.target.closest('tr[data-id]'); if (!tr) return;
+  state.compare = [...new Set(state.compare.concat(tr.dataset.id))].slice(-3);
+  updateCmpButton(); renderInspector();
+});
+
+/* ==========================================================================
+   KPIs y chips activos
+   ========================================================================== */
+function renderKpis() {
+  const list = visible();
+  const stats = PROTO.stats(list, state.fuel);
+  document.getElementById('kCount').textContent = list.length;
+  document.getElementById('kMin').textContent = stats ? stats.min.toFixed(3).replace('.', ',') : '—';
+  document.getElementById('kMed').textContent = stats ? stats.median.toFixed(3).replace('.', ',') : '—';
+  document.getElementById('kMax').textContent = stats ? stats.max.toFixed(3).replace('.', ',') : '—';
+  document.getElementById('kSpread').textContent = stats ? (stats.spread * 100).toFixed(1).replace('.', ',') + ' ¢' : '—';
+  document.getElementById('kSave').textContent = stats ? PROTO.money((stats.avg - stats.min) * 50, 2) : '—';
+  document.getElementById('legend4').innerHTML = ProtoFeat.legend(stats);
+  document.getElementById('cacheCount').textContent = baseList().length;
+  const chips = [];
+  const push = (k, label) => chips.push(`<button class="chip" data-clear="${k}">${Proto.esc(label)}<span class="x">✕</span></button>`);
+  if (state.loc) push('loc', state.loc);
+  if (state.brands.length) push('brands', state.brands.length + ' marcas');
+  if (state.maxKm) push('maxKm', '≤ ' + state.maxKm + ' km');
+  if (state.fav) push('fav', 'Favoritos');
+  if (state.cheap) push('cheap', 'Con descuento');
+  if (state.only24) push('only24', '24 h');
+  if (state.noStale) push('noStale', 'Ocultar sin publicar hoy');
+  if (state.q) push('q', '«' + state.q + '»');
+  document.getElementById('activeChips').innerHTML = chips.join('') || '<span class="tiny dim">Sin filtros: toda la provincia</span>';
+  document.getElementById('qHint').textContent = list.length;
+  document.getElementById('cacheLine').textContent = 'Caché hace 8 min · ' + list.length + ' de ' + baseList().length + ' estaciones';
+  document.getElementById('fuelBadge').textContent = PROTO.fuelShort(state.fuel) + ' · ' + state.prov;
+  document.getElementById('provBadge').textContent = state.prov;
+}
+document.getElementById('activeChips').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-clear]'); if (!b) return;
+  clearFilter(b.dataset.clear);
+});
+document.getElementById('clearAll').addEventListener('click', () => {
+  ['loc', 'maxKm', 'fav', 'cheap', 'only24', 'noStale', 'q'].forEach(clearFilter);
+  state.brands = [];
+  Proto.toast('Filtros limpiados');
+});
+function clearFilter(k) {
+  if (k === 'brands') state.brands = [];
+  else if (k === 'maxKm') { state.maxKm = 0; document.getElementById('fKm').value = 0; document.getElementById('fKmLabel').textContent = 'Sin límite'; }
+  else if (k === 'q') { state.q = ''; document.getElementById('q').value = ''; }
+  else state[k] = false;
+  fillFilters(); renderKpis(); refresh();
+}
+
+/* ==========================================================================
+   Inspector
+   ========================================================================== */
+function updateCmpButton() {
+  document.getElementById('cmpBtn').innerHTML = Proto.icon('compare', 'sm') + 'Comparar (' + state.compare.length + ')';
+}
+document.getElementById('inspTabs').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-tab]'); if (!b) return;
+  state.tab = b.dataset.tab;
+  document.querySelectorAll('#inspTabs [data-tab]').forEach(x => x.classList.toggle('on', x === b));
+  renderInspector();
+});
+document.getElementById('inspClose').addEventListener('click', () => {
+  document.getElementById('inspector').classList.remove('on');
+  state.sel = null; renderTable();
+});
+document.getElementById('inspBtn').addEventListener('click', () => document.getElementById('inspector').classList.toggle('on'));
+document.getElementById('railBtn').addEventListener('click', () => document.getElementById('rail').classList.toggle('on'));
+
+function renderInspector() {
+  const host = document.getElementById('inspBody');
+  const st = PROTO.STATIONS.find(s => s.id === state.sel);
+  if (!st) {
+    host.innerHTML = `<div class="empty"><span class="e-icon">${Proto.icon('info')}</span>
+      <h3>Selecciona una estación</h3><p>Haz clic en una fila de la tabla (o en un marcador del mapa) para ver su ficha, su histórico y compararla con las seleccionadas con doble clic.</p>
+      <div class="row" style="gap:6px"><kbd>↑</kbd><kbd>↓</kbd> moverse · <kbd>⏎</kbd> abrir</div></div>`;
+    return;
+  }
+  if (state.tab === 'st') {
+    host.innerHTML = '';
+    window._insp = Proto.stationDetail(host, st, {
+      fuel: state.fuel, days: 14, list: visible(),
+      onFuel: (f) => { state.fuel = f; fillFilters(); refresh(); },
+    });
+    return;
+  }
+  if (state.tab === 'cmp') {
+    const ids = state.compare.length ? state.compare : [st.id];
+    const list = ids.map(id => PROTO.STATIONS.find(s => s.id === id)).filter(Boolean);
+    const stats = PROTO.stats(visible(), state.fuel);
+    const rows = [
+      ['Precio', (s2) => PROTO.money(PROTO.finalPrice(s2, state.fuel), 3)],
+      ['Nivel', (s2) => (PROTO.level(PROTO.finalPrice(s2, state.fuel), stats.lo, stats.hi) === 'lo' ? 'barata' : PROTO.level(PROTO.finalPrice(s2, state.fuel), stats.lo, stats.hi) === 'mid' ? 'media' : 'cara')],
+      ['Descuento', (s2) => (PROTO.brandMeta(s2.brand).discount ? '-' + PROTO.brandMeta(s2.brand).discount + ' ¢ ' + PROTO.brandMeta(s2.brand).program : '—')],
+      ['Distancia', (s2) => PROTO.dist(PROTO.kmFromUser(s2))],
+      ['Desvío', (s2) => PROTO.driveMin(PROTO.kmFromUser(s2)) + ' min'],
+      ['24 h', (s2) => s2.schedule === '24h' ? 'Sí' : s2.schedule],
+      ['Valoración', (s2) => '★ ' + String(s2.rating).replace('.', ',') + ' (' + s2.reviews + ')'],
+      ['Servicios', (s2) => s2.services.join(', ')],
+      ['Actualizado', (s2) => PROTO.since(s2.updatedMin)],
+      ['Depósito 50 L', (s2) => PROTO.money(PROTO.finalPrice(s2, state.fuel) * 50, 2)],
+    ];
+    const best = (fn) => list.map(s2 => fn(s2)).map(Number).filter(v => v > 0);
+    host.innerHTML = `<div class="tiny muted mb2">Doble clic en la tabla para añadir estaciones (máx. 3). Ahora: ${list.length}.</div>
+      <table class="data cmp-table"><thead><tr><th></th>${list.map(s2 => `<th class="num">${Proto.esc(s2.brand)}<div class="tiny muted">${Proto.esc(Proto.shortName(s2))}</div></th>`).join('')}</tr></thead>
+      <tbody>${rows.map(([label, fn]) => {
+        const vals = list.map(fn);
+        const nums = vals.map(v => parseFloat(String(v).replace(',', '.')));
+        const min = Math.min(...nums.filter(n => !isNaN(n)));
+        return `<tr><td class="muted">${label}</td>${vals.map((v, i) => `<td class="num ${(!isNaN(nums[i]) && nums[i] === min) ? 'cmp-best' : ''}">${v}</td>`).join('')}</tr>`;
+      }).join('')}</tbody></table>
+      <div class="chartbox mt4"><canvas data-h="180" id="cmpChart"></canvas><div class="chart-tip"></div></div>
+      <div class="row mt2" style="gap:6px;flex-wrap:wrap">${list.map((s2, i) => `<span class="badge" style="border-left:3px solid ${['var(--brand)', 'var(--ok)', 'var(--mid)'][i]}">${Proto.esc(s2.brand)}</span>`).join('')}</div>
+      <button class="btn block mt3" id="cmpClear">Vaciar comparativa</button>`;
+    const days = 14;
+    const series = list.map((s2, i) => ({
+      label: s2.brand + ' ' + Proto.shortName(s2),
+      color: ['var(--brand)', 'var(--ok)', 'var(--mid)'][i],
+      data: PROTO.series(s2, state.fuel, days),
+      area: i === 0,
+    }));
+    const el = document.getElementById('cmpChart');
+    const geom = ProtoChart.draw(el, { series, avg: false });
+    ProtoChart.tooltip(el, el.parentElement, geom, { live: true });
+    document.getElementById('cmpClear').addEventListener('click', () => { state.compare = []; updateCmpButton(); renderInspector(); });
+    return;
+  }
+  /* histórico */
+  host.innerHTML = `<div class="row between"><div><div class="bold">${Proto.esc(st.name)}</div><div class="tiny muted">${Proto.esc(st.city)} · ${Proto.dist(PROTO.kmFromUser(st))}</div></div>
+      <span class="badge brand">${Proto.esc(PROTO.fuelShort(state.fuel))}</span></div>
+    <div class="chartbox mt3"><canvas data-h="200" id="histChart"></canvas><div class="chart-tip"></div></div>
+    <div class="row mt2" style="gap:var(--s2)">
+      <select class="select-native" id="histFuel" style="width:auto;min-height:36px;font-size:var(--t-sm)">${PROTO.FUELS.filter(f => st.prices[f.id] != null).map(f => `<option value="${f.id}" ${f.id === state.fuel ? 'selected' : ''}>${f.name}</option>`).join('')}</select>
+      <div class="spacer"></div>
+      <div class="segmented" id="histDays"><button data-d="7">7 d</button><button data-d="14" class="on">14 d</button><button data-d="30">30 d</button><button data-d="90">90 d</button></div>
+    </div>
+    <div id="histStats" class="kpis mt3"></div>
+    <div class="card mt4"><div class="card-title">${Proto.icon('bank', 'sm')} Origen de los datos</div>
+      <div class="card-sub mt2">API del Ministerio (EstacionesTerrestres + PreciosProductos) · serie con un día de retraso · última fecha publicada <b>${PROTO.ddmmyyyy(new Date())}</b> rematada con el precio en vivo si la estación lo tiene.</div></div>`;
+  drawHist();
+  document.getElementById('histFuel').addEventListener('change', drawHist);
+  document.getElementById('histDays').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-d]'); if (!b) return;
+    document.querySelectorAll('#histDays button').forEach(x => x.classList.toggle('on', x === b));
+    drawHist();
+  });
+}
+function drawHist() {
+  const st = PROTO.STATIONS.find(s => s.id === state.sel); if (!st) return;
+  const fuel = document.getElementById('histFuel')?.value || state.fuel;
+  const days = +(document.querySelector('#histDays button.on')?.dataset.d || 14);
+  const own = PROTO.series(st, fuel, days);
+  const pool = PROTO.sortStations(visible(), 'price', 'asc', fuel).slice(0, 6);
+  const avg = own.map((_, i) => {
+    const vals = pool.map(s2 => PROTO.series(s2, fuel, days)[i]?.price).filter(v => v != null);
+    return { date: own[i].date, price: vals.reduce((a, b) => a + b, 0) / (vals.length || 1) };
+  });
+  const el = document.getElementById('histChart');
+  const geom = ProtoChart.draw(el, { series: [
+    { label: 'Media', color: ProtoChart.css('--brand'), data: avg, dash: true, area: false },
+    { label: st.brand, color: ProtoChart.css('--ok'), data: own },
+  ], avg: false });
+  ProtoChart.tooltip(el, el.parentElement, geom, { live: true });
+  const s = PROTO.seriesStats(own);
+  document.getElementById('histStats').innerHTML = `
+    <div class="kpi-mini card"><div class="k-label">Mínimo</div><div class="k-val">${s.min.toFixed(3).replace('.', ',')}</div><div class="tiny muted">${s.minDate}</div></div>
+    <div class="kpi-mini card"><div class="k-label">Media</div><div class="k-val">${s.avg.toFixed(3).replace('.', ',')}</div><div class="tiny muted">${s.days} días</div></div>
+    <div class="kpi-mini card"><div class="k-label">Máximo</div><div class="k-val">${s.max.toFixed(3).replace('.', ',')}</div><div class="tiny muted">${s.maxDate}</div></div>
+    <div class="kpi-mini card"><div class="k-label">Tendencia</div><div class="k-val" style="color:var(--${s.diff < 0 ? 'lo' : 'hi'})">${(s.diff * 100).toFixed(1).replace('.', ',')} ¢</div><div class="tiny muted">vs. primera fecha</div></div>`;
+}
+
+/* ==========================================================================
+   Mapa
+   ========================================================================== */
+let map = null, mapHostReady = false;
+function ensureMap() {
+  if (mapHostReady) return;
+  document.getElementById('mapHost').classList.add('v4');
+  map = ProtoMap.create(document.getElementById('mapHost'), { stations: visible(), fuel: state.fuel, seed: 'madrid-v4', fit: 'stations', padding: 50 });
+  map.on('marker', (id) => { state.sel = id; renderTable(); renderInspector(); });
+  mapHostReady = true;
+}
+function syncMap() {
+  if (!mapHostReady || !map) return;
+  map.setStations(visible());
+  if (state.sel) map.select(state.sel); else map.select(null);
+}
+ProtoFeat.mapStyleSelect(document.getElementById('mapStyle4'), { mapHost: document.getElementById('mapHost') });
+
+/* ==========================================================================
+   Vistas (tabla / mapa / ambos)
+   ========================================================================== */
+document.getElementById('viewSwitch').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-view]'); if (!b) return;
+  setView(b.dataset.view);
+});
+function setView(v) {
+  state.view = v;
+  document.body.dataset.view = v;
+  document.querySelectorAll('#viewSwitch button').forEach(x => x.classList.toggle('on', x.dataset.view === v));
+  const pane = document.getElementById('mappane');
+  const table = document.querySelector('.tablewrap');
+  pane.classList.toggle('hide', v === 'table');
+  table.classList.toggle('hide', v === 'map');
+  if (v !== 'table') { ensureMap(); map && map.fit(visible(), { padding: 50 }); }
+  try { localStorage.setItem('proto_v4_view', v); } catch (e) {}
+}
+
+/* ==========================================================================
+   Paridad: chat IA y ajustes (capa compartida)
+   ========================================================================== */
+function selectStation(id) {
+  state.sel = id;
+  renderTable(); renderInspector(); syncMap();
+  if (map) map.focus(id);
+  document.getElementById('inspector').classList.add('on');
+}
+let iaFeat = null, cfgFeat = null;
+const iaOverlay4 = ProtoFeat.overlay({
+  title: 'Copiloto IA', icon: 'sparkles',
+  render(body) {
+    body.classList.add('pf-scroll');
+    body.innerHTML = '<div id="iaFeat"></div>';
+    iaFeat = ProtoFeat.iaPanel(document.getElementById('iaFeat'), {
+      list: () => visible(),
+      onOpenStation: (id) => { iaOverlay4.close(); selectStation(id); },
+    });
+  },
+});
+const cfgOverlay4 = ProtoFeat.overlay({
+  title: 'Ajustes', icon: 'gear',
+  render(body) {
+    body.classList.add('pf-scroll');
+    body.innerHTML = '<div id="cfgFeat"></div>';
+    cfgFeat = ProtoFeat.configPanel(document.getElementById('cfgFeat'), {
+      pageSize: state.pageSize,
+      onDiscounts: () => refresh(),
+      onPageSize: (n) => { state.pageSize = n; renderTable(); },
+      getHiddenIa: () => (iaFeat ? iaFeat.hidden : []),
+      onIaTabs: (ids) => iaFeat && iaFeat.setHidden(ids),
+    });
+  },
+});
+document.getElementById('iaBtn4').addEventListener('click', () => iaOverlay4.open());
+document.getElementById('cfgBtn4').addEventListener('click', () => cfgOverlay4.open());
+
+/* ==========================================================================
+   Command palette
+   ========================================================================== */
+const cmdkScrim = document.getElementById('cmdkScrim');
+const cmdkInput = document.getElementById('cmdkInput');
+let cmdkItems = [], cmdkIdx = 0;
+function openCmdk() {
+  cmdkScrim.classList.add('on');
+  cmdkInput.value = ''; cmdkInput.focus();
+  buildCmdk('');
+}
+function closeCmdk() { cmdkScrim.classList.remove('on'); }
+function buildCmdk(q) {
+  const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const nq = norm(q);
+  const actions = [
+    { kind: 'Vista', label: 'Ver tabla', run: () => setView('table') },
+    { kind: 'Vista', label: 'Ver mapa', run: () => setView('map') },
+    { kind: 'Vista', label: 'Ver ambos', run: () => setView('both') },
+    { kind: 'Vista', label: 'Mostrar filtros', run: () => document.getElementById('rail').classList.add('on') },
+    { kind: 'Acción', label: 'Solo favoritos', run: () => { state.fav = true; document.getElementById('fFav').checked = true; refresh(); } },
+    { kind: 'Acción', label: 'Solo con descuento de marca', run: () => { state.cheap = true; document.getElementById('fCheap').checked = true; refresh(); } },
+    { kind: 'Acción', label: 'Actualizar datos de la API', run: () => Proto.toast('Consultando la API del Ministerio… (mock)', { iconName: 'refresh' }) },
+    { kind: 'Acción', label: 'Vaciar caché', run: () => Proto.toast('Caché vaciada (mock)', { iconName: 'trash' }) },
+    { kind: 'Acción', label: 'Abrir ajustes', run: () => cfgOverlay4.open() },
+    { kind: 'Acción', label: 'Abrir chat IA (copiloto)', run: () => iaOverlay4.open() },
+    { kind: 'Cambio', label: 'Cambiar a Gasolina 95', run: () => { state.fuel = 'g95'; fillFilters(); refresh(); } },
+    { kind: 'Cambio', label: 'Cambiar a Gasóleo A', run: () => { state.fuel = 'diesel'; fillFilters(); refresh(); } },
+    { kind: 'Cambio', label: 'Cambiar a Gasolina 98', run: () => { state.fuel = 'g98'; fillFilters(); refresh(); } },
+  ];
+  const stations = baseList().map(st => ({
+    kind: 'Estación', label: st.brand + ' ' + Proto.shortName(st) + ' · ' + PROTO.money(PROTO.finalPrice(st, state.fuel), 3),
+    run: () => { state.sel = st.id; renderTable(); renderInspector(); syncMap(); if (map) map.focus(st.id); document.getElementById('inspector').classList.add('on'); },
+  }));
+  const all = [...actions, ...stations];
+  cmdkItems = (nq ? all.filter(i => norm(i.label).includes(nq) || norm(i.kind).includes(nq)) : all).slice(0, 24);
+  cmdkIdx = 0;
+  renderCmdk();
+}
+function renderCmdk() {
+  document.getElementById('cmdkList').innerHTML = cmdkItems.map((it, i) =>
+    `<div class="cmdk-item ${i === cmdkIdx ? 'on' : ''}" data-i="${i}"><span class="ck-kind">${it.kind}</span><span class="grow truncate">${Proto.esc(it.label)}</span>${i === cmdkIdx ? '<span class="tiny dim">↵</span>' : ''}</div>`).join('')
+    || '<div class="cmdk-item"><span class="tiny muted">Sin resultados</span></div>';
+  document.querySelectorAll('.cmdk-item[data-i]').forEach(el => el.addEventListener('click', () => { cmdkItems[+el.dataset.i].run(); closeCmdk(); }));
+}
+document.getElementById('cmdkBtn').addEventListener('click', openCmdk);
+cmdkScrim.addEventListener('click', (e) => { if (e.target === cmdkScrim) closeCmdk(); });
+cmdkInput.addEventListener('input', () => buildCmdk(cmdkInput.value));
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); cmdkScrim.classList.contains('on') ? closeCmdk() : openCmdk(); return; }
+  if (!cmdkScrim.classList.contains('on')) {
+    if (e.key === 'j' || e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'k') {
+      if (document.activeElement.tagName === 'INPUT') return;
+      e.preventDefault();
+      moveSel(e.key === 'ArrowDown' || e.key === 'j' ? 1 : -1);
+      return;
+    }
+    if (e.key === 'Escape') { document.getElementById('rail').classList.remove('on'); document.getElementById('inspector').classList.remove('on'); }
+    return;
+  }
+  if (e.key === 'Escape') { closeCmdk(); return; }
+  if (e.key === 'ArrowDown') { e.preventDefault(); cmdkIdx = Math.min(cmdkItems.length - 1, cmdkIdx + 1); renderCmdk(); }
+  if (e.key === 'ArrowUp') { e.preventDefault(); cmdkIdx = Math.max(0, cmdkIdx - 1); renderCmdk(); }
+  if (e.key === 'Enter') { const it = cmdkItems[cmdkIdx]; if (it) { it.run(); closeCmdk(); } }
+});
+function moveSel(d) {
+  const list = sorted(); if (!list.length) return;
+  const i = Math.max(0, list.findIndex(s => s.id === state.sel));
+  const nxt = list[Math.max(0, Math.min(list.length - 1, i + (state.sel ? d : 0)))];
+  state.sel = nxt.id;
+  renderTable(); renderInspector(); syncMap();
+  document.querySelector(`tr[data-id="${nxt.id}"]`)?.scrollIntoView({ block: 'nearest' });
+}
+
+/* ==========================================================================
+   Arranque
+   ========================================================================== */
+document.getElementById('q').addEventListener('input', (e) => { state.q = e.target.value; clearTimeout(window._qt); window._qt = setTimeout(refresh, 160); });
+document.getElementById('syncBtn').addEventListener('click', (e) => {
+  Proto.toast('Actualizando desde la API del Ministerio… (mock)', { iconName: 'refresh' });
+  setTimeout(() => {
+    document.getElementById('cacheAge').textContent = 'ahora mismo';
+    document.getElementById('lastSync').textContent = 'ahora mismo';
+    Proto.toast('11 estaciones actualizadas · 200 OK en 1.284 ms', { iconName: 'check' });
+    renderKpis();
+  }, 900);
+});
+document.getElementById('cmpBtn').addEventListener('click', () => {
+  state.tab = 'cmp';
+  document.querySelectorAll('#inspTabs [data-tab]').forEach(x => x.classList.toggle('on', x.dataset.tab === 'cmp'));
+  document.getElementById('inspector').classList.add('on');
+  renderInspector();
+});
+document.getElementById('sortPrice').addEventListener('click', () => { state.sort = 'price'; state.dir = state.dir === 'asc' && true ? 'asc' : 'asc'; renderTable(); markSortBtns(); });
+document.getElementById('sortDist').addEventListener('click', () => { state.sort = 'distance'; state.dir = 'asc'; renderTable(); markSortBtns(); });
+document.getElementById('sortBrand').addEventListener('click', () => { state.sort = 'brand'; state.dir = 'asc'; renderTable(); markSortBtns(); });
+document.getElementById('sortUpd').addEventListener('click', () => { state.sort = 'updated'; state.dir = 'asc'; renderTable(); markSortBtns(); });
+function markSortBtns() {
+  const map2 = { price: 'sortPrice', distance: 'sortDist', brand: 'sortBrand', updated: 'sortUpd' };
+  ['sortPrice', 'sortDist', 'sortBrand', 'sortUpd'].forEach(id => document.getElementById(id).classList.toggle('ghost', map2[state.sort] !== id));
+  document.getElementById('sortPrice').innerHTML = Proto.icon('arrowDown', 'sm') + 'Precio';
+  Proto.hydrateIcons(document.getElementById('sortPrice').parentElement);
+}
+function refresh() {
+  renderKpis(); renderTable(); syncMap();
+  if (state.sel) renderInspector();
+  else if (!document.getElementById('inspector').classList.contains('on')) renderInspector();
+}
+let initialView = 'table';
+try { initialView = localStorage.getItem('proto_v4_view') || 'table'; } catch (e) {}
+fillFilters();
+updateCmpButton();
+setView(initialView);
+refresh();
+renderInspector();
+window.addEventListener('resize', () => { if (state.view !== 'table') { ensureMap(); map && map.fit(visible(), { padding: 50 }); } });
+document.addEventListener('proto:theme', () => { if (state.sel) renderInspector(); drawSideNone(); });
+function drawSideNone() { /* el inspector se repinta con los nuevos colores */ }
+</script>
+</body>
+</html>

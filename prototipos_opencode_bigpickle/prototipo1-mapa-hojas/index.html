@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#1a73e8">
+<title>Prototipo 1 · Mapa + hojas — Gasolineras</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<!-- Prototipo de rediseño. No forma parte de la app: maqueta interactiva con datos fake. -->
+<div class="marco">
+  <div class="cinta" aria-hidden="true">PROTOTIPO 1 · «Mapa + hojas» · datos simulados</div>
+
+  <!-- ===================== CABECERA ===================== -->
+  <header class="barra-superior">
+    <div class="barra-fila">
+      <button class="icono-btn" id="btnUbicacion" aria-label="Usar mi ubicación" title="Mi ubicación"></button>
+      <div class="buscador">
+        <span class="buscador-lupa" aria-hidden="true"></span>
+        <input type="search" id="buscador" placeholder="Busca localidad, calle o marca" aria-label="Buscar localidad, calle o marca" autocomplete="off">
+        <button class="buscador-limpiar" id="btnLimpiarBusqueda" aria-label="Borrar búsqueda" hidden>✕</button>
+      </div>
+      <button class="icono-btn" id="btnRefrescar" aria-label="Actualizar precios" title="Actualizar precios"></button>
+    </div>
+    <!-- Chips de filtro: siempre a la vista, scroll horizontal en móvil -->
+    <div class="fila-chips" id="filaChips" role="toolbar" aria-label="Filtros"></div>
+    <!-- Navegación de escritorio (en móvil vive abajo) -->
+    <nav class="nav-superior" id="navSuperior" aria-label="Vistas"></nav>
+  </header>
+
+  <!-- ===================== CONTENIDO ===================== -->
+  <main class="contenido" id="contenido">
+
+    <!-- --------- Vista MAPA (+ hoja de lista arrastrable) --------- -->
+    <section class="vista activa" id="vista-mapa" data-vista="mapa" aria-label="Mapa de estaciones">
+      <div class="mapa" id="mapa">
+        <div class="mapa-fondo" id="mapaFondo" aria-hidden="true"></div>
+        <div class="mapa-marcadores" id="mapaMarcadores"></div>
+        <div class="mapa-hud">
+          <button class="hud-btn" id="btnEstilo" aria-haspopup="dialog">Satélite ▾</button>
+          <div class="leyenda" id="leyenda" title="Leyenda de precios"><!-- dinámica --></div>
+        </div>
+        <div class="mapa-zoom">
+          <button id="btnZoomMas" aria-label="Acercar mapa">+</button>
+          <button id="btnZoomMenos" aria-label="Alejar mapa">−</button>
+          <button id="btnCentrar" aria-label="Centrar en mi ubicación">◎</button>
+        </div>
+      </div>
+
+      <!-- Hoja de lista: en móvil sube desde abajo (peek/medio/lleno); en PC es panel lateral -->
+      <div class="hoja hoja-lista" id="hojaLista">
+        <button class="hoja-agarre" id="agarreLista" aria-label="Ampliar o reducir la lista"></button>
+        <div class="hoja-cabecera">
+          <div class="hoja-titulos">
+            <strong id="hojaTitulo">—</strong>
+            <span class="hoja-sub" id="hojaSub"></span>
+          </div>
+          <div class="hoja-acciones">
+            <button class="mini-btn" id="btnOrdenHoja">Precio ↑</button>
+          </div>
+        </div>
+        <div class="hoja-cuerpo" id="listaHoja"></div>
+      </div>
+    </section>
+
+    <!-- --------- Vista LISTA (tarjetas a pantalla completa) --------- -->
+    <section class="vista" id="vista-lista" data-vista="lista" aria-label="Lista de estaciones">
+      <div class="barra-pegajosa">
+        <span class="contador" id="listaContador">—</span>
+        <div class="segmentado" id="segOrdenLista" role="group" aria-label="Ordenar por">
+          <button data-orden="precio-asc" class="activo" aria-pressed="true">Precio ↑</button>
+          <button data-orden="precio-desc" aria-pressed="false">Precio ↓</button>
+          <button data-orden="dist" aria-pressed="false">Distancia</button>
+        </div>
+      </div>
+      <div class="lista-tarjetas" id="listaTarjetas"></div>
+      <button class="btn-ancho" id="btnCargarMas" hidden>Cargar más</button>
+    </section>
+
+    <!-- --------- Vista AMBOS (mapa + tabla paginada) --------- -->
+    <section class="vista" id="vista-ambos" data-vista="ambos" aria-label="Mapa y tabla">
+      <div class="ambos-mapa" id="ambosMapa">
+        <div class="mapa-fondo" aria-hidden="true"></div>
+        <div class="mapa-marcadores"></div>
+      </div>
+      <div class="barra-pegajosa">
+        <span class="contador" id="ambosContador">—</span>
+        <span class="pista-orden">Pulsa una columna para ordenar</span>
+      </div>
+      <div class="tabla-envoltorio">
+        <table class="tabla" id="tablaEstaciones">
+          <thead>
+            <tr>
+              <th data-col="marca" scope="col">Marca<span class="flecha"></span></th>
+              <th data-col="precio" scope="col">Precio<span class="flecha"></span></th>
+              <th data-col="dist" scope="col">Distancia<span class="flecha"></span></th>
+              <th data-col="localidad" scope="col">Localidad<span class="flecha"></span></th>
+              <th data-col="direccion" scope="col">Calle<span class="flecha"></span></th>
+              <th class="col-fav" scope="col"><span class="visualmente-oculto">Favorito</span></th>
+            </tr>
+          </thead>
+          <tbody id="tablaCuerpo"></tbody>
+        </table>
+      </div>
+      <div class="paginacion" id="paginacion"></div>
+    </section>
+
+    <!-- --------- Vista IA --------- -->
+    <section class="vista vista-ia" id="vista-ia" data-vista="ia" aria-label="Chat de IA">
+      <div class="ia-pills" id="iaPills" role="tablist" aria-label="Proveedor de IA"></div>
+      <div class="ia-cabecera" id="iaCabecera"></div>
+      <div class="ia-mensajes" id="iaMensajes" role="log" aria-live="polite"></div>
+      <form class="ia-entrada" id="iaForm">
+        <input type="text" id="iaInput" placeholder="Pregunta sobre precios, estaciones o tendencias…" aria-label="Mensaje para la IA">
+        <button type="submit" id="iaEnviar">Enviar</button>
+      </form>
+    </section>
+
+    <!-- --------- Vista CONFIG --------- -->
+    <section class="vista vista-config" id="vista-config" data-vista="config" aria-label="Configuración">
+      <div class="config-lista" id="configLista"></div>
+    </section>
+  </main>
+
+  <!-- ===================== BARRA DE ESTADO + NAV ===================== -->
+  <footer class="info-barra">
+    <span id="infoTexto">Selecciona una provincia para empezar</span>
+    <span class="info-datos" id="infoDatos"></span>
+  </footer>
+
+  <nav class="nav-inferior" id="navInferior" aria-label="Navegación principal"></nav>
+</div>
+
+<!-- ===================== CAPAS SUPERPUESTAS ===================== -->
+<div class="velo" id="velo" hidden></div>
+
+<!-- Hoja de detalle de estación (arrastrable) -->
+<div class="hoja hoja-detalle" id="hojaDetalle" role="dialog" aria-modal="true" aria-labelledby="detTitulo" hidden>
+  <button class="hoja-agarre" id="agarreDetalle" aria-label="Ampliar o cerrar el detalle"></button>
+  <header class="detalle-cabecera">
+    <button class="detalle-cerrar" id="detalleCerrar" aria-label="Cerrar detalle">✕</button>
+    <div class="detalle-marca" id="detMarca"></div>
+    <h2 class="detalle-titulo" id="detTitulo">—</h2>
+    <div class="detalle-precio" id="detPrecio"></div>
+    <div class="detalle-meta" id="detMeta"></div>
+    <div class="detalle-acciones">
+      <button class="accion" id="detFav"></button>
+      <button class="accion" id="detRuta">Cómo llegar</button>
+      <button class="accion" id="detCompartir">Compartir</button>
+    </div>
+  </header>
+  <div class="detalle-tabs" role="tablist" aria-label="Secciones del detalle">
+    <button class="detalle-tab activa" data-dtab="precios" role="tab" aria-selected="true">Precios</button>
+    <button class="detalle-tab" data-dtab="historico" role="tab" aria-selected="false">Histórico</button>
+  </div>
+  <div class="detalle-cuerpo">
+    <div class="detalle-panel activa" id="detPanelPrecios" role="tabpanel"></div>
+    <div class="detalle-panel" id="detPanelHistorico" role="tabpanel" hidden>
+      <div class="historico-controles">
+        <select id="histFuel" aria-label="Combustible del histórico"></select>
+        <select id="histDias" aria-label="Días del histórico"></select>
+      </div>
+      <div class="grafica-caja">
+        <canvas id="histCanvas" height="180" aria-label="Gráfica de evolución de precios" role="img"></canvas>
+        <div class="grafica-tooltip" id="histTooltip" hidden></div>
+      </div>
+      <div class="historico-resumen" id="histResumen"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Hoja genérica de opciones (provincia, combustible, marcas, estilo, distancia) -->
+<div class="hoja hoja-opciones" id="hojaOpciones" role="dialog" aria-modal="true" aria-labelledby="opcTitulo" hidden>
+  <button class="hoja-agarre" id="agarreOpciones" aria-label="Cerrar"></button>
+  <div class="opciones-cabecera">
+    <h2 id="opcTitulo">Opciones</h2>
+    <button class="detalle-cerrar" id="opcionesCerrar" aria-label="Cerrar">✕</button>
+  </div>
+  <div class="opciones-cuerpo" id="opcCuerpo"></div>
+  <div class="opciones-pie" id="opcPie"></div>
+</div>
+
+<!-- Aviso breve (toast) -->
+<div class="aviso" id="aviso" role="status" aria-live="polite" hidden></div>
+
+<script src="../shared/datos-fake.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

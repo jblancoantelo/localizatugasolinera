@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>C2 · Atlas — Prototipo</title>
+<link rel="stylesheet" href="../comun/base.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="atlas" id="atlas">
+
+  <!-- Mapa a sangre -->
+  <div class="map-full" id="mapFull"></div>
+
+  <!-- Barra flotante superior: búsqueda + ubicación -->
+  <div class="flot-top">
+    <button class="flot-loc" id="locBtn">📍 Madrid</button>
+    <button class="flot-search" id="searchBtn">
+      <i class="ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></i>
+      <span>Buscar estación o dirección</span>
+    </button>
+    <button class="flot-icon" id="aiBtn" title="Asistente IA">🤖</button>
+  </div>
+
+  <!-- Filtros rápidos flotantes -->
+  <div class="flot-filtros scroll-x" id="flotFiltros"></div>
+
+  <!-- Botones de acción flotantes a la derecha -->
+  <div class="flot-acts">
+    <button class="fa-btn" id="geolocBtn" title="Mi ubicación">🎯</button>
+    <button class="fa-btn" id="favBtn" title="Solo favoritas">★</button>
+    <button class="fa-btn" id="styleBtn" title="Estilo mapa">🗺️</button>
+  </div>
+
+  <!-- Bottom sheet -->
+  <div class="bsheet" id="bsheet" data-snap="peek">
+    <div class="bs-grab" id="bsGrab"><span></span></div>
+
+    <!-- Cabecera resumen (siempre visible en peek+) -->
+    <div class="bs-summary" id="bsSummary">
+      <div class="bs-sum-left">
+        <div class="bs-sum-title" id="bsTitle">14 estaciones cerca</div>
+        <div class="bs-sum-sub" id="bsSub">Gasolina 95 · Madrid</div>
+      </div>
+      <div class="bs-sum-right">
+        <div class="bs-range" id="bsRange">1,44 – 1,54 €</div>
+        <div class="bs-act" id="bsAct">Arrastra ↑ para ver la lista</div>
+      </div>
+    </div>
+
+    <!-- Contenido desplegable -->
+    <div class="bs-content scroll-y" id="bsContent">
+      <!-- tabs internas -->
+      <div class="bs-tabs" id="bsTabs">
+        <button class="bs-tab active" data-bstab="lista">📋 Lista</button>
+        <button class="bs-tab" data-bstab="filtros">⚙️ Filtros</button>
+        <button class="bs-tab" data-bstab="favoritas">★ Favoritas</button>
+      </div>
+      <div class="bs-pane active" id="bp-lista"><div class="bs-list" id="bsList"></div></div>
+      <div class="bs-pane" id="bp-filtros"><div class="bs-filtros" id="bsFiltros"></div></div>
+      <div class="bs-pane" id="bp-favoritas"><div class="bs-list" id="bsFavList"></div></div>
+    </div>
+  </div>
+
+  <!-- Ficha estación (popup desde abajo) -->
+  <div class="ficha" id="ficha">
+    <div class="ficha-grab"><span></span></div>
+    <button class="ficha-close" id="fichaClose">✕</button>
+    <div class="ficha-body scroll-y" id="fichaBody"></div>
+  </div>
+
+  <!-- Navegación inferior minimal (solo 3 destinos) -->
+  <nav class="anav" id="anav">
+    <button class="an active" data-an="mapa">🗺️<span>Mapa</span></button>
+    <button class="an" data-an="lista">📋<span>Lista</span></button>
+    <button class="an" data-an="ia">🤖<span>IA</span></button>
+  </nav>
+
+  <!-- Overlay IA a pantalla completa -->
+  <div class="ia-overlay" id="iaOverlay">
+    <div class="iao-head"><span>🤖 Asistente</span><button id="iaoClose">✕</button></div>
+    <div class="iao-msgs" id="iaoMsgs"></div>
+    <div class="iao-input"><input type="text" id="iaoInput" placeholder="Pregunta sobre precios…"><button id="iaoSend">➤</button></div>
+  </div>
+</div>
+
+<script src="../comun/datos.js"></script>
+<script src="../comun/ui.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

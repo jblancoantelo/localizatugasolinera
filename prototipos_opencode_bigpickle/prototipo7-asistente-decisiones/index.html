@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#4f46e5">
+<title>Prototipo 7 · Asistente por decisiones — Gasolineras</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<!-- =============================================================================
+     Prototipo 7 · «Asistente por decisiones» — maqueta interactiva con datos fake
+     -----------------------------------------------------------------------------
+     NO forma parte de la app real: es un prototipo de rediseño que vive en
+     prototipos_opencode_bigpickle/. Todo funciona abriendo el archivo por file://
+     (sin módulos ES, sin CDN y con SVG inline).
+     ========================================================================== -->
+<div class="marco">
+  <div class="cinta" aria-hidden="true">PROTOTIPO 7 · «Asistente por decisiones» · datos simulados</div>
+
+  <!-- ============================ CABECERA ============================ -->
+  <header class="cabecera">
+    <span class="cabecera-logo" aria-hidden="true">A</span>
+    <span class="cabecera-texto">
+      <strong>Asistente de repostaje</strong>
+      <small id="cabeceraSub">Madrid · Gasolina 95 E5</small>
+    </span>
+    <span class="cabecera-chip" id="cabeceraChip">Sin alertas activas</span>
+  </header>
+
+  <!-- ============================ CUERPO ============================ -->
+  <div class="cuerpo">
+    <!-- La navegación es única: abajo en móvil y raíl lateral en PC -->
+    <nav class="nav" id="navPrincipal" aria-label="Navegación principal"></nav>
+
+    <main class="contenido" id="contenido">
+
+      <!-- ---------- VISTA 1 · INICIO (asistente por pasos) ---------- -->
+      <section class="vista activa" id="vista-inicio" data-vista="inicio" aria-label="Asistente de decisiones">
+        <div class="lienzo" id="lienzoAsistente"></div>
+      </section>
+
+      <!-- ---------- VISTA 2 · MAPA ---------- -->
+      <section class="vista" id="vista-mapa" data-vista="mapa" aria-label="Mapa de estaciones">
+        <div class="mapa-caja">
+          <div class="mapa" id="mapaPrincipal">
+            <div class="mapa-fondo" id="mapaFondo" aria-hidden="true"></div>
+            <svg class="mapa-ruta" id="mapaRuta" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+            <div class="mapa-marcadores" id="mapaMarcadores"></div>
+            <div class="mapa-hud">
+              <span class="mapa-leyenda" id="mapaLeyenda"><!-- dinámica --></span>
+            </div>
+            <div class="mapa-zoom">
+              <button data-zoom="mas" aria-label="Acercar el mapa" title="Acercar">+</button>
+              <button data-zoom="menos" aria-label="Alejar el mapa" title="Alejar">−</button>
+              <button data-zoom="centrar" aria-label="Centrar el mapa" title="Centrar">◎</button>
+            </div>
+          </div>
+          <div class="mapa-pie">
+            <span class="mapa-pie-texto" id="mapaResumen">—</span>
+            <button class="btn btn-secundario" data-accion="ir-explorar">Ver en lista</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- VISTA 3 · EXPLORAR (lista con filtros) ---------- -->
+      <section class="vista" id="vista-explorar" data-vista="explorar" aria-label="Explorar estaciones">
+        <div class="explorar-barra">
+          <label class="campo">
+            <span class="campo-etq">Provincia</span>
+            <select id="filtroProv" aria-label="Filtrar por provincia"></select>
+          </label>
+          <label class="campo">
+            <span class="campo-etq">Combustible</span>
+            <select id="filtroFuel" aria-label="Filtrar por combustible"></select>
+          </label>
+          <div class="segmentado" role="group" aria-label="Ordenar por">
+            <button data-orden="precio" class="on" aria-pressed="true">Precio</button>
+            <button data-orden="dist" aria-pressed="false">Distancia</button>
+            <button data-orden="marca" aria-pressed="false">Marca</button>
+          </div>
+          <label class="campo campo-buscar">
+            <span class="campo-etq">Buscar</span>
+            <input type="search" id="filtroTexto" placeholder="Localidad, calle o marca" aria-label="Buscar estación">
+          </label>
+        </div>
+        <div class="explorar-lista" id="explorarLista"></div>
+      </section>
+
+      <!-- ---------- VISTA 4 · IA ---------- -->
+      <section class="vista vista-ia" id="vista-ia" data-vista="ia" aria-label="Chat de IA">
+        <div class="ia-pills" id="iaPills" role="tablist" aria-label="Proveedor de IA"></div>
+        <div class="ia-cabecera" id="iaCabecera"></div>
+        <div class="ia-mensajes" id="iaMensajes" role="log" aria-live="polite"></div>
+        <form class="ia-form" id="iaForm">
+          <input type="text" id="iaInput" placeholder="Pregunta por precios, estaciones o tendencias…" aria-label="Mensaje para la IA" autocomplete="off">
+          <button type="submit" class="btn btn-primario" id="iaEnviar">Enviar</button>
+        </form>
+      </section>
+
+      <!-- ---------- VISTA 5 · CONFIG ---------- -->
+      <section class="vista vista-config" id="vista-config" data-vista="config" aria-label="Configuración">
+        <div class="config-lista" id="configLista"></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- ==================== DETALLE DE ESTACIÓN (superpuesto) ==================== -->
+<div class="detalle" id="detalle" hidden>
+  <div class="detalle-caja" role="dialog" aria-modal="true" aria-labelledby="detTitulo">
+    <header class="detalle-cabecera">
+      <button class="detalle-cerrar" id="detCerrar" aria-label="Cerrar detalle">✕</button>
+      <span class="detalle-marca" id="detMarca">—</span>
+      <h2 class="detalle-titulo" id="detTitulo">—</h2>
+      <div class="detalle-precio" id="detPrecio"></div>
+      <div class="detalle-meta" id="detMeta"></div>
+      <div class="detalle-acciones">
+        <button class="btn-accion" id="detFav">☆ Favorita</button>
+        <button class="btn-accion" id="detRuta">Cómo llegar</button>
+        <button class="btn-accion" id="detCompartir">Compartir</button>
+        <button class="btn-accion" id="detLlamar">Llamar</button>
+      </div>
+    </header>
+    <div class="detalle-cuerpo" id="detCuerpo"></div>
+  </div>
+</div>
+
+<!-- Aviso breve (toast) -->
+<div class="aviso" id="aviso" role="status" aria-live="polite" hidden></div>
+
+<script src="../shared/datos-fake.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

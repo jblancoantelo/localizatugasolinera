@@ -1,0 +1,166 @@
+{
+  "prototipo1-mapa-hojas": {
+    "filtroProvincia": "n/a",
+    "filtroCombustible": "n/a",
+    "busqueda": "si",
+    "favoritos": "si",
+    "detalle": "si",
+    "detalleCanvas": "si",
+    "detalleSelectores": "si",
+    "notas": [
+      "detalle: canvas visibles=1 pintados=1 selects=histFuel,histDias",
+      "ia: burbujas 4→8",
+      "config: {\"paginacion\":true,\"cache\":true,\"push\":true,\"claves\":true,\"version\":true,\"logs\":true}"
+    ],
+    "ia": "si",
+    "iaRespuesta": "si",
+    "config": "6/6",
+    "mapa": "si",
+    "mapaDetalle": "marcad=28 estilos=0 leyenda=si zoom=2",
+    "errores": []
+  },
+  "prototipo2-escritorio-sala-de-control": {
+    "filtroProvincia": "n/a",
+    "filtroCombustible": "n/a",
+    "busqueda": "n/a",
+    "favoritos": "si",
+    "detalle": "si",
+    "detalleCanvas": "NO",
+    "detalleSelectores": "si",
+    "notas": [
+      "detalle: canvas visibles=0 pintados=0 selects=mapaEstilo,ordenLista,histCombustible,histDias",
+      "ia: burbujas 4→12",
+      "config: {\"paginacion\":true,\"cache\":true,\"push\":true,\"claves\":true,\"version\":true,\"logs\":true}"
+    ],
+    "ia": "si",
+    "iaRespuesta": "si",
+    "config": "6/6",
+    "mapa": "si",
+    "mapaDetalle": "marcad=3 estilos=1 leyenda=si zoom=2",
+    "errores": []
+  },
+  "prototipo3-lista-tarjetas": {
+    "filtroProvincia": "si",
+    "filtroCombustible": "si",
+    "busqueda": "si",
+    "favoritos": "si",
+    "detalle": "si",
+    "detalleCanvas": "NO",
+    "detalleSelectores": "NO",
+    "notas": [
+      "detalle: canvas visibles=0 pintados=0 selects=histCombustible",
+      "ia: burbujas 4→6",
+      "config: {\"paginacion\":false,\"cache\":false,\"push\":false,\"claves\":false,\"version\":false,\"logs\":false}"
+    ],
+    "ia": "si",
+    "iaRespuesta": "si",
+    "config": "0/6",
+    "mapa": "si",
+    "mapaDetalle": "marcad=5 estilos=0 leyenda=si zoom=0",
+    "errores": []
+  },
+  "prototipo4-modo-noche-conduccion": {
+    "filtroProvincia": "si",
+    "filtroCombustible": "si",
+    "busqueda": "si",
+    "favoritos": "si",
+    "detalle": "si",
+    "detalleCanvas": "NO",
+    "detalleSelectores": "si",
+    "notas": [
+      "detalle: canvas visibles=0 pintados=0 selects=selProv,selLocalidad,selCombustible,selOrden,detCombSel,detDiasSel",
+      "ia: burbujas 4→6",
+      "config: {\"paginacion\":true,\"cache\":true,\"push\":true,\"claves\":true,\"version\":true,\"logs\":true}"
+    ],
+    "ia": "si",
+    "iaRespuesta": "si",
+    "config": "6/6",
+    "mapa": "si",
+    "mapaDetalle": "marcad=5 estilos=0 leyenda=si zoom=2",
+    "errores": []
+  },
+  "prototipo5-split-comparador": {
+    "filtroProvincia": "si",
+    "filtroCombustible": "si",
+    "busqueda": "si",
+    "favoritos": "si",
+    "detalle": "si",
+    "detalleCanvas": "si",
+    "detalleSelectores": "si",
+    "notas": [
+      "detalle: canvas visibles=1 pintados=1 selects=fProvincia,fLocalidad,fCombustible,ordenSel,pageSizeSel,detFuel,detDias",
+      "ia: burbujas 18→26",
+      "config: {\"paginacion\":true,\"cache\":true,\"push\":true,\"claves\":true,\"version\":true,\"logs\":true}"
+    ],
+    "ia": "si",
+    "iaRespuesta": "si",
+    "config": "6/6",
+    "mapa": "si",
+    "mapaDetalle": "marcad=1 estilos=1 leyenda=no zoom=2",
+    "errores": []
+  },
+  "prototipo6-gestos-atajos": {
+    "filtroProvincia": "n/a",
+    "filtroCombustible": "n/a",
+    "busqueda": "n/a",
+    "favoritos": "si",
+    "detalle": "si",
+    "detalleCanvas": "si",
+    "detalleSelectores": "si",
+    "notas": [
+      "detalle: canvas visibles=1 pintados=1 selects=histFuel,histDias",
+      "ia: burbujas 4→8",
+      "config: {\"paginacion\":true,\"cache\":true,\"push\":true,\"claves\":true,\"version\":true,\"logs\":true}"
+    ],
+    "ia": "si",
+    "iaRespuesta": "si",
+    "config": "6/6",
+    "mapa": "si",
+    "mapaDetalle": "marcad=28 estilos=0 leyenda=si zoom=2",
+    "errores": []
+  },
+  "prototipo7-asistente-decisiones": {
+    "filtroProvincia": "NO",
+    "notas": [
+      "filtroProvincia: sin reacción (filas=6)",
+      "filtroCombustible: sin reacción (filas=6)",
+      "detalle: canvas visibles=1 pintados=1 selects=histFuel,histDias",
+      "ia: burbujas 4→8",
+      "config: {\"paginacion\":true,\"cache\":true,\"push\":true,\"claves\":false,\"version\":true,\"logs\":true}"
+    ],
+    "filtroCombustible": "NO",
+    "busqueda": "n/a",
+    "favoritos": "UI",
+    "detalle": "si",
+    "detalleCanvas": "si",
+    "detalleSelectores": "si",
+    "ia": "si",
+    "iaRespuesta": "si",
+    "config": "5/6",
+    "mapa": "si",
+    "mapaDetalle": "marcad=5 estilos=0 leyenda=si zoom=2",
+    "errores": []
+  },
+  "prototipo8-panel-de-datos": {
+    "filtroProvincia": "NO",
+    "notas": [
+      "filtroProvincia: sin reacción (filas=15)",
+      "filtroCombustible: sin reacción (filas=15)",
+      "detalle: canvas visibles=2 pintados=2 selects=selProv,selFuel,selDias,fichaFuel,fichaDias",
+      "ia: burbujas 4→8",
+      "config: {\"paginacion\":true,\"cache\":true,\"push\":true,\"claves\":true,\"version\":true,\"logs\":true}"
+    ],
+    "filtroCombustible": "NO",
+    "busqueda": "n/a",
+    "favoritos": "UI",
+    "detalle": "si",
+    "detalleCanvas": "si",
+    "detalleSelectores": "si",
+    "ia": "si",
+    "iaRespuesta": "si",
+    "config": "6/6",
+    "mapa": "si",
+    "mapaDetalle": "marcad=5 estilos=0 leyenda=si zoom=0",
+    "errores": []
+  }
+}

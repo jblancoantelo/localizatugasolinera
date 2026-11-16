@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>C1 · Card Flow — Prototipo</title>
+<link rel="stylesheet" href="../comun/base.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ======== BARRA SUPERIOR ======== -->
+  <header class="topbar">
+    <div class="topbar-row">
+      <div class="topbar-loc">
+        <span class="topbar-kicker">Estás en</span>
+        <button class="topbar-prov" id="provBtn">📍 Madrid <i class="ico chev"><svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z" fill="currentColor"/></svg></i></button>
+      </div>
+      <div class="topbar-acts">
+        <button class="icon-btn" id="pushBtn" title="Notificaciones">🔔</button>
+        <button class="icon-btn" id="themeBtn" title="Cambiar vista mapa">🗺️</button>
+      </div>
+    </div>
+    <button class="search-pill" id="searchPill">
+      <i class="ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></i>
+      Buscar estación, calle o localidad
+    </button>
+    <div class="chips-row scroll-x" id="fuelChips"></div>
+  </header>
+
+  <!-- ======== CONTENIDO ======== -->
+  <main class="views" id="views">
+
+    <!-- LISTA -->
+    <section class="view view-lista active" id="v-lista">
+      <div class="list-head">
+        <div>
+          <h2>Más baratas cerca</h2>
+          <p class="list-sub" id="listSub">14 estaciones · actualizado hace 12 min</p>
+        </div>
+        <button class="sort-btn" id="sortBtn">Precio ▲</button>
+      </div>
+      <div class="cards" id="cards"></div>
+    </section>
+
+    <!-- MAPA -->
+    <section class="view view-mapa" id="v-mapa">
+      <div class="map-holder" id="mapHolder"></div>
+      <button class="map-fab" id="mapToList">📋 Lista</button>
+    </section>
+
+    <!-- FAVORITOS -->
+    <section class="view view-favs" id="v-favs">
+      <div class="list-head"><div><h2>Favoritas</h2><p class="list-sub">Te avisamos si bajan de precio</p></div></div>
+      <div class="cards" id="favCards"></div>
+      <div class="empty" id="favEmpty" style="display:none">
+        <div class="empty-emoji">⭐</div>
+        <p>Añade estaciones a favoritas para seguir sus precios y recibir avisos de bajadas.</p>
+      </div>
+    </section>
+
+    <!-- IA -->
+    <section class="view view-ia" id="v-ia">
+      <div class="ia-top">
+        <div class="ia-title">🤖 Asistente de precios</div>
+        <div class="ia-chips scroll-x" id="iaChips"></div>
+      </div>
+      <div class="ia-msgs" id="iaMsgs"></div>
+      <div class="ia-input-row">
+        <input type="text" id="iaInput" placeholder="Pregunta sobre precios…">
+        <button id="iaSend">Enviar</button>
+      </div>
+    </section>
+
+    <!-- AJUSTES -->
+    <section class="view view-ajustes" id="v-ajustes">
+      <div class="list-head"><div><h2>Ajustes</h2><p class="list-sub">Notificaciones, caché y IA</p></div></div>
+      <div class="settings" id="settings"></div>
+    </section>
+  </main>
+
+  <!-- ======== NAV INFERIOR ======== -->
+  <nav class="bottomnav" id="bottomnav">
+    <button class="bn-item active" data-view="lista"><span class="bn-ico">📋</span><span>Lista</span></button>
+    <button class="bn-item" data-view="mapa"><span class="bn-ico">🗺️</span><span>Mapa</span></button>
+    <button class="bn-item" data-view="favs"><span class="bn-ico">⭐</span><span>Favoritas</span></button>
+    <button class="bn-item" data-view="ia"><span class="bn-ico">🤖</span><span>IA</span></button>
+    <button class="bn-item" data-view="ajustes"><span class="bn-ico">⚙️</span><span>Ajustes</span></button>
+  </nav>
+
+  <!-- ======== BOTTOM SHEET DETALLE ======== -->
+  <div class="sheet-backdrop" id="sheetBackdrop"></div>
+  <div class="sheet" id="sheet" data-snap="none">
+    <div class="sheet-grab" id="sheetGrab"><span></span></div>
+    <button class="sheet-close" id="sheetClose">✕</button>
+    <div class="sheet-body scroll-y" id="sheetBody"></div>
+  </div>
+
+</div>
+<script src="../comun/datos.js"></script>
+<script src="../comun/ui.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

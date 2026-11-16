@@ -1,0 +1,813 @@
+/* =============================================================================
+ * Prototipo 1 · «Mapa + hojas» — hoja de estilo
+ * -----------------------------------------------------------------------------
+ * Enfoque: móvil primero (390×844), con hojas (bottom sheets) arrastrables que
+ * evitan el problema actual de meter 12 controles diminutos en una toolbar.
+ * A partir de 1000 px la misma maqueta se reorganiza: la hoja de lista pasa a
+ * ser panel lateral y las hojas emergentes se convierten en diálogos/drawer.
+ *
+ * Decisiones de diseño destacadas:
+ *  - Tokens en :root (color, radios, sombras, alturas) para mantener coherencia.
+ *  - Tamaño de letra base 15 px y objetivos táctiles ≥44 px (48 en acciones).
+ *  - El PRECIO es el protagonista: tipografía tabular monoespaciada y color
+ *    semántico (verde/ámbar/rojo) reutilizado en marcadores, tarjetas y leyenda.
+ *  - Nada de sombras difusas exageradas: elevación en 2 niveles y bordes 1 px.
+ *  - safe-area de iOS respetada en las barras fijas inferior/superior.
+ * ========================================================================== */
+
+/* ==== Tokens ==== */
+:root {
+  --bg: #eef1f6;
+  --sup: #ffffff;
+  --sup-2: #f7f9fc;
+  --sup-3: #edf1f6;
+  --txt: #101a24;
+  --txt-2: #5c6b7a;
+  --txt-3: #8695a4;
+  --linea: #e3e9f0;
+  --linea-fuerte: #ccd8e4;
+
+  --azul: #1a73e8;
+  --azul-osc: #1458ba;
+  --azul-sup: #e8f0fe;
+
+  --verde: #1b8a4b;
+  --verde-txt: #146b3c;   /* verde legible sobre tinte claro (AA) */
+  --verde-sup: #e6f6ec;
+  --ambar: #b26a00;
+  --ambar-txt: #8a5200;
+  --ambar-sup: #fff4e0;
+  --rojo: #c0392b;
+  --rojo-sup: #fdecea;
+
+  --radio: 18px;
+  --radio-s: 12px;
+  --sombra-1: 0 1px 2px rgba(16, 26, 36, .06), 0 2px 10px rgba(16, 26, 36, .07);
+  --sombra-2: 0 14px 40px rgba(16, 26, 36, .18);
+
+  --nav-h: 64px;
+  --info-h: 30px;
+  --cinta-h: 22px;
+  --t-activa: .16s cubic-bezier(.2, .7, .3, 1);
+  --fuente: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: var(--fuente);
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--txt);
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+  overflow: hidden;
+}
+
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: none; }
+:focus-visible { outline: 2px solid var(--azul); outline-offset: 2px; border-radius: 6px; }
+
+.visualmente-oculto {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ==== Marco de la maqueta ==== */
+.marco {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-width: 100%;
+  background: var(--bg);
+}
+
+.cinta {
+  flex: 0 0 auto;
+  height: var(--cinta-h);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10.5px; letter-spacing: .09em; font-weight: 700;
+  color: #7b8794;
+  background: repeating-linear-gradient(45deg, #e6ebf1, #e6ebf1 8px, #dee5ec 8px, #dee5ec 16px);
+}
+
+/* =============================================================================
+ * Cabecera: buscador siempre visible + chips de filtro
+ * ========================================================================== */
+.barra-superior {
+  flex: 0 0 auto;
+  background: var(--sup);
+  border-bottom: 1px solid var(--linea);
+  padding: max(env(safe-area-inset-top), 8px) 10px 0;
+  position: relative;
+  z-index: 30;
+}
+
+.barra-fila { display: flex; align-items: center; gap: 8px; }
+
+.icono-btn {
+  width: 44px; height: 44px; flex: 0 0 auto;
+  display: grid; place-items: center;
+  border-radius: 14px;
+  color: var(--azul);
+  background: var(--azul-sup);
+  transition: background var(--t-activa), transform var(--t-activa);
+}
+.icono-btn:active { transform: scale(.94); }
+.icono-btn svg { width: 21px; height: 21px; }
+
+.buscador {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 8px;
+  height: 44px; padding: 0 10px;
+  background: var(--sup-3);
+  border: 1px solid transparent;
+  border-radius: 14px;
+  transition: border-color var(--t-activa), background var(--t-activa);
+}
+.buscador:focus-within { background: var(--sup); border-color: var(--azul); }
+.buscador input {
+  flex: 1; min-width: 0; height: 100%;
+  border: none; background: none; outline: none; font-size: 14.5px;
+}
+.buscador input::placeholder { color: var(--txt-3); }
+.buscador-lupa {
+  width: 17px; height: 17px; flex: 0 0 auto; border-radius: 50%;
+  border: 2px solid var(--txt-3); position: relative;
+}
+.buscador-lupa::after {
+  content: ""; position: absolute; right: -4px; bottom: -3px;
+  width: 7px; height: 2px; background: var(--txt-3); transform: rotate(45deg); border-radius: 2px;
+}
+.buscador-limpiar {
+  width: 26px; height: 26px; border-radius: 50%; flex: 0 0 auto;
+  background: var(--linea); color: var(--txt-2); font-size: 12px;
+}
+
+/* Chips de filtros: scroll horizontal con inercia, sin barra visible */
+.fila-chips {
+  display: flex; gap: 7px; align-items: center;
+  overflow-x: auto; overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  padding: 9px 2px 10px;
+  scrollbar-width: none;
+}
+.fila-chips::-webkit-scrollbar { display: none; }
+
+.chip {
+  flex: 0 0 auto; scroll-snap-align: start;
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 12px;
+  border-radius: 999px;
+  background: var(--sup-3);
+  border: 1px solid transparent;
+  color: var(--txt);
+  font-size: 13.5px; font-weight: 600;
+  white-space: nowrap;
+  transition: background var(--t-activa), color var(--t-activa), border-color var(--t-activa);
+}
+.chip .chev { color: var(--txt-3); font-size: 11px; }
+.chip.activo { background: var(--azul); color: #fff; }
+.chip.activo .chev { color: rgba(255, 255, 255, .8); }
+.chip.sutil { background: none; border-color: var(--linea-fuerte); color: var(--txt-2); font-weight: 500; }
+.chip.sutil:active { background: var(--sup-3); }
+.chip .quitar {
+  display: grid; place-items: center;
+  width: 18px; height: 18px; margin-right: -4px;
+  border-radius: 50%; background: rgba(255, 255, 255, .28); font-size: 10px;
+}
+
+/* Navegación de escritorio (oculta en móvil) */
+.nav-superior { display: none; gap: 4px; padding: 4px 0 0; }
+.nav-superior button {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 38px; padding: 0 14px; border-radius: 10px 10px 0 0;
+  font-size: 14px; font-weight: 600; color: var(--txt-2);
+}
+.nav-superior button.activo { background: var(--sup-2); color: var(--azul-osc); box-shadow: inset 0 -2px 0 var(--azul); }
+.nav-superior svg { width: 17px; height: 17px; }
+
+/* =============================================================================
+ * Contenido y vistas
+ * ========================================================================== */
+.contenido { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.vista { display: none; flex: 1; min-height: 0; flex-direction: column; }
+.vista.activa { display: flex; }
+
+/* =============================================================================
+ * Mapa fake (SVG + marcadores posicionados por %) con zoom y arrastre
+ * ========================================================================== */
+.mapa {
+  position: relative; flex: 1; min-height: 0; overflow: hidden;
+  background: #dfe7ee;
+  touch-action: none;                 /* lo gestionamos con pointer events */
+  cursor: grab;
+}
+.mapa.arrastrando { cursor: grabbing; }
+.mapa-fondo {
+  position: absolute; inset: -30%;
+  transform-origin: 50% 50%;
+  transition: transform .25s var(--t-activa);
+}
+.mapa-fondo svg { width: 100%; height: 100%; display: block; }
+.mapa-marcadores { position: absolute; inset: 0; }
+
+.marcador {
+  position: absolute; z-index: 2;
+  transform: translate(-50%, -50%);
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 7px 10px;   /* altura ≥32 px: objetivo táctil real sobre el mapa */
+  border-radius: 999px;
+  background: var(--sup);
+  border: 2px solid var(--c, var(--azul));
+  color: var(--txt);
+  font-size: 12.5px; font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  box-shadow: var(--sombra-1);
+  transition: transform var(--t-activa), background var(--t-activa), color var(--t-activa);
+}
+.marcador:hover { z-index: 4; transform: translate(-50%, -50%) scale(1.08); }
+.marcador.sel { background: var(--c, var(--azul)); color: #fff; z-index: 5; transform: translate(-50%, -50%) scale(1.12); }
+.marcador.fav::after { content: "★"; font-size: 10px; }
+.marcador-yo {
+  position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px;
+  border-radius: 50%; background: var(--azul); border: 3px solid #fff;
+  box-shadow: 0 0 0 8px rgba(26, 115, 232, .18); z-index: 1;
+}
+
+.mapa-hud {
+  position: absolute; top: 10px; left: 10px; right: 10px;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+  pointer-events: none;
+}
+.mapa-hud > * { pointer-events: auto; }
+.hud-btn {
+  height: 38px; padding: 0 13px; border-radius: 999px;
+  background: var(--sup); box-shadow: var(--sombra-1);
+  font-size: 13.5px; font-weight: 600;
+}
+.leyenda {
+  display: inline-flex; gap: 10px; align-items: center;
+  height: 38px; padding: 0 12px; border-radius: 999px;
+  background: var(--sup); box-shadow: var(--sombra-1);
+  font-size: 12.5px; color: var(--txt-2); font-weight: 600;
+}
+.leyenda i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+.p-verde { background: var(--verde); }
+.p-naranja { background: var(--ambar); }
+.p-rojo { background: var(--rojo); }
+.txt-verde { color: var(--verde); }
+.txt-naranja { color: var(--ambar); }
+.txt-rojo { color: var(--rojo); }
+
+/* Zoom arriba a la derecha: así no choca nunca con la hoja de lista */
+.mapa-zoom {
+  position: absolute; right: 10px; top: 58px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.mapa-zoom button {
+  width: 42px; height: 42px; border-radius: 14px;
+  background: var(--sup); box-shadow: var(--sombra-1);
+  font-size: 19px; font-weight: 700; color: var(--txt-2);
+  display: grid; place-items: center;
+}
+.mapa-zoom button:active { background: var(--sup-3); }
+
+/* =============================================================================
+ * Hojas (bottom sheets) — arrastre por pointer events, 3 alturas
+ * La caja de la hoja mide SIEMPRE lo que se ve (height = --alto) y la
+ * aparición se anima con transform, para que el hit-testing sea correcto.
+ * ========================================================================== */
+.hoja {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  z-index: 60;
+  background: var(--sup);
+  border-radius: 22px 22px 0 0;
+  box-shadow: var(--sombra-2);
+  height: var(--alto, 34%);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  transform: translateY(100%);
+  transition: transform .28s cubic-bezier(.2, .8, .25, 1), height .28s cubic-bezier(.2, .8, .25, 1);
+  will-change: transform, height;
+}
+.hoja.abierta { transform: translateY(0); }
+.hoja.arrastrando { transition: none; }
+.hoja[hidden] { display: none; }
+
+.hoja-agarre {
+  flex: 0 0 auto; height: 32px; width: 100%;   /* objetivo táctil ≥32 px */
+  display: grid; place-items: center;
+  cursor: grab; touch-action: none;
+}
+.hoja-agarre::before {
+  content: ""; width: 42px; height: 4px; border-radius: 3px; background: var(--linea-fuerte);
+}
+.hoja-agarre:active { cursor: grabbing; }
+
+.hoja-cabecera {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 10px;
+  padding: 2px 14px 10px; border-bottom: 1px solid var(--linea);
+}
+.hoja-titulos { min-width: 0; }
+.hoja-titulos strong { display: block; font-size: 15.5px; }
+.hoja-sub { font-size: 12.5px; color: var(--txt-2); }
+.hoja-acciones { margin-left: auto; display: flex; gap: 6px; }
+.mini-btn {
+  height: 34px; padding: 0 12px; border-radius: 999px;
+  background: var(--sup-3); font-size: 13px; font-weight: 600; color: var(--txt);
+}
+.mini-btn.activo { background: var(--azul-sup); color: var(--azul); }
+
+.hoja-cuerpo { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 10px 16px; }
+
+/* La hoja de lista del mapa está siempre presente: no se abre ni se cierra */
+#hojaLista {
+  --alto: 36%;
+  bottom: calc(var(--nav-h) + var(--info-h) + env(safe-area-inset-bottom));
+  transform: translateY(0);
+}
+#hojaLista.medio { --alto: 58%; }
+#hojaLista.lleno { --alto: 100%; }
+
+/* Detalle y opciones arrancan más abajo para poder cerrarlas deslizando */
+#hojaDetalle { z-index: 80; --alto: 92%; max-width: 100%; }
+#hojaOpciones { z-index: 90; --alto: 88%; }
+
+.velo {
+  position: fixed; inset: 0; z-index: 70;
+  background: rgba(12, 20, 30, .42);
+  opacity: 0; transition: opacity .2s;
+}
+.velo.visible { opacity: 1; }
+.velo[hidden] { display: none; }
+
+/* =============================================================================
+ * Tarjetas de estación (lista y hoja)
+ * ========================================================================== */
+.tarjeta {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+  width: 100%; text-align: left;
+  padding: 13px 14px;
+  background: var(--sup);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  margin-bottom: 9px;
+  transition: border-color var(--t-activa), box-shadow var(--t-activa), transform var(--t-activa);
+}
+.tarjeta:hover { border-color: var(--linea-fuerte); box-shadow: var(--sombra-1); }
+.tarjeta:active { transform: scale(.995); }
+.tarjeta.sel { border-color: var(--azul); box-shadow: 0 0 0 3px rgba(26, 115, 232, .14); }
+.tarjeta.barata { background: linear-gradient(0deg, var(--verde-sup), var(--sup) 60%); }
+
+.tarjeta .fila-1 { grid-column: 1; display: flex; align-items: center; gap: 7px; min-width: 0; }
+.tarjeta .marca-logo {
+  width: 26px; height: 26px; flex: 0 0 auto; border-radius: 9px;
+  display: grid; place-items: center;
+  font-size: 11.5px; font-weight: 800; color: #fff; background: var(--txt-2);
+}
+.tarjeta .nombre { font-weight: 700; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tarjeta .precio {
+  grid-row: 1 / span 3; grid-column: 2;
+  align-self: center; text-align: right;
+  font-family: var(--mono); font-size: 24px; font-weight: 800;
+  font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+}
+.tarjeta .precio small { display: block; font-family: var(--fuente); font-size: 12px; font-weight: 600; color: var(--txt-2); letter-spacing: 0; }
+.tarjeta .meta { grid-column: 1; font-size: 12.5px; color: var(--txt-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tarjeta .etiquetas { grid-column: 1; display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.tarjeta .estrella {
+  width: 40px; height: 40px; border-radius: 12px; margin-left: auto;
+  display: grid; place-items: center; color: var(--txt-3); font-size: 18px;
+}
+.tarjeta .estrella.on { color: #f5a623; background: var(--ambar-sup); }
+
+.etiqueta {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 999px;
+  font-size: 12px; font-weight: 700;
+  background: var(--sup-3); color: var(--txt-2);
+}
+.etiqueta.ok { background: var(--verde-sup); color: var(--verde-txt); }
+.etiqueta.aviso { background: var(--ambar-sup); color: var(--ambar-txt); }
+.etiqueta.info { background: var(--azul-sup); color: var(--azul-osc); }
+
+/* Cabecera de grupo pegajosa al hacer scroll */
+.grupo-cabecera {
+  position: sticky; top: 0; z-index: 3;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 4px 8px; margin-bottom: 2px;
+  background: linear-gradient(var(--sup) 70%, rgba(255, 255, 255, .86));
+  font-size: 12.5px; font-weight: 700; color: var(--txt-2);
+  text-transform: uppercase; letter-spacing: .04em;
+}
+
+/* =============================================================================
+ * Vista LISTA
+ * ========================================================================== */
+.barra-pegajosa {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, .92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--linea);
+}
+.contador { font-size: 13px; color: var(--txt-2); font-weight: 600; }
+.contador b { color: var(--txt); font-size: 14.5px; }
+.pista-orden { font-size: 12px; color: var(--txt-3); margin-left: auto; }
+
+.segmentado { margin-left: auto; display: flex; background: var(--sup-3); border-radius: 999px; padding: 3px; }
+.segmentado button {
+  height: 32px; padding: 0 12px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 600; color: var(--txt-2);
+  transition: background var(--t-activa), color var(--t-activa);
+}
+.segmentado button.activo { background: var(--sup); color: var(--azul); box-shadow: var(--sombra-1); }
+
+.lista-tarjetas { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 12px 20px; }
+
+.btn-ancho {
+  margin: 0 12px 16px; height: 46px; border-radius: 14px;
+  background: var(--azul-sup); color: var(--azul); font-weight: 700;
+}
+
+.vacio {
+  margin: 40px auto; max-width: 320px; text-align: center; color: var(--txt-2);
+}
+.vacio .icono { font-size: 34px; display: block; margin-bottom: 8px; }
+.vacio h3 { font-size: 16px; color: var(--txt); margin-bottom: 6px; }
+.vacio p { font-size: 13.5px; margin-bottom: 14px; }
+.vacio button { height: 44px; padding: 0 18px; border-radius: 999px; background: var(--azul); color: #fff; font-weight: 700; }
+
+/* =============================================================================
+ * Vista AMBOS (mapa + tabla con paginación real)
+ * ========================================================================== */
+.ambos-mapa {
+  position: relative; flex: 0 0 40%; min-height: 150px; overflow: hidden;
+  background: #dfe7ee;
+}
+.ambos-mapa .mapa-fondo { position: absolute; inset: -30%; }
+.ambos-mapa .mapa-marcadores { position: absolute; inset: 0; }
+.tabla-envoltorio { flex: 1; min-height: 0; overflow: auto; }
+.tabla { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tabla thead th {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--sup-2); color: var(--txt-2);
+  font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em;
+  text-align: left; padding: 10px 10px; border-bottom: 1px solid var(--linea);
+  white-space: nowrap; cursor: pointer;
+}
+.tabla thead th .flecha { color: var(--azul); margin-left: 3px; }
+.tabla td { padding: 10px; border-bottom: 1px solid var(--linea); white-space: nowrap; }
+.tabla tbody tr { cursor: pointer; }
+.tabla tbody tr:nth-child(even) td { background: rgba(247, 249, 252, .7); }
+.tabla tbody tr:hover td { background: var(--azul-sup); }
+.tabla tbody tr.sel td { background: var(--azul-sup); box-shadow: inset 3px 0 0 var(--azul); }
+.tabla .celda-precio { font-family: var(--mono); font-weight: 800; font-variant-numeric: tabular-nums; }
+.tabla .celda-fav { width: 46px; text-align: center; }
+.tabla .fav {
+  width: 36px; height: 36px; border-radius: 10px; font-size: 16px; color: var(--txt-3);
+}
+.tabla .fav.on { color: #f5a623; background: var(--ambar-sup); }
+
+.paginacion {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 10px; border-top: 1px solid var(--linea); background: var(--sup);
+}
+.paginacion button { height: 38px; min-width: 38px; border-radius: 11px; background: var(--sup-3); font-weight: 700; }
+.paginacion button:disabled { opacity: .35; }
+.paginacion span { font-size: 12.5px; color: var(--txt-2); font-variant-numeric: tabular-nums; }
+
+/* =============================================================================
+ * Vista IA
+ * ========================================================================== */
+.vista-ia { background: var(--sup-2); }
+.ia-pills {
+  display: flex; gap: 6px; overflow-x: auto; padding: 10px; scrollbar-width: none;
+  border-bottom: 1px solid var(--linea); background: var(--sup);
+}
+.ia-pills::-webkit-scrollbar { display: none; }
+.ia-pill {
+  flex: 0 0 auto; height: 34px; padding: 0 13px; border-radius: 999px;
+  background: var(--sup-3); font-size: 13px; font-weight: 600; color: var(--txt-2);
+}
+.ia-pill.activo { background: var(--azul); color: #fff; }
+
+.ia-cabecera {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 9px 12px; background: var(--sup); border-bottom: 1px solid var(--linea);
+  font-size: 12.5px; color: var(--txt-2);
+}
+.ia-cabecera select { height: 34px; padding: 0 8px; border: 1px solid var(--linea); border-radius: 10px; font-size: 13px; background: var(--sup); }
+.ia-cabecera .ia-estado { margin-left: auto; font-weight: 600; }
+.ia-cabecera .ia-estado.ok { color: var(--verde); }
+.ia-cabecera .ia-estado.no { color: var(--ambar); }
+
+.ia-mensajes { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+.burbuja { max-width: 88%; padding: 10px 13px; border-radius: 16px; font-size: 14px; line-height: 1.5; }
+.burbuja.usuario { align-self: flex-end; background: var(--azul); color: #fff; border-bottom-right-radius: 6px; }
+.burbuja.ia { align-self: flex-start; background: var(--sup); border: 1px solid var(--linea); border-bottom-left-radius: 6px; }
+.burbuja.error { align-self: flex-start; background: var(--rojo-sup); color: var(--rojo); border: 1px solid #f6c9c4; }
+.burbuja.cargando { color: var(--txt-3); font-style: italic; }
+.burbuja .meta { margin-top: 7px; padding-top: 5px; border-top: 1px dashed var(--linea-fuerte); font-size: 11px; color: var(--txt-3); text-align: right; }
+.burbuja.proveedor { align-self: stretch; max-width: 100%; }
+.burbuja .proveedor-nombre { font-size: 11.5px; font-weight: 800; color: var(--azul); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+
+/* markdown básico */
+.burbuja h4 { font-size: 14.5px; margin: 8px 0 4px; }
+.burbuja p { margin: 0 0 6px; }
+.burbuja p:last-child { margin-bottom: 0; }
+.burbuja ul, .burbuja ol { margin: 4px 0 8px; padding-left: 20px; }
+.burbuja li { margin: 2px 0; }
+.burbuja code { background: rgba(16, 26, 36, .07); padding: 1px 5px; border-radius: 5px; font-family: var(--mono); font-size: .92em; }
+.burbuja table { border-collapse: collapse; margin: 6px 0; font-size: 13px; }
+.burbuja th, .burbuja td { border: 1px solid var(--linea-fuerte); padding: 4px 9px; text-align: left; }
+.burbuja th { background: var(--sup-2); }
+.burbuja blockquote { border-left: 3px solid var(--linea-fuerte); padding-left: 10px; color: var(--txt-2); }
+.burbuja hr { border: none; border-top: 1px solid var(--linea); margin: 8px 0; }
+
+.ia-entrada {
+  flex: 0 0 auto; display: flex; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: var(--sup); border-top: 1px solid var(--linea);
+}
+.ia-entrada input {
+  flex: 1; min-width: 0; height: 46px; padding: 0 14px;
+  border: 1px solid var(--linea-fuerte); border-radius: 14px; background: var(--sup-2);
+}
+.ia-entrada input:focus { outline: none; border-color: var(--azul); background: var(--sup); }
+.ia-entrada button { height: 46px; padding: 0 18px; border-radius: 14px; background: var(--azul); color: #fff; font-weight: 700; }
+.ia-entrada button:disabled { opacity: .5; }
+
+/* =============================================================================
+ * Vista CONFIG (acordeón)
+ * ========================================================================== */
+.vista-config { background: var(--sup-2); }
+.config-lista { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 12px 24px; }
+.tarjeta-config {
+  background: var(--sup); border: 1px solid var(--linea); border-radius: var(--radio);
+  margin-bottom: 10px; overflow: hidden;
+}
+.tarjeta-config > summary {
+  list-style: none; cursor: pointer;
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px; font-weight: 700; font-size: 14.5px;
+}
+.tarjeta-config > summary::-webkit-details-marker { display: none; }
+.tarjeta-config > summary .ic { font-size: 17px; }
+.tarjeta-config > summary .chev { margin-left: auto; color: var(--txt-3); transition: transform var(--t-activa); }
+.tarjeta-config[open] > summary .chev { transform: rotate(90deg); }
+.tarjeta-config .cuerpo { padding: 0 14px 14px; font-size: 13.5px; color: var(--txt-2); }
+.tarjeta-config .cuerpo > * + * { margin-top: 9px; }
+.tarjeta-config label { display: flex; align-items: center; gap: 8px; }
+.tarjeta-config input[type="number"], .tarjeta-config input[type="text"], .tarjeta-config input[type="password"], .tarjeta-config select {
+  height: 38px; padding: 0 10px; border: 1px solid var(--linea-fuerte); border-radius: 10px; background: var(--sup); min-width: 0;
+}
+.tarjeta-config input[type="number"] { width: 78px; }
+.tarjeta-config .btn-sec {
+  height: 40px; padding: 0 14px; border-radius: 11px; background: var(--sup-3); font-weight: 600; color: var(--txt);
+}
+.tarjeta-config .btn-peligro { background: var(--rojo-sup); color: var(--rojo); }
+.tarjeta-config .btn-primario { background: var(--azul); color: #fff; }
+.tarjeta-config .mini-cabs { display: flex; gap: 6px; }
+.tarjeta-config .mini-cabs button { height: 34px; padding: 0 12px; border-radius: 999px; background: var(--sup-3); font-size: 12.5px; font-weight: 600; }
+.tarjeta-config .mini-cabs button.activo { background: var(--azul); color: #fff; }
+.tarjeta-config .consola {
+  font-family: var(--mono); font-size: 11.5px; line-height: 1.55;
+  background: var(--sup-2); border: 1px solid var(--linea); border-radius: 10px;
+  padding: 8px 10px; max-height: 190px; overflow-y: auto; color: var(--txt-2);
+}
+.tarjeta-config .consola b { color: var(--txt); }
+.tarjeta-config .consola .ko { color: var(--rojo); }
+.tarjeta-config .fila-borrar { display: flex; align-items: center; gap: 8px; }
+.tarjeta-config .fila-borrar input { flex: 1; }
+.tarjeta-config .fila-borrar button { width: 40px; height: 40px; border-radius: 11px; background: var(--rojo-sup); color: var(--rojo); }
+.rejilla-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.rejilla-2 label { flex-direction: column; align-items: flex-start; font-size: 12.5px; }
+.rejilla-2 input { width: 100%; }
+
+/* =============================================================================
+ * Detalle de estación
+ * ========================================================================== */
+.detalle-cabecera { flex: 0 0 auto; padding: 4px 16px 14px; background: var(--sup); position: relative; }
+.detalle-cerrar {
+  position: absolute; top: 0; right: 12px;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--sup-3); color: var(--txt-2); font-size: 14px;
+}
+.detalle-marca { font-size: 12.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--txt-3); }
+.detalle-titulo { font-size: 20px; line-height: 1.25; margin: 2px 0 8px; padding-right: 46px; }
+.detalle-precio {
+  display: flex; align-items: baseline; gap: 8px;
+  font-family: var(--mono); font-size: 42px; font-weight: 800; letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums;
+}
+.detalle-precio small { font-family: var(--fuente); font-size: 13px; font-weight: 600; color: var(--txt-2); letter-spacing: 0; }
+.detalle-meta { font-size: 13px; color: var(--txt-2); margin-top: 4px; }
+.detalle-acciones { display: flex; gap: 8px; margin-top: 12px; }
+.accion {
+  flex: 1; height: 46px; border-radius: 14px;
+  background: var(--sup-3); font-size: 13.5px; font-weight: 700; color: var(--txt);
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.accion.on { background: var(--ambar-sup); color: var(--ambar); }
+.detalle-tabs { flex: 0 0 auto; display: flex; padding: 0 12px; background: var(--sup); border-bottom: 1px solid var(--linea); }
+.detalle-tab {
+  height: 44px; padding: 0 16px; font-size: 14px; font-weight: 600; color: var(--txt-2);
+  border-bottom: 2px solid transparent;
+}
+.detalle-tab.activa { color: var(--azul); border-bottom-color: var(--azul); }
+.detalle-cuerpo { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px calc(20px + env(safe-area-inset-bottom)); }
+.detalle-panel { display: none; }
+.detalle-panel.activa { display: block; }
+
+.lista-combustibles { display: flex; flex-direction: column; gap: 6px; }
+.combustible {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 13px; border: 1px solid var(--linea); border-radius: 13px;
+}
+.combustible.mejor { border-color: var(--verde); background: var(--verde-sup); }
+.combustible .nombre { font-weight: 600; font-size: 13.5px; }
+.combustible .importe { margin-left: auto; font-family: var(--mono); font-weight: 800; font-size: 17px; font-variant-numeric: tabular-nums; }
+
+.historico-controles { display: flex; gap: 8px; margin-bottom: 10px; }
+.historico-controles select { flex: 1; height: 40px; padding: 0 10px; border: 1px solid var(--linea-fuerte); border-radius: 11px; background: var(--sup); font-size: 13.5px; }
+.grafica-caja { position: relative; }
+#histCanvas { display: block; width: 100%; height: 190px; }
+.grafica-tooltip {
+  position: absolute; pointer-events: none; z-index: 4;
+  background: #101a24; color: #fff; border-radius: 9px;
+  padding: 5px 9px; font-size: 11.5px; line-height: 1.35;
+  transform: translate(-50%, -112%); white-space: nowrap;
+}
+.historico-resumen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.historico-resumen div { background: var(--sup-2); border: 1px solid var(--linea); border-radius: 12px; padding: 9px 10px; }
+.historico-resumen dt { font-size: 11.5px; color: var(--txt-3); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.historico-resumen dd { font-family: var(--mono); font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* =============================================================================
+ * Hoja genérica de opciones
+ * ========================================================================== */
+.opciones-cabecera { flex: 0 0 auto; display: flex; align-items: center; padding: 0 16px 10px; }
+.opciones-cabecera h2 { font-size: 17px; }
+.opciones-cabecera button { margin-left: auto; position: static; }
+.opciones-cuerpo { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 12px 12px; }
+.opcion {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  padding: 12px; border-radius: 13px; text-align: left; font-size: 14.5px;
+}
+.opcion:hover { background: var(--sup-2); }
+.opcion .marca-check {
+  width: 22px; height: 22px; flex: 0 0 auto; border-radius: 7px;
+  border: 2px solid var(--linea-fuerte); display: grid; place-items: center; font-size: 12px; color: transparent;
+}
+.opcion.elegida .marca-check { background: var(--azul); border-color: var(--azul); color: #fff; }
+.opcion .cuenta { margin-left: auto; font-size: 12.5px; color: var(--txt-3); }
+.opciones-pie {
+  flex: 0 0 auto; display: flex; gap: 8px; padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--linea);
+}
+.opciones-pie button { flex: 1; height: 46px; border-radius: 14px; font-weight: 700; }
+.opciones-pie .aplicar { background: var(--azul); color: #fff; }
+.opciones-pie .limpiar { background: var(--sup-3); color: var(--txt-2); }
+.deslizador { width: 100%; }
+
+/* =============================================================================
+ * Barra de información + navegación inferior
+ * ========================================================================== */
+.info-barra {
+  flex: 0 0 auto;
+  min-height: var(--info-h);
+  display: flex; align-items: center; gap: 10px;
+  padding: 4px 12px;
+  font-size: 12px; color: var(--txt-2);
+  background: var(--sup); border-top: 1px solid var(--linea);
+}
+.info-datos { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+.nav-inferior {
+  flex: 0 0 auto;
+  display: flex;
+  background: var(--sup);
+  border-top: 1px solid var(--linea);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 40;
+}
+.nav-inferior button {
+  flex: 1; height: var(--nav-h);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  font-size: 12px; font-weight: 600; color: var(--txt-2);
+  position: relative;
+}
+.nav-inferior button svg { width: 23px; height: 23px; }
+.nav-inferior button.activo { color: var(--azul-osc); }
+.nav-inferior button.activo::before {
+  content: ""; position: absolute; top: 0; width: 26px; height: 3px; border-radius: 0 0 3px 3px; background: var(--azul);
+}
+.nav-inferior .insignia {
+  position: absolute; top: 12px; left: 50%; margin-left: 6px;
+  min-width: 17px; height: 17px; border-radius: 999px; background: var(--rojo); color: #fff;
+  font-size: 10.5px; font-weight: 700; display: grid; place-items: center; padding: 0 4px;
+}
+
+/* =============================================================================
+ * Aviso (toast)
+ * ========================================================================== */
+/* Selector por id: una .etiqueta.aviso de las tarjetas heredaría el
+   position:fixed y saldría de su sitio. */
+#aviso {
+  position: fixed; left: 50%; bottom: calc(var(--nav-h) + 22px);
+  transform: translate(-50%, 12px);
+  z-index: 200;
+  background: #101a24; color: #fff;
+  padding: 11px 16px; border-radius: 13px;
+  font-size: 13.5px; box-shadow: var(--sombra-2);
+  opacity: 0; transition: opacity .2s, transform .2s;
+  max-width: min(90vw, 420px); text-align: center;
+  /* Nunca intercepta toques: flota sobre hojas y botones. */
+  pointer-events: none;
+}
+#aviso.visible { opacity: 1; transform: translate(-50%, 0); }
+#aviso[hidden] { display: none; }
+
+/* =============================================================================
+ * ≥ 1000 px — aprovechar pantalla grande
+ *  - La hoja de lista se convierte en panel lateral estable (sin arrastre).
+ *  - Aparece la navegación horizontal en la cabecera.
+ *  - Detalle y opciones pasan a drawer/diálogo lateral centrado.
+ * ========================================================================== */
+@media (min-width: 1000px) {
+  .cinta { height: 20px; }
+  .barra-superior { padding: 10px 18px 0; }
+  .buscador { max-width: 520px; }
+  .buscador input { font-size: 14px; }
+  .fila-chips { padding: 10px 2px; }
+  .nav-superior { display: flex; }
+  .nav-inferior { display: none; }
+  .info-barra { padding: 4px 18px; }
+
+  #vista-mapa { flex-direction: row; gap: 14px; padding: 14px; }
+  #vista-mapa .mapa { border-radius: var(--radio); box-shadow: var(--sombra-1); }
+  .hoja-lista {
+    position: static; transform: none !important; height: auto;
+    flex: 0 0 400px; border-radius: var(--radio); box-shadow: var(--sombra-1);
+    border: 1px solid var(--linea); max-height: 100%;
+  }
+  .hoja-lista .hoja-agarre { display: none; }
+  .mapa-zoom { top: 58px; right: 14px; }
+
+  #vista-lista { max-width: 860px; margin: 0 auto; width: 100%; }
+  .lista-tarjetas { padding: 16px 16px 28px; }
+
+  #vista-ambos { flex-direction: row; gap: 14px; padding: 14px; }
+  .ambos-mapa { flex: 1 1 46%; border-radius: var(--radio); box-shadow: var(--sombra-1); }
+  #vista-ambos .tabla-envoltorio {
+    flex: 1 1 54%; border: 1px solid var(--linea); border-radius: var(--radio);
+    background: var(--sup); overflow: auto;
+  }
+  #vista-ambos .barra-pegajosa { border-radius: var(--radio) var(--radio) 0 0; flex: 0 0 auto; }
+  #vista-ambos { overflow: hidden; }
+
+  .vista-ia, .vista-config { max-width: 980px; margin: 0 auto; width: 100%; }
+  .vista-ia { border: 1px solid var(--linea); border-radius: var(--radio); overflow: hidden; background: var(--sup-2); }
+  .config-lista { padding: 18px 18px 30px; }
+  .rejilla-2 { grid-template-columns: repeat(4, 1fr); }
+
+  /* Detalle: drawer lateral derecho */
+  .hoja-detalle {
+    left: auto; right: 16px; top: 16px; bottom: 16px;
+    width: 480px; height: auto;
+    border-radius: var(--radio); transform: none !important;
+    box-shadow: var(--sombra-2); border: 1px solid var(--linea);
+  }
+  .hoja-detalle .hoja-agarre { display: none; }
+  .hoja-detalle.derecha-oculta { display: none; }
+
+  /* Opciones: diálogo centrado */
+  .hoja-opciones {
+    left: 50%; right: auto; top: 50%; bottom: auto;
+    width: 520px; max-height: 78dvh; height: auto;
+    transform: translate(-50%, -50%) !important; border-radius: var(--radio);
+    border: 1px solid var(--linea);
+  }
+  .hoja-opciones .hoja-agarre { display: none; }
+  #aviso { left: auto; right: 24px; transform: translateY(12px); bottom: 24px; }
+  #aviso.visible { transform: translateY(0); }
+}
+
+@media (min-width: 1400px) {
+  .hoja-lista { flex: 0 0 460px; }
+  #vista-lista { max-width: 920px; }
+}
+
+/* =============================================================================
+ * Accesibilidad: menos movimiento si el usuario lo pide
+ * ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
