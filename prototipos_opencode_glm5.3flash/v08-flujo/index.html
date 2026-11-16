@@ -157,6 +157,24 @@ button{font-family:inherit}
   background:#16211b;color:#fff;font-size:.82rem;padding:10px 16px;border-radius:999px;opacity:0;pointer-events:none;transition:.25s}
 .snk2-vis{opacity:1;transform:translate(-50%,0)}
 @media(min-width:960px){.snk2{transform:translate(-50%,14px) scale(.9)}}
+/* comparador de litros */
+.cmp-card{display:flex;gap:10px;align-items:center;border:1px solid var(--linea);border-radius:14px;padding:10px 12px;background:#fff;color:var(--tinta)}
+.cmp-card.mejor{border-color:#22a06b;background:rgba(34,160,107,.12)}
+.cmp-card.peor{border-color:#e07b74;background:rgba(224,123,116,.14)}
+.cmp-card.sin{opacity:.6}
+.cmp-rk{width:26px;height:26px;border-radius:99px;background:rgba(127,142,158,.18);color:var(--sub);font-weight:800;font-size:.8rem;display:flex;align-items:center;justify-content:center;flex:none}
+.cmp-card.mejor .cmp-rk{background:#22a06b;color:#fff}
+.cmp-card.peor .cmp-rk{background:#e07b74;color:#fff}
+.cmp-nm{font-weight:700;font-size:.9rem}
+.cmp-sub{font-size:.72rem;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmp-pl{font-size:.76rem;color:var(--tinta)}
+.cmp-dto{background:rgba(34,160,107,.16);color:#14915d;font-size:.66rem;font-weight:700;border-radius:99px;padding:1px 6px;margin-left:4px}
+.cmp-diff{font-size:.68rem;color:var(--sub);margin-top:2px}
+.cmp-diff.mejor{color:#14915d;font-weight:700}
+.cmp-diff.peor{color:#c9605a;font-weight:700}
+.cmp-sum{border:1px solid var(--linea);border-radius:14px;padding:10px 12px;font-size:.8rem;background:#f7f9fb}
+.cmp-sum.aviso{border-color:#e07b74;background:rgba(224,123,116,.14)}
+.cmp-nota{font-size:.68rem;color:var(--sub);margin-top:6px}
 </style>
 </head>
 <body>
@@ -200,6 +218,7 @@ button{font-family:inherit}
           </div>
           <div class="rapd">
             <div class="q1" data-go="lista"><span>☰</span>Toda la lista</div>
+            <div class="q1" data-go="cmp"><span>🧮</span>Comparar litros</div>
             <div class="q1" data-go="hist"><span>📈</span>Evolución de media</div>
             <div class="q1" data-go="ajus"><span>🏷️</span>Descuentos</div>
             <div class="q1" data-go="ajus"><span>🔔</span>Avisos</div>
@@ -320,6 +339,32 @@ button{font-family:inherit}
         </div>
         <div style="flex:1;overflow-y:auto" id="bodSub"></div>
       </section>
+
+      <!-- COMPARADOR DE LITROS (detalle) -->
+      <section class="pan arr" id="panCmp">
+        <div class="pti">
+          <button class="zb" data-pop id="cmpX">←</button>
+          <div class="ti">🧮 Comparar precios</div>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:0 16px calc(16px + env(safe-area-inset-bottom))" id="bodCmp">
+          <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-top:10px">
+            <label style="font-size:.72rem;color:var(--sub);display:flex;flex-direction:column;gap:3px">Litros
+              <input id="cmpL" type="number" min="1" max="1000" step="1" inputmode="decimal" value="25" style="width:90px;border:1px solid var(--linea);border-radius:12px;padding:10px;font:inherit;background:#fff;color:var(--tinta)">
+            </label>
+            <div style="font-size:.72rem;color:var(--sub);display:flex;flex-direction:column;gap:3px">Favoritas
+              <div style="display:flex;gap:4px;align-items:center">
+                <button id="cmpMinus" type="button" aria-label="Menos favoritas" style="border:1px solid var(--linea);background:#fff;border-radius:12px;width:36px;padding:9px 0;font:inherit;cursor:pointer">−</button>
+                <input id="cmpN" type="number" min="1" step="1" value="5" aria-label="Número de favoritas a comparar" style="width:52px;border:1px solid var(--linea);border-radius:12px;padding:10px;font:inherit;text-align:center;background:#fff;color:var(--tinta)">
+                <button id="cmpPlus" type="button" aria-label="Más favoritas" style="border:1px solid var(--linea);background:#fff;border-radius:12px;width:36px;padding:9px 0;font:inherit;cursor:pointer">+</button>
+              </div>
+              <small id="cmpHint"></small>
+            </div>
+          </div>
+          <p id="cmpFuel" style="font-size:.75rem;color:var(--sub);margin:12px 0 0"></p>
+          <div id="cmpBody" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
+          <div id="cmpFoot" style="margin-top:12px"></div>
+        </div>
+      </section>
     </div>
   </div>
   <p class="nota">Prototipo v08 — en PC se previsualiza dentro del marco; en un móvil real se ve a pantalla completa. Prueba también el botón ← para volver</p>
@@ -381,11 +426,118 @@ document.addEventListener('click',function(e){
 document.body.addEventListener('click',function(e){
   var g=e.target.closest('[data-go]');
   if(g){
-    if(g.dataset.go==='hist')pHist();else irRaiz(g.dataset.go);
+    if(g.dataset.go==='hist')pHist();else if(g.dataset.go==='cmp')pCmp();else irRaiz(g.dataset.go);
     return;
   }
   var fo=e.target.closest('[data-favz]');
   if(fo){ST.favTog(ST.sel);return}
+});
+
+/* ---------- comparador de litros ---------- */
+var cmpIn=document.getElementById('cmpL'), cmpNIn=document.getElementById('cmpN'),
+    cmpMinus=document.getElementById('cmpMinus'), cmpPlus=document.getElementById('cmpPlus'),
+    cmpHint=document.getElementById('cmpHint'), cmpFuel=document.getElementById('cmpFuel'),
+    cmpBody=document.getElementById('cmpBody'), cmpFoot=document.getElementById('cmpFoot');
+var cmpCfg=GLM.cmpCarga(); ST.cmpL=cmpCfg.litros; ST.cmpN=cmpCfg.n;
+cmpIn.value=ST.cmpL; cmpNIn.value=ST.cmpN;
+function cmpFavoritas(){
+  return GLM.de(ST.prov).filter(function(e){ return ST.fav[e.id]; });
+}
+function cmpNum(v){ return String(v).replace('.',','); }
+function cmpEuro(v){ return v.toFixed(2).replace('.',',')+' €'; }
+function cmpPrecio(v){ return v.toFixed(3).replace('.',',')+' €/L'; }
+function cmpControles(total){
+  var n = total ? Math.max(1, Math.min(ST.cmpN, total)) : 0;
+  if(document.activeElement!==cmpIn) cmpIn.value=ST.cmpL;
+  cmpNIn.disabled=!total;
+  if(document.activeElement!==cmpNIn) cmpNIn.value=n;
+  cmpMinus.disabled = total<2 || n<=1;
+  cmpPlus.disabled = total<2 || n>=total;
+  cmpHint.textContent = total ? 'de '+total+' favorita'+(total===1?'':'s') : 'sin favoritas';
+}
+function cmpPinta(){
+  var fs=cmpFavoritas(), total=fs.length;
+  cmpControles(total);
+  if(!total){
+    cmpBody.innerHTML='<div class="q1" style="border:none"><span>⭐</span>Todavía no tienes gasolineras favoritas. Marca estaciones con la ☆ y aparecerán aquí para comparar lo que cuesta repostar.</div>';
+    cmpFoot.innerHTML='';
+    return;
+  }
+  var n=Math.max(1, Math.min(ST.cmpN, total));
+  var res=GLM.comparador(fs.slice(0,n), ST.comb, ST.cmpL);
+  cmpBody.innerHTML=res.filas.map(function(f){
+    var e=f.est, cls=f.tag?' '+f.tag:'', tag='', dto=GLM.descuento(e.marca);
+    if(f.total==null){ tag='<div class="cmp-diff">Sin precio</div>'; }
+    else if(f.tag==='mejor'){ tag='<div class="cmp-diff mejor">Más barata</div>'; }
+    else if(res.conPrecio<2){ tag='<div class="cmp-diff">Única con precio</div>'; }
+    else{
+      var dif=f.total-res.mejor.total, pct=res.mejor.total>0?(dif/res.mejor.total)*100:0;
+      tag='<div class="cmp-diff'+(f.tag==='peor'?' peor':'')+'">+'+cmpEuro(dif)+' · +'+pct.toFixed(1).replace('.',',')+' %</div>';
+    }
+    return '<div class="cmp-card'+cls+'" data-id="'+GLM.escHtml(e.id)+'" data-total="'+(f.total==null?'':f.total.toFixed(2))+'" data-price="'+(f.precio==null?'':f.precio.toFixed(3))+'">'+
+      '<div class="cmp-rk">'+f.rango+'</div>'+
+      '<div style="flex:1;min-width:0"><div class="cmp-nm">'+GLM.escHtml(e.marca)+'</div>'+
+      '<div class="cmp-sub">'+GLM.escHtml(e.localidad+' · '+e.direccion)+'</div>'+
+      '<div class="cmp-pl">'+GLM.escHtml(ST.comb)+' · '+cmpPrecio(f.precio)+
+      (dto?' <span class="cmp-dto">dto. −'+cmpNum(dto)+' cts/L</span>':'')+'</div></div>'+
+      '<div style="text-align:right"><b>'+(f.total==null?'—':cmpEuro(f.total))+'</b>'+tag+'</div>'+
+    '</div>';
+  }).join('');
+  var sum='';
+  if(res.conPrecio>=2){
+    var ahorro=res.peor.total-res.mejor.total, pct=res.mejor.total>0?(ahorro/res.mejor.total)*100:0;
+    sum='<div class="cmp-sum">Con <b>'+cmpNum(ST.cmpL)+' L</b> la más barata cuesta <b>'+cmpEuro(res.mejor.total)+
+      '</b> y la más cara <b>'+cmpEuro(res.peor.total)+'</b>: ahorras <b>'+cmpEuro(ahorro)+'</b> ('+pct.toFixed(1).replace('.',',')+' %).</div>';
+  } else if(res.conPrecio===1){
+    sum='<div class="cmp-sum">Solo una favorita tiene precio para este combustible: <b>'+cmpEuro(res.mejor.total)+'</b> por '+cmpNum(ST.cmpL)+' L.</div>';
+  } else {
+    sum='<div class="cmp-sum aviso">Ninguna de las favoritas tiene precio para el filtro actual.</div>';
+  }
+  cmpFoot.innerHTML=sum+'<div class="cmp-nota">Precios con los descuentos por marca aplicados. Cambia el litraje o el número de favoritas arriba; los totales se recalculan al momento.</div>';
+}
+function pCmp(){
+  cmpFuel.textContent='Filtro: '+ST.comb+'.';
+  cmpPinta();
+  empuja('panCmp');
+}
+cmpIn.addEventListener('input', function(){
+  var v=parseFloat(this.value);
+  if(!isFinite(v)||v<1) return;
+  ST.cmpL=Math.min(1000,v);
+  GLM.cmpGuarda(ST.cmpL,ST.cmpN);
+  cmpPinta();
+});
+cmpIn.addEventListener('blur', function(){
+  var v=isFinite(ST.cmpL)?Math.max(1,Math.min(1000,ST.cmpL)):25;
+  ST.cmpL=v; this.value=v;
+  GLM.cmpGuarda(ST.cmpL,ST.cmpN);
+  cmpPinta();
+});
+cmpNIn.addEventListener('input', function(){
+  var v=parseInt(this.value,10);
+  if(!isFinite(v)||v<1) return;
+  var total=cmpFavoritas().length;
+  ST.cmpN=Math.min(Math.max(1,total),v);
+  GLM.cmpGuarda(ST.cmpL,ST.cmpN);
+  cmpPinta();
+});
+cmpNIn.addEventListener('blur', function(){
+  var total=cmpFavoritas().length;
+  this.value = total ? Math.max(1,Math.min(ST.cmpN,total)) : 0;
+});
+function cmpStep(d){
+  var total=cmpFavoritas().length;
+  if(!total) return;
+  var max=Math.max(1,total);
+  ST.cmpN=Math.max(1,Math.min(max, Math.max(1,Math.min(ST.cmpN,max))+d));
+  cmpNIn.value=ST.cmpN;
+  GLM.cmpGuarda(ST.cmpL,ST.cmpN);
+  cmpPinta();
+}
+cmpMinus.addEventListener('click',function(){ cmpStep(-1); });
+cmpPlus.addEventListener('click',function(){ cmpStep(1); });
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape' && document.getElementById('panCmp').classList.contains('act')) sale();
 });
 
 /* ---------- onboarding ---------- */

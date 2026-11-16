@@ -153,6 +153,24 @@ body{font-family:system-ui,'Segoe UI',Roboto,sans-serif;color:var(--tinta);overf
 .snk{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom));transform:translate(-50%,12px);z-index:99;
   background:#f2f4f8;color:#0b0f14;font-size:.86rem;font-weight:600;padding:11px 17px;border-radius:999px;opacity:0;pointer-events:none;transition:.25s}
 .snk-vis{opacity:1;transform:translate(-50%,0)}
+/* comparador de litros */
+.cmp-card{display:flex;gap:10px;align-items:center;border:1px solid var(--linea);border-radius:14px;padding:10px 12px;background:var(--panel2);color:var(--tinta)}
+.cmp-card.mejor{border-color:#2fbf7f;background:rgba(47,191,127,.14)}
+.cmp-card.peor{border-color:#e07b74;background:rgba(224,123,116,.14)}
+.cmp-card.sin{opacity:.6}
+.cmp-rk{width:26px;height:26px;border-radius:99px;background:rgba(127,142,158,.22);color:var(--sub);font-weight:800;font-size:.8rem;display:flex;align-items:center;justify-content:center;flex:none}
+.cmp-card.mejor .cmp-rk{background:#2fbf7f;color:#08240f}
+.cmp-card.peor .cmp-rk{background:#e07b74;color:#2a0f0d}
+.cmp-nm{font-weight:700;font-size:.9rem}
+.cmp-sub{font-size:.72rem;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmp-pl{font-size:.76rem;color:var(--tinta)}
+.cmp-dto{background:rgba(47,191,127,.18);color:#7fe0b4;font-size:.66rem;font-weight:700;border-radius:99px;padding:1px 6px;margin-left:4px}
+.cmp-diff{font-size:.68rem;color:var(--sub);margin-top:2px}
+.cmp-diff.mejor{color:#7fe0b4;font-weight:700}
+.cmp-diff.peor{color:#f0a29c;font-weight:700}
+.cmp-sum{border:1px solid var(--linea);border-radius:14px;padding:10px 12px;font-size:.8rem;background:var(--panel2)}
+.cmp-sum.aviso{border-color:#e07b74}
+.cmp-nota{font-size:.68rem;color:var(--sub);margin-top:6px}
 </style>
 </head>
 <body>
@@ -160,6 +178,7 @@ body{font-family:system-ui,'Segoe UI',Roboto,sans-serif;color:var(--tinta);overf
   <div class="tt" id="tt">Nocti · precios<small id="ttS">Madrid · G.95</small></div>
   <div class="esp"></div>
   <select id="selProv" aria-label="Provincia" style="height:44px;border:none;border-radius:14px;background:var(--panel2);color:var(--tinta);font-size:.9rem;font-weight:700;padding:0 6px;max-width:92px"></select>
+  <button id="bCmp" aria-label="Comparar precios por litros" title="Comparar precios por litros" style="padding:0 13px">🧮</button>
   <button id="bBus" aria-label="Buscar" style="padding:0 13px">🔍</button>
   <button class="bpr" id="bLoc" aria-label="Ordenar por cercanía" style="padding:0 13px">📍</button>
 </header>
@@ -256,6 +275,32 @@ body{font-family:system-ui,'Segoe UI',Roboto,sans-serif;color:var(--tinta);overf
       <button id="fLimpiar" style="flex:1;height:48px;border:1px solid var(--linea);background:var(--panel2);color:var(--tinta);border-radius:14px;font-weight:700;cursor:pointer;font-size:.95rem">✕ Limpiar</button>
       <button id="fAplicar" style="flex:1;height:48px;border:none;background:var(--verde);color:#08240f;border-radius:14px;font-weight:800;cursor:pointer;font-size:.95rem">Aplicar</button>
     </div>
+  </div>
+</div>
+
+<!-- comparador de litros (modal) -->
+<div id="cmpmodal" role="dialog" aria-label="Comparar precios por litros" style="position:fixed;inset:0;z-index:90;display:none;place-items:center;background:rgba(0,0,0,.65)">
+  <div style="width:min(420px,92vw);max-height:86dvh;overflow-y:auto;background:var(--panel);border:1px solid var(--linea);border-radius:22px;padding:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <b style="font-size:1.05rem">🧮 Comparar precios</b>
+      <button id="cmpX" style="border:none;background:var(--panel2);color:var(--tinta);border-radius:12px;width:36px;height:36px;cursor:pointer;font-size:.95rem">✕</button>
+    </div>
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+      <label style="font-size:.72rem;color:var(--sub);display:flex;flex-direction:column;gap:3px">Litros
+        <input id="cmpL" type="number" min="1" max="1000" step="1" inputmode="decimal" value="25" style="width:90px;border:1px solid var(--linea);border-radius:12px;padding:10px;font:inherit;background:var(--panel2);color:var(--tinta)">
+      </label>
+      <div style="font-size:.72rem;color:var(--sub);display:flex;flex-direction:column;gap:3px">Favoritas
+        <div style="display:flex;gap:4px;align-items:center">
+          <button id="cmpMinus" type="button" aria-label="Menos favoritas" style="border:1px solid var(--linea);background:var(--panel2);color:var(--tinta);border-radius:12px;width:38px;padding:9px 0;font:inherit;cursor:pointer">−</button>
+          <input id="cmpN" type="number" min="1" step="1" value="5" aria-label="Número de favoritas a comparar" style="width:54px;border:1px solid var(--linea);border-radius:12px;padding:10px;font:inherit;text-align:center;background:var(--panel2);color:var(--tinta)">
+          <button id="cmpPlus" type="button" aria-label="Más favoritas" style="border:1px solid var(--linea);background:var(--panel2);color:var(--tinta);border-radius:12px;width:38px;padding:9px 0;font:inherit;cursor:pointer">+</button>
+        </div>
+        <small id="cmpHint"></small>
+      </div>
+    </div>
+    <p id="cmpFuel" style="font-size:.78rem;color:var(--sub);margin:12px 0 0"></p>
+    <div id="cmpBody" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
+    <div id="cmpFoot" style="margin-top:12px"></div>
   </div>
 </div>
 
@@ -527,6 +572,116 @@ document.getElementById('fLimpiar').addEventListener('click',function(){
   pChips();pantallas();fmodal.style.display='none';
   snack('Filtros limpiados');
 });
+
+/* comparador de litros */
+var cmpmodal=document.getElementById('cmpmodal');
+var cmpIn=document.getElementById('cmpL'), cmpNIn=document.getElementById('cmpN'),
+    cmpMinus=document.getElementById('cmpMinus'), cmpPlus=document.getElementById('cmpPlus'),
+    cmpHint=document.getElementById('cmpHint'), cmpFuel=document.getElementById('cmpFuel'),
+    cmpBody=document.getElementById('cmpBody'), cmpFoot=document.getElementById('cmpFoot');
+var cmpCfg=GLM.cmpCarga(); ST.cmpL=cmpCfg.litros; ST.cmpN=cmpCfg.n;
+cmpIn.value=ST.cmpL; cmpNIn.value=ST.cmpN;
+function cmpFavoritas(){
+  return GLM.de(ST.prov).filter(function(e){ return ST.fav[e.id]; });
+}
+function cmpNum(v){ return String(v).replace('.',','); }
+function cmpEuro(v){ return v.toFixed(2).replace('.',',')+' €'; }
+function cmpPrecio(v){ return v.toFixed(3).replace('.',',')+' €/L'; }
+function cmpControles(total){
+  var n = total ? Math.max(1, Math.min(ST.cmpN, total)) : 0;
+  if(document.activeElement!==cmpIn) cmpIn.value=ST.cmpL;
+  cmpNIn.disabled=!total;
+  if(document.activeElement!==cmpNIn) cmpNIn.value=n;
+  cmpMinus.disabled = total<2 || n<=1;
+  cmpPlus.disabled = total<2 || n>=total;
+  cmpHint.textContent = total ? 'de '+total+' favorita'+(total===1?'':'s') : 'sin favoritas';
+}
+function cmpPinta(){
+  var fs=cmpFavoritas(), total=fs.length;
+  cmpControles(total);
+  if(!total){
+    cmpBody.innerHTML='<p style="font-size:.88rem;color:var(--sub);margin:6px 0">⭐ Todavía no tienes gasolineras favoritas. Marca estaciones con la ★ y aparecerán aquí para comparar lo que cuesta repostar.</p>';
+    cmpFoot.innerHTML='';
+    return;
+  }
+  var n=Math.max(1, Math.min(ST.cmpN, total));
+  var res=GLM.comparador(fs.slice(0,n), ST.comb, ST.cmpL);
+  cmpBody.innerHTML=res.filas.map(function(f){
+    var e=f.est, cls=f.tag?' '+f.tag:'', tag='', dto=GLM.descuento(e.marca);
+    if(f.total==null){ tag='<div class="cmp-diff">Sin precio</div>'; }
+    else if(f.tag==='mejor'){ tag='<div class="cmp-diff mejor">Más barata</div>'; }
+    else if(res.conPrecio<2){ tag='<div class="cmp-diff">Única con precio</div>'; }
+    else{
+      var dif=f.total-res.mejor.total, pct=res.mejor.total>0?(dif/res.mejor.total)*100:0;
+      tag='<div class="cmp-diff'+(f.tag==='peor'?' peor':'')+'">+'+cmpEuro(dif)+' · +'+pct.toFixed(1).replace('.',',')+' %</div>';
+    }
+    return '<div class="cmp-card'+cls+'" data-id="'+GLM.escHtml(e.id)+'" data-total="'+(f.total==null?'':f.total.toFixed(2))+'" data-price="'+(f.precio==null?'':f.precio.toFixed(3))+'">'+
+      '<div class="cmp-rk">'+f.rango+'</div>'+
+      '<div style="flex:1;min-width:0"><div class="cmp-nm">'+GLM.escHtml(e.marca)+'</div>'+
+      '<div class="cmp-sub">'+GLM.escHtml(e.localidad+' · '+e.direccion)+'</div>'+
+      '<div class="cmp-pl">'+GLM.escHtml(ST.comb)+' · '+cmpPrecio(f.precio)+
+      (dto?' <span class="cmp-dto">dto. −'+cmpNum(dto)+' cts/L</span>':'')+'</div></div>'+
+      '<div style="text-align:right"><b>'+(f.total==null?'—':cmpEuro(f.total))+'</b>'+tag+'</div>'+
+    '</div>';
+  }).join('');
+  var sum='';
+  if(res.conPrecio>=2){
+    var ahorro=res.peor.total-res.mejor.total, pct=res.mejor.total>0?(ahorro/res.mejor.total)*100:0;
+    sum='<div class="cmp-sum">Con <b>'+cmpNum(ST.cmpL)+' L</b> la más barata cuesta <b>'+cmpEuro(res.mejor.total)+
+      '</b> y la más cara <b>'+cmpEuro(res.peor.total)+'</b>: ahorras <b>'+cmpEuro(ahorro)+'</b> ('+pct.toFixed(1).replace('.',',')+' %).</div>';
+  } else if(res.conPrecio===1){
+    sum='<div class="cmp-sum">Solo una favorita tiene precio para este combustible: <b>'+cmpEuro(res.mejor.total)+'</b> por '+cmpNum(ST.cmpL)+' L.</div>';
+  } else {
+    sum='<div class="cmp-sum aviso">Ninguna de las favoritas tiene precio para el filtro actual.</div>';
+  }
+  cmpFoot.innerHTML=sum+'<div class="cmp-nota">Precios con los descuentos por marca aplicados. Cambia el litraje o el número de favoritas arriba; los totales se recalculan al momento.</div>';
+}
+function abreCmp(){
+  cmpFuel.textContent='Filtro: '+ST.comb+'.';
+  cmpPinta();
+  cmpmodal.style.display='grid';
+}
+function cierraCmp(){ cmpmodal.style.display='none'; }
+document.getElementById('bCmp').addEventListener('click', abreCmp);
+document.getElementById('cmpX').addEventListener('click', cierraCmp);
+cmpmodal.addEventListener('click',function(e){ if(e.target===cmpmodal) cierraCmp(); });
+cmpIn.addEventListener('input', function(){
+  var v=parseFloat(this.value);
+  if(!isFinite(v)||v<1) return;
+  ST.cmpL=Math.min(1000,v);
+  GLM.cmpGuarda(ST.cmpL,ST.cmpN);
+  cmpPinta();
+});
+cmpIn.addEventListener('blur', function(){
+  var v=isFinite(ST.cmpL)?Math.max(1,Math.min(1000,ST.cmpL)):25;
+  ST.cmpL=v; this.value=v;
+  GLM.cmpGuarda(ST.cmpL,ST.cmpN);
+  cmpPinta();
+});
+cmpNIn.addEventListener('input', function(){
+  var v=parseInt(this.value,10);
+  if(!isFinite(v)||v<1) return;
+  var total=cmpFavoritas().length;
+  ST.cmpN=Math.min(Math.max(1,total),v);
+  GLM.cmpGuarda(ST.cmpL,ST.cmpN);
+  cmpPinta();
+});
+cmpNIn.addEventListener('blur', function(){
+  var total=cmpFavoritas().length;
+  this.value = total ? Math.max(1,Math.min(ST.cmpN,total)) : 0;
+});
+function cmpStep(d){
+  var total=cmpFavoritas().length;
+  if(!total) return;
+  var max=Math.max(1,total);
+  ST.cmpN=Math.max(1,Math.min(max, Math.max(1,Math.min(ST.cmpN,max))+d));
+  cmpNIn.value=ST.cmpN;
+  GLM.cmpGuarda(ST.cmpL,ST.cmpN);
+  cmpPinta();
+}
+cmpMinus.addEventListener('click',function(){ cmpStep(-1); });
+cmpPlus.addEventListener('click',function(){ cmpStep(1); });
+document.addEventListener('keydown',function(e){ if(e.key==='Escape') cierraCmp(); });
 
 /* IA */
 var CHATK=GLM.chatKit('v05');

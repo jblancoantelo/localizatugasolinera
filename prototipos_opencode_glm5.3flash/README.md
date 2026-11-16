@@ -209,4 +209,16 @@ texto); favoritas y descuentos que sobreviven a la recarga; v04 estrena editor
 de descuentos en su sidebar; el histórico de la IA respeta rangos explícitos
 («60 días», «6 semanas», «3 meses», «1 año»). Sondeo ampliado a **156 pruebas
 (v01 18, v02 18, v03 17, v04 17 a PC, v05 23, v06 22, v07 18, v08 23), todas en
-verde y 0 errores JS**.
+verde y 0 errores JS**. · **6ª** portada del comparador de litros de la app
+(PR #7, `js/compare.js`): botón 🧮 en los 8 (cabecera en v01/v03–v07, FAB en
+v02 y acción rápida en el home de v08) que abre su modal/hoja con litros
+(25, 1–1000) y nº de favoritas acotado a las que haya; una tarjeta por
+favorita ordenada barata→cara con rango, extremos («Más barata» / «+X € ·
++Y %» con ≥2 con precio), chip de descuento por marca, total € del litraje
+y resumen de ahorro; litros y nº de favoritas persisten en `localStorage`
+(`glm_cmp`) y sobreviven al F5. Cálculo compartido en `_lib/mock.js`
+(`GLM.comparador`, con `precioFinal` para respetar el combustible del filtro
+y los descuentos, como `getSelectedFuelPrice` en la app). Sondeo ampliado a
+**188 pruebas (4 nuevas por prototipo: apertura con orden/extremos/resumen,
+litros ×2 duplica totales, contador acotado a 3 favoritas sembradas y
+litraje que sobrevive al F5), todas en verde y 0 errores JS**.

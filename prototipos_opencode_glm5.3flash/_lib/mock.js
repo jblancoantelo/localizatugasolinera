@@ -629,5 +629,53 @@
     return out.join('');
   };
 
+  /* Comparador de litros (como el 🧮 de la app): litraje y nº de favoritas
+   * persistentes y cálculo compartido (orden barata→cara, extremos y ahorro).
+   * El precio sale de precioFinal, así que respeta el combustible dado y los
+   * descuentos por marca, igual que getSelectedFuelPrice en la app. */
+  GLM.CMP_LS = 'glm_cmp';
+  GLM.cmpGuarda = function (litros, n) {
+    try { localStorage.setItem(GLM.CMP_LS, JSON.stringify({ litros: litros, n: n })); } catch (err) {}
+  };
+  GLM.cmpCarga = function () {
+    try {
+      var d = JSON.parse(localStorage.getItem(GLM.CMP_LS) || 'null');
+      if (d && typeof d === 'object') {
+        var l = +d.litros, n = +d.n;
+        return {
+          litros: (isFinite(l) && l >= 1) ? Math.min(1000, Math.round(l)) : 25,
+          n: (isFinite(n) && n >= 1) ? Math.max(1, Math.round(n)) : 5
+        };
+      }
+    } catch (err) {}
+    return { litros: 25, n: 5 };
+  };
+  /* favoritas: estaciones ya recortadas al nº elegido; comb: combustible del
+   * filtro activo; litros: litraje. Devuelve filas ordenadas barata→cara (las
+   * sin precio al final) con rango 1..N, tag 'mejor'/'peor'/'sin' (solo con
+   * ≥2 con precio, como la app) y el ahorro barata↔cara. */
+  GLM.comparador = function (favoritas, comb, litros) {
+    var filas = (favoritas || []).map(function (e) {
+      var p = GLM.precioFinal(e, comb);
+      return { est: e, precio: (p == null ? null : p), total: (p == null ? null : p * litros) };
+    });
+    filas.sort(function (a, b) {
+      if (a.total == null && b.total == null) return 0;
+      if (a.total == null) return 1;
+      if (b.total == null) return -1;
+      return a.total - b.total;
+    });
+    var conPrecio = filas.filter(function (f) { return f.total != null; });
+    var mejor = conPrecio.length ? conPrecio[0] : null;
+    var peor = (conPrecio.length >= 2) ? conPrecio[conPrecio.length - 1] : null;
+    filas.forEach(function (f, i) {
+      f.rango = i + 1;
+      f.tag = f.total == null ? 'sin' : (f === mejor && peor ? 'mejor' : (f === peor ? 'peor' : null));
+    });
+    return { filas: filas, mejor: mejor, peor: peor,
+             ahorro: (mejor && peor) ? peor.total - mejor.total : 0,
+             conPrecio: conPrecio.length };
+  };
+
   GLM.integrable = false;
 })();
