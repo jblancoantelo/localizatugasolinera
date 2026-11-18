@@ -833,6 +833,15 @@ function renderMapa(arr) {
 // ---- Detalle ----
 function abrirDetalle(e) {
   state.selected = e.IDEESS;
+  const isMobile = window.innerWidth <= 1023;
+  if (isMobile) { els.detail.classList.add('open'); els.detail.classList.remove('hide'); }
+  else { els.detail.classList.remove('hide'); }
+  render();
+}
+function renderDetail() {
+  if (!state.selected) return;
+  const e = ESTACIONES.find(x => x.IDEESS === state.selected);
+  if (!e) return;
   const clave = state.filters.fuel ? COMBUSTIBLES.find(c => c.nombre === state.filters.fuel).clave : 'Precio Gasolina 95 E5';
   const p = precioActual(e, clave);
   els.detailName.textContent = e.Rótulo;
@@ -850,11 +859,8 @@ function abrirDetalle(e) {
   }).join('');
   drawChart(e);
   els.btnDetailFav.textContent = (state.favorites.has(e.IDEESS) ? '★' : '☆') + ' Favorito';
-  const isMobile = window.innerWidth <= 1023;
-  if (isMobile) { els.detail.classList.add('open'); els.detail.classList.remove('hide'); }
-  else { els.detail.classList.remove('hide'); }
-  render();
 }
+
 function cerrarDetalle() {
   state.selected = null;
   const isMobile = window.innerWidth <= 1023;

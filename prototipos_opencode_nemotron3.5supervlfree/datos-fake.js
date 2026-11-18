@@ -6,6 +6,7 @@
 // Datos inventados para validar interfaz y navegación. NO son datos reales.
 // ============================================================================
 
+(function () {
 const PROVINCIAS = ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Zaragoza'];
 
 const MARCAS = ['Repsol', 'Cepsa', 'BP', 'Shell', 'Galp', 'Disa', 'BonÀrea',
@@ -129,3 +130,4 @@ window.DATOS_FAKE = {
   fechaDDMMYYYY,
   precioActual,
 };
+})();

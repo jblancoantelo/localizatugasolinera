@@ -225,7 +225,7 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Ro
 const STATE = { prov: null, combustible: '', marca: '', buscar: '', soloFav: false, view: 'list', orden: 'precio', asc: true, seleccionada: null };
 const COMB = 'Precio Gasolina 95 E5';
 const els = {};
-['chipBar','searchWrap','inpSearch','btnSearch','btnCloseSearch','btnMap','btnList','secMap','secList','secEmpty','list','listMap','mapLayer','headerTitle','btnBack','bottomNav','sheet','sheetBody','sheetNombre','sheetFav','btnSheetClose','btnGeo','ptr','toast'].forEach(k => { els[k] = document.getElementById(k); });
+['chipBar','searchWrap','inpSearch','btnSearch','btnCloseSearch','btnMap','btnList','secMap','secList','secEmpty','list','listMap','mapLayer','headerTitle','btnBack','bottomNav','sheet','sheetBody','sheetNombre','sheetFav','btnSheetClose','btnGeo','ptr','view','toast'].forEach(k => { els[k] = document.getElementById(k); });
 function toast(m){const t=els.toast;t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);}
 function provChip(p,sel){const c=document.createElement('button');c.className='chip '+(sel?'active':'');if(sel){c.innerHTML=p.nombre+' <span class="remove">✕</span>';c.querySelector('.remove').onclick=e=>{e.stopPropagation();setProv(null);}}else{c.innerHTML=p.nombre;}c.onclick=e=>{e.stopPropagation();setProv(p.id);};return c;}
 function combChip(){const c=document.createElement('button');c.className='chip active';c.innerHTML='Gasolina 95 <span class="remove">✕</span>';c.onclick=e=>{e.stopPropagation();setComb('');};c.querySelector('.remove').onclick=e=>{e.stopPropagation();setComb('');};return c;}

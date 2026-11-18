@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Prototipo 6 Â· IA Embebida Â· Gasolineras</title>
+<title>Prototipo 6 · IA Embebida · Gasolineras</title>
 <link rel="preload" as="script" href="../datos-fake.js">
 <script src="../datos-fake.js"></script>
 <style>
@@ -75,7 +75,7 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Ro
 .ia-msg.meta { font-size: 0.65rem; color: var(--muted); margin-top: 0.25rem; }
 .ia-msg.empty { align-self: center; max-width: 100%; text-align: center; color: var(--muted); padding: 1rem; }
 .ia-typing { display: inline-block; }
-.ia-typing::after { content: 'â€¦'; animation: typing 1.4s infinite; }
+.ia-typing::after { content: '…'; animation: typing 1.4s infinite; }
 @keyframes typing { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-4px); } }
 
 .assistant .ia-input-row { display: flex; gap: 0.5rem; padding: 0.6rem 1rem; border-top: 1px solid var(--line); flex-shrink: 0; background: #fff; }
@@ -132,11 +132,11 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Ro
 <body>
 <div class="app">
   <header class="app-header">
-    <button class="back" id="btnBack">â€¹</button>
+    <button class="back" id="btnBack">‹</button>
     <div class="app-title" id="headerTitle">Asistente IA</div>
     <div class="app-actions">
-      <button class="icon-btn" id="btnOpenIA" title="Asistente" active>ðŸ¤–</button>
-      <button class="icon-btn" id="btnMapView" title="Mapa">ðŸ—ºï¸</button>
+      <button class="icon-btn" id="btnOpenIA" title="Asistente" active>🤖</button>
+      <button class="icon-btn" id="btnMapView" title="Mapa">🗺️</button>
     </div>
   </header>
 
@@ -145,7 +145,7 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Ro
   <div class="view" id="view">
     <section id="secEmpty" class="active">
       <div class="empty">
-        <div class="icon">ðŸ“</div>
+        <div class="icon">📍</div>
         <h3>Selecciona una provincia</h3>
         <p>Elige una provincia para consultar al asistente sobre precios.</p>
       </div>
@@ -161,36 +161,63 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Ro
   </div>
 
   <div class="quick" id="quick">
-    <button class="quick-btn" data-q="Â¿CuÃ¡l es la gasolinera mÃ¡s barata?">MÃ¡s barata</button>
-    <button class="quick-btn" data-q="Â¿CuÃ¡nto costarÃ­a llenar el depÃ³sito?">Llenar depÃ³sito</button>
-    <button class="quick-btn" data-q="EvoluciÃ³n del precio en 30 dÃ­as">EvoluciÃ³n 30d</button>
+    <button class="quick-btn" data-q="¿Cuál es la gasolinera más barata?">Más barata</button>
+    <button class="quick-btn" data-q="¿Cuánto costaría llenar el depósito?">Llenar depósito</button>
+    <button class="quick-btn" data-q="Evolución del precio en 30 días">Evolución 30d</button>
     <button class="quick-btn" data-q="Compara Repsol vs Cepsa">Compara marcas</button>
-    <button class="quick-btn" data-q="Â¿Hay alguna cerca de mÃ­?">Cerca de mÃ­</button>
+    <button class="quick-btn" data-q="¿Hay alguna cerca de mí?">Cerca de mí</button>
   </div>
 
   <div class="assistant" id="assistant">
     <div class="sheet-handle"></div>
     <div class="sheet-header">
-      <h2>ðŸ¤– Asistente</h2>
-      <button class="sheet-close" id="btnCloseIA">âœ•</button>
+      <h2>🤖 Asistente</h2>
+      <button class="sheet-close" id="btnCloseIA">✕</button>
     </div>
     <div class="ia-messages" id="iaMessages">
-      <div class="ia-msg assistant empty">PregÃºntame sobre precios, estaciones o historial de tu provincia.</div>
+      <div class="ia-msg assistant empty">Pregúntame sobre precios, estaciones o historial de tu provincia.</div>
     </div>
     <div class="ia-input-row">
-      <input type="text" id="iaInput" placeholder="Pregunta al asistenteâ€¦">
+      <input type="text" id="iaInput" placeholder="Pregunta al asistente…">
       <button id="iaSend">Enviar</button>
     </div>
   </div>
 
   <nav class="bottom-nav" id="bottomNav">
-    <button class="nav-tab active" data-tab="list"><span class="icon">ðŸ“‹</span><span>Listado</span></button>
-    <button class="nav-tab" data-tab="map"><span class="icon">ðŸ—ºï¸</span><span>Mapa</span></button>
+    <button class="nav-tab active" data-tab="list"><span class="icon">📋</span><span>Listado</span></button>
+    <button class="nav-tab" data-tab="map"><span class="icon">🗺️</span><span>Mapa</span></button>
   </nav>
 
   <div class="toast" id="toast"></div>
 </div>
-<script>const\ STATE\ =\ \{\ prov:\ null,\ combustible:\ '',\ marca:\ '',\ buscar:\ '',\ soloFav:\ false,\ seleccionada:\ null,\ iaOpen:\ false\ };\nconst\ COMB\ =\ 'Precio\ Gasolina\ 95\ E5';\nconst\ els\ =\ \{};\n\['chipBar','secEmpty','secMain','list','mapLayer','headerTitle','btnBack','assistant','iaMessages','iaInput','iaSend','btnOpenIA','btnCloseIA','quick','toast']\.forEach\(k\ =>\ \{\ els\[k]\ =\ document\.getElementById\(k\);\ }\);\nfunction\ toast\(m\)\{const\ t=els\.toast;t\.textContent=m;t\.classList\.add\('show'\);setTimeout\(\(\)=>t\.classList\.remove\('show'\),1600\);}\nfunction\ chip\(label,active,onClick,removable\)\{const\ c=document\.createElement\('button'\);c\.className='chip\ '\+\(active\?'active':''\);c\.innerHTML=label\+\(removable\?'\ <span\ class="remove">âœ•</span>':''\);if\(onClick\)c\.onclick=e=>\{e\.stopPropagation\(\);onClick\(\);};if\(removable\)c\.querySelector\('\.remove'\)\.onclick=e=>\{e\.stopPropagation\(\);onClick\(\);};return\ c;}\nfunction\ renderChips\(\)\{els\.chipBar\.innerHTML='';if\(STATE\.prov\)\{const\ p=PROVINCIAS\.find\(x=>x\.id===STATE\.prov\);els\.chipBar\.appendChild\(chip\(p\.nombre,true,\(\)=>setProv\(null\),true\)\);}else\{PROVINCIAS\.forEach\(p=>els\.chipBar\.appendChild\(chip\(p\.nombre,false,\(\)=>setProv\(p\.id\)\)\)\);}}\nfunction\ setProv\(v\)\{STATE\.prov=v;STATE\.seleccionada=null;renderChips\(\);render\(\);renderIAContext\(\);}\nfunction\ precioColor\(est\)\{const\ p=est\.precios\[COMB]\|\|0;return\ p<=1\.45\?'green':p<=1\.60\?'orange':'red';}\nfunction\ listaFiltrada\(\)\{const\ base=STATE\.prov\?ESTACIONES\.porProvincia\(STATE\.prov\):ESTACIONES;return\ filtrarEstaciones\(base,\{provincia:STATE\.prov,combustible:STATE\.combustible,marca:STATE\.marca,buscar:STATE\.buscar,soloFavoritos:!!STATE\.soloFav}\);}\nfunction\ render\(\)\{if\(!STATE\.prov\)\{els\.secEmpty\.classList\.add\('active'\);els\.secMain\.classList\.remove\('active'\);els\.headerTitle\.textContent='Asistente\ IA';els\.btnBack\.style\.display='none';els\.mapLayer\.innerHTML='';els\.list\.innerHTML='';return;}els\.secEmpty\.classList\.remove\('active'\);els\.secMain\.classList\.add\('active'\);const\ prov=PROVINCIAS\.find\(p=>p\.id===STATE\.prov\);els\.headerTitle\.textContent=prov\.nombre;els\.btnBack\.style\.display='block';const\ lista=ordenarEstaciones\(listaFiltrada\(\),'precio',true\);renderMap\(lista\);els\.list\.innerHTML=lista\.map\(renderCard\)\.join\(''\);}\nfunction\ renderMap\(lista\)\{if\(!STATE\.prov\)\{els\.mapLayer\.innerHTML='';return;}const\ prov=PROVINCIAS\.find\(p=>p\.id===STATE\.prov\);els\.mapLayer\.innerHTML=lista\.map\(est=>\{const\ c=precioColor\(est\);const\ x=50\+\(\(est\.lat-prov\.centro\[0]\)/0\.2\)\*40;const\ y=50\+\(\(prov\.centro\[1]-est\.lng\)/0\.2\)\*40;return\ `<div\ class="map-marker\ \$\{c}\ \$\{est\.id===STATE\.seleccionada\?'selected':''}"\ style="left:\$\{Math\.max\(5,Math\.min\(95,x\)\)}%;top:\$\{Math\.max\(5,Math\.min\(95,y\)\)}%;"\ data-id="\$\{est\.id}"\ title="\$\{est\.nombre}">\$\{est\.marca\[0]}</div>`;}\)\.join\(''\);}\nfunction\ renderCard\(est\)\{const\ c=precioColor\(est\);const\ favCls=est\.favorito\?'on':'';const\ best=est\.esMejor\?'<div\ class="rank\ best">1</div>':'<div\ class="rank">-</div>';return\ `<div\ class="station-card\ \$\{est\.id===STATE\.seleccionada\?'selected':''}"\ data-id="\$\{est\.id}">\$\{best}<div\ class="info"><div\ class="name">\$\{est\.nombre}</div><div\ class="addr">\$\{est\.direccion}\ Â·\ \$\{est\.localidad}</div></div><div\ class="right"><div\ class="price">\$\{formatearPrecio\(est\.precios\[COMB]\|\|0\)}\ <span\ class="uni">â‚¬/L</span></div><div\ class="dist"\ style="color:\$\{c==='green'\?'\#2e7d32':c==='orange'\?'\#f57c00':'\#c62828'};">\$\{formatearDistancia\(est\.distancia\)}</div><button\ class="fav\ \$\{favCls}"\ data-id="\$\{est\.id}">\$\{est\.favorito\?'â˜…':'â˜†'}</button></div></div>`;}\nfunction\ renderIAContext\(\)\{if\(!STATE\.prov\)return;const\ lista=listaFiltrada\(\);const\ mejor=lista\.reduce\(\(a,b\)=>\(a\.precios\[COMB]\|\|99\)<\(b\.precios\[COMB]\|\|99\)\?a:b,null\);const\ ctx=document\.getElementById\('iaCtx'\);if\(ctx\)ctx\.textContent='Contexto:\ '\+\(mejor\?mejor\.nombre\+'\ \('\+formatearPrecio\(mejor\.precios\[COMB]\)\+'\ â‚¬/L\)':'sin\ datos'\);}\nfunction\ addMsg\(role,html\)\{const\ div=document\.createElement\('div'\);div\.className='ia-msg\ '\+role;div\.innerHTML=html;els\.iaMessages\.appendChild\(div\);els\.iaMessages\.scrollTop=els\.iaMessages\.scrollHeight;return\ div;}\nfunction\ setTyping\(show\)\{let\ t=els\.iaMessages\.querySelector\('\.ia-typing-wrap'\);if\(show&&!t\)\{const\ wrap=document\.createElement\('div'\);wrap\.className='ia-typing-wrap';wrap\.innerHTML='<div\ class="ia-msg\ assistant"><span\ class="ia-typing">El\ asistente\ estÃ¡\ escribiendo</span></div>';els\.iaMessages\.appendChild\(wrap\);}if\(!show&&t\)t\.remove\(\);els\.iaMessages\.scrollTop=els\.iaMessages\.scrollHeight;}\nfunction\ responderIA\(pregunta\)\{const\ q=pregunta\.toLowerCase\(\);const\ lista=listaFiltrada\(\);const\ mejor=lista\.reduce\(\(a,b\)=>\(a\.precios\[COMB]\|\|99\)<\(b\.precios\[COMB]\|\|99\)\?a:b,null\);const\ prov=PROVINCIAS\.find\(p=>p\.id===STATE\.prov\);let\ r='';if\(q\.includes\('barata'\)\|\|q\.includes\('mÃ¡s\ barata'\)\|\|q\.includes\('menor'\)\)\{r=mejor\?`La\ estaciÃ³n\ mÃ¡s\ barata\ de\ \$\{prov\.nombre}\ para\ \$\{COMB\.replace\('Precio\ ',''\)}\ es\ <strong>\$\{mejor\.nombre}</strong>\ \(\$\{mejor\.marca}\)\ a\ <strong>\$\{formatearPrecio\(mejor\.precios\[COMB]\)}\ â‚¬/L</strong>\.<br>ðŸ“\ \$\{mejor\.direccion},\ \$\{mejor\.localidad}\.`:'No\ encontrÃ©\ estaciones\ con\ precio\ en\ esta\ provincia\.';}else\ if\(q\.includes\('depÃ³sito'\)\|\|q\.includes\('llenar'\)\)\{const\ litros=50;const\ p=mejor\?mejor\.precios\[COMB]:1\.55;r=`Llenar\ un\ depÃ³sito\ de\ <strong>\$\{litros}\ L</strong>\ costarÃ­a\ aprox\.\ <strong>\$\{formatearPrecio\(p\*litros\)}\ â‚¬</strong>\ al\ precio\ mÃ¡s\ barato\ \(\$\{formatearPrecio\(p\)}\ â‚¬/L\)\.`;}else\ if\(q\.includes\('evoluciÃ³n'\)\|\|q\.includes\('30\ dÃ­as'\)\|\|q\.includes\('historial'\)\)\{r=`En\ los\ Ãºltimos\ 30\ dÃ­as,\ el\ precio\ de\ \$\{COMB\.replace\('Precio\ ',''\)}\ en\ \$\{prov\.nombre}\ ha\ variado\ levemente\ \(datos\ simulados\)\.\ La\ estaciÃ³n\ <strong>\$\{mejor\?mejor\.nombre:'â€”'}</strong>\ mantiene\ el\ precio\ mÃ¡s\ estable\ y\ barato\.`;}else\ if\(q\.includes\('compara'\)\|\|q\.includes\('repsol'\)\|\|q\.includes\('cepsa'\)\)\{const\ marcas=\[\.\.\.new\ Set\(lista\.map\(e=>e\.marca\)\)]\.slice\(0,4\)\.map\(m=>\{const\ deMarca=lista\.filter\(e=>e\.marca===m\);const\ prom=deMarca\.reduce\(\(s,e\)=>s\+\(e\.precios\[COMB]\|\|0\),0\)/deMarca\.length;return\ `â€¢\ <strong>\$\{m}</strong>:\ media\ \$\{formatearPrecio\(prom\)}\ â‚¬/L`;}\)\.join\('<br>'\);r=`Comparativa\ en\ \$\{prov\.nombre}:<br>\$\{marcas}`;}else\{r=`Puedo\ ayudarte\ a\ encontrar\ la\ gasolinera\ mÃ¡s\ barata,\ calcular\ el\ coste\ de\ llenar\ el\ depÃ³sito\ o\ consultar\ la\ evoluciÃ³n\ de\ precios\ en\ \$\{prov\.nombre}\.\ Prueba\ con:\ â€œÂ¿CuÃ¡l\ es\ la\ mÃ¡s\ barata\?â€\ o\ â€œEvoluciÃ³n\ en\ 30\ dÃ­asâ€\.`;}return\ r;}\nfunction\ handleSend\(\)\{const\ texto=els\.iaInput\.value\.trim\(\);if\(!texto\)return;els\.iaInput\.value='';addMsg\('user',String\(texto\)\.replace\(/&/g,'&amp;'\)\.replace\(/</g,'&lt;'\)\.replace\(/>/g,'&gt;'\)\);setTyping\(true\);els\.iaSend\.disabled=true;setTimeout\(\(\)=>\{setTyping\(false\);const\ resp=responderIA\(texto\);addMsg\('assistant',resp\);els\.iaSend\.disabled=false;toast\('Respuesta\ del\ asistente\ \(simulada\)'\);},1200\);}\nels\.btnBack\.onclick=\(\)=>setProv\(null\);\nels\.btnOpenIA\.onclick=\(\)=>\{els\.assistant\.classList\.add\('open'\);els\.btnOpenIA\.classList\.add\('active'\);STATE\.iaOpen=true;};\nels\.btnCloseIA\.onclick=\(\)=>\{els\.assistant\.classList\.remove\('open'\);els\.btnOpenIA\.classList\.remove\('active'\);STATE\.iaOpen=false;};\nels\.iaSend\.onclick=handleSend;\nels\.iaInput\.onkeypress=e=>\{if\(e\.key==='Enter'\)handleSend\(\);};\nels\.mapLayer\.onclick=e=>\{const\ m=e\.target\.closest\('\.map-marker'\);if\(!m\)return;STATE\.seleccionada=Number\(m\.dataset\.id\);render\(\);};\nels\.list\.onclick=e=>\{const\ card=e\.target\.closest\('\.station-card'\);if\(!card\)return;const\ fav=e\.target\.closest\('\.fav'\);if\(fav\)\{e\.stopPropagation\(\);const\ id=Number\(fav\.dataset\.id\);const\ est=ESTACIONES\.find\(e2=>e2\.id===id\);est\.favorito=!est\.favorito;render\(\);return;}STATE\.seleccionada=Number\(card\.dataset\.id\);render\(\);};\nels\.quick\.onclick=e=>\{const\ btn=e\.target\.closest\('\.quick-btn'\);if\(!btn\)return;els\.iaInput\.value=btn\.dataset\.q;handleSend\(\);};\nrenderChips\(\);render\(\);\n</script>
+<script>const STATE = { prov: null, combustible: '', marca: '', buscar: '', soloFav: false, seleccionada: null, iaOpen: false };
+const COMB = 'Precio Gasolina 95 E5';
+const els = {};
+['chipBar','secEmpty','secMain','list','mapLayer','headerTitle','btnBack','assistant','iaMessages','iaInput','iaSend','btnOpenIA','btnCloseIA','quick','toast'].forEach(k => { els[k] = document.getElementById(k); });
+function toast(m){const t=els.toast;t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1600);}
+function chip(label,active,onClick,removable){const c=document.createElement('button');c.className='chip '+(active?'active':'');c.innerHTML=label+(removable?' <span class="remove">✕</span>':'');if(onClick)c.onclick=e=>{e.stopPropagation();onClick();};if(removable)c.querySelector('.remove').onclick=e=>{e.stopPropagation();onClick();};return c;}
+function renderChips(){els.chipBar.innerHTML='';if(STATE.prov){const p=PROVINCIAS.find(x=>x.id===STATE.prov);els.chipBar.appendChild(chip(p.nombre,true,()=>setProv(null),true));}else{PROVINCIAS.forEach(p=>els.chipBar.appendChild(chip(p.nombre,false,()=>setProv(p.id))));}}
+function setProv(v){STATE.prov=v;STATE.seleccionada=null;renderChips();render();renderIAContext();}
+function precioColor(est){const p=est.precios[COMB]||0;return p<=1.45?'green':p<=1.60?'orange':'red';}
+function listaFiltrada(){const base=STATE.prov?ESTACIONES.porProvincia(STATE.prov):ESTACIONES;return filtrarEstaciones(base,{provincia:STATE.prov,combustible:STATE.combustible,marca:STATE.marca,buscar:STATE.buscar,soloFavoritos:!!STATE.soloFav});}
+function render(){if(!STATE.prov){els.secEmpty.classList.add('active');els.secMain.classList.remove('active');els.headerTitle.textContent='Asistente IA';els.btnBack.style.display='none';els.mapLayer.innerHTML='';els.list.innerHTML='';return;}els.secEmpty.classList.remove('active');els.secMain.classList.add('active');const prov=PROVINCIAS.find(p=>p.id===STATE.prov);els.headerTitle.textContent=prov.nombre;els.btnBack.style.display='block';const lista=ordenarEstaciones(listaFiltrada(),'precio',true);renderMap(lista);els.list.innerHTML=lista.map(renderCard).join('');}
+function renderMap(lista){if(!STATE.prov){els.mapLayer.innerHTML='';return;}const prov=PROVINCIAS.find(p=>p.id===STATE.prov);els.mapLayer.innerHTML=lista.map(est=>{const c=precioColor(est);const x=50+((est.lat-prov.centro[0])/0.2)*40;const y=50+((prov.centro[1]-est.lng)/0.2)*40;return `<div class="map-marker ${c} ${est.id===STATE.seleccionada?'selected':''}" style="left:${Math.max(5,Math.min(95,x))}%;top:${Math.max(5,Math.min(95,y))}%;" data-id="${est.id}" title="${est.nombre}">${est.marca[0]}</div>`;}).join('');}
+function renderCard(est){const c=precioColor(est);const favCls=est.favorito?'on':'';const best=est.esMejor?'<div class="rank best">1</div>':'<div class="rank">-</div>';return `<div class="station-card ${est.id===STATE.seleccionada?'selected':''}" data-id="${est.id}">${best}<div class="info"><div class="name">${est.nombre}</div><div class="addr">${est.direccion} · ${est.localidad}</div></div><div class="right"><div class="price">${formatearPrecio(est.precios[COMB]||0)} <span class="uni">€/L</span></div><div class="dist" style="color:${c==='green'?'#2e7d32':c==='orange'?'#f57c00':'#c62828'};">${formatearDistancia(est.distancia)}</div><button class="fav ${favCls}" data-id="${est.id}">${est.favorito?'★':'☆'}</button></div></div>`;}
+function renderIAContext(){if(!STATE.prov)return;const lista=listaFiltrada();const mejor=lista.slice().sort((a,b)=>(a.precios[COMB]||99)-(b.precios[COMB]||99))[0]||null;const ctx=document.getElementById('iaCtx');if(ctx)ctx.textContent='Contexto: '+(mejor?mejor.nombre+' ('+formatearPrecio(mejor.precios[COMB])+' €/L)':'sin datos');}
+function addMsg(role,html){const div=document.createElement('div');div.className='ia-msg '+role;div.innerHTML=html;els.iaMessages.appendChild(div);els.iaMessages.scrollTop=els.iaMessages.scrollHeight;return div;}
+function setTyping(show){let t=els.iaMessages.querySelector('.ia-typing-wrap');if(show&&!t){const wrap=document.createElement('div');wrap.className='ia-typing-wrap';wrap.innerHTML='<div class="ia-msg assistant"><span class="ia-typing">El asistente está escribiendo</span></div>';els.iaMessages.appendChild(wrap);}if(!show&&t)t.remove();els.iaMessages.scrollTop=els.iaMessages.scrollHeight;}
+function responderIA(pregunta){const q=pregunta.toLowerCase();const lista=listaFiltrada();const mejor=lista.slice().sort((a,b)=>(a.precios[COMB]||99)-(b.precios[COMB]||99))[0]||null;const prov=PROVINCIAS.find(p=>p.id===STATE.prov);let r='';if(q.includes('barata')||q.includes('más barata')||q.includes('menor')){r=mejor?`La estación más barata de ${prov.nombre} para ${COMB.replace('Precio ','')} es <strong>${mejor.nombre}</strong> (${mejor.marca}) a <strong>${formatearPrecio(mejor.precios[COMB])} €/L</strong>.<br>📍 ${mejor.direccion}, ${mejor.localidad}.`:'No encontré estaciones con precio en esta provincia.';}else if(q.includes('depósito')||q.includes('llenar')){const litros=50;const p=mejor?mejor.precios[COMB]:1.55;r=`Llenar un depósito de <strong>${litros} L</strong> costaría aprox. <strong>${formatearPrecio(p*litros)} €</strong> al precio más barato (${formatearPrecio(p)} €/L).`;}else if(q.includes('evolución')||q.includes('30 días')||q.includes('historial')){r=`En los últimos 30 días, el precio de ${COMB.replace('Precio ','')} en ${prov.nombre} ha variado levemente (datos simulados). La estación <strong>${mejor?mejor.nombre:'—'}</strong> mantiene el precio más estable y barato.`;}else if(q.includes('compara')||q.includes('repsol')||q.includes('cepsa')){const marcas=[...new Set(lista.map(e=>e.marca))].slice(0,4).map(m=>{const deMarca=lista.filter(e=>e.marca===m);const prom=deMarca.reduce((s,e)=>s+(e.precios[COMB]||0),0)/deMarca.length;return `• <strong>${m}</strong>: media ${formatearPrecio(prom)} €/L`;}).join('<br>');r=`Comparativa en ${prov.nombre}:<br>${marcas}`;}else{r=`Puedo ayudarte a encontrar la gasolinera más barata, calcular el coste de llenar el depósito o consultar la evolución de precios en ${prov.nombre}. Prueba con: “¿Cuál es la más barata?” o “Evolución en 30 días”.`;}return r;}
+function handleSend(){const texto=els.iaInput.value.trim();if(!texto)return;els.iaInput.value='';addMsg('user',String(texto).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'));setTyping(true);els.iaSend.disabled=true;setTimeout(()=>{setTyping(false);const resp=responderIA(texto);addMsg('assistant',resp);els.iaSend.disabled=false;toast('Respuesta del asistente (simulada)');},1200);}
+els.btnBack.onclick=()=>setProv(null);
+els.btnOpenIA.onclick=()=>{els.assistant.classList.add('open');els.btnOpenIA.classList.add('active');STATE.iaOpen=true;};
+els.btnCloseIA.onclick=()=>{els.assistant.classList.remove('open');els.btnOpenIA.classList.remove('active');STATE.iaOpen=false;};
+els.iaSend.onclick=handleSend;
+els.iaInput.onkeypress=e=>{if(e.key==='Enter')handleSend();};
+els.mapLayer.onclick=e=>{const m=e.target.closest('.map-marker');if(!m)return;STATE.seleccionada=Number(m.dataset.id);render();};
+els.list.onclick=e=>{const card=e.target.closest('.station-card');if(!card)return;const fav=e.target.closest('.fav');if(fav){e.stopPropagation();const id=Number(fav.dataset.id);const est=ESTACIONES.find(e2=>e2.id===id);est.favorito=!est.favorito;render();return;}STATE.seleccionada=Number(card.dataset.id);render();};
+els.quick.onclick=e=>{const btn=e.target.closest('.quick-btn');if(!btn)return;els.iaInput.value=btn.dataset.q;handleSend();};
+renderChips();render();
+</script>
 </body>
 </html>
 

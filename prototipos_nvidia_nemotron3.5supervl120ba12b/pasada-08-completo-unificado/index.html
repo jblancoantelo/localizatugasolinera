@@ -6,8 +6,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Prototipo 8 · Completo Unificado · Gasolineras</title>
-<link rel="preload" as="script" href="../../datos-fake.js">
-<script src="../../datos-fake.js"></script>
+<link rel="preload" as="script" href="../datos-fake.js">
+<script src="../datos-fake.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 :root {
@@ -337,7 +337,7 @@ els.btnSearch.onclick=()=>{els.searchWrap.classList.add('open');els.inpSearch.fo
 els.btnCloseSearch.onclick=e=>{e.stopPropagation();els.searchWrap.classList.remove('open');els.inpSearch.value='';setBuscar('');};
 els.inpSearch.oninput=e=>setBuscar(e.target.value);
 
-els.btnClear.onclick=()=>{setProv(null);setComb('');setMarca('');setFav(false);setBuscar('');setDistancia('');els.inpSearch.value='';els.inpDistance.value='';els.searchWrap.classList.remove('open');els.distanceRow.classList.remove('open');render();};
+if(els.btnClear)els.btnClear.onclick=()=>{setProv(null);setComb('');setMarca('');setFav(false);setBuscar('');setDistancia('');els.inpSearch.value='';els.inpDistance.value='';els.searchWrap.classList.remove('open');els.distanceRow.classList.remove('open');render();};
 
 els.btnGeo.onclick=()=>toast('Ubicación activada (simulada)');
 
@@ -349,7 +349,7 @@ document.getElementById('listBoth').onclick=e=>{const card=e.target.closest('.st
 
 els.btnSheetClose.onclick=cerrarSheet;
 els.sheetFav.onclick=e=>{e.stopPropagation();toggleFavorito(STATE.seleccionada);};
-els.btnSheetRuta.onclick=()=>{STATE.view='map';render();cerrarSheet();};
+if(els.btnSheetRuta)els.btnSheetRuta.onclick=()=>{STATE.view='map';render();cerrarSheet();};
 
 els.inpDistance.oninput=e=>setDistancia(e.target.value);
 
@@ -360,7 +360,7 @@ els.bottomNav.onclick=e=>{const tab=e.target.closest('.nav-tab');if(!tab)return;
 let configSection='';
 function renderConfig(){const sections={cache:`<div style="padding:0.8rem 1rem;border-bottom:1px solid var(--line);font-size:0.8rem;color:var(--muted)">Caché de datos (simulado)</div><div style="padding:0.8rem 1rem"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem"><span>TTL caché (horas)</span><span id="cfgTtlVal">24 h</span></div><input type="range" id="cfgTtl" min="1" max="168" value="24" style="width:100%"><div style="padding:0.8rem 1rem;border-top:1px solid var(--line);font-size:0.75rem;color:var(--muted)">Índices: 12 provincias · Histórico: 360 entradas</div></div>`,push:`<div style="padding:0.8rem 1rem;border-bottom:1px solid var(--line);font-size:0.8rem;color:var(--muted)">Notificaciones push (simulado)</div><div style="padding:0.8rem 1rem"><label style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.7rem"><input type="checkbox" id="cfgPushEnabled" style="width:18px;height:18px"> Activar push</label><div style="margin-bottom:0.5rem"><span style="font-size:0.7rem;color:var(--muted);display:block;margin-bottom:0.2rem">Intervalo de chequeo</span><select id="cfgPushInterval" style="width:100%;padding:0.4rem;border:1px solid var(--line);border-radius:6px;background:#fff"><option>1 hora</option><option>4 horas</option><option>8 horas</option><option>24 horas</option></select></div><div style="margin-bottom:0.5rem"><span style="font-size:0.7rem;color:var(--muted);display:block;margin-bottom:0.2rem">Ventana de días</span><select id="cfgPushDays" style="width:100%;padding:0.4rem;border:1px solid var(--line);border-radius:6px;background:#fff"><option>3 días</option><option>7 días</option><option>30 días</option><option>90 días</option></select></div><button class="modal-btn primary" id="btnPushTest" style="margin-top:0.5rem">Probar notificación</button></div>`,ia:`<div style="padding:0.8rem 1rem;border-bottom:1px solid var(--line);font-size:0.8rem;color:var(--muted)">Pestañas de IA (simulado)</div><div style="padding:0.8rem 1rem">Groq · Mistral · OpenRouter · LLM7 · NVIDIA · Google · Chrome</div>`};
 els.sidebarBody.innerHTML=sections[configSection]||sections.cache;
-if(configSection==='push'){document.getElementById('btnPushTest')?.onclick=()=>{toast('Notificación push simulada enviada');};}}
+if(configSection==='push'){const btnPushTest=document.getElementById('btnPushTest');if(btnPushTest)btnPushTest.onclick=()=>{toast('Notificación push simulada enviada');};}}
 
 /* Chat IA modal */
 let iaHistorial=[];
