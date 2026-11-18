@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- Copyright (C) 2026 Juan Blanco Antelo — Localiza tu Gasolinera -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Prototipo 8 · Completo Unificado · Gasolineras</title>
+<link rel="preload" as="script" href="../../datos-fake.js">
+<script src="../../datos-fake.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --brand: #1a73e8;
+  --brand-dark: #1557b0;
+  --surface: #ffffff;
+  --surface-alt: #f8fafc;
+  --bg: #f4f6f9;
+  --text: #1a1a2e;
+  --text-soft: #475467;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --green: #2e7d32;
+  --green-bg: #dcfce7;
+  --orange: #f57c00;
+  --orange-bg: #fef3c7;
+  --red: #c62828;
+  --red-bg: #fee2e2;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow: 0 2px 10px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.1);
+  --radius: 12px;
+  --radius-lg: 16px;
+  --touch: 48px;
+  --header-h: 60px;
+  --transition: 0.25s cubic-bezier(0.16,1,0.3,1);
+}
+html, body { height: 100%; }
+body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; -webkit-touch-callout: none; }
+.app { display: flex; flex-direction: column; height: 100vh; position: relative; }
+
+.app-header {
+  position: sticky; top: 0; z-index: 60; height: var(--header-h);
+  background: rgba(255,255,255,0.88); backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+  padding: max(0.4rem, env(safe-area-inset-top)) 1rem 0.5rem;
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+}
+.app-header .back { display: none; font-size: 1.3rem; color: var(--muted); background: none; border: none; cursor: pointer; padding: 0.35rem; border-radius: 50%; width: var(--touch); height: var(--touch); display: grid; place-items: center; }
+.app-header .back.show { display: block; }
+.app-title { font-weight: 700; font-size: 1rem; letter-spacing: -0.3px; flex: 1; text-align: center; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-actions { display: flex; gap: 0.3rem; align-items: center; }
+.icon-btn { width: var(--touch); height: var(--touch); border-radius: 50%; border: 1px solid var(--line); background: #fff; cursor: pointer; display: grid; place-items: center; font-size: 1.1rem; color: var(--text); box-shadow: var(--shadow-sm); }
+.icon-btn:hover { background: #f1f3f5; }
+.icon-btn.active { background: #e8f0fe; border-color: var(--brand); color: var(--brand); }
+.icon-btn.danger { color: var(--red); border-color: var(--red-bg); background: var(--red-bg); }
+
+.chip-bar { display: flex; gap: 0.4rem; padding: 0.5rem 1rem 0.4rem; overflow-x: auto; scrollbar-width: none; }
+.chip-bar::-webkit-scrollbar { display: none; }
+.chip { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.9rem; border-radius: 999px; border: 1px solid var(--line); background: #fff; font-size: 0.78rem; color: var(--text); cursor: pointer; white-space: nowrap; min-height: var(--touch); box-shadow: var(--shadow-sm); }
+.chip:hover { border-color: var(--brand); }
+.chip.active { background: var(--brand); color: #fff; border-color: var(--brand); box-shadow: var(--shadow); }
+.chip .remove { font-size: 1rem; line-height: 1; padding: 0 0.1rem; }
+
+.search-wrap { padding: 0.4rem 1rem; display: none; gap: 0.5rem; align-items: center; background: #fff; border-bottom: 1px solid var(--line); }
+.search-wrap.open { display: flex; }
+.search-wrap input { flex: 1; padding: 0.55rem 0.9rem; border: 1px solid var(--line); border-radius: 10px; font-size: 0.9rem; background: #f8fafc; }
+.search-wrap input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(26,115,232,0.1); }
+
+.distance-row { padding: 0.4rem 1rem; display: flex; gap: 0.5rem; align-items: center; background: #fff; border-bottom: 1px solid var(--line); display: none; }
+.distance-row.open { display: flex; }
+.distance-row label { font-size: 0.7rem; color: var(--muted); font-weight: 600; }
+.distance-row input { width: 70px; padding: 0.45rem 0.5rem; border: 1px solid var(--line); border-radius: 8px; font-size: 0.8rem; background: #f8fafc; }
+
+.view { flex: 1; overflow-y: auto; padding: 0.5rem 1rem 100px; position: relative; display: none; }
+.view.active { display: block; }
+
+.tab-map .map-wrap { height: 40vh; }
+.tab-table .card-list { margin-top: 0.5rem; }
+.tab-both .map-wrap { height: 45vh; }
+
+.empty { text-align: center; padding: 3rem 1rem; color: var(--muted); }
+.empty .icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.5; }
+.empty h3 { font-size: 1rem; margin-bottom: 0.3rem; color: var(--text); }
+.empty p { font-size: 0.85rem; }
+
+.map-wrap { position: relative; border-radius: var(--radius-lg); overflow: hidden; background: #dbeafe; border: 1px solid var(--line); }
+.map-canvas { width: 100%; height: 100%; background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%); position: relative; }
+.map-layer { position: absolute; inset: 0; pointer-events: none; }
+.map-marker { position: absolute; width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); cursor: pointer; transform: translate(-50%, -50%); display: grid; place-items: center; font-size: 0.75rem; z-index: 5; transition: transform 0.15s, box-shadow 0.15s; }
+.map-marker.green { background: var(--green); }
+.map-marker.orange { background: var(--orange); }
+.map-marker.red { background: var(--red); }
+.map-marker.selected { border-color: var(--brand); box-shadow: 0 0 0 4px rgba(26,115,232,0.35); }
+
+.card-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.station-card { display: flex; align-items: center; gap: 0.7rem; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 0.65rem 0.8rem; cursor: pointer; transition: transform 0.1s, box-shadow 0.15s, border-color 0.15s; min-height: var(--touch); }
+.station-card:active { transform: scale(0.995); }
+.station-card:hover { border-color: var(--brand); box-shadow: var(--shadow); }
+.station-card.selected { border-color: var(--brand); background: #eef6ff; }
+.station-card .rank { width: 24px; height: 24px; border-radius: 50%; background: #e5e7eb; color: #6b7280; font-size: 0.68rem; font-weight: 700; display: grid; place-items: center; flex-shrink: 0; }
+.station-card .rank.best { background: var(--green); color: #fff; }
+.station-card .info { flex: 1; min-width: 0; }
+.station-card .name { font-weight: 700; font-size: 0.86rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.station-card .addr { font-size: 0.7rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.station-card .right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }
+.station-card .price { font-weight: 800; font-size: 1rem; color: var(--text); }
+.station-card .price .uni { font-size: 0.6rem; color: var(--muted); font-weight: 600; }
+.station-card .dist { font-size: 0.68rem; color: var(--muted); background: #f1f5f9; padding: 0.1rem 0.45rem; border-radius: 999px; border: 1px solid #cbd5e1; }
+.station-card .fav { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line); background: #fff; cursor: pointer; display: grid; place-items: center; font-size: 0.95rem; color: #b0b0b0; flex-shrink: 0; }
+.station-card .fav.on { color: #f9a825; border-color: #f9a825; background: #fff7e0; }
+.station-card .badge { display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.1rem 0.5rem; border-radius: 6px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.station-card .badge.green { background: var(--green-bg); color: var(--green); }
+.station-card .badge.orange { background: var(--orange-bg); color: var(--orange); }
+.station-card .badge.red { background: var(--red-bg); color: var(--red); }
+
+.legend { display: flex; gap: 0.4rem; justify-content: center; margin-bottom: 0.5rem; font-size: 0.7rem; color: var(--muted); flex-wrap: wrap; }
+.legend .item { display: flex; align-items: center; gap: 0.25rem; }
+.legend .dot { width: 8px; height: 8px; border-radius: 50%; border: 1px solid currentColor; }
+
+.bottom-nav { position: fixed; bottom: max(env(safe-area-inset-bottom), 0.5rem); left: 0.5rem; right: 0.5rem; display: flex; gap: 0.25rem; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 0.2rem; box-shadow: var(--shadow-lg); z-index: 60; }
+.nav-tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.15rem; padding: 0.42rem 0.25rem; border-radius: 999px; border: none; background: transparent; cursor: pointer; font-size: 0.62rem; color: #94a3b8; min-height: var(--touch); }
+.nav-tab .icon { font-size: 1.25rem; line-height: 1; }
+.nav-tab.active { background: #eef2ff; color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); }
+
+.fab-wrap { position: fixed; bottom: 100px; right: 1rem; z-index: 55; }
+.fab { width: 56px; height: 56px; border-radius: 50%; background: var(--brand); color: #fff; border: none; box-shadow: 0 4px 14px rgba(26,115,232,0.35); cursor: pointer; display: grid; place-items: center; font-size: 1.4rem; transition: transform 0.15s, background 0.15s; }
+.fab:active { transform: scale(0.92); background: var(--brand-dark); }
+
+.bottom-sheet { position: fixed; inset: auto 0 0 0; z-index: 100; background: #fff; border-radius: var(--radius-lg) var(--radius-lg) 0 0; box-shadow: 0 -6px 28px rgba(0,0,0,0.12); transform: translateY(100vh); transition: transform var(--transition); height: 100vh; max-height: 92vh; overflow: hidden; display: flex; flex-direction: column; }
+.bottom-sheet.open { transform: translateY(0); }
+.bottom-sheet .sheet-handle { width: 32px; height: 4px; background: #d1d5db; border-radius: 2px; margin: 0.5rem auto 0.2rem; cursor: pointer; }
+.bottom-sheet .sheet-header { display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 1rem; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.bottom-sheet .sheet-header h2 { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 0.4rem; }
+.bottom-sheet .sheet-close { background: none; border: none; cursor: pointer; font-size: 1.2rem; color: var(--muted); padding: 0.2rem; border-radius: 50%; width: var(--touch); height: var(--touch); display: grid; place-items: center; }
+.bottom-sheet .sheet-close:hover { background: #f1f3f5; }
+.bottom-sheet .sheet-body { flex: 1; overflow-y: auto; padding: 1rem; }
+.sheet-row { display: flex; justify-content: space-between; padding: 0.45rem 0; border-bottom: 1px solid var(--line); font-size: 0.82rem; }
+.sheet-row:last-child { border-bottom: none; }
+.sheet-row .label { color: var(--muted); }
+.sheet-row .value { font-weight: 600; text-align: right; }
+.sheet-actions { padding: 0.8rem 1rem; border-top: 1px solid var(--line); display: flex; gap: 0.5rem; }
+.sheet-btn { flex: 1; padding: 0.6rem; border-radius: 10px; border: 1px solid var(--line); background: #fff; font-weight: 600; cursor: pointer; font-size: 0.85rem; }
+.sheet-btn.primary { background: var(--brand); color: #fff; border-color: var(--brand); }
+.sheet-btn.fav { width: 56px; }
+.sheet-chart-wrap { position: relative; height: 150px; border: 1px solid var(--line); border-radius: 10px; background: #fff; margin-top: 0.5rem; }
+.sheet-canvas { width: 100%; height: 100%; }
+
+.skeleton { background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.skeleton.text { height: 0.9rem; margin-bottom: 0.4rem; }
+.skeleton.price { height: 1.2rem; width: 45%; }
+
+.toast { position: fixed; bottom: 150px; left: 50%; transform: translateX(-50%); background: rgba(26,26,46,0.9); color: #fff; padding: 0.6rem 1rem; border-radius: 24px; font-size: 0.8rem; z-index: 70; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+.toast.show { opacity: 1; }
+
+.modal { position: fixed; inset: 0; z-index: 200; background: rgba(26,26,46,0.4); backdrop-filter: blur(4px); display: none; flex-direction: column; justify-content: center; align-items: center; }
+.modal.open { display: flex; }
+.modal-panel { background: #fff; border-radius: var(--radius-lg); width: 92vw; max-width: 480px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow-lg); }
+.modal-header { padding: 1rem; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+.modal-header h2 { font-size: 1rem; font-weight: 700; }
+.modal-close { background: none; border: none; font-size: 1.4rem; color: var(--muted); cursor: pointer; }
+.modal-body { flex: 1; overflow-y: auto; padding: 1rem; }
+.modal-actions { padding: 0.8rem 1rem; border-top: 1px solid var(--line); display: flex; gap: 0.5rem; }
+.modal-btn { flex: 1; padding: 0.6rem; border-radius: 10px; border: 1px solid var(--line); background: #fff; font-weight: 600; cursor: pointer; font-size: 0.85rem; }
+.modal-btn.primary { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+.sidebar-panel { position: fixed; inset: 0 0 0 auto; z-index: 150; background: #fff; width: 85vw; max-width: 420px; height: 100%; display: none; flex-direction: column; box-shadow: var(--shadow-lg); transform: translateX(100%); transition: transform var(--transition); }
+.sidebar-panel.open { transform: translateX(0); display: flex; }
+.sidebar-overlay { position: fixed; inset: 0; z-index: 140; background: rgba(0,0,0,0.3); display: none; }
+.sidebar-overlay.open { display: block; }
+
+@media (min-width: 1024px) {
+  .app { flex-direction: row; }
+  .app-header { position: fixed; inset: 0 0 auto 0; width: 100%; flex-direction: column; padding: 1rem; height: auto; }
+  .app-header .app-actions { margin-left: auto; }
+  .view { padding-bottom: 90px; padding-right: 440px; }
+  .fab-wrap { bottom: 140px; }
+  .right-panel { position: fixed; inset: 0 auto 0 0; width: 420px; height: 100%; overflow-y: auto; background: #fff; border-left: 1px solid var(--line); z-index: 30; padding: 1rem; }
+  .bottom-nav { bottom: 1rem; left: 1rem; right: auto; width: auto; max-width: 400px; border-radius: 10px; }
+  .fab-wrap { right: 1.5rem; bottom: 150px; }
+  .modal-panel { width: 560px; max-width: 70vw; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <button class="back" id="btnBack">‹</button>
+    <div class="app-title" id="headerTitle">Gasolineras</div>
+    <div class="app-actions">
+      <button class="icon-btn" id="btnMap" title="Mapa">🗺️</button>
+      <button class="icon-btn" id="btnTable" title="Tabla" active>📋</button>
+      <button class="icon-btn" id="btnBoth" title="Ambos">🔗</button>
+      <button class="icon-btn" id="btnSearch" title="Buscar">🔍</button>
+      <button class="icon-btn" id="btnConfig" title="Configuración">⚙️</button>
+      <button class="icon-btn" id="btnIA" title="Asistente IA">🤖</button>
+    </div>
+  </header>
+
+  <div class="chip-bar" id="chipBar"></div>
+
+  <div class="search-wrap" id="searchWrap">
+    <input type="text" id="inpSearch" placeholder="Buscar localidad, calle o marca...">
+    <button class="icon-btn" id="btnCloseSearch" style="font-size:1.2rem">✕</button>
+  </div>
+
+  <div class="distance-row" id="distanceRow">
+    <label>Distancia máx.</label>
+    <input type="number" id="inpDistance" min="1" placeholder="km">
+  </div>
+
+  <div class="view tab-map active" id="viewMap">
+    <div class="map-wrap" id="mapWrap">
+      <div class="map-canvas" id="mapCanvas"></div>
+      <div class="map-layer" id="mapLayer"></div>
+    </div>
+    <div class="legend" id="legendMap"></div>
+    <div class="card-list" id="listMap"></div>
+  </div>
+
+  <div class="view tab-table" id="viewTable">
+    <div class="legend" id="legendTable"></div>
+    <div class="card-list" id="listTable"></div>
+    <div id="pagination"></div>
+  </div>
+
+  <div class="view tab-both" id="viewBoth">
+    <div class="map-wrap" id="mapWrapBoth">
+      <div class="map-canvas" id="mapCanvasBoth"></div>
+      <div class="map-layer" id="mapLayerBoth"></div>
+    </div>
+    <div class="legend" id="legendBoth"></div>
+    <div class="card-list" id="listBoth"></div>
+  </div>
+
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="nav-tab active" data-tab="map"><span class="icon">🗺️</span><span>Mapa</span></button>
+    <button class="nav-tab" data-tab="table"><span class="icon">📋</span><span>Tabla</span></button>
+    <button class="nav-tab" data-tab="both"><span class="icon">🔗</span><span>Ambos</span></button>
+  </nav>
+
+  <div class="fab-wrap">
+    <button class="fab" id="btnGeo" title="Mi ubicación">📍</button>
+  </div>
+
+  <aside class="bottom-sheet" id="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h2 id="sheetNombre">Estación</h2>
+      <button class="sheet-close" id="btnSheetClose">✕</button>
+    </div>
+    <div class="sheet-body" id="sheetBody"></div>
+    <div class="sheet-actions">
+      <button class="sheet-btn fav" id="sheetFav" title="Favorito">☆</button>
+      <button class="sheet-btn primary" id="sheetRuta">Ver en mapa</button>
+    </div>
+  </aside>
+
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <aside class="sidebar-panel" id="sidebarPanel">
+    <div class="modal-header">
+      <h2 id="sidebarTitle">Configuración</h2>
+      <button class="modal-close" id="btnSidebarClose">✕</button>
+    </div>
+    <div class="modal-body" id="sidebarBody"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="btnSidebarCancel">Cerrar</button>
+    </div>
+  </aside>
+
+  <div class="modal" id="modalIA">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h2>Asistente IA</h2>
+        <button class="modal-close" id="btnIAClose">✕</button>
+      </div>
+      <div class="modal-body" id="modalIABody">
+        <div style="padding:1rem;text-align:center;color:var(--muted)">Asistente IA simulado</div>
+        <div class="ia-messages" id="iaMessages" style="display:flex;flex-direction:column;gap:0.7rem;padding:0.5rem 1rem;"></div>
+        <div style="display:flex;gap:0.5rem;padding:0.6rem 1rem;border-top:1px solid var(--line);background:#fff">
+          <input type="text" id="iaInputModal" placeholder="Pregunta al asistente…" style="flex:1;padding:0.55rem 0.9rem;border:1px solid var(--line);border-radius:10px;background:#f8fafc">
+          <button id="iaSendModal" style="padding:0.55rem 0.9rem;border:none;border-radius:10px;background:var(--brand);color:#fff;font-weight:600;cursor:pointer">Enviar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+<script>
+const STATE = {
+  prov: null, combustible: '', marca: '', buscar: '', soloFav: false,
+  distancia: '', view: 'map', orden: 'precio', asc: true, pagina: 1, filasPorPagina: 30,
+  seleccionada: null, favoritos: new Set()
+};
+const COMB = 'Precio Gasolina 95 E5';
+const els = {};
+['chipBar','searchWrap','inpSearch','btnSearch','btnCloseSearch','distanceRow','inpDistance',
+ 'viewMap','viewTable','viewBoth','mapWrap','mapLayer','listMap','listTable','listBoth',
+ 'headerTitle','btnBack','bottomNav','sheet','sheetBody','sheetNombre','sheetFav',
+ 'btnSheetClose','btnSheetRuta','btnGeo','toast','sidebarPanel','sidebarOverlay',
+ 'sidebarBody','sidebarTitle','btnSidebarClose','btnSidebarCancel','modalIA','modalIABody',
+ 'iaMessages','iaInputModal','iaSendModal','btnIAClose','legendMap','legendTable','legendBoth',
+ 'pagination','btnMap','btnTable','btnBoth','btnConfig','btnIA'].forEach(k => { els[k] = document.getElementById(k); });
+function toast(m){const t=els.toast;t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);}
+function chip(label,active,onClick,removable){const c=document.createElement('button');c.className='chip '+(active?'active':'');c.innerHTML=label+(removable?' <span class="remove">✕</span>':'');if(onClick)c.onclick=e=>{e.stopPropagation();onClick();};if(removable)c.querySelector('.remove').onclick=e=>{e.stopPropagation();onClick();};return c;}
+function renderChips(){els.chipBar.innerHTML='';if(!STATE.prov){PROVINCIAS.forEach(p=>els.chipBar.appendChild(chip(p.nombre,false,()=>setProv(p.id))));}else{const p=PROVINCIAS.find(x=>x.id===STATE.prov);els.chipBar.appendChild(chip(p.nombre,true,()=>setProv(null),true));}if(STATE.combustible)els.chipBar.appendChild(chip('Gasolina 95',true,()=>setComb('')));if(STATE.marca)els.chipBar.appendChild(chip(STATE.marca,true,()=>setMarca(''),true));if(STATE.soloFav)els.chipBar.appendChild(chip('⭐ Favoritos',true,()=>setFav(false),true));if(STATE.buscar)els.chipBar.appendChild(chip('🔍 '+STATE.buscar,true,()=>setBuscar(''),true));if(STATE.distancia)els.chipBar.appendChild(chip('📏 ≤'+STATE.distancia+' km',true,()=>setDistancia(''),true));}
+function setProv(id){STATE.prov=id;STATE.seleccionada=null;STATE.pagina=1;renderChips();render();}
+function setComb(v){STATE.combustible=v;renderChips();render();}
+function setMarca(v){STATE.marca=v;renderChips();render();}
+function setFav(v){STATE.soloFav=v;renderChips();render();}
+function setBuscar(v){STATE.buscar=v;STATE.pagina=1;renderChips();render();}
+function setDistancia(v){STATE.distancia=v;STATE.pagina=1;renderChips();render();}
+function precioColor(est){const p=est.precios[COMB]||0;return p<=1.45?'green':p<=1.60?'orange':'red';}
+function precioBadge(est){const p=est.precios[COMB]||0;const c=precioColor(est);const t=c==='green'?'Barato':c==='orange'?'Medio':'Caro';return `<span class="badge ${c}">${t}</span>`;}
+function listaFiltrada(){const base=STATE.prov?ESTACIONES.porProvincia(STATE.prov):ESTACIONES;let lista=filtrarEstaciones(base,{provincia:STATE.prov,combustible:STATE.combustible,marca:STATE.marca,buscar:STATE.buscar,soloFavoritos:STATE.soloFav});if(STATE.distancia){const d=parseFloat(STATE.distancia);lista=lista.filter(e=>e.distancia<=d);}return ordenarEstaciones(lista,STATE.orden,STATE.asc);}
+function render(){if(!STATE.prov){els.viewMap.classList.remove('active');els.viewTable.classList.remove('active');els.viewBoth.classList.remove('active');els.headerTitle.textContent='Gasolineras';els.btnBack.style.display='none';return;}els.btnBack.style.display='block';const prov=PROVINCIAS.find(p=>p.id===STATE.prov);els.headerTitle.textContent=prov.nombre;const lista=listaFiltrada();els.viewMap.classList.add('active');els.viewTable.classList.remove('active');els.viewBoth.classList.remove('active');renderMap(lista,els.mapLayer);renderList(lista,els.listMap);renderLegend(els.legendMap);renderPagination(lista);}
+function renderMap(lista,layer){if(!STATE.prov){layer.innerHTML='';return;}const prov=PROVINCIAS.find(p=>p.id===STATE.prov);layer.innerHTML=lista.map(est=>{const c=precioColor(est);const x=50+((est.lat-prov.centro[0])/0.2)*40;const y=50+((prov.centro[1]-est.lng)/0.2)*40;return `<div class="map-marker ${c} ${est.id===STATE.seleccionada?'selected':''}" style="left:${Math.max(5,Math.min(95,x))}%;top:${Math.max(5,Math.min(95,y))}%;" data-id="${est.id}" title="${est.nombre}">${est.marca[0]}</div>`;}).join('');}
+function renderList(lista,listEl){const inicio=(STATE.pagina-1)*STATE.filasPorPagina;const fin=inicio+STATE.filasPorPagina;const pag=lista.slice(inicio,fin);listEl.innerHTML=pag.map(renderCard).join('');}
+function renderLegend(el){el.innerHTML=`<div class="item"><div class="dot green"></div> &lt;1,45</div><div class="item"><div class="dot orange"></div> 1,45–1,60</div><div class="item"><div class="dot red"></div> &gt;1,60</div>`;}
+function renderPagination(lista){const total=Math.ceil(lista.length/STATE.filasPorPagina);let html='';for(let i=1;i<=total;i++){html+=`<button class="chip ${i===STATE.pagina?'active':''}" onclick="setPagina(${i})">${i}</button>`;}els.pagination.innerHTML=html;els.pagination.style.display=total>1?'flex':'none';els.pagination.style.justifyContent='center';els.pagination.style.gap='0.4rem';els.pagination.style.marginTop='0.5rem';}
+function setPagina(p){STATE.pagina=p;render();}
+function renderCard(est){const c=precioColor(est);const favCls=STATE.favoritos.has(est.id)?'on':'';const best=est.esMejor?'<div class="rank best">1</div>':'<div class="rank">-</div>';return `<div class="station-card ${est.id===STATE.seleccionada?'selected':''}" data-id="${est.id}">${best}<div class="info"><div class="name">${est.nombre}</div><div class="addr">${est.direccion} · ${est.localidad}</div></div><div class="right"><div class="price">${formatearPrecio(est.precios[COMB]||0)} <span class="uni">€/L</span></div><div class="dist" style="color:${c==='green'?'#2e7d32':c==='orange'?'#f57c00':'#c62828'};border-color:${c==='green'?'#bbf7d0':c==='orange'?'#fed7aa':'#fecaca'};">${formatearDistancia(est.distancia)}</div>${precioBadge(est)}<button class="fav ${favCls}" data-id="${est.id}">${STATE.favoritos.has(est.id)?'★':'☆'}</button></div></div>`;}
+function abrirDetalle(id){const est=ESTACIONES.find(e=>e.id===id);if(!est)return;STATE.seleccionada=id;render();const pDesc=precioConDescuento(est,COMB);const color=precioColor(est);const hist=historicoParaGrafica(est,COMB);const primero=hist[hist.length-1];const ultimo=hist[0];const variacion=ultimo&&primero?((ultimo.precio-primero.precio)/primero.precio*100):0;els.sheetNombre.textContent=est.nombre;els.sheetBody.innerHTML=`<div class="sheet-row"><span class="label">Marca</span><span class="value">${est.marca}</span></div><div class="sheet-row"><span class="label">Dirección</span><span class="value">${est.direccion}</span></div><div class="sheet-row"><span class="label">Localidad</span><span class="value">${est.localidad}, ${est.provincia}</span></div><div class="sheet-row"><span class="label">Horario</span><span class="value">${est.horario}</span></div><div class="sheet-row"><span class="label">Servicios</span><span class="value">${est.servicios}</span></div><div class="sheet-row"><span class="label">Distancia</span><span class="value">${formatearDistancia(est.distancia)}</span></div><div class="sheet-row"><span class="label">Precio ${COMB.replace('Precio ','')}</span><span class="value" style="color:var(--${color==='green'?'green':color==='orange'?'orange':'red'})">${formatearPrecio(est.precios[COMB]||0)} €/L</span></div><div class="sheet-row"><span class="label">Con descuento ${est.descuento.toFixed(2)} €/L</span><span class="value">${formatearPrecio(pDesc)} €/L</span></div><div class="sheet-row"><span class="label">Variación 30d</span><span class="value">${variacion>=0?'+':''}${variacion.toFixed(1)}%</span></div><div class="sheet-chart-wrap"><canvas class="sheet-canvas" id="sheetCanvas"></canvas></div>`;els.sheetFav.textContent=STATE.favoritos.has(id)?'★':'☆';els.sheetFav.dataset.fav=STATE.favoritos.has(id);els.sheet.classList.add('open');document.body.style.overflow='hidden';dibujarGrafica(hist);}
+function dibujarGrafica(hist){const cv=document.getElementById('sheetCanvas');const ctx=cv.getContext('2d');const dpr=window.devicePixelRatio||1;const w=cv.parentElement.clientWidth;const h=150;cv.width=w*dpr;cv.height=h*dpr;ctx.scale(dpr,dpr);ctx.clearRect(0,0,w,h);if(!hist||hist.length<2)return;const precios=hist.map(f=>f.precio);const min=Math.min(...precios),max=Math.max(...precios);const pad=(max-min)*0.2||1;const yMin=min-pad,yMax=max+pad;const n=hist.length;const xStep=w/(n-1||1);const toY=p=>h-18-((p-yMin)/(yMax-yMin))*(h-36);ctx.beginPath();ctx.strokeStyle='#1a73e8';ctx.lineWidth=2;hist.forEach((f,i)=>{const x=i*xStep;const y=toY(f.precio);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});ctx.stroke();hist.forEach((f,i)=>{const x=i*xStep;const y=toY(f.precio);ctx.beginPath();ctx.arc(x,y,2.5,0,Math.PI*2);ctx.fillStyle=i===n-1?'#1a73e8':'#e5e7eb';ctx.fill();});ctx.fillStyle='#1a73e8';ctx.font='600 11px system-ui';ctx.fillText(formatearPrecio(hist[n-1].precio)+' €/L · '+hist[n-1].fecha,6,16);}
+function cerrarSheet(){els.sheet.classList.remove('open');document.body.style.overflow='';STATE.seleccionada=null;render();}
+function toggleFavorito(id){if(STATE.favoritos.has(id))STATE.favoritos.delete(id);else STATE.favoritos.add(id);toast(STATE.favoritos.has(id)?'Añadido a favoritos':'Eliminado de favoritos');render();}
+
+/* Eventos principales */
+els.btnBack.onclick=()=>setProv(null);
+els.btnMap.onclick=()=>{STATE.view='map';render();};
+els.btnTable.onclick=()=>{STATE.view='table';render();};
+els.btnBoth.onclick=()=>{STATE.view='both';render();};
+
+els.btnSearch.onclick=()=>{els.searchWrap.classList.add('open');els.inpSearch.focus();};
+els.btnCloseSearch.onclick=e=>{e.stopPropagation();els.searchWrap.classList.remove('open');els.inpSearch.value='';setBuscar('');};
+els.inpSearch.oninput=e=>setBuscar(e.target.value);
+
+els.btnClear.onclick=()=>{setProv(null);setComb('');setMarca('');setFav(false);setBuscar('');setDistancia('');els.inpSearch.value='';els.inpDistance.value='';els.searchWrap.classList.remove('open');els.distanceRow.classList.remove('open');render();};
+
+els.btnGeo.onclick=()=>toast('Ubicación activada (simulada)');
+
+els.mapLayer.onclick=e=>{const m=e.target.closest('.map-marker');if(!m)return;abrirDetalle(Number(m.dataset.id));};
+
+document.getElementById('listMap').onclick=e=>{const card=e.target.closest('.station-card');if(!card)return;const fav=e.target.closest('.fav');if(fav){e.stopPropagation();toggleFavorito(Number(fav.dataset.id));return;}abrirDetalle(Number(card.dataset.id));};
+document.getElementById('listTable').onclick=e=>{const card=e.target.closest('.station-card');if(!card)return;const fav=e.target.closest('.fav');if(fav){e.stopPropagation();toggleFavorito(Number(fav.dataset.id));return;}abrirDetalle(Number(card.dataset.id));};
+document.getElementById('listBoth').onclick=e=>{const card=e.target.closest('.station-card');if(!card)return;const fav=e.target.closest('.fav');if(fav){e.stopPropagation();toggleFavorito(Number(fav.dataset.id));return;}abrirDetalle(Number(card.dataset.id));};
+
+els.btnSheetClose.onclick=cerrarSheet;
+els.sheetFav.onclick=e=>{e.stopPropagation();toggleFavorito(STATE.seleccionada);};
+els.btnSheetRuta.onclick=()=>{STATE.view='map';render();cerrarSheet();};
+
+els.inpDistance.oninput=e=>setDistancia(e.target.value);
+
+/* Bottom nav */
+els.bottomNav.onclick=e=>{const tab=e.target.closest('.nav-tab');if(!tab)return;els.bottomNav.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));tab.classList.add('active');const name=tab.dataset.tab;if(name==='map'){STATE.view='map';}else if(name==='table'){STATE.view='table';}else{STATE.view='both';}render();};
+
+/* Configuración sidebar */
+let configSection='';
+function renderConfig(){const sections={cache:`<div style="padding:0.8rem 1rem;border-bottom:1px solid var(--line);font-size:0.8rem;color:var(--muted)">Caché de datos (simulado)</div><div style="padding:0.8rem 1rem"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem"><span>TTL caché (horas)</span><span id="cfgTtlVal">24 h</span></div><input type="range" id="cfgTtl" min="1" max="168" value="24" style="width:100%"><div style="padding:0.8rem 1rem;border-top:1px solid var(--line);font-size:0.75rem;color:var(--muted)">Índices: 12 provincias · Histórico: 360 entradas</div></div>`,push:`<div style="padding:0.8rem 1rem;border-bottom:1px solid var(--line);font-size:0.8rem;color:var(--muted)">Notificaciones push (simulado)</div><div style="padding:0.8rem 1rem"><label style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.7rem"><input type="checkbox" id="cfgPushEnabled" style="width:18px;height:18px"> Activar push</label><div style="margin-bottom:0.5rem"><span style="font-size:0.7rem;color:var(--muted);display:block;margin-bottom:0.2rem">Intervalo de chequeo</span><select id="cfgPushInterval" style="width:100%;padding:0.4rem;border:1px solid var(--line);border-radius:6px;background:#fff"><option>1 hora</option><option>4 horas</option><option>8 horas</option><option>24 horas</option></select></div><div style="margin-bottom:0.5rem"><span style="font-size:0.7rem;color:var(--muted);display:block;margin-bottom:0.2rem">Ventana de días</span><select id="cfgPushDays" style="width:100%;padding:0.4rem;border:1px solid var(--line);border-radius:6px;background:#fff"><option>3 días</option><option>7 días</option><option>30 días</option><option>90 días</option></select></div><button class="modal-btn primary" id="btnPushTest" style="margin-top:0.5rem">Probar notificación</button></div>`,ia:`<div style="padding:0.8rem 1rem;border-bottom:1px solid var(--line);font-size:0.8rem;color:var(--muted)">Pestañas de IA (simulado)</div><div style="padding:0.8rem 1rem">Groq · Mistral · OpenRouter · LLM7 · NVIDIA · Google · Chrome</div>`};
+els.sidebarBody.innerHTML=sections[configSection]||sections.cache;
+if(configSection==='push'){document.getElementById('btnPushTest')?.onclick=()=>{toast('Notificación push simulada enviada');};}}
+
+/* Chat IA modal */
+let iaHistorial=[];
+function renderIA(){els.iaMessages.innerHTML=iaHistorial.length?iaHistorial.map(m=>`<div class="ia-msg ${m.role}"><div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.2rem">${m.role==='user'?'Tú':'Asistente'}</div>${m.html}</div>`).join(''):'<div style="padding:1rem;text-align:center;color:var(--muted)">Escribe una pregunta para comenzar</div>';els.iaMessages.scrollTop=els.iaMessages.scrollHeight;}
+function iaSend(){const texto=els.iaInputModal.value.trim();if(!texto)return;iaHistorial.push({role:'user',html:String(texto).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')});els.iaInputModal.value='';renderIA();setTimeout(()=>{const q=texto.toLowerCase();let r='';if(q.includes('barata')||q.includes('más barata')){r='La estación más barata simulada es Repsol Madrid a 1,450 €/L.';}else if(q.includes('precio')){r='El precio medio simulado es 1,520 €/L.';}else{r='Asistente IA simulado: precios e históricos son datos fake para validar la interfaz.';}iaHistorial.push({role:'assistant',html:r});renderIA();},800);}
+
+els.btnConfig.onclick=()=>{configSection='cache';els.sidebarTitle.textContent='Configuración';renderConfig();els.sidebarPanel.classList.add('open');els.sidebarOverlay.classList.add('open');};
+els.btnIA.onclick=()=>{els.modalIA.classList.add('open');renderIA();};
+els.btnSidebarClose.onclick=()=>{els.sidebarPanel.classList.remove('open');els.sidebarOverlay.classList.remove('open');};
+els.sidebarOverlay.onclick=()=>{els.sidebarPanel.classList.remove('open');els.sidebarOverlay.classList.remove('open');};
+els.btnSidebarCancel.onclick=()=>{els.sidebarPanel.classList.remove('open');els.sidebarOverlay.classList.remove('open');};
+els.btnIAClose.onclick=()=>{els.modalIA.classList.remove('open');};
+els.iaSendModal.onclick=iaSend;
+els.iaInputModal.onkeypress=e=>{if(e.key==='Enter')iaSend();};
+
+/* Init */
+renderChips();render();
+</script>
+</body>
+</html>

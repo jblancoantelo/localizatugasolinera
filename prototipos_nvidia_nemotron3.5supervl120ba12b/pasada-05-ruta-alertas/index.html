@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Prototipo 5 · Ruta y Alertas · Gasolineras</title>
+<title>Prototipo 5 Â· Ruta y Alertas Â· Gasolineras</title>
 <link rel="preload" as="script" href="../datos-fake.js">
 <script src="../datos-fake.js"></script>
 <style>
@@ -121,11 +121,11 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Ro
 <body>
 <div class="app">
   <header class="app-header">
-    <button class="back" id="btnBack">‹</button>
+    <button class="back" id="btnBack">â€¹</button>
     <div class="app-title" id="headerTitle">Ruta y alertas</div>
     <div class="app-actions">
-      <button class="icon-btn" id="btnGeo" title="Ubicación">📍</button>
-      <button class="icon-btn" id="btnMapView" title="Mapa">🗺️</button>
+      <button class="icon-btn" id="btnGeo" title="UbicaciÃ³n">ðŸ“</button>
+      <button class="icon-btn" id="btnMapView" title="Mapa">ðŸ—ºï¸</button>
     </div>
   </header>
 
@@ -134,7 +134,7 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Ro
   <div class="view" id="view">
     <section id="secEmpty" class="active">
       <div class="empty">
-        <div class="icon">🗺️</div>
+        <div class="icon">ðŸ—ºï¸</div>
         <h3>Selecciona una provincia</h3>
         <p>Elige una provincia para planificar una ruta y activar alertas.</p>
       </div>
@@ -149,255 +149,19 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Ro
       <div id="routeSteps"></div>
       <div id="costCard"></div>
       <div id="alertCard"></div>
-      <button class="btn-primary" id="btnSimNotif">Probar notificación push</button>
+      <button class="btn-primary" id="btnSimNotif">Probar notificaciÃ³n push</button>
       <div id="logPanel" style="margin-top:1rem; max-height:200px; overflow-y:auto;"></div>
     </section>
   </div>
 
   <nav class="bottom-nav" id="bottomNav">
-    <button class="nav-tab active" data-tab="ruta"><span class="icon">🛣️</span><span>Ruta</span></button>
-    <button class="nav-tab" data-tab="alertas"><span class="icon">🔔</span><span>Alertas</span></button>
-    <button class="nav-tab" data-tab="log"><span class="icon">📋</span><span>Log</span></button>
+    <button class="nav-tab active" data-tab="ruta"><span class="icon">ðŸ›£ï¸</span><span>Ruta</span></button>
+    <button class="nav-tab" data-tab="alertas"><span class="icon">ðŸ””</span><span>Alertas</span></button>
+    <button class="nav-tab" data-tab="log"><span class="icon">ðŸ“‹</span><span>Log</span></button>
   </nav>
 
   <div class="toast" id="toast"></div>
 </div>
-<script>
-try {
-const STATE = {
-  prov: null,
-  ruta: [],
-  alertas: {},
-  log: [],
-  seleccionada: null,
-};
-const COMB = 'Precio Gasolina 95 E5';
-
-const els = {
-  chipBar: document.getElementById('chipBar'),
-  secEmpty: document.getElementById('secEmpty'),
-  secMain: document.getElementById('secMain'),
-  mapLayer: document.getElementById('mapLayer'),
-  headerTitle: document.getElementById('headerTitle'),
-  btnBack: document.getElementById('btnBack'),
-  routeSteps: document.getElementById('routeSteps'),
-  costCard: document.getElementById('costCard'),
-  alertCard: document.getElementById('alertCard'),
-  btnSimNotif: document.getElementById('btnSimNotif'),
-  toast: document.getElementById('toast'),
-  logPanel: document.getElementById('logPanel'),
-};
-
-function toast(msg) {
-  const t = els.toast; t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 1800);
-}
-
-function logPush(texto) {
-  const hora = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-  STATE.log.unshift({ texto, hora });
-  if (STATE.log.length > 50) STATE.log.pop();
-  renderLog();
-}
-
-function chip(label, active, onClick, removable) {
-  const c = document.createElement('button');
-  c.className = 'chip ' + (active ? 'active' : '');
-  c.innerHTML = label + (removable ? ' <span class="remove">✕</span>' : '');
-  if (onClick) c.onclick = (e) => { e.stopPropagation(); onClick(); };
-  if (removable) c.querySelector('.remove').onclick = (e) => { e.stopPropagation(); onClick(); };
-  return c;
-}
-
-function renderChips() {
-  els.chipBar.innerHTML = '';
-  if (STATE.prov) {
-    const p = PROVINCIAS.find(x => x.id === STATE.prov);
-    els.chipBar.appendChild(chip(p.nombre, true, () => setProv(null), true));
-  } else {
-    PROVINCIAS.forEach(p => els.chipBar.appendChild(chip(p.nombre, false, () => setProv(p.id))));
-  }
-}
-
-function setProv(v) { STATE.prov = v; STATE.ruta = []; renderChips(); render(); }
-
-function precioColor(est) {
-  const p = est.precios[COMB] || 0;
-  return p <= 1.45 ? 'green' : p <= 1.60 ? 'orange' : 'red';
-}
-
-function listaFiltrada() {
-  const base = STATE.prov ? ESTACIONES.porProvincia(STATE.prov) : ESTACIONES;
-  return filtrarEstaciones(base, { provincia: STATE.prov, combustible: '', marca: '', buscar: '', soloFavoritos: false });
-}
-
-function render() {
-  if (!STATE.prov) {
-    els.secEmpty.classList.add('active');
-    els.secMain.classList.remove('active');
-    els.headerTitle.textContent = 'Ruta y alertas';
-    els.btnBack.style.display = 'none';
-    els.mapLayer.innerHTML = '';
-    return;
-  }
-  els.secEmpty.classList.remove('active');
-  els.secMain.classList.add('active');
-  const prov = PROVINCIAS.find(p => p.id === STATE.prov);
-  els.headerTitle.textContent = prov.nombre;
-  els.btnBack.style.display = 'block';
-  const lista = ordenarEstaciones(listaFiltrada(), 'distancia', true);
-  renderMap(lista);
-  renderRoute(lista);
-  renderCost(lista);
-  renderAlerts(lista);
-  renderLog();
-}
-
-function renderMap(lista) {
-  if (!STATE.prov) { els.mapLayer.innerHTML = ''; return; }
-  const prov = PROVINCIAS.find(p => p.id === STATE.prov);
-  els.mapLayer.innerHTML = lista.map(est => {
-    const c = precioColor(est);
-    const x = 50 + ((est.lat - prov.centro[0]) / 0.2) * 40;
-    const y = 50 + ((prov.centro[1] - est.lng) / 0.2) * 40;
-    const enRuta = STATE.ruta.includes(est.id);
-    return `<div class="map-marker ${c} ${enRuta ? 'selected' : ''}" style="left:${Math.max(5,Math.min(95,x))}%;top:${Math.max(5,Math.min(95,y))}%;" data-id="${est.id}" title="${est.nombre}">${est.marca[0]}</div>`;
-  }).join('');
-}
-
-function renderRoute(lista) {
-  const porId = Object.fromEntries(lista.map(e => [e.id, e]));
-  els.routeSteps.innerHTML = STATE.ruta.map((id, i) => {
-    const est = porId[id];
-    if (!est) return '';
-    const c = precioColor(est);
-    const favCls = est.favorito ? 'on' : '';
-    const enAlerta = STATE.alertas[id] && STATE.alertas[id].activo ? ' 🔔' : '';
-    return `<div class="route-step ${i === 0 ? 'selected' : ''}" data-id="${est.id}">
-      <div class="num">${i + 1}</div>
-      <div class="info">
-        <div class="name">${est.nombre}${enAlerta}</div>
-        <div class="addr">${est.direccion} · ${est.localidad}</div>
-      </div>
-      <div class="price">${formatearPrecio(est.precios[COMB] || 0)} <span class="uni">€/L</span></div>
-      <button class="fav ${favCls}" data-id="${est.id}">${est.favorito ? '★' : '☆'}</button>
-    </div>`;
-  }).join('');
-}
-
-function renderCost(lista) {
-  const porId = Object.fromEntries(lista.map(e => [e.id, e]));
-  let total = 0;
-  const pasos = STATE.ruta.map(id => porId[id]).filter(Boolean);
-  pasos.forEach(e => { total += (e.precios[COMB] || 0) * 40; });
-  els.costCard.innerHTML = `
-    <h3>Coste estimado de la ruta <span class="chip">${pasos.length} parada${pasos.length !== 1 ? 's' : ''}</span></h3>
-    <div class="cost-row"><span class="label">Estaciones</span><span class="value">${pasos.length}</span></div>
-    <div class="cost-row"><span class="label">Combustible</span><span class="value">${COMB.replace('Precio ','')}</span></div>
-    <div class="cost-row"><span class="label">Litros estimados</span><span class="value">40 L × ${pasos.length}</span></div>
-    <div class="cost-row total"><span class="label">Coste total aprox.</span><span class="value">${formatearPrecio(total)} €</span></div>
-    <div style="margin-top:0.5rem"><button class="btn-outline" id="btnOptimizar">Optimizar orden</button><button class="btn-outline" id="btnLimpiarRuta">Limpiar ruta</button></div>
-  `;
-  const btnOpt = document.getElementById('btnOptimizar');
-  const btnLim = document.getElementById('btnLimpiarRuta');
-  if (btnOpt) btnOpt.onclick = () => { STATE.ruta.reverse(); toast('Ruta optimizada (simulada)'); renderRoute(lista); renderMap(lista); };
-  if (btnLim) btnLim.onclick = () => { STATE.ruta = []; renderRoute(lista); renderMap(lista); renderCost(lista); };
-}
-
-function renderAlerts(lista) {
-  const porId = Object.fromEntries(lista.map(e => [e.id, e]));
-  const items = STATE.ruta.map(id => porId[id]).filter(Boolean);
-  if (items.length === 0) {
-    els.alertCard.innerHTML = '<div style="padding:0.6rem;color:var(--muted);font-size:0.8rem">Añade estaciones a la ruta para activar alertas de precio.</div>';
-    return;
-  }
-  els.alertCard.innerHTML = `
-    <h3>Alertas de precio</h3>
-    ${items.map(est => {
-      const a = STATE.alertas[est.id] || { activo: false, umbral: 0.05, modo: 'bajada' };
-      const checked = a.activo ? 'checked' : '';
-      return `<div class="alert-item">
-        <div class="info">
-          <div class="name">${est.nombre}</div>
-          <div class="sub">${est.precios[COMB]} €/L · ${est.localidad}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:0.4rem">
-          <label style="display:flex;align-items:center;gap:0.3rem;cursor:pointer;margin:0">
-            <input type="checkbox" id="al-${est.id}" ${checked} style="width:18px;height:18px">
-            <span style="font-size:0.75rem;color:var(--muted)">Activar alerta</span>
-          </label>
-        </div>
-      </div>`;
-    }).join('')}
-    <div style="margin-top:0.4rem"><button class="btn-outline" id="btnGuardarAlertas">Guardar alertas</button></div>
-  `;
-  items.forEach(est => {
-    const cb = document.getElementById('al-' + est.id);
-    if (cb) cb.onchange = (e) => {
-      STATE.alertas[est.id] = STATE.alertas[est.id] || {};
-      STATE.alertas[est.id].activo = e.target.checked;
-      if (STATE.alertas[est.id].activo) toast('Alerta activada para ' + est.nombre);
-    };
-  });
-  const btnGuardar = document.getElementById('btnGuardarAlertas');
-  if (btnGuardar) btnGuardar.onclick = () => { toast('Alertas guardadas'); renderAlerts(lista); };
-}
-
-function renderLog() {
-  if (!els.logPanel) return;
-  els.logPanel.innerHTML = STATE.log.map(l => `
-    <div class="log-item"><div class="msg">${l.texto}</div><div class="time">${l.hora}</div></div>
-  `).join('');
-}
-
-function agregarARuta(id) {
-  if (STATE.ruta.includes(id)) { toast('Ya está en la ruta'); return; }
-  if (STATE.ruta.length >= 6) { toast('Máximo 6 paradas'); return; }
-  STATE.ruta.push(id);
-  toast('Añadida a la ruta');
-  render();
-}
-
-function quitarDeRuta(id) {
-  STATE.ruta = STATE.ruta.filter(x => x !== id);
-  render();
-}
-
-els.btnBack.onclick = () => { setProv(null); };
-
-els.mapLayer.onclick = (e) => {
-  const m = e.target.closest('.map-marker');
-  if (!m) return;
-  const id = Number(m.dataset.id);
-  if (STATE.ruta.includes(id)) quitarDeRuta(id); else agregarARuta(id);
-};
-
-els.routeSteps.onclick = (e) => {
-  const step = e.target.closest('.route-step');
-  if (!step) return;
-  const fav = e.target.closest('.fav');
-  if (fav) { e.stopPropagation(); const id = Number(fav.dataset.id); const est = ESTACIONES.find(e2 => e2.id === id); est.favorito = !est.favorito; renderRoute(listaFiltrada()); return; }
-  const id = Number(step.dataset.id);
-  quitarDeRuta(id);
-};
-
-els.btnSimNotif.onclick = () => {
-  toast('Notificación push simulada');
-  logPush('Prueba de notificación push enviada');
-};
-
-document.getElementById('bottomNav').onclick = (e) => {
-  const tab = e.target.closest('.nav-tab');
-  if (!tab) return;
-  document.getElementById('bottomNav').querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  tab.classList.add('active');
-};
-
-renderChips(); render();
-} catch (err) {
-  console.error('Error en pasada-05:', err);
-  document.body.insertAdjacentHTML('afterbegin', '<div style="padding:1rem;background:#fee2e2;color:#c62828;border:1px solid #fecaca;">Error de JavaScript: ' + err.message + '</div>');
-}
-</script>
+<script>const\ STATE\ =\ \{\ prov:\ null,\ ruta:\ \[],\ alertas:\ \{},\ log:\ \[],\ seleccionada:\ null\ };\nconst\ COMB\ =\ 'Precio\ Gasolina\ 95\ E5';\nconst\ els\ =\ \{};\n\['chipBar','secEmpty','secMain','mapLayer','headerTitle','btnBack','routeSteps','costCard','alertCard','btnSimNotif','toast','logPanel']\.forEach\(k\ =>\ \{\ els\[k]\ =\ document\.getElementById\(k\);\ }\);\nfunction\ toast\(m\)\{const\ t=els\.toast;t\.textContent=m;t\.classList\.add\('show'\);setTimeout\(\(\)=>t\.classList\.remove\('show'\),1800\);}\nfunction\ logPush\(texto\)\{const\ hora=new\ Date\(\)\.toLocaleTimeString\('es-ES',\{hour:'2-digit',minute:'2-digit'}\);STATE\.log\.unshift\(\{texto,hora}\);if\(STATE\.log\.length>50\)STATE\.log\.pop\(\);renderLog\(\);}\nfunction\ chip\(label,active,onClick,removable\)\{const\ c=document\.createElement\('button'\);c\.className='chip\ '\+\(active\?'active':''\);c\.innerHTML=label\+\(removable\?'\ <span\ class="remove">âœ•</span>':''\);if\(onClick\)c\.onclick=e=>\{e\.stopPropagation\(\);onClick\(\);};if\(removable\)c\.querySelector\('\.remove'\)\.onclick=e=>\{e\.stopPropagation\(\);onClick\(\);};return\ c;}\nfunction\ renderChips\(\)\{els\.chipBar\.innerHTML='';if\(STATE\.prov\)\{const\ p=PROVINCIAS\.find\(x=>x\.id===STATE\.prov\);els\.chipBar\.appendChild\(chip\(p\.nombre,true,\(\)=>setProv\(null\),true\)\);}else\{PROVINCIAS\.forEach\(p=>els\.chipBar\.appendChild\(chip\(p\.nombre,false,\(\)=>setProv\(p\.id\)\)\)\);}}\nfunction\ setProv\(v\)\{STATE\.prov=v;STATE\.ruta=\[];renderChips\(\);render\(\);}\nfunction\ precioColor\(est\)\{const\ p=est\.precios\[COMB]\|\|0;return\ p<=1\.45\?'green':p<=1\.60\?'orange':'red';}\nfunction\ listaFiltrada\(\)\{const\ base=STATE\.prov\?ESTACIONES\.porProvincia\(STATE\.prov\):ESTACIONES;return\ filtrarEstaciones\(base,\{provincia:STATE\.prov,combustible:'',marca:'',buscar:'',soloFavoritos:false}\);}\nfunction\ render\(\)\{if\(!STATE\.prov\)\{els\.secEmpty\.classList\.add\('active'\);els\.secMain\.classList\.remove\('active'\);els\.headerTitle\.textContent='Ruta\ y\ alertas';els\.btnBack\.style\.display='none';els\.mapLayer\.innerHTML='';return;}els\.secEmpty\.classList\.remove\('active'\);els\.secMain\.classList\.add\('active'\);const\ prov=PROVINCIAS\.find\(p=>p\.id===STATE\.prov\);els\.headerTitle\.textContent=prov\.nombre;els\.btnBack\.style\.display='block';const\ lista=ordenarEstaciones\(listaFiltrada\(\),'distancia',true\);renderMap\(lista\);renderRoute\(lista\);renderCost\(lista\);renderAlerts\(lista\);renderLog\(\);}\nfunction\ renderMap\(lista\)\{if\(!STATE\.prov\)\{els\.mapLayer\.innerHTML='';return;}const\ prov=PROVINCIAS\.find\(p=>p\.id===STATE\.prov\);els\.mapLayer\.innerHTML=lista\.map\(est=>\{const\ c=precioColor\(est\);const\ x=50\+\(\(est\.lat-prov\.centro\[0]\)/0\.2\)\*40;const\ y=50\+\(\(prov\.centro\[1]-est\.lng\)/0\.2\)\*40;const\ enRuta=STATE\.ruta\.includes\(est\.id\);return\ `<div\ class="map-marker\ \$\{c}\ \$\{enRuta\?'selected':''}"\ style="left:\$\{Math\.max\(5,Math\.min\(95,x\)\)}%;top:\$\{Math\.max\(5,Math\.min\(95,y\)\)}%;"\ data-id="\$\{est\.id}"\ title="\$\{est\.nombre}">\$\{est\.marca\[0]}</div>`;}\)\.join\(''\);}\nfunction\ renderRoute\(lista\)\{const\ porId=Object\.fromEntries\(lista\.map\(e=>\[e\.id,e]\)\);els\.routeSteps\.innerHTML=STATE\.ruta\.map\(\(id,i\)=>\{const\ est=porId\[id];if\(!est\)return'';const\ c=precioColor\(est\);const\ favCls=est\.favorito\?'on':'';const\ enAlerta=STATE\.alertas\[id]&&STATE\.alertas\[id]\.activo\?'\ ðŸ””':'';return\ `<div\ class="route-step\ \$\{i===0\?'selected':''}"\ data-id="\$\{est\.id}"><div\ class="num">\$\{i\+1}</div><div\ class="info"><div\ class="name">\$\{est\.nombre}\$\{enAlerta}</div><div\ class="addr">\$\{est\.direccion}\ Â·\ \$\{est\.localidad}</div></div><div\ class="price">\$\{formatearPrecio\(est\.precios\[COMB]\|\|0\)}\ <span\ class="uni">â‚¬/L</span></div><button\ class="fav\ \$\{favCls}"\ data-id="\$\{est\.id}">\$\{est\.favorito\?'â˜…':'â˜†'}</button></div>`;}\)\.join\(''\);}\nfunction\ renderCost\(lista\)\{const\ porId=Object\.fromEntries\(lista\.map\(e=>\[e\.id,e]\)\);let\ total=0;const\ pasos=STATE\.ruta\.map\(id=>porId\[id]\)\.filter\(Boolean\);pasos\.forEach\(e=>\{total\+=\(e\.precios\[COMB]\|\|0\)\*40;}\);els\.costCard\.innerHTML=`<h3>Coste\ estimado\ de\ la\ ruta\ <span\ class="chip">\$\{pasos\.length}\ parada\$\{pasos\.length!==1\?'s':''}</span></h3><div\ class="cost-row"><span\ class="label">Estaciones</span><span\ class="value">\$\{pasos\.length}</span></div><div\ class="cost-row"><span\ class="label">Combustible</span><span\ class="value">\$\{COMB\.replace\('Precio\ ',''\)}</span></div><div\ class="cost-row"><span\ class="label">Litros\ estimados</span><span\ class="value">40\ L\ Ã—\ \$\{pasos\.length}</span></div><div\ class="cost-row\ total"><span\ class="label">Coste\ total\ aprox\.</span><span\ class="value">\$\{formatearPrecio\(total\)}\ â‚¬</span></div><div\ style="margin-top:0\.5rem"><button\ class="btn-outline"\ id="btnOptimizar">Optimizar\ orden</button><button\ class="btn-outline"\ id="btnLimpiarRuta">Limpiar\ ruta</button></div>`;const\ btnOpt=document\.getElementById\('btnOptimizar'\);const\ btnLim=document\.getElementById\('btnLimpiarRuta'\);if\(btnOpt\)btnOpt\.onclick=\(\)=>\{STATE\.ruta\.reverse\(\);toast\('Ruta\ optimizada\ \(simulada\)'\);renderRoute\(lista\);renderMap\(lista\);};if\(btnLim\)btnLim\.onclick=\(\)=>\{STATE\.ruta=\[];renderRoute\(lista\);renderMap\(lista\);renderCost\(lista\);};}\nfunction\ renderAlerts\(lista\)\{const\ porId=Object\.fromEntries\(lista\.map\(e=>\[e\.id,e]\)\);const\ items=STATE\.ruta\.map\(id=>porId\[id]\)\.filter\(Boolean\);if\(items\.length===0\)\{els\.alertCard\.innerHTML='<div\ style="padding:0\.6rem;color:var\(--muted\);font-size:0\.8rem">AÃ±ade\ estaciones\ a\ la\ ruta\ para\ activar\ alertas\ de\ precio\.</div>';return;}els\.alertCard\.innerHTML=`<h3>Alertas\ de\ precio</h3>\$\{items\.map\(est=>\{const\ a=STATE\.alertas\[est\.id]\|\|\{activo:false,umbral:0\.05,modo:'bajada'};const\ checked=a\.activo\?'checked':'';return\ `<div\ class="alert-item"><div\ class="info"><div\ class="name">\$\{est\.nombre}</div><div\ class="sub">\$\{est\.precios\[COMB]}\ â‚¬/L\ Â·\ \$\{est\.localidad}</div></div><div\ style="display:flex;align-items:center;gap:0\.4rem"><label\ style="display:flex;align-items:center;gap:0\.3rem;cursor:pointer;margin:0"><input\ type="checkbox"\ id="al-\$\{est\.id}"\ \$\{checked}\ style="width:18px;height:18px"><span\ style="font-size:0\.75rem;color:var\(--muted\)">Activar\ alerta</span></label></div></div>`;}\)\.join\(''\)}<div\ style="margin-top:0\.4rem"><button\ class="btn-outline"\ id="btnGuardarAlertas">Guardar\ alertas</button></div>`;items\.forEach\(est=>\{const\ cb=document\.getElementById\('al-'\+est\.id\);if\(cb\)cb\.onchange=e=>\{STATE\.alertas\[est\.id]=STATE\.alertas\[est\.id]\|\|\{};STATE\.alertas\[est\.id]\.activo=e\.target\.checked;if\(STATE\.alertas\[est\.id]\.activo\)toast\('Alerta\ activada\ para\ '\+est\.nombre\);};}\);const\ btnGuardar=document\.getElementById\('btnGuardarAlertas'\);if\(btnGuardar\)btnGuardar\.onclick=\(\)=>\{toast\('Alertas\ guardadas'\);renderAlerts\(lista\);};}\nfunction\ renderLog\(\)\{if\(!els\.logPanel\)return;els\.logPanel\.innerHTML=STATE\.log\.map\(l=>`<div\ class="log-item"><div\ class="msg">\$\{l\.texto}</div><div\ class="time">\$\{l\.hora}</div></div>`\)\.join\(''\);}\nfunction\ agregarARuta\(id\)\{if\(STATE\.ruta\.includes\(id\)\)\{toast\('Ya\ estÃ¡\ en\ la\ ruta'\);return;}if\(STATE\.ruta\.length>=6\)\{toast\('MÃ¡ximo\ 6\ paradas'\);return;}STATE\.ruta\.push\(id\);toast\('AÃ±adida\ a\ la\ ruta'\);render\(\);}\nfunction\ quitarDeRuta\(id\)\{STATE\.ruta=STATE\.ruta\.filter\(x=>x!==id\);render\(\);}\nels\.btnBack\.onclick=\(\)=>setProv\(null\);\nels\.mapLayer\.onclick=e=>\{const\ m=e\.target\.closest\('\.map-marker'\);if\(!m\)return;const\ id=Number\(m\.dataset\.id\);if\(STATE\.ruta\.includes\(id\)\)quitarDeRuta\(id\);else\ agregarARuta\(id\);};\nels\.routeSteps\.onclick=e=>\{const\ step=e\.target\.closest\('\.route-step'\);if\(!step\)return;const\ fav=e\.target\.closest\('\.fav'\);if\(fav\)\{e\.stopPropagation\(\);const\ id=Number\(fav\.dataset\.id\);const\ est=ESTACIONES\.find\(e2=>e2\.id===id\);est\.favorito=!est\.favorito;renderRoute\(listaFiltrada\(\)\);return;}const\ id=Number\(step\.dataset\.id\);quitarDeRuta\(id\);};\nels\.btnSimNotif\.onclick=\(\)=>\{toast\('NotificaciÃ³n\ push\ simulada'\);logPush\('Prueba\ de\ notificaciÃ³n\ push\ enviada'\);};\ndocument\.getElementById\('bottomNav'\)\.onclick=e=>\{const\ tab=e\.target\.closest\('\.nav-tab'\);if\(!tab\)return;document\.getElementById\('bottomNav'\)\.querySelectorAll\('\.nav-tab'\)\.forEach\(t=>t\.classList\.remove\('active'\)\);tab\.classList\.add\('active'\);};\nrenderChips\(\);render\(\);\n</script>
 </body>
 </html>

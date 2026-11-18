@@ -154,205 +154,51 @@ body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Ro
   </div>
 </div>
 <script>
-const STATE = {
-  prov: null,
-  combustible: '',
-  marca: '',
-  buscar: '',
-  soloFav: false,
-  orden: 'precio',
-  asc: true,
-  seleccionada: null,
-};
+const STATE = { prov: null, combustible: '', marca: '', buscar: '', soloFav: false, view: 'both', orden: 'precio', asc: true, seleccionada: null };
 const COMB = 'Precio Gasolina 95 E5';
-
-const els = {
-  sidebar: document.getElementById('sidebar'),
-  btnOpenSidebar: document.getElementById('btnOpenSidebar'),
-  sidebarNav: document.getElementById('sidebarNav'),
-  headerTitle: document.getElementById('headerTitle'),
-  filtersStrip: document.getElementById('filtersStrip'),
-  mapLayer: document.getElementById('mapLayer'),
-  panelInner: document.getElementById('panelInner'),
-  detailCard: document.getElementById('detailCard'),
-  btnFavOnly: document.getElementById('btnFavOnly'),
-};
-
+const els = {};
+['sidebar','btnOpenSidebar','sidebarNav','headerTitle','filtersStrip','mapLayer','panelInner','detailCard','btnFavOnly'].forEach(k => { els[k] = document.getElementById(k); });
 function chip(label, active, onClick, removable) {
   const c = document.createElement('button');
   c.className = 'chip ' + (active ? 'active' : '');
   c.innerHTML = label + (removable ? ' <span class="remove">✕</span>' : '');
-  if (onClick) c.onclick = (e) => { e.stopPropagation(); onClick(); };
-  if (removable) c.querySelector('.remove').onclick = (e) => { e.stopPropagation(); onClick(); };
+  if (onClick) c.onclick = e => { e.stopPropagation(); onClick(); };
+  if (removable) c.querySelector('.remove').onclick = e => { e.stopPropagation(); onClick(); };
   return c;
 }
-
 function renderChips() {
   els.filtersStrip.innerHTML = '';
-  if (STATE.prov) {
-    const p = PROVINCIAS.find(x => x.id === STATE.prov);
-    els.filtersStrip.appendChild(chip(p.nombre, true, () => setProv(null), true));
-  } else {
-    PROVINCIAS.forEach(p => els.filtersStrip.appendChild(chip(p.nombre, false, () => setProv(p.id))));
-  }
-  ['Precio Gasolina 95 E5','Precio Gasolina 98 E5','Precio Gasoleo A','Precio Gasoleo Premium','GLP'].forEach(c => {
-    const nombre = c.replace('Precio ','');
-    els.filtersStrip.appendChild(chip(nombre, STATE.combustible === c || (nombre === 'GLP' && STATE.combustible === 'Precio Gases licuados del petróleo'), () => setComb(c), true));
-  });
+  if (STATE.prov) { const p = PROVINCIAS.find(x => x.id === STATE.prov); els.filtersStrip.appendChild(chip(p.nombre, true, () => setProv(null), true)); }
+  else { PROVINCIAS.forEach(p => els.filtersStrip.appendChild(chip(p.nombre, false, () => setProv(p.id)))); }
+  ['Precio Gasolina 95 E5','Precio Gasolina 98 E5','Precio Gasoleo A','Precio Gasoleo Premium','GLP'].forEach(c => { els.filtersStrip.appendChild(chip(c, STATE.combustible === c, () => setComb(STATE.combustible === c ? '' : c), true)); });
   els.filtersStrip.appendChild(chip('⭐ Favoritos', STATE.soloFav, () => setFav(!STATE.soloFav)));
   els.filtersStrip.appendChild(chip('🔍 ' + (STATE.buscar || 'Buscar…'), false, () => {}));
 }
-
 function setProv(v) { STATE.prov = v; STATE.seleccionada = null; renderChips(); renderSidebar(); renderMap(); }
 function setComb(v) { STATE.combustible = v; renderChips(); renderSidebar(); renderMap(); }
 function setMarca(v) { STATE.marca = v; renderChips(); renderSidebar(); renderMap(); }
 function setFav(v) { STATE.soloFav = v; renderChips(); renderSidebar(); renderMap(); }
-
-function listaFiltrada() {
-  const base = STATE.prov ? ESTACIONES.porProvincia(STATE.prov) : ESTACIONES;
-  return filtrarEstaciones(base, { provincia: STATE.prov, combustible: STATE.combustible, marca: STATE.marca, buscar: STATE.buscar, soloFavoritos: STATE.soloFav });
-}
-
-function precioColor(est) {
-  const p = est.precios[COMB] || 0;
-  return p <= 1.45 ? 'green' : p <= 1.60 ? 'orange' : 'red';
-}
-
+function listaFiltrada() { const base = STATE.prov ? ESTACIONES.porProvincia(STATE.prov) : ESTACIONES; return filtrarEstaciones(base, { provincia: STATE.prov, combustible: STATE.combustible, marca: STATE.marca, buscar: STATE.buscar, soloFavoritos: STATE.soloFav }); }
+function precioColor(est) { const p = est.precios[COMB] || 0; return p <= 1.45 ? 'green' : p <= 1.60 ? 'orange' : 'red'; }
 function renderSidebar() {
-  if (!STATE.prov) {
-    els.headerTitle.textContent = 'Selecciona provincia';
-    els.panelInner.innerHTML = '<div class="empty"><div class="icon">🗺️</div><h3>Elige una provincia</h3><p>Selecciona una provincia del filtro para ver sus estaciones.</p></div>';
-    els.detailCard.innerHTML = '';
-    return;
-  }
+  if (!STATE.prov) { els.headerTitle.textContent = 'Selecciona provincia'; els.panelInner.innerHTML = '<div class="empty"><div class="icon">🗺️</div><h3>Elige una provincia</h3><p>Selecciona una provincia del filtro para ver sus estaciones.</p></div>'; els.detailCard.innerHTML = ''; return; }
   const prov = PROVINCIAS.find(p => p.id === STATE.prov);
   els.headerTitle.textContent = prov.nombre;
   const lista = ordenarEstaciones(listaFiltrada(), STATE.orden, STATE.asc);
-  els.panelInner.innerHTML = `
-    <div class="section-title"><span>Estaciones</span><span class="count">${lista.length}</span></div>
-    <div class="card-list">${lista.map(renderCard).join('')}</div>
-  `;
-  if (STATE.seleccionada) renderDetail(ESTACIONES.find(e => e.id === STATE.seleccionada));
-  else els.detailCard.innerHTML = '';
+  els.panelInner.innerHTML = `<div class="section-title"><span>Estaciones</span><span class="count">${lista.length}</span></div><div class="card-list">${lista.map(renderCard).join('')}</div>`;
+  if (STATE.seleccionada) renderDetail(ESTACIONES.find(e => e.id === STATE.seleccionada)); else els.detailCard.innerHTML = '';
 }
-
-function renderCard(est) {
-  const c = precioColor(est);
-  const favCls = est.favorito ? 'on' : '';
-  const best = est.esMejor ? '<div class="rank best">1</div>' : '<div class="rank">-</div>';
-  return `<div class="station-card ${est.id === STATE.seleccionada ? 'selected' : ''}" data-id="${est.id}">
-    ${best}
-    <div class="info">
-      <div class="name">${est.nombre}</div>
-      <div class="addr">${est.direccion} · ${est.localidad}</div>
-    </div>
-    <div class="right">
-      <div class="price">${formatearPrecio(est.precios[COMB] || 0)} <span class="uni">€/L</span></div>
-      <div class="dist" style="color:${c === 'green' ? '#2e7d32' : c === 'orange' ? '#f57c00' : '#c62828'};">${formatearDistancia(est.distancia)}</div>
-      <button class="fav ${favCls}" data-id="${est.id}">${est.favorito ? '★' : '☆'}</button>
-    </div>
-  </div>`;
-}
-
-function renderDetail(est) {
-  const c = precioColor(est);
-  const colorCss = c === 'green' ? 'var(--green)' : c === 'orange' ? 'var(--orange)' : 'var(--red)';
-  const pDesc = precioConDescuento(est, COMB);
-  const hist = historicoParaGrafica(est, COMB);
-  const primero = hist[hist.length - 1];
-  const ultimo = hist[0];
-  const variacion = ultimo && primero ? ((ultimo.precio - primero.precio) / primero.precio * 100) : 0;
-  els.detailCard.innerHTML = `
-    <h2>${est.nombre} <button class="detail-btn fav" data-id="${est.id}" data-fav="${est.favorito}" style="padding:0.25rem">${est.favorito ? '★' : '☆'}</button></h2>
-    <div class="detail-grid">
-      <div class="detail-row"><span class="label">Marca</span><span class="value">${est.marca}</span></div>
-      <div class="detail-row"><span class="label">Dirección</span><span class="value">${est.direccion}</span></div>
-      <div class="detail-row"><span class="label">Localidad</span><span class="value">${est.localidad}, ${est.provincia}</span></div>
-      <div class="detail-row"><span class="label">Horario</span><span class="value">${est.horario}</span></div>
-      <div class="detail-row"><span class="label">Distancia</span><span class="value">${formatearDistancia(est.distancia)}</span></div>
-      <div class="detail-row"><span class="label">Precio</span><span class="value" style="color:${colorCss}">${formatearPrecio(est.precios[COMB] || 0)} €/L</span></div>
-      <div class="detail-row"><span class="label">Con descuento ${est.descuento.toFixed(2)} €/L</span><span class="value">${formatearPrecio(pDesc)} €/L</span></div>
-      <div class="detail-row"><span class="label">Variación 30d</span><span class="value">${variacion >= 0 ? '+' : ''}${variacion.toFixed(1)}%</span></div>
-    </div>
-    <div class="detail-actions">
-      <button class="detail-btn primary">Ruta desde aquí</button>
-      <button class="detail-btn" id="btnShare">Compartir</button>
-    </div>
-  `;
-}
-
-function abrirDetalle(id) {
-  const est = ESTACIONES.find(e => e.id === id);
-  if (!est) return;
-  STATE.seleccionada = id;
-  renderSidebar();
-  renderMap();
-}
-
-function renderMap() {
-  if (!STATE.prov) { els.mapLayer.innerHTML = ''; return; }
-  const prov = PROVINCIAS.find(p => p.id === STATE.prov);
-  const lista = ordenarEstaciones(listaFiltrada(), STATE.orden, STATE.asc);
-  els.mapLayer.innerHTML = lista.map(est => {
-    const c = precioColor(est);
-    const x = 50 + ((est.lat - prov.centro[0]) / 0.22) * 35;
-    const y = 50 + ((prov.centro[1] - est.lng) / 0.22) * 35;
-    return `<div class="map-marker ${c} ${est.id === STATE.seleccionada ? 'selected' : ''}" style="left:${Math.max(5,Math.min(95,x))}%;top:${Math.max(5,Math.min(95,y))}%;" data-id="${est.id}" title="${est.nombre}">${est.marca[0]}</div>`;
-  }).join('');
-}
-
-/* Events */
+function renderCard(est) { const c = precioColor(est); const favCls = est.favorito ? 'on' : ''; const best = est.esMejor ? '<div class="rank best">1</div>' : '<div class="rank">-</div>'; return `<div class="station-card ${est.id === STATE.seleccionada ? 'selected' : ''}" data-id="${est.id}">${best}<div class="info"><div class="name">${est.nombre}</div><div class="addr">${est.direccion} · ${est.localidad}</div></div><div class="right"><div class="price">${formatearPrecio(est.precios[COMB] || 0)} <span class="uni">€/L</span></div><div class="dist" style="color:${c === 'green' ? '#2e7d32' : c === 'orange' ? '#f57c00' : '#c62828'};">${formatearDistancia(est.distancia)}</div><button class="fav ${favCls}" data-id="${est.id}">${est.favorito ? '★' : '☆'}</button></div></div>`; }
+function renderDetail(est) { const c = precioColor(est); const colorCss = c === 'green' ? 'var(--green)' : c === 'orange' ? 'var(--orange)' : 'var(--red)'; const pDesc = precioConDescuento(est, COMB); const hist = historicoParaGrafica(est, COMB); const primero = hist[hist.length - 1]; const ultimo = hist[0]; const variacion = ultimo && primero ? ((ultimo.precio - primero.precio) / primero.precio * 100) : 0; els.detailCard.innerHTML = `<h2>${est.nombre} <button class="detail-btn fav" data-id="${est.id}" data-fav="${est.favorito}" style="padding:0.25rem">${est.favorito ? '★' : '☆'}</button></h2><div class="detail-grid"><div class="detail-row"><span class="label">Marca</span><span class="value">${est.marca}</span></div><div class="detail-row"><span class="label">Dirección</span><span class="value">${est.direccion}</span></div><div class="detail-row"><span class="label">Localidad</span><span class="value">${est.localidad}, ${est.provincia}</span></div><div class="detail-row"><span class="label">Horario</span><span class="value">${est.horario}</span></div><div class="detail-row"><span class="label">Distancia</span><span class="value">${formatearDistancia(est.distancia)}</span></div><div class="detail-row"><span class="label">Precio</span><span class="value" style="color:${colorCss}">${formatearPrecio(est.precios[COMB] || 0)} €/L</span></div><div class="detail-row"><span class="label">Con descuento ${est.descuento.toFixed(2)} €/L</span><span class="value">${formatearPrecio(pDesc)} €/L</span></div><div class="detail-row"><span class="label">Variación 30d</span><span class="value">${variacion >= 0 ? '+' : ''}${variacion.toFixed(1)}%</span></div></div><div class="detail-actions"><button class="detail-btn primary">Ruta desde aquí</button><button class="detail-btn" id="btnShare">Compartir</button></div>`; }
+function abrirDetalle(id) { const est = ESTACIONES.find(e => e.id === id); if (!est) return; STATE.seleccionada = id; renderSidebar(); renderMap(); }
+function renderMap() { if (!STATE.prov) { els.mapLayer.innerHTML = ''; return; } const prov = PROVINCIAS.find(p => p.id === STATE.prov); const lista = ordenarEstaciones(listaFiltrada(), STATE.orden, STATE.asc); els.mapLayer.innerHTML = lista.map(est => { const c = precioColor(est); const x = 50 + ((est.lat - prov.centro[0]) / 0.22) * 35; const y = 50 + ((prov.centro[1] - est.lng) / 0.22) * 35; return `<div class="map-marker ${c} ${est.id === STATE.seleccionada ? 'selected' : ''}" style="left:${Math.max(5,Math.min(95,x))}%;top:${Math.max(5,Math.min(95,y))}%;" data-id="${est.id}" title="${est.nombre}">${est.marca[0]}</div>`; }).join(''); }
 els.btnOpenSidebar.onclick = () => { els.sidebar.classList.toggle('hidden'); };
-
-els.panelInner.onclick = (e) => {
-  const card = e.target.closest('.station-card');
-  if (!card) return;
-  const fav = e.target.closest('.fav');
-  if (fav) {
-    e.stopPropagation();
-    const id = Number(fav.dataset.id);
-    const est = ESTACIONES.find(e2 => e2.id === id);
-    est.favorito = !est.favorito;
-    renderSidebar();
-    renderMap();
-    return;
-  }
-  abrirDetalle(Number(card.dataset.id));
-};
-
-els.detailCard.onclick = (e) => {
-  const fav = e.target.closest('.detail-btn.fav');
-  if (fav) {
-    e.stopPropagation();
-    const id = Number(fav.dataset.id);
-    const est = ESTACIONES.find(e2 => e2.id === id);
-    est.favorito = !est.favorito;
-    renderSidebar();
-    renderMap();
-  }
-};
-
-els.mapLayer.onclick = (e) => {
-  const m = e.target.closest('.map-marker');
-  if (!m) return;
-  abrirDetalle(Number(m.dataset.id));
-};
-
+els.panelInner.onclick = e => { const card = e.target.closest('.station-card'); if (!card) return; const fav = e.target.closest('.fav'); if (fav) { e.stopPropagation(); const id = Number(fav.dataset.id); const est = ESTACIONES.find(e2 => e2.id === id); est.favorito = !est.favorito; renderSidebar(); renderMap(); return; } abrirDetalle(Number(card.dataset.id)); };
+els.detailCard.onclick = e => { const fav = e.target.closest('.detail-btn.fav'); if (fav) { e.stopPropagation(); const id = Number(fav.dataset.id); const est = ESTACIONES.find(e2 => e2.id === id); est.favorito = !est.favorito; renderSidebar(); renderMap(); } };
+els.mapLayer.onclick = e => { const m = e.target.closest('.map-marker'); if (!m) return; abrirDetalle(Number(m.dataset.id)); };
 els.btnFavOnly.onclick = () => { setFav(!STATE.soloFav); els.btnFavOnly.classList.toggle('active', STATE.soloFav); };
-
-/* Keyboard shortcuts */
-document.addEventListener('keydown', (e) => {
-  if (e.key >= '1' && e.key <= '5') {
-    const prov = PROVINCIAS[Number(e.key) - 1];
-    if (prov) setProv(prov.id);
-  }
-  if (e.key.toLowerCase() === 'f') setFav(!STATE.soloFav);
-  if (e.key === 'Escape') setProv(null);
-});
-
-renderChips();
-renderSidebar();
-renderMap();
+document.addEventListener('keydown', e => { if (e.key >= '1' && e.key <= '5') { const prov = PROVINCIAS[Number(e.key) - 1]; if (prov) setProv(prov.id); } if (e.key.toLowerCase() === 'f') setFav(!STATE.soloFav); if (e.key === 'Escape') setProv(null); });
+renderChips(); renderSidebar(); renderMap();
 </script>
 </body>
 </html>
