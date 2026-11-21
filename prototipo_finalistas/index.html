@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- Copyright (C) 2026 Juan Blanco Antelo — Localiza tu Gasolinera -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Finalistas · síntesis de los prototipos — Gasolineras</title>
+<style>
+  :root{
+    --bg:#eef1f5; --surface:#fff; --surface2:#f2f5f8; --line:#e1e7ee; --fg:#0d1620; --fg2:#55677a; --fg3:#8697a8;
+    --brand:#0b62d6; --brand2:#0a4fa8; --brandsoft:#e7f0fd; --brandline:#bcd6f7;
+    --ok:#00875a; --okbg:#e3f7ee; --okline:#a8e0c8;
+    --warn:#b26a00; --warnbg:#fff5e0;
+    --bad:#cf2b2b; --badbg:#fdeaea;
+    --r:18px; --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --sh:0 1px 2px rgba(13,22,32,.06); --sh2:0 10px 28px rgba(13,22,32,.10);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0b1218; --surface:#131c25; --surface2:#1a2530; --line:#24313d; --fg:#e8eef5; --fg2:#a9bacb; --fg3:#7b8fa3;
+      --brand:#4d9bff; --brand2:#2f7be0; --brandsoft:#16283d; --brandline:#284a72;
+      --ok:#3ddc97; --okbg:#0f2b21; --okline:#1e5540; --warn:#ffc266; --warnbg:#2e2312; --bad:#ff7b7b; --badbg:#331919;
+      --sh:0 1px 2px rgba(0,0,0,.35); --sh2:0 10px 28px rgba(0,0,0,.45);
+    }
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI Variable Text","Segoe UI",Roboto,"Helvetica Neue",system-ui,sans-serif;
+    background:var(--bg); color:var(--fg); min-height:100vh; padding:28px 16px 64px; line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1140px;margin:0 auto}
+  header.top h1{font-size:clamp(1.5rem,3.6vw,2.1rem);letter-spacing:-.03em;line-height:1.15}
+  header.top .sub{color:var(--fg2);font-size:.95rem;max-width:76ch;margin-top:.55rem}
+  header.top b{color:var(--fg)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+  .pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;background:var(--surface);border:1px solid var(--line);font-size:.72rem;font-weight:700;color:var(--fg2);box-shadow:var(--sh)}
+  .pill.ok{background:var(--okbg);border-color:var(--okline);color:var(--ok)}
+  .pill.brand{background:var(--brandsoft);border-color:var(--brandline);color:var(--brand)}
+
+  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-top:22px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:.65rem;box-shadow:var(--sh);transition:transform .18s ease,box-shadow .18s ease}
+  .card:hover{transform:translateY(-2px);box-shadow:var(--sh2)}
+  .card .tag{font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;padding:3px 9px;border-radius:99px;width:fit-content}
+  .t-thumb{background:var(--brandsoft);color:var(--brand)}
+  .t-tower{background:var(--surface2);color:var(--fg2);border:1px solid var(--line)}
+  .t-uni{background:var(--okbg);color:var(--ok)}
+  .card h2{font-size:1.15rem;letter-spacing:-.015em}
+  .card h2 small{display:block;font-size:.72rem;font-weight:600;color:var(--fg3);letter-spacing:0;margin-top:2px}
+  .card p{font-size:.85rem;color:var(--fg2);flex:0 1 auto}
+  .card ul{font-size:.79rem;color:var(--fg);line-height:1.65;padding-left:1.05rem;display:grid;gap:2px}
+  .card ul li::marker{color:var(--brand)}
+  .card a.go{display:block;text-align:center;background:var(--brand);color:#fff;font-weight:800;text-decoration:none;padding:.72rem;border-radius:12px;margin-top:auto}
+  .card a.go:hover{filter:brightness(1.08)}
+  .card a.go.alt{background:var(--surface2);color:var(--fg);border:1px solid var(--line)}
+
+  /* Miniaturas hechas con CSS ------------------------------------------------ */
+  .mk{border-radius:14px;height:150px;position:relative;overflow:hidden;border:1px solid var(--line);background:var(--bg);flex:0 0 auto}
+  .mk i,.mk b,.mk u{position:absolute;display:block}
+  /* thumb */
+  .mk-thumb{display:grid;place-items:center;background:linear-gradient(160deg,#dfe9f5,#cfdce9)}
+  @media (prefers-color-scheme:dark){.mk-thumb{background:linear-gradient(160deg,#16222e,#0d1720)}}
+  .mk-phone{position:relative;width:88px;height:136px;border-radius:14px;background:var(--surface);border:3px solid #33475c;overflow:hidden;box-shadow:0 8px 18px rgba(13,22,32,.25)}
+  .mk-phone .map{position:absolute;inset:0;background:
+      radial-gradient(circle at 30% 32%,#cfe3c8 0 18%,transparent 19%),
+      radial-gradient(circle at 72% 58%,#cfe3c8 0 22%,transparent 23%),
+      linear-gradient(115deg,transparent 46%,#fff 47% 51%,transparent 52%),
+      linear-gradient(25deg,transparent 58%,#fff 59% 62%,transparent 63%),#e8e0d2}
+  .mk-phone .pin{width:8px;height:8px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .mk-phone .bar{left:6px;right:6px;top:6px;height:12px;border-radius:99px;background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+  .mk-phone .sheet{left:4px;right:4px;bottom:20px;height:52px;border-radius:9px 9px 0 0;background:var(--surface);box-shadow:0 -4px 12px rgba(13,22,32,.18)}
+  .mk-phone .sheet i{left:6px;right:6px;height:5px;border-radius:3px;background:var(--line)}
+  .mk-phone .sheet i:first-child{background:var(--brandline);width:38%}
+  .mk-phone .nav{left:0;right:0;bottom:0;height:20px;background:var(--surface);border-top:1px solid var(--line)}
+  .mk-phone .nav i{top:7px;width:6px;height:6px;border-radius:2px;background:var(--fg3)}
+  .mk-phone .nav i:nth-child(1){left:10px;background:var(--brand)} .mk-phone .nav i:nth-child(2){left:26px}
+  .mk-phone .nav i:nth-child(3){left:42px} .mk-phone .nav i:nth-child(4){left:58px} .mk-phone .nav i:nth-child(5){left:72px}
+  .mk-phone .fab{right:6px;bottom:25px;width:16px;height:16px;border-radius:6px;background:var(--brand)}
+  /* tower */
+  .mk-tower{display:grid;grid-template-columns:44px 1fr 56px;background:var(--surface)}
+  .mk-tower .rail{background:var(--surface2);border-right:1px solid var(--line);padding:7px 5px;display:flex;flex-direction:column;gap:5px}
+  .mk-tower .rail i{height:7px;border-radius:4px;background:var(--line)}
+  .mk-tower .rail i:first-child{background:var(--brandline)}
+  .mk-tower .cen{display:flex;flex-direction:column;min-width:0}
+  .mk-tower .cen .head{height:20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:4px;padding:0 6px}
+  .mk-tower .cen .head i{height:8px;border-radius:99px;background:var(--line);flex:1}
+  .mk-tower .cen .body{flex:1;display:grid;grid-template-columns:1fr 1fr}
+  .mk-tower .cen .body .l{padding:6px;display:flex;flex-direction:column;gap:4px;border-right:1px solid var(--line)}
+  .mk-tower .cen .body .l i{height:12px;border-radius:4px;background:var(--surface2);border:1px solid var(--line)}
+  .mk-tower .cen .body .l i:nth-child(2){border-color:var(--brandline)}
+  .mk-tower .cen .body .m{background:#e8e0d2;position:relative}
+  .mk-tower .cen .body .m u{width:7px;height:7px;border-radius:50%;border:2px solid #fff;background:var(--brand)}
+  .mk-tower .insp{background:var(--surface2);border-left:1px solid var(--line);padding:6px 4px;display:flex;flex-direction:column;gap:4px}
+  .mk-tower .insp i{height:14px;border-radius:4px;background:var(--line)}
+  .mk-tower .insp i:first-child{background:var(--okline)}
+  /* unified */
+  .mk-uni{display:flex;flex-direction:column;background:var(--surface)}
+  .mk-uni .top{height:16px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:4px;padding:0 6px}
+  .mk-uni .top i{width:8px;height:8px;border-radius:3px;background:var(--brand)}
+  .mk-uni .top b{position:static;height:5px;border-radius:3px;background:var(--line);width:46px;display:block}
+  .mk-uni .tools{height:18px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:4px;padding:0 6px}
+  .mk-uni .tools i{height:9px;border-radius:99px;background:var(--surface2);border:1px solid var(--line);width:26px}
+  .mk-uni .tools i:first-child{background:var(--brandsoft);border-color:var(--brandline);width:32px}
+  .mk-uni .body{flex:1;display:grid;grid-template-columns:1fr 1fr}
+  .mk-uni .body .l{padding:6px;display:flex;flex-direction:column;gap:4px;border-right:1px solid var(--line);background:var(--bg)}
+  .mk-uni .body .l i{height:13px;border-radius:5px;background:var(--surface);border:1px solid var(--line)}
+  .mk-uni .body .l i:first-child{border-color:var(--brandline)}
+  .mk-uni .body .m{background:#e8e0d2;position:relative}
+  .mk-uni .body .m u{width:7px;height:7px;border-radius:50%;border:2px solid #fff;background:var(--ok)}
+  .mk-uni .nav{height:16px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-around;background:var(--surface)}
+  .mk-uni .nav i{width:9px;height:6px;border-radius:2px;background:var(--fg3)}
+  .mk-uni .nav i:first-child{background:var(--brand)}
+
+  /* Secciones --------------------------------------------------------------- */
+  section.block{margin-top:34px}
+  section.block > h2{font-size:1.05rem;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+  section.block > h2 .n{width:24px;height:24px;border-radius:8px;background:var(--brandsoft);color:var(--brand);display:grid;place-items:center;font-size:.72rem;font-weight:800}
+  section.block > p.lead{color:var(--fg2);font-size:.86rem;max-width:88ch;margin-top:6px}
+
+  .tablewrap{margin-top:12px;overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--sh)}
+  table{border-collapse:collapse;width:100%;font-size:.82rem;min-width:640px}
+  thead th{position:sticky;top:0;background:var(--surface2);text-align:left;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--fg3);padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+  tbody td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover td{background:var(--surface2)}
+  td.ok{color:var(--ok);font-weight:800;text-align:center;width:74px}
+  td.no{color:var(--fg3);text-align:center;width:74px}
+  td.grp{background:var(--surface2);font-weight:800;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--fg2)}
+  .cov{display:inline-flex;align-items:center;gap:5px;font-weight:800;color:var(--ok)}
+  .cov::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok)}
+  .foot-note{font-size:.75rem;color:var(--fg3);margin-top:8px}
+  .note-card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:12px;padding:12px 14px;font-size:.84rem;color:var(--fg2);margin-top:12px}
+  .note-card b{color:var(--fg)}
+
+  footer{margin-top:34px;color:var(--fg2);font-size:.82rem;line-height:1.75;max-width:96ch}
+  footer b{color:var(--fg)}
+  code{font-family:var(--mono);font-size:.9em;background:var(--surface2);border:1px solid var(--line);padding:.08rem .34rem;border-radius:6px;color:var(--brand)}
+  ol.steps{margin:10px 0 0 1.1rem;font-size:.84rem;color:var(--fg2);display:grid;gap:4px}
+  ol.steps b{color:var(--fg)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>Finalistas · la síntesis de los 7 talleres</h1>
+  <p class="sub">Tres prototipos <b>funcionales</b> que recogen lo mejor de las <b>7 carpetas</b> y <b>57 páginas</b> anteriores.
+  Comparten la misma capa de datos y componentes, así que las diferencias son de <b>flujo</b>, no de funcionalidad:
+  los tres cubren las <b>25 funciones de la app actual</b> y añaden <b>6 patrones nuevos</b>.
+  Abren con doble clic, sin servidor ni red.</p>
+  <div class="chips">
+    <span class="pill ok">25 / 25 funciones de la app</span>
+    <span class="pill brand">+6 patrones nuevos</span>
+    <span class="pill">29 estaciones · 5 provincias</span>
+    <span class="pill">6 combustibles</span>
+    <span class="pill">IA: General + 7 proveedores</span>
+    <span class="pill">Tema claro y oscuro</span>
+  </div>
+</header>
+
+<div class="grid">
+
+  <div class="card">
+    <span class="tag t-thumb">01 · Móvil · una mano</span>
+    <div class="mk mk-thumb">
+      <div class="mk-phone">
+        <div class="map">
+          <i class="pin" style="left:22%;top:34%;background:#00875a"></i>
+          <i class="pin" style="left:58%;top:48%;background:#0b62d6"></i>
+          <i class="pin" style="left:38%;top:66%;background:#c26b00"></i>
+          <i class="pin" style="left:70%;top:26%;background:#cf2b2b"></i>
+        </div>
+        <i class="bar"></i>
+        <div class="sheet"><i style="top:8px"></i><i style="top:18px;width:64%"></i><i style="top:28px"></i><i style="top:38px;width:72%"></i></div>
+        <i class="fab"></i>
+        <div class="nav"><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+    </div>
+    <h2>El pulgar <small>Mapa a pantalla completa + hoja arrastrable</small></h2>
+    <p>La calle manda. El mapa ocupa todo y la lista sube y baja con el pulgar en tres posiciones. Todo lo demás
+    vive en una hoja que se cierra con un gesto, sin cambiar de pantalla.</p>
+    <ul>
+      <li>Hoja <b>peek → media → completa</b> y filtros en chips</li>
+      <li>FAB de asistente y barra inferior de 5 destinos</li>
+      <li>Ficha e historial en hoja, no en página nueva</li>
+      <li>Modo conducción con precios gigantes</li>
+    </ul>
+    <a class="go" href="finalista-01-pulgar.html">Abrir El pulgar →</a>
+  </div>
+
+  <div class="card">
+    <span class="tag t-tower">02 · Escritorio · densidad</span>
+    <div class="mk mk-tower">
+      <div class="rail"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="cen">
+        <div class="head"><i></i><i style="flex:0 0 14px"></i><i style="flex:0 0 14px"></i></div>
+        <div class="body">
+          <div class="l"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="m">
+            <u style="left:24%;top:26%"></u><u style="left:62%;top:40%"></u><u style="left:40%;top:62%"></u><u style="left:74%;top:70%"></u>
+          </div>
+        </div>
+      </div>
+      <div class="insp"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+    <h2>Torre de control <small>Raíl + lista/mapa + inspector</small></h2>
+    <p>Para 1280–1920 px: nada se abre encima de nada. Los filtros, los KPIs y los paneles viven en un raíl;
+    la lista y el mapa se reparten el centro; la ficha o los insights esperan a la derecha.</p>
+    <ul>
+      <li>Tres columnas fijas con scroll independiente</li>
+      <li>Inspector con pestañas <b>Ficha / Insights</b></li>
+      <li>Paleta de comandos con <code>Ctrl</code> + <code>K</code></li>
+      <li>Degrada a móvil sin perder nada</li>
+    </ul>
+    <a class="go" href="finalista-02-torre.html">Abrir Torre de control →</a>
+  </div>
+
+  <div class="card">
+    <span class="tag t-uni">03 · La app · responsive</span>
+    <div class="mk mk-uni">
+      <div class="top"><i></i><b></b></div>
+      <div class="tools"><i></i><i></i><i></i><i style="margin-left:auto;width:14px"></i></div>
+      <div class="body">
+        <div class="l"><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="m"><u style="left:28%;top:32%"></u><u style="left:64%;top:52%"></u><u style="left:44%;top:70%"></u></div>
+      </div>
+      <div class="nav"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+    <h2>Una app <small>La de siempre, con lo nuevo dentro</small></h2>
+    <p>El menor riesgo: conserva las pestañas y la toolbar actuales, pero estrena comparador, planificador,
+    asistente, insights y paleta. Si hay que llevar algo a producción, este es el camino corto.</p>
+    <ul>
+      <li>Pestañas <b>Mapa / Tabla / Ambos</b> y toolbar de filtros</li>
+      <li>Tabla ordenable con las 5 columnas de la app</li>
+      <li>Los paneles nuevos se abren a pantalla completa</li>
+      <li>Mismos atajos y persistencia que los otros dos</li>
+    </ul>
+    <a class="go" href="finalista-03-una-app.html">Abrir Una app →</a>
+  </div>
+
+</div>
+
+<section class="block">
+  <h2><span class="n">25</span> Paridad con la app actual</h2>
+  <p class="lead">Comprobado en los tres finalistas. No son maquetas: filtran, ordenan, paginan, guardan favoritos,
+  abren la ficha con histórico, cambian descuentos y hablan con los 8 proveedores de IA (simulados).</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Función de la app</th><th>Pulgar</th><th>Torre</th><th>Una app</th></tr></thead>
+      <tbody>
+        <tr><td class="grp" colspan="4">Filtros y búsqueda</td></tr>
+        <tr><td>1 · Provincia</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>2 · Localidad</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>3 · Combustible (6, con recálculo)</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>4 · Marca (12, multi-selección)</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>5 · Distancia máxima (0–60 km)</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>6 · Búsqueda por texto</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+
+        <tr><td class="grp" colspan="4">Lista y mapa</td></tr>
+        <tr><td>7 · Favoritos persistentes</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>8 · Orden (precio, distancia, valoración…)</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>9 · Paginación y tamaño de página</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>10 · Mapa sintético con pines y usuario</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>11 · 10 estilos de mapa (equivalentes sintéticos)</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>12 · Leyenda y escala de precios</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>13 · Estado vacío y recuperación de filtros</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+
+        <tr><td class="grp" colspan="4">Detalle e histórico</td></tr>
+        <tr><td>14 · Ficha de estación con acciones</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>15 · Histórico con gráfica y tooltip</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>16 · Selector de días y combustible del histórico</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+
+        <tr><td class="grp" colspan="4">Configuración</td></tr>
+        <tr><td>17 · Descuentos por marca (mueven los precios)</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>18 · Caché (IndexedDB y localStorage)</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>19 · Paginación por defecto</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>20 · Registro de actividad (API y Push)</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>21 · Notificaciones push (mock y aviso)</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>22 · Claves IA cifradas (passphrase)</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>23 · Pestañas de IA visibles (ocultar proveedores)</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td>24 · Actualización de la app y versión</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+
+        <tr><td class="grp" colspan="4">Inteligencia artificial</td></tr>
+        <tr><td>25 · Chat IA: General + 7 proveedores, editar, cancelar, borrar</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="foot-note">La fila 25 usa respuestas simuladas: no hay red ni claves reales en ningún prototipo.</p>
+</section>
+
+<section class="block">
+  <h2><span class="n">+6</span> Lo que aportan los finalistas</h2>
+  <p class="lead">Estos patrones no existen en la app actual. Se han portado de los prototipos que mejor los resolvieron
+  y se han integrado con los mismos datos, filtros y descuentos.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Patrón nuevo</th><th>Origen</th><th>Pulgar</th><th>Torre</th><th>Una app</th></tr></thead>
+      <tbody>
+        <tr><td><b>1 · Comparador con coste real</b><br><small>ahorro bruto − desvío de ida y vuelta − consumo</small></td><td>deepseek v7 · bigpickle 5 · mimov Radar</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td><b>2 · Planificador de depósito</b><br><small>nivel, consumo, presupuesto y previsión a 7 días</small></td><td>deepseek v8 · bigpickle 9</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td><b>3 · Asistente guiado</b><br><small>tres preguntas y una recomendación explicada</small></td><td>bigpickle 7 · mimov Flow</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td><b>4 · Insights de la zona</b><br><small>mínimo, desvío que compensa, tendencia y favoritas</small></td><td>bigpickle 8 · mimov Cockpit</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td><b>5 · Modo conducción</b><br><small>precio gigante, una decisión por pantalla y contraste alto</small></td><td>deepseek v6 · bigpickle 4 · musespark Volante</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+        <tr><td><b>6 · Paleta de comandos</b><br><small><code>Ctrl</code> + <code>K</code>: ir a, comparar, plan, tema…</small></td><td>deepseek v4 · bigpickle 6</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="foot-note">Además, los tres guardan filtros, favoritos, comparador, plan, asistente, tema y pestañas ocultas en
+  <code>localStorage</code> (clave <code>gasolineras_finalistas_v1</code>): recargar no reinicia nada.</p>
+</section>
+
+<section class="block">
+  <h2><span class="n">↺</span> Qué se ha tomado de cada taller</h2>
+  <p class="lead">Ninguna carpeta se descarta. La base es la capa compartida de deepseek (la única que ya cubría 25/25);
+  encima se han injertado los patrones que cada taller resolvía mejor.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Carpeta</th><th>Páginas</th><th>Qué se ha llevado a los finalistas</th></tr></thead>
+      <tbody>
+        <tr><td><b>deepseekv4.1flashfree</b></td><td>8</td><td>La capa compartida <code>Proto</code> / <code>ProtoFeat</code> / <code>ProtoMap</code> / <code>ProtoChart</code> (25/25), el comparador con veredicto de v7, la previsión de v8 y el modo repostaje de v6. Es la columna vertebral.</td></tr>
+        <tr><td><b>nvidia nemotron 3.5 super vl 120b</b></td><td>10</td><td>Lectura móvil de una mano y respeto de safe areas; jerarquía de hoja arrastrable aplicada al pulgar.</td></tr>
+        <tr><td><b>bigpickle</b></td><td>11</td><td>Sala de control de 3 columnas (torre), asistente por decisiones, panel de datos convertido en insights, modo noche y gestos/atajos convertidos en paleta.</td></tr>
+        <tr><td><b>glm 5.3 flash</b></td><td>8</td><td>Estructura de galería-portada, biblioteca compartida y la idea de validar en dos viewports (390×844 y 1440×900).</td></tr>
+        <tr><td><b>mimov 2.6 flashfree</b></td><td>6</td><td>Enfoque de cobertura y propuestas, Cockpit como referencia de densidad y Radar como antecedente del comparador.</td></tr>
+        <tr><td><b>musespark 1.3 free</b></td><td>6</td><td>Pulso y Volante: la conducción con precio protagonista y el flujo de una decisión por pantalla.</td></tr>
+        <tr><td><b>nemotron 3.5 super vl free</b></td><td>8</td><td>Responsive y datos falsos coherentes; la idea de que el mismo esqueleto sirva en móvil y PC.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="block">
+  <h2><span class="n">3′</span> Cómo validarlos</h2>
+  <div class="note-card">
+    <b>Recorrido mínimo (3 minutos):</b>
+    <ol class="steps">
+      <li>Abre uno de los tres y cambia <b>provincia</b> (Madrid → Zaragoza) y <b>combustible</b>: lista, KPIs, mapa y gráficas se recalculan.</li>
+      <li>Marca <b>dos favoritas</b>, activa el chip <i>Favoritos</i>, recarga la página: siguen ahí.</li>
+      <li>Abre una estación: ficha con histórico, tooltip al pasar el ratón y botones de comparar/favorito/ruta.</li>
+      <li>Entra en <b>Comparar</b>, cambia litros, consumo y desvío: el veredicto en € netos cambia. Prueba <i>Selección inteligente</i>.</li>
+      <li>Entra en <b>Plan</b>, baja el nivel del depósito y mira la recomendación y la previsión de 7 días.</li>
+      <li>Prueba el <b>asistente</b> (3 pasos), el <b>modo conducción</b> y la <b>paleta</b> con <code>Ctrl</code> + <code>K</code>.</li>
+      <li>En Config, cambia un descuento de marca: los precios de toda la app bajan; cambia el tema y recarga.</li>
+    </ol>
+  </div>
+  <p class="foot-note">Validación automática (Playwright): <code>node prototipo_finalistas/_validar.mjs</code>.
+  Recorre los tres finalistas en móvil y escritorio, pulsa la navegación, abre la ficha y falla si hay un error de consola.</p>
+</section>
+
+<footer>
+  <b>Carpeta independiente.</b> No toca <code>sw.js</code>, <code>manifest.json</code>, <code>ASSETS</code>, tests ni la app real.
+  Los datos son simulados y deterministas (29 estaciones de 5 provincias, histórico sintético), así que las capturas
+  y los precios son reproducibles.<br>
+  Tres shells, un motor: <code>finalist-core.js</code> calcula y persiste; <code>finalist-ui.js</code> pinta;
+  <code>finalist.css</code> viste. Los componentes de mapa, gráfica, ficha, chat IA y configuración se reutilizan
+  de <code>assets/</code>.<br>
+  <b>Localiza tu Gasolinera</b> · prototipos de diseño · datos ficticios · AGPL-3.0-only.
+</footer>
+
+</div>
+</body>
+</html>

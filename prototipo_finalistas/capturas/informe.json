@@ -1,0 +1,888 @@
+{
+  "fecha": "2026-11-21T09:49:07.124Z",
+  "total": 176,
+  "ok": 176,
+  "fallos": 0,
+  "checks": [
+    {
+      "scope": "01-pulgar · mv · arranca",
+      "ok": true,
+      "detail": "El pulgar"
+    },
+    {
+      "scope": "01-pulgar · mv · consola limpia al cargar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · mv · lista con estaciones",
+      "ok": true,
+      "detail": "11 filas de Madrid"
+    },
+    {
+      "scope": "01-pulgar · mv · filtro provincia",
+      "ok": true,
+      "detail": "Zaragoza → 6 estaciones"
+    },
+    {
+      "scope": "01-pulgar · mv · cambio de combustible",
+      "ok": true,
+      "detail": "Gasolina 98"
+    },
+    {
+      "scope": "01-pulgar · mv · estilos de mapa",
+      "ok": true,
+      "detail": "10 paletas · Satélite aplicado"
+    },
+    {
+      "scope": "01-pulgar · mv · ficha con acciones",
+      "ok": true,
+      "detail": "4 acciones"
+    },
+    {
+      "scope": "01-pulgar · mv · histórico con gráfica",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · mv · favorito desde la ficha",
+      "ok": true,
+      "detail": "6 → 7"
+    },
+    {
+      "scope": "01-pulgar · mv · comparador",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · mv · comparador recalcula",
+      "ok": true,
+      "detail": "litros 50 → 80"
+    },
+    {
+      "scope": "01-pulgar · mv · planificador",
+      "ok": true,
+      "detail": "7 días de previsión"
+    },
+    {
+      "scope": "01-pulgar · mv · depósito y autonomía",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · mv · asistente paso 1",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · mv · asistente recomendación",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · mv · configuración",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · mv · tarjetas de configuración",
+      "ok": true,
+      "detail": "8 secciones"
+    },
+    {
+      "scope": "01-pulgar · mv · descuentos por marca",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · mv · panel IA",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · mv · General + 7 proveedores",
+      "ok": true,
+      "detail": "8 pestañas"
+    },
+    {
+      "scope": "01-pulgar · mv · insights",
+      "ok": true,
+      "detail": "6 tarjetas"
+    },
+    {
+      "scope": "01-pulgar · mv · paleta Ctrl+K",
+      "ok": true,
+      "detail": "13 comandos"
+    },
+    {
+      "scope": "01-pulgar · mv · cambio de tema",
+      "ok": true,
+      "detail": "light → dark"
+    },
+    {
+      "scope": "01-pulgar · mv · modo conducción",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · mv · precio legible",
+      "ok": true,
+      "detail": "1,389€/L"
+    },
+    {
+      "scope": "01-pulgar · mv · persistencia tras recarga",
+      "ok": true,
+      "detail": "provincia Sevilla, combustible g95"
+    },
+    {
+      "scope": "01-pulgar · mv · favoritos persisten",
+      "ok": true,
+      "detail": "7 favoritos"
+    },
+    {
+      "scope": "01-pulgar · mv · provincia restaurada en la vista",
+      "ok": true,
+      "detail": "Sevilla → 4 estaciones"
+    },
+    {
+      "scope": "01-pulgar · mv · consola limpia al final",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · pc · arranca",
+      "ok": true,
+      "detail": "El pulgar"
+    },
+    {
+      "scope": "01-pulgar · pc · consola limpia al cargar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · pc · lista con estaciones",
+      "ok": true,
+      "detail": "11 filas de Madrid"
+    },
+    {
+      "scope": "01-pulgar · pc · filtro provincia",
+      "ok": true,
+      "detail": "Zaragoza → 6 estaciones"
+    },
+    {
+      "scope": "01-pulgar · pc · cambio de combustible",
+      "ok": true,
+      "detail": "Gasolina 98"
+    },
+    {
+      "scope": "01-pulgar · pc · estilos de mapa",
+      "ok": true,
+      "detail": "10 paletas · Satélite aplicado"
+    },
+    {
+      "scope": "01-pulgar · pc · ficha con acciones",
+      "ok": true,
+      "detail": "4 acciones"
+    },
+    {
+      "scope": "01-pulgar · pc · histórico con gráfica",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · pc · favorito desde la ficha",
+      "ok": true,
+      "detail": "6 → 7"
+    },
+    {
+      "scope": "01-pulgar · pc · comparador",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · pc · comparador recalcula",
+      "ok": true,
+      "detail": "litros 50 → 80"
+    },
+    {
+      "scope": "01-pulgar · pc · planificador",
+      "ok": true,
+      "detail": "7 días de previsión"
+    },
+    {
+      "scope": "01-pulgar · pc · depósito y autonomía",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · pc · asistente paso 1",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · pc · asistente recomendación",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · pc · configuración",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · pc · tarjetas de configuración",
+      "ok": true,
+      "detail": "8 secciones"
+    },
+    {
+      "scope": "01-pulgar · pc · descuentos por marca",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · pc · panel IA",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · pc · General + 7 proveedores",
+      "ok": true,
+      "detail": "8 pestañas"
+    },
+    {
+      "scope": "01-pulgar · pc · insights",
+      "ok": true,
+      "detail": "6 tarjetas"
+    },
+    {
+      "scope": "01-pulgar · pc · paleta Ctrl+K",
+      "ok": true,
+      "detail": "13 comandos"
+    },
+    {
+      "scope": "01-pulgar · pc · cambio de tema",
+      "ok": true,
+      "detail": "light → dark"
+    },
+    {
+      "scope": "01-pulgar · pc · modo conducción",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "01-pulgar · pc · precio legible",
+      "ok": true,
+      "detail": "1,389€/L"
+    },
+    {
+      "scope": "01-pulgar · pc · persistencia tras recarga",
+      "ok": true,
+      "detail": "provincia Sevilla, combustible g95"
+    },
+    {
+      "scope": "01-pulgar · pc · favoritos persisten",
+      "ok": true,
+      "detail": "7 favoritos"
+    },
+    {
+      "scope": "01-pulgar · pc · provincia restaurada en la vista",
+      "ok": true,
+      "detail": "Sevilla → 4 estaciones"
+    },
+    {
+      "scope": "01-pulgar · pc · consola limpia al final",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · mv · arranca",
+      "ok": true,
+      "detail": "Torre de control"
+    },
+    {
+      "scope": "02-torre · mv · consola limpia al cargar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · mv · lista con estaciones",
+      "ok": true,
+      "detail": "11 filas de Madrid"
+    },
+    {
+      "scope": "02-torre · mv · filtro provincia",
+      "ok": true,
+      "detail": "Zaragoza → 6 estaciones"
+    },
+    {
+      "scope": "02-torre · mv · cambio de combustible",
+      "ok": true,
+      "detail": "Gasolina 98"
+    },
+    {
+      "scope": "02-torre · mv · estilos de mapa",
+      "ok": true,
+      "detail": "10 paletas · Satélite aplicado"
+    },
+    {
+      "scope": "02-torre · mv · ficha con acciones",
+      "ok": true,
+      "detail": "4 acciones"
+    },
+    {
+      "scope": "02-torre · mv · histórico con gráfica",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · mv · favorito desde la ficha",
+      "ok": true,
+      "detail": "6 → 7"
+    },
+    {
+      "scope": "02-torre · mv · comparador",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · mv · comparador recalcula",
+      "ok": true,
+      "detail": "litros 50 → 80"
+    },
+    {
+      "scope": "02-torre · mv · planificador",
+      "ok": true,
+      "detail": "7 días de previsión"
+    },
+    {
+      "scope": "02-torre · mv · depósito y autonomía",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · mv · asistente paso 1",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · mv · asistente recomendación",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · mv · configuración",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · mv · tarjetas de configuración",
+      "ok": true,
+      "detail": "8 secciones"
+    },
+    {
+      "scope": "02-torre · mv · descuentos por marca",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · mv · panel IA",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · mv · General + 7 proveedores",
+      "ok": true,
+      "detail": "8 pestañas"
+    },
+    {
+      "scope": "02-torre · mv · insights",
+      "ok": true,
+      "detail": "6 tarjetas"
+    },
+    {
+      "scope": "02-torre · mv · paleta Ctrl+K",
+      "ok": true,
+      "detail": "13 comandos"
+    },
+    {
+      "scope": "02-torre · mv · cambio de tema",
+      "ok": true,
+      "detail": "light → dark"
+    },
+    {
+      "scope": "02-torre · mv · modo conducción",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · mv · precio legible",
+      "ok": true,
+      "detail": "1,389€/L"
+    },
+    {
+      "scope": "02-torre · mv · persistencia tras recarga",
+      "ok": true,
+      "detail": "provincia Sevilla, combustible g95"
+    },
+    {
+      "scope": "02-torre · mv · favoritos persisten",
+      "ok": true,
+      "detail": "7 favoritos"
+    },
+    {
+      "scope": "02-torre · mv · provincia restaurada en la vista",
+      "ok": true,
+      "detail": "Sevilla → 4 estaciones"
+    },
+    {
+      "scope": "02-torre · mv · consola limpia al final",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · pc · arranca",
+      "ok": true,
+      "detail": "Torre de control"
+    },
+    {
+      "scope": "02-torre · pc · consola limpia al cargar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · pc · lista con estaciones",
+      "ok": true,
+      "detail": "11 filas de Madrid"
+    },
+    {
+      "scope": "02-torre · pc · filtro provincia",
+      "ok": true,
+      "detail": "Zaragoza → 6 estaciones"
+    },
+    {
+      "scope": "02-torre · pc · cambio de combustible",
+      "ok": true,
+      "detail": "Gasolina 98"
+    },
+    {
+      "scope": "02-torre · pc · estilos de mapa",
+      "ok": true,
+      "detail": "10 paletas · Satélite aplicado"
+    },
+    {
+      "scope": "02-torre · pc · ficha con acciones",
+      "ok": true,
+      "detail": "4 acciones"
+    },
+    {
+      "scope": "02-torre · pc · histórico con gráfica",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · pc · favorito desde la ficha",
+      "ok": true,
+      "detail": "6 → 7"
+    },
+    {
+      "scope": "02-torre · pc · comparador",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · pc · comparador recalcula",
+      "ok": true,
+      "detail": "litros 50 → 80"
+    },
+    {
+      "scope": "02-torre · pc · planificador",
+      "ok": true,
+      "detail": "7 días de previsión"
+    },
+    {
+      "scope": "02-torre · pc · depósito y autonomía",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · pc · asistente paso 1",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · pc · asistente recomendación",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · pc · configuración",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · pc · tarjetas de configuración",
+      "ok": true,
+      "detail": "8 secciones"
+    },
+    {
+      "scope": "02-torre · pc · descuentos por marca",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · pc · panel IA",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · pc · General + 7 proveedores",
+      "ok": true,
+      "detail": "8 pestañas"
+    },
+    {
+      "scope": "02-torre · pc · insights",
+      "ok": true,
+      "detail": "6 tarjetas"
+    },
+    {
+      "scope": "02-torre · pc · paleta Ctrl+K",
+      "ok": true,
+      "detail": "13 comandos"
+    },
+    {
+      "scope": "02-torre · pc · cambio de tema",
+      "ok": true,
+      "detail": "light → dark"
+    },
+    {
+      "scope": "02-torre · pc · modo conducción",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "02-torre · pc · precio legible",
+      "ok": true,
+      "detail": "1,389€/L"
+    },
+    {
+      "scope": "02-torre · pc · persistencia tras recarga",
+      "ok": true,
+      "detail": "provincia Sevilla, combustible g95"
+    },
+    {
+      "scope": "02-torre · pc · favoritos persisten",
+      "ok": true,
+      "detail": "7 favoritos"
+    },
+    {
+      "scope": "02-torre · pc · provincia restaurada en la vista",
+      "ok": true,
+      "detail": "Sevilla → 4 estaciones"
+    },
+    {
+      "scope": "02-torre · pc · consola limpia al final",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · mv · arranca",
+      "ok": true,
+      "detail": "Una app"
+    },
+    {
+      "scope": "03-una-app · mv · consola limpia al cargar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · mv · tabla con estaciones",
+      "ok": true,
+      "detail": "11 filas de Madrid"
+    },
+    {
+      "scope": "03-una-app · mv · filtro provincia",
+      "ok": true,
+      "detail": "Zaragoza → 6 estaciones"
+    },
+    {
+      "scope": "03-una-app · mv · cambio de combustible",
+      "ok": true,
+      "detail": "Gasolina 98"
+    },
+    {
+      "scope": "03-una-app · mv · estilos de mapa",
+      "ok": true,
+      "detail": "10 paletas · Satélite aplicado"
+    },
+    {
+      "scope": "03-una-app · mv · ficha con acciones",
+      "ok": true,
+      "detail": "4 acciones"
+    },
+    {
+      "scope": "03-una-app · mv · histórico con gráfica",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · mv · favorito desde la ficha",
+      "ok": true,
+      "detail": "6 → 7"
+    },
+    {
+      "scope": "03-una-app · mv · comparador",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · mv · comparador recalcula",
+      "ok": true,
+      "detail": "litros 50 → 80"
+    },
+    {
+      "scope": "03-una-app · mv · planificador",
+      "ok": true,
+      "detail": "7 días de previsión"
+    },
+    {
+      "scope": "03-una-app · mv · depósito y autonomía",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · mv · asistente paso 1",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · mv · asistente recomendación",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · mv · configuración",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · mv · tarjetas de configuración",
+      "ok": true,
+      "detail": "8 secciones"
+    },
+    {
+      "scope": "03-una-app · mv · descuentos por marca",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · mv · panel IA",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · mv · General + 7 proveedores",
+      "ok": true,
+      "detail": "8 pestañas"
+    },
+    {
+      "scope": "03-una-app · mv · insights",
+      "ok": true,
+      "detail": "6 tarjetas"
+    },
+    {
+      "scope": "03-una-app · mv · paleta Ctrl+K",
+      "ok": true,
+      "detail": "13 comandos"
+    },
+    {
+      "scope": "03-una-app · mv · cambio de tema",
+      "ok": true,
+      "detail": "light → dark"
+    },
+    {
+      "scope": "03-una-app · mv · modo conducción",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · mv · precio legible",
+      "ok": true,
+      "detail": "1,389€/L"
+    },
+    {
+      "scope": "03-una-app · mv · persistencia tras recarga",
+      "ok": true,
+      "detail": "provincia Sevilla, combustible g95"
+    },
+    {
+      "scope": "03-una-app · mv · favoritos persisten",
+      "ok": true,
+      "detail": "7 favoritos"
+    },
+    {
+      "scope": "03-una-app · mv · provincia restaurada en la vista",
+      "ok": true,
+      "detail": "Sevilla → 4 estaciones"
+    },
+    {
+      "scope": "03-una-app · mv · consola limpia al final",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · pc · arranca",
+      "ok": true,
+      "detail": "Una app"
+    },
+    {
+      "scope": "03-una-app · pc · consola limpia al cargar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · pc · tabla con estaciones",
+      "ok": true,
+      "detail": "11 filas de Madrid"
+    },
+    {
+      "scope": "03-una-app · pc · filtro provincia",
+      "ok": true,
+      "detail": "Zaragoza → 6 estaciones"
+    },
+    {
+      "scope": "03-una-app · pc · cambio de combustible",
+      "ok": true,
+      "detail": "Gasolina 98"
+    },
+    {
+      "scope": "03-una-app · pc · estilos de mapa",
+      "ok": true,
+      "detail": "10 paletas · Satélite aplicado"
+    },
+    {
+      "scope": "03-una-app · pc · ficha con acciones",
+      "ok": true,
+      "detail": "4 acciones"
+    },
+    {
+      "scope": "03-una-app · pc · histórico con gráfica",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · pc · favorito desde la ficha",
+      "ok": true,
+      "detail": "6 → 7"
+    },
+    {
+      "scope": "03-una-app · pc · comparador",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · pc · comparador recalcula",
+      "ok": true,
+      "detail": "litros 50 → 80"
+    },
+    {
+      "scope": "03-una-app · pc · planificador",
+      "ok": true,
+      "detail": "7 días de previsión"
+    },
+    {
+      "scope": "03-una-app · pc · depósito y autonomía",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · pc · asistente paso 1",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · pc · asistente recomendación",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · pc · configuración",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · pc · tarjetas de configuración",
+      "ok": true,
+      "detail": "8 secciones"
+    },
+    {
+      "scope": "03-una-app · pc · descuentos por marca",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · pc · panel IA",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · pc · General + 7 proveedores",
+      "ok": true,
+      "detail": "8 pestañas"
+    },
+    {
+      "scope": "03-una-app · pc · insights",
+      "ok": true,
+      "detail": "6 tarjetas"
+    },
+    {
+      "scope": "03-una-app · pc · paleta Ctrl+K",
+      "ok": true,
+      "detail": "13 comandos"
+    },
+    {
+      "scope": "03-una-app · pc · cambio de tema",
+      "ok": true,
+      "detail": "light → dark"
+    },
+    {
+      "scope": "03-una-app · pc · modo conducción",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "03-una-app · pc · precio legible",
+      "ok": true,
+      "detail": "1,389€/L"
+    },
+    {
+      "scope": "03-una-app · pc · persistencia tras recarga",
+      "ok": true,
+      "detail": "provincia Sevilla, combustible g95"
+    },
+    {
+      "scope": "03-una-app · pc · favoritos persisten",
+      "ok": true,
+      "detail": "7 favoritos"
+    },
+    {
+      "scope": "03-una-app · pc · provincia restaurada en la vista",
+      "ok": true,
+      "detail": "Sevilla → 4 estaciones"
+    },
+    {
+      "scope": "03-una-app · pc · consola limpia al final",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "scope": "file:// · abre y pinta estaciones",
+      "ok": true,
+      "detail": "11 filas"
+    },
+    {
+      "scope": "file:// · consola limpia",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}
